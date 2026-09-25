@@ -19,8 +19,10 @@ async function waitServer() {
   throw new Error('vite não subiu');
 }
 
-const browser = await (async () => { await waitServer(); return chromium.launch({ channel: 'chrome' }); })();
+let browser;
 try {
+  await waitServer();
+  browser = await chromium.launch({ channel: 'chrome' });
   const page = await browser.newPage({ viewport: { width: 768, height: 672 } });
   const shot = name => page.screenshot({ path: `${out}/${name}.png` });
   const tap = async code => { await page.keyboard.down(code); await sleep(60); await page.keyboard.up(code); await sleep(60); };
@@ -45,7 +47,10 @@ try {
     await shot(stage === 5 ? '08-stage5' : '09-stage8');
   }
 } finally {
-  await browser.close();
-  server.kill();
+  try {
+    await browser?.close();
+  } finally {
+    server.kill();
+  }
 }
 console.log(`screenshots em ${out}`);
