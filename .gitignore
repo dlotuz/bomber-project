@@ -1,0 +1,8 @@
+# ROM comercial: não versionar
+*.sfc
+*.smc
+# build / deps
+node_modules/
+web/dist/
+.DS_Store
+*.log
