@@ -1,4 +1,4 @@
-import { BTN, createMatch, startRound, finishRound, step, type GameEvent, type MatchState, type RoundState } from '../core';
+import { BTN, createMatch, startRound, finishRound, step, createAi, aiInputs, type AiState, type GameEvent, type MatchState, type RoundState } from '../core';
 import type { GameConfig } from './config';
 
 export const ROUND_OVER_FRAMES = 150;
@@ -30,6 +30,8 @@ export interface Session {
    *  pausar/sair/confirmar aceita entrada de qualquer dispositivo (`anyPressed`) em vez de só a do próprio slot. */
   anyControl: boolean;
   notices: SessionNotice[];
+  /** Memória das CPUs (caminhos, próxima decisão). */
+  ai: AiState;
   prevPads: number[]; lastWinners: number[]; champions: number[];
 }
 
@@ -38,7 +40,7 @@ export function createSession(cfg: GameConfig, seed: number, initialPads: number
   return {
     cfg, seed, match, round: startRound(match), phase: 'battle', timer: 0, paused: false, matchOver: false,
     stepped: false, finished: false, aborted: false, confirmQuit: false, anyControl: !cfg.humans.some(Boolean),
-    notices: [], prevPads: [...initialPads], lastWinners: [], champions: [],
+    notices: [], ai: createAi(), prevPads: [...initialPads], lastWinners: [], champions: [],
   };
 }
 
@@ -49,7 +51,7 @@ export function updateSession(s: Session, pads: number[], anyPressed = 0): GameE
   s.prevPads = [...pads];
   s.stepped = false;
   if (s.finished) return [];
-  // Só jogadores humanos pausam, pulam telas ou controlam personagens; CPUs (Plano 4) ficam paradas.
+  // Só jogadores humanos pausam, pulam telas ou controlam personagens; as CPUs são controladas pela IA.
   // Sem ninguém no controle (anyControl), qualquer dispositivo serve para pausar/sair/confirmar.
   const hit = (mask: number) =>
     pressed.some((p, i) => s.cfg.humans[i] && (p & mask) !== 0) || (s.anyControl && (anyPressed & mask) !== 0);
@@ -68,7 +70,11 @@ export function updateSession(s: Session, pads: number[], anyPressed = 0): GameE
         }
       }
       if (s.paused) break;
-      ev = step(s.round, pads.map((p, i) => (s.cfg.humans[i] ? p : 0)));
+      {
+        const cpu = s.cfg.humans.map((h, i) => !h && s.cfg.rules.active[i]);
+        const ai = aiInputs(s.round, s.ai, cpu, s.cfg.rules.cpuLevel);
+        ev = step(s.round, pads.map((p, i) => (s.cfg.humans[i] ? p : ai[i])));
+      }
       s.stepped = true;
       if (s.round.phase === 'result') { s.phase = 'roundOver'; s.timer = ROUND_OVER_FRAMES; }
       break;

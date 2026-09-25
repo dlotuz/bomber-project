@@ -22,7 +22,8 @@ export function displayName(names: readonly string[], slot: number): string {
 /**
  * Partida rápida pela URL (usada com ?quick e pelas screenshots):
  * ?stage=1..10&players=2..5&matches=1..5&time=0..4&mode=ffa|team&sd=1&racer=1&spawns=0&chars=0,1,2,3,4&seed=N
- * Todos os jogadores ativos são humanos.
+ *  &humans=0..5 (quantos dos primeiros jogadores são humanos; o resto é CPU — padrão: todos)
+ *  &level=0..2 (nível da CPU: fraco, normal, forte — padrão: normal)
  */
 export function parseConfig(search: string): GameConfig {
   const q = new URLSearchParams(search);
@@ -32,6 +33,7 @@ export function parseConfig(search: string): GameConfig {
     ...defaultRules(),
     matches: int(q.get('matches'), 3, 1, 5),
     timeIdx: int(q.get('time'), 2, 0, 4),
+    cpuLevel: int(q.get('level'), 1, 0, 2) as 0 | 1 | 2,
     suddenDeath: q.get('sd') === '1',
     racer: q.get('racer') === '1',
     randomSpawns: q.get('spawns') !== '0',
@@ -44,7 +46,7 @@ export function parseConfig(search: string): GameConfig {
   return {
     rules, stage: int(q.get('stage'), 1, 1, 10), chars,
     seed: q.has('seed') ? int(q.get('seed'), 0, 0, 2 ** 31 - 1) : null,
-    humans: [...active], names: ['', '', '', '', ''],
+    humans: active.map((a, i) => a && i < int(q.get('humans'), 5, 0, 5)), names: ['', '', '', '', ''],
   };
 }
 

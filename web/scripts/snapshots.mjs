@@ -72,7 +72,11 @@ try {
   await tap('Enter'); for (let k = 0; k < 3; k++) await tap('KeyW');
   await sleep(100); await shot('19-name-edit');
 
-  // 4) Outras arenas
+  // 4) Partida só de CPUs (IA nível normal)
+  await page.goto(`${base}?quick&seed=11&players=5&humans=0&level=1&debug=1`);
+  await sleep(9000); await shot('22-cpu-match');
+
+  // 5) Outras arenas
   for (const stage of [5, 8]) {
     await page.goto(`${base}?quick&seed=3&players=5&stage=${stage}&debug=1`);
     await sleep(2000);

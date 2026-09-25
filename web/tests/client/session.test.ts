@@ -12,6 +12,14 @@ const winRound = (s: Session, winner: number) => {
 };
 
 describe('parseConfig', () => {
+  it('humans e level definem quem é CPU e o nível', () => {
+    const c = parseConfig('?players=4&humans=1&level=2');
+    expect(c.humans).toEqual([true, false, false, false, false]);
+    expect(c.rules.active).toEqual([true, true, true, true, false]);
+    expect(c.rules.cpuLevel).toBe(2);
+    expect(parseConfig('').humans).toEqual([true, true, true, true, true]);
+    expect(parseConfig('').rules.cpuLevel).toBe(1);
+  });
   it('padrões', () => {
     const c = parseConfig('');
     expect(c.stage).toBe(1);
@@ -144,18 +152,21 @@ describe('sessão', () => {
     expect(s.finished).toBe(true);
     expect(s.aborted).toBe(false);
   });
-  it('slots de CPU não pausam nem controlam o personagem', () => {
-    const cfg = parseConfig('?players=3');
-    cfg.humans = [true, true, false, false, false];
-    const s = createSession(cfg, 1);
-    run(s, INTRO_FRAMES + 1);
-    tap(s, 2, BTN.START);
-    expect(s.paused).toBe(false);
-    const x = s.round.players[2].x, y = s.round.players[2].y;
-    const p = [0, 0, BTN.A | BTN.DOWN | BTN.RIGHT, 0, 0];
-    for (let i = 0; i < 20; i++) updateSession(s, p);
-    expect([s.round.players[2].x, s.round.players[2].y]).toEqual([x, y]);
-    expect(s.round.bombs.filter(b => b.owner === 2)).toHaveLength(0);
+  it('slots de CPU não pausam e ignoram o controle: quem joga é a IA', () => {
+    const mk = () => {
+      const cfg = parseConfig('?players=3&seed=4');
+      cfg.humans = [true, true, false, false, false];
+      return createSession(cfg, 4);
+    };
+    const a = mk(), b = mk();
+    run(a, INTRO_FRAMES + 1); run(b, INTRO_FRAMES + 1);
+    tap(a, 2, BTN.START);
+    run(b, 2);
+    expect(a.paused).toBe(false);
+    const noisy = [0, 0, BTN.A | BTN.DOWN | BTN.RIGHT, 0, 0];
+    for (let i = 0; i < 60; i++) { updateSession(a, noisy); updateSession(b, idle); }
+    const pos = (s: Session) => [s.round.players[2].x, s.round.players[2].y, s.round.bombs.filter(q => q.owner === 2).length];
+    expect(pos(a)).toEqual(pos(b));
   });
   it('START pausa e retoma; slot inativo não pausa', () => {
     const s = createSession(parseConfig('?players=2'), 1);
