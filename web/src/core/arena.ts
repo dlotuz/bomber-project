@@ -1,4 +1,4 @@
-import { CELL, ITEM, type Arena } from './types';
+import { CELL, ITEM, type Arena, type RoundState } from './types';
 import { GRID_W, GRID_H, ITEM_CHANCE_PCT } from './constants';
 import { idx } from './grid';
 import { LAYOUTS } from './layouts';
@@ -25,4 +25,16 @@ export function specialCells(stage: number): [number, number][] {
   const out: [number, number][] = [];
   LAYOUTS[stage - 1].forEach((row, r) => [...row].forEach((ch, c) => { if (ch === '?') out.push([c + 1, r + 1]); }));
   return out;
+}
+
+export function tickArena(s: RoundState): void {
+  const a = s.arena;
+  for (let i = 0; i < a.flame.length; i++) {
+    if (a.flame[i] > 0) a.flame[i]--;
+    if (a.burning[i] > 0 && --a.burning[i] === 0) {
+      a.cells[i] = CELL.EMPTY;
+      a.items[i] = a.hidden[i];
+      a.hidden[i] = ITEM.NONE;
+    }
+  }
 }

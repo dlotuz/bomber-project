@@ -1,7 +1,7 @@
-import { BASE_SPEED_SUB, CORNER_SUB } from './constants';
-import { BTN, DIR, DISEASE, DX, DY, type GameEvent, type Player, type RoundState } from './types';
-import { cellX, cellY, centerX, centerY } from './grid';
-import { blocksPlayer } from './query';
+import { BASE_SPEED_SUB, CORNER_SUB, FUSE_FRAMES } from './constants';
+import { BTN, CELL, DIR, DISEASE, DX, DY, type GameEvent, type Player, type RoundState } from './types';
+import { cellX, cellY, centerX, centerY, idx } from './grid';
+import { blocksPlayer, bombAt } from './query';
 
 export function speedSub(p: Player): number {
   if (p.disease === DISEASE.SLOW) return 4;
@@ -64,4 +64,23 @@ export function steerPlayer(s: RoundState, p: Player, buttons: number, ev: GameE
     movePlayer(s, p, d, ev);
     if (p.x !== x || p.y !== y) return;
   }
+}
+
+export function placeBomb(s: RoundState, p: Player, gx: number, gy: number, ev: GameEvent[]): void {
+  if (s.bombs.filter(b => b.owner === p.slot).length >= p.maxBombs) return;
+  if (s.arena.cells[idx(gx, gy)] !== CELL.EMPTY || bombAt(s, gx, gy)) return;
+  const passers = s.players
+    .filter(q => q.active && q.alive && q.dying === 0 && cellX(q.x) === gx && cellY(q.y) === gy)
+    .map(q => q.slot);
+  s.bombs.push({
+    id: s.nextBombId++, owner: p.slot, x: centerX(gx), y: centerY(gy), fuse: FUSE_FRAMES,
+    range: flameRange(p), pierce: p.pierce, passers, slide: DIR.NONE, flight: null, carried: false,
+  });
+  ev.push({ type: 'bomb_placed', slot: p.slot, gx, gy });
+}
+
+export function playerActions(s: RoundState, p: Player, buttons: number, ev: GameEvent[]): void {
+  const pressed = buttons & ~p.prevButtons;
+  const gx = cellX(p.x), gy = cellY(p.y);
+  if ((pressed & BTN.A) || p.disease === DISEASE.DIARRHEA) placeBomb(s, p, gx, gy, ev);
 }
