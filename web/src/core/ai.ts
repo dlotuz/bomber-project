@@ -339,12 +339,29 @@ function escape(s: RoundState, p: Player, hz: Hazard, blocked: ReadonlySet<numbe
   return route(sr, best);
 }
 
-/** Uma bomba aqui atingiria um bloco destrutível ou (se `hunt`) outro jogador? */
+/** `q` tem algum refúgio alcançável com este perigo (folga 0)? */
+function hasRefuge(s: RoundState, q: Player, hz: Hazard, blocked: ReadonlySet<number>): boolean {
+  const sr = search(s, q, hz, blocked, 0, 0);
+  for (let i = 0; i < sr.time.length; i++) if (refuge(hz, sr, i, 0)) return true;
+  return false;
+}
+
+/** Jogadores de pé (ativos, vivos, sem animação de morte). */
+function standing(s: RoundState): Player[] {
+  return s.players.filter(q => q.active && q.alive && q.dying === 0);
+}
+
+/** Colega de time (só no modo `team`): nunca é alvo e não pode estar no alcance de uma bomba nossa. */
+function mate(s: RoundState, p: Player, q: Player): boolean {
+  return q !== p && s.rules.mode === 'team' && q.team === p.team;
+}
+
+/** Uma bomba aqui atingiria um bloco destrutível ou (se `hunt`) um adversário? */
 function bombUseful(s: RoundState, p: Player, gx: number, gy: number, hunt: boolean): boolean {
   const cells = blastCells(s, { gx, gy, t: 0, range: flameRange(p), pierce: p.pierce }, groundBombCells(s));
   for (const i of cells) {
     if (s.arena.cells[i] === CELL.SOFT && s.arena.burning[i] === 0) return true;
-    if (hunt && s.players.some(q => q !== p && q.active && q.alive && q.dying === 0 && idx(cellX(q.x), cellY(q.y)) === i)) return true;
+    if (hunt && standing(s).some(q => q !== p && !mate(s, p, q) && idx(cellX(q.x), cellY(q.y)) === i)) return true;
   }
   return false;
 }
@@ -400,7 +417,16 @@ function think(s: RoundState, p: Player, level: AiLevel, brain: Brain): void {
   const canPlace = ownBombs(s, p) < p.maxBombs && !blocked.has(here) && !crowded;
   if (canPlace && bombUseful(s, p, gx, gy, level.hunt)) {
     const withBomb = hazards(s, { gx, gy, range: flameRange(p), pierce: p.pierce });
-    const out = escape(s, p, withBomb, new Set(blocked).add(here), level, true, 1);
+    const blockedWith = new Set(blocked).add(here);
+    // a bomba (ou a cadeia que ela antecipa) não pode chegar num colega de time, nem tirar a fuga dele
+    const hurtsMate = standing(s).some(q => {
+      if (!mate(s, p, q)) return false;
+      const c = idx(cellX(q.x), cellY(q.y));
+      if (withBomb.at[c] < hz.at[c]) return true;
+      return Math.abs(cellX(q.x) - gx) + Math.abs(cellY(q.y) - gy) <= 10 &&
+        hasRefuge(s, q, hz, blocked) && !hasRefuge(s, q, withBomb, blockedWith);
+    });
+    const out = hurtsMate ? null : escape(s, p, withBomb, blockedWith, level, true, 1);
     if (out && out.path.length > 0) { brain.bomb = true; follow(out); return; }
   }
 

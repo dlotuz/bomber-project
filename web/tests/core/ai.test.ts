@@ -1,7 +1,7 @@
 import { newRound, addBomb, place } from './helpers';
 import { createAi, aiInputs, dangerMap, aiRoll, SAFE, AI_LEVELS } from '../../src/core/ai';
 import { step, createRound } from '../../src/core/round';
-import { idx } from '../../src/core/grid';
+import { cellX, cellY, idx } from '../../src/core/grid';
 import { ITEM, CELL, DIR, DISEASE, defaultRules, type RoundState, type GameEvent } from '../../src/core/types';
 import { hashState } from '../../src/core/hash';
 import { INTRO_FRAMES } from '../../src/core/constants';
@@ -271,6 +271,32 @@ function watch(s: RoundState, slot: number, level: number, frames: number): { bo
   }
   return { bombs, osc };
 }
+
+describe('times', () => {
+  it('não coloca bomba que pegue um colega de time', () => {
+    // time 0: slots 0 e 2 lado a lado; o inimigo (slot 1) fica parado longe; arena limpa: só dá para caçar
+    const s = newRound({ clear: true, mode: 'team', teams: [0, 1, 0, 1, 0], active: [true, true, true, false, false] });
+    place(s, 0, 5, 5);
+    place(s, 2, 6, 5);
+    place(s, 1, 13, 11);
+    const ai = createAi();
+    const cpu = [true, false, true, false, false];
+    for (let f = 0; f < 900 && s.phase === 'playing'; f++) {
+      for (const e of step(s, aiInputs(s, ai, cpu, 2))) {
+        if (e.type !== 'bomb_placed') continue;
+        const mate = s.players[e.slot === 0 ? 2 : 0];
+        const r = s.players[e.slot].fire + 2;
+        const mx = cellX(mate.x), my = cellY(mate.y);
+        // arena limpa: numa linha/coluna par há pilar entre quaisquer duas casas; nas ímpares o braço vai livre
+        const open = (a: number, b: number, line: number) => line % 2 === 1 || a === b;
+        const hit = (mx === e.gx && Math.abs(my - e.gy) <= r && open(my, e.gy, mx)) ||
+          (my === e.gy && Math.abs(mx - e.gx) <= r && open(mx, e.gx, my));
+        expect(hit, `frame ${s.frame}: bomba de ${e.slot} em ${e.gx},${e.gy} pega o colega em ${mx},${my}`).toBe(false);
+      }
+    }
+    expect(s.players[0].alive && s.players[2].alive).toBe(true);
+  });
+});
 
 describe('velocidade alta', () => {
   // speedSub 12 e 15 não dividem 128: o jogador passa do centro da casa e a IA não pode exigir centro exato
