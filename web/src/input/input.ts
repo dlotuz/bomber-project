@@ -83,6 +83,12 @@ export function idleInput(): MenuInput {
   return { pads: [0, 0, 0, 0, 0], pressed: [0, 0, 0, 0, 0], any: 0, pressedAny: 0, key: null };
 }
 
+/** Escape = voltar em qualquer menu (também cancela a captura de tecla no remapeamento, que lê `key` direto). */
+export function withEscapeAsBack(inp: MenuInput): MenuInput {
+  if (inp.key !== 'Escape' || (inp.pressedAny & BTN.B) !== 0) return inp;
+  return { ...inp, pressedAny: inp.pressedAny | BTN.B };
+}
+
 /** Nome legível de uma tecla (KeyboardEvent.code) para a tela de remapeamento. */
 export function keyLabel(code: string): string {
   if (/^Key[A-Z]$/.test(code)) return code.slice(3);

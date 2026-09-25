@@ -1,4 +1,7 @@
-import { readKeyMap, readGamepad, readDevices, buildInput, emptyDevices, keyLabel, InputManager, DEFAULT_KEYMAPS, type GamepadLike } from '../../src/input/input';
+import {
+  readKeyMap, readGamepad, readDevices, buildInput, emptyDevices, keyLabel, InputManager, DEFAULT_KEYMAPS,
+  withEscapeAsBack, idleInput, type GamepadLike,
+} from '../../src/input/input';
 import { stepsFor, STEP_MS, MAX_STEPS } from '../../src/app/loop';
 import { BTN } from '../../src/core';
 
@@ -57,6 +60,32 @@ describe('dispositivos e atribuição', () => {
     expect(inp.pads[0]).toBe(BTN.A);
     expect(inp.pressed[0]).toBe(0);
     expect(inp.pressedAny).toBe(0);
+  });
+});
+
+describe('withEscapeAsBack', () => {
+  it('Escape soma BTN.B ao pressedAny (e ao any), sem mudar mais nada', () => {
+    const base = idleInput();
+    base.key = 'Escape';
+    base.pads = [BTN.UP, 0, 0, 0, 0];
+    base.pressed = [BTN.UP, 0, 0, 0, 0];
+    base.any = BTN.UP;
+    base.pressedAny = BTN.UP;
+    const out = withEscapeAsBack(base);
+    expect(out.pressedAny).toBe(BTN.UP | BTN.B);
+    expect(out.pads).toEqual(base.pads);
+    expect(out.key).toBe('Escape');
+  });
+  it('sem Escape, devolve a entrada sem alterar', () => {
+    const base = idleInput();
+    base.pressedAny = BTN.A;
+    expect(withEscapeAsBack(base)).toEqual(base);
+  });
+  it('não duplica o bit se B já estiver em pressedAny', () => {
+    const base = idleInput();
+    base.key = 'Escape';
+    base.pressedAny = BTN.B;
+    expect(withEscapeAsBack(base).pressedAny).toBe(BTN.B);
   });
 });
 
