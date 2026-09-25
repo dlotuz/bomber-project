@@ -1,7 +1,8 @@
-import { BTN, CELL, DISEASE, DX, DY, ITEM, type Player, type RoundState } from './types';
+import { BTN, CELL, DIR, DISEASE, DX, DY, ITEM, type Player, type RoundState } from './types';
 import { CORNER_SUB, FUSE_FRAMES, GRID_H, GRID_W, MOVE_BOMB_SUB, PRESSURE_INTERVAL, T } from './constants';
 import { cellX, cellY, centerX, centerY, idx, inPlayfield } from './grid';
 import { flameRange, speedSub } from './player';
+import { blocksBomb } from './query';
 
 /** Casa que nenhuma chama conhecida vai atingir. */
 export const SAFE = 1_000_000;
@@ -36,13 +37,28 @@ export function aiRoll(frame: number, slot: number, salt: number): number {
   return (h >>> 0) % 100;
 }
 
-interface BombInfo { gx: number; gy: number; t: number; range: number; pierce: boolean }
+interface BombInfo { gx: number; gy: number; t: number; range: number; pierce: boolean; trail?: number[]; flying?: boolean }
 
 /** Casas ocupadas por bombas paradas no chão (as que seguram o braço de uma explosão). */
 function groundBombCells(s: RoundState): Set<number> {
   const out = new Set<number>();
   for (const b of s.bombs) if (!b.carried && !b.flight) out.add(idx(cellX(b.x), cellY(b.y)));
   return out;
+}
+
+/** Bomba chutada: repete `stepSlide` (bombs.ts) até o pavio acabar ou ela parar, e devolve a casa onde explode e
+ *  as casas por onde passa. O pavio continua correndo durante o deslize. */
+function slideEnd(s: RoundState, b: RoundState['bombs'][number]): { gx: number; gy: number; trail: number[] } {
+  const dx = DX[b.slide], dy = DY[b.slide];
+  let x = b.x, y = b.y;
+  const trail = [idx(cellX(x), cellY(y))];
+  for (let k = 0; k < b.fuse; k++) {
+    if (x % T === 0 && y % T === 0 && blocksBomb(s, cellX(x) + dx, cellY(y) + dy)) break;
+    x += dx * MOVE_BOMB_SUB; y += dy * MOVE_BOMB_SUB;
+    const c = idx(cellX(x), cellY(y));
+    if (c !== trail[trail.length - 1]) trail.push(c);
+  }
+  return { gx: cellX(x), gy: cellY(y), trail };
 }
 
 /** Casas atingidas pela explosão de uma bomba (mesmas regras do core: HARD para; SOFT queima e para; item para). */
@@ -74,9 +90,6 @@ export function dangerMap(s: RoundState, extra?: { gx: number; gy: number; range
   const danger = new Int32Array(n).fill(SAFE);
   for (let i = 0; i < n; i++) if (s.arena.flame[i] > 0) danger[i] = 0;
 
-  const cells = groundBombCells(s);
-  if (extra) cells.add(idx(extra.gx, extra.gy));
-
   const bombs: BombInfo[] = [];
   for (const b of s.bombs) {
     if (b.carried) continue;               // carregada: pavio parado, ainda não ameaça ninguém
@@ -88,12 +101,22 @@ export function dangerMap(s: RoundState, extra?: { gx: number; gy: number; range
       if (gx < 1) gx += 13; else if (gx > 13) gx -= 13;
       if (gy < 1) gy += 11; else if (gy > 11) gy -= 11;
       const t = Math.max(0, b.fuse) + Math.ceil((f.cellsLeft * T - f.progress) / MOVE_BOMB_SUB);
-      bombs.push({ gx, gy, t, range: b.range, pierce: b.pierce });
+      bombs.push({ gx, gy, t, range: b.range, pierce: b.pierce, flying: true });
+      continue;
+    }
+    if (b.slide !== DIR.NONE) {
+      // chutada: explode onde parar (ou onde estiver quando o pavio acabar); o trajeto todo fica marcado
+      const e = slideEnd(s, b);
+      bombs.push({ gx: e.gx, gy: e.gy, t: Math.max(0, b.fuse), range: b.range, pierce: b.pierce, trail: e.trail });
       continue;
     }
     bombs.push({ gx: cellX(b.x), gy: cellY(b.y), t: Math.max(0, b.fuse), range: b.range, pierce: b.pierce });
   }
   if (extra) bombs.push({ ...extra, t: FUSE_FRAMES });
+
+  // casas que seguram o braço de uma explosão: bombas no chão (a chutada, onde vai parar) e a hipotética
+  const cells = new Set<number>();
+  for (const b of bombs) if (!b.flying) cells.add(idx(b.gx, b.gy));
 
   // reação em cadeia: uma bomba no alcance de outra explode junto com ela
   const blasts = bombs.map(b => blastCells(s, b, cells));
@@ -105,7 +128,7 @@ export function dangerMap(s: RoundState, extra?: { gx: number; gy: number; range
       });
     });
   }
-  bombs.forEach((b, k) => { for (const i of blasts[k]) danger[i] = Math.min(danger[i], b.t); });
+  bombs.forEach((b, k) => { for (const i of blasts[k].concat(b.trail ?? [])) danger[i] = Math.min(danger[i], b.t); });
 
   // blocos de pressão que estão para cair
   const pr = s.pressure;

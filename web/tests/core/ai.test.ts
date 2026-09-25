@@ -2,7 +2,7 @@ import { newRound, addBomb, place } from './helpers';
 import { createAi, aiInputs, dangerMap, aiRoll, SAFE, AI_LEVELS } from '../../src/core/ai';
 import { step, createRound } from '../../src/core/round';
 import { idx } from '../../src/core/grid';
-import { ITEM, CELL, DISEASE, defaultRules, type RoundState, type GameEvent } from '../../src/core/types';
+import { ITEM, CELL, DIR, DISEASE, defaultRules, type RoundState, type GameEvent } from '../../src/core/types';
 import { hashState } from '../../src/core/hash';
 import { INTRO_FRAMES } from '../../src/core/constants';
 
@@ -69,6 +69,37 @@ describe('mapa de perigo', () => {
     expect(d[idx(8, 5)]).toBe(74);
     expect(d[idx(10, 5)]).toBe(74);
     expect(d[idx(5, 5)]).toBe(SAFE);
+  });
+  it('bomba chutada é prevista na casa onde para, com o pavio que continua correndo', () => {
+    const s = newRound({ clear: true });
+    s.arena.cells[idx(6, 5)] = CELL.SOFT;       // barra o deslize: para no centro de (5,5)
+    const b = addBomb(s, 3, 5, 50, 1);
+    b.slide = DIR.RIGHT;
+    const d = dangerMap(s);
+    expect(d[idx(5, 5)]).toBe(50);
+    expect(d[idx(5, 4)]).toBe(50);
+    expect(d[idx(6, 5)]).toBe(50);                // o bloco queima
+    expect(d[idx(4, 5)]).toBe(50);                // trajeto (e braço)
+    expect(d[idx(3, 4)]).toBe(SAFE);              // de onde saiu não explode mais
+    expect(d[idx(3, 6)]).toBe(SAFE);
+  });
+  it('bomba chutada que não para a tempo explode no meio do caminho (igual ao core)', () => {
+    const s = newRound({ clear: true });
+    const b = addBomb(s, 3, 5, 50, 1);
+    b.slide = DIR.RIGHT;
+    const d = dangerMap(s);
+    // 50 frames × 16 sub = 6,25 casas: explode em (9,5)
+    expect(d[idx(9, 4)]).toBe(50);
+    expect(d[idx(9, 6)]).toBe(50);
+    expect(d[idx(10, 5)]).toBe(50);
+    expect(d[idx(11, 5)]).toBe(SAFE);
+    expect(d[idx(3, 4)]).toBe(SAFE);
+    // confere com o core
+    let at = -1;
+    for (let f = 1; f <= 60 && at < 0; f++) {
+      for (const e of step(s, [0, 0, 0, 0, 0])) if (e.type === 'explosion') { at = f; expect([e.gx, e.gy]).toEqual([9, 5]); }
+    }
+    expect(at).toBe(50);
   });
 });
 
