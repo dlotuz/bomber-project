@@ -1,10 +1,11 @@
-import { CELL, DIR, type GameEvent, type Player, type RoundState, type Rules } from './types';
-import { DEATH_FRAMES, INTRO_FRAMES, SPAWNS, TIME_OPTIONS_FRAMES } from './constants';
+import { CELL, DIR, ITEM, type GameEvent, type Player, type RoundState, type Rules } from './types';
+import { DEATH_FRAMES, DISEASE_FRAMES, INTRO_FRAMES, SPAWNS, TIME_OPTIONS_FRAMES } from './constants';
 import { cellX, cellY, centerX, centerY, idx } from './grid';
 import { buildArena, tickArena } from './arena';
 import { makeRng, shuffle, type Rng } from './rng';
 import { playerActions, steerPlayer } from './player';
 import { updateBombs } from './bombs';
+import { applyItem } from './items';
 
 export function makePlayers(stage: number, rules: Rules, rng: Rng): Player[] {
   const order = [0, 1, 2, 3, 4];
@@ -61,6 +62,25 @@ function tickDying(s: RoundState, ev: GameEvent[]): void {
   }
 }
 
+function pickupsAndContagion(s: RoundState, ev: GameEvent[]): void {
+  const standing = s.players.filter(p => p.active && p.alive && p.dying === 0);
+  for (const p of standing) {
+    const i = idx(cellX(p.x), cellY(p.y));
+    const it = s.arena.items[i];
+    if (it !== ITEM.NONE) {
+      applyItem(p, it, s.rng);
+      s.arena.items[i] = ITEM.NONE;
+      ev.push({ type: 'item_picked', slot: p.slot, item: it });
+    }
+  }
+  for (let a = 0; a < standing.length; a++) for (let b = a + 1; b < standing.length; b++) {
+    const p = standing[a], q = standing[b];
+    if (cellX(p.x) !== cellX(q.x) || cellY(p.y) !== cellY(q.y)) continue;
+    if (p.disease && !q.disease) { q.disease = p.disease; q.diseaseTimer = DISEASE_FRAMES; }
+    else if (q.disease && !p.disease) { p.disease = q.disease; p.diseaseTimer = DISEASE_FRAMES; }
+  }
+}
+
 export function step(s: RoundState, inputs: number[]): GameEvent[] {
   const ev: GameEvent[] = [];
   if (s.phase === 'result') return ev;
@@ -75,12 +95,14 @@ export function step(s: RoundState, inputs: number[]): GameEvent[] {
     if (!p.active || !p.alive) continue;
     const btn = inputs[p.slot] ?? 0;
     if (p.dying === 0) {
+      if (p.disease && --p.diseaseTimer <= 0) p.disease = 0;
       steerPlayer(s, p, btn, ev);
       playerActions(s, p, btn, ev);
     }
     p.prevButtons = btn;
   }
   updateBombs(s, ev);
+  pickupsAndContagion(s, ev);
   applyHazards(s, ev);
   tickDying(s, ev);
   return ev;
