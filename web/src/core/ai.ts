@@ -1,5 +1,5 @@
-import { BTN, CELL, DX, DY, ITEM, type Player, type RoundState } from './types';
-import { FUSE_FRAMES, GRID_H, GRID_W, PRESSURE_INTERVAL, T } from './constants';
+import { BTN, CELL, DISEASE, DX, DY, ITEM, type Player, type RoundState } from './types';
+import { FUSE_FRAMES, GRID_H, GRID_W, MOVE_BOMB_SUB, PRESSURE_INTERVAL, T } from './constants';
 import { cellX, cellY, centerX, centerY, idx, inPlayfield } from './grid';
 import { flameRange, speedSub } from './player';
 
@@ -28,7 +28,8 @@ export function createAi(): AiState {
   return { round: null, brains: [] };
 }
 
-/** Número pseudoaleatório 0..99 derivado só do estado (frame, slot, sal): mantém a IA determinística sem guardar RNG. */
+/** Número pseudoaleatório 0..99 derivado só do estado (frame, slot, sal): mantém a IA determinística sem guardar RNG.
+ *  Usa um hash próprio em vez de `s.rng`: tirar números do RNG da rodada mudaria o sorteio de itens/spawns conforme a quantidade de CPUs. */
 export function aiRoll(frame: number, slot: number, salt: number): number {
   let h = Math.imul(frame + 0x9e3779b1, 0x85ebca6b) ^ Math.imul(slot + 1, 0xc2b2ae35) ^ Math.imul(salt + 7, 0x27d4eb2f);
   h ^= h >>> 15; h = Math.imul(h, 0x2c1b3c6d); h ^= h >>> 12;
@@ -37,8 +38,15 @@ export function aiRoll(frame: number, slot: number, salt: number): number {
 
 interface BombInfo { gx: number; gy: number; t: number; range: number; pierce: boolean }
 
+/** Casas ocupadas por bombas paradas no chão (as que seguram o braço de uma explosão). */
+function groundBombCells(s: RoundState): Set<number> {
+  const out = new Set<number>();
+  for (const b of s.bombs) if (!b.carried && !b.flight) out.add(idx(cellX(b.x), cellY(b.y)));
+  return out;
+}
+
 /** Casas atingidas pela explosão de uma bomba (mesmas regras do core: HARD para; SOFT queima e para; item para). */
-function blastCells(s: RoundState, b: BombInfo): number[] {
+function blastCells(s: RoundState, b: BombInfo, bombCells: ReadonlySet<number>): number[] {
   const out = [idx(b.gx, b.gy)];
   for (let d = 1; d <= 4; d++) {
     for (let r = 1; r <= b.range; r++) {
@@ -50,6 +58,7 @@ function blastCells(s: RoundState, b: BombInfo): number[] {
       out.push(i);
       if (c === CELL.SOFT && !b.pierce) break;
       if (s.arena.items[i] !== ITEM.NONE) break;
+      if (bombCells.has(i)) break;   // outra bomba segura o braço (ela explode junto: ver reação em cadeia)
     }
   }
   return out;
@@ -65,15 +74,29 @@ export function dangerMap(s: RoundState, extra?: { gx: number; gy: number; range
   const danger = new Int32Array(n).fill(SAFE);
   for (let i = 0; i < n; i++) if (s.arena.flame[i] > 0) danger[i] = 0;
 
+  const cells = groundBombCells(s);
+  if (extra) cells.add(idx(extra.gx, extra.gy));
+
   const bombs: BombInfo[] = [];
   for (const b of s.bombs) {
-    if (b.carried || b.flight) continue;
+    if (b.carried) continue;               // carregada: pavio parado, ainda não ameaça ninguém
+    if (b.flight) {
+      // voando: pavio parado; prevê a casa de pouso (sem quiques) e soma o tempo de voo que falta
+      const f = b.flight;
+      let gx = cellX(b.x - f.dx * f.progress) + f.dx * f.cellsLeft;
+      let gy = cellY(b.y - f.dy * f.progress) + f.dy * f.cellsLeft;
+      if (gx < 1) gx += 13; else if (gx > 13) gx -= 13;
+      if (gy < 1) gy += 11; else if (gy > 11) gy -= 11;
+      const t = Math.max(0, b.fuse) + Math.ceil((f.cellsLeft * T - f.progress) / MOVE_BOMB_SUB);
+      bombs.push({ gx, gy, t, range: b.range, pierce: b.pierce });
+      continue;
+    }
     bombs.push({ gx: cellX(b.x), gy: cellY(b.y), t: Math.max(0, b.fuse), range: b.range, pierce: b.pierce });
   }
   if (extra) bombs.push({ ...extra, t: FUSE_FRAMES });
 
   // reação em cadeia: uma bomba no alcance de outra explode junto com ela
-  const blasts = bombs.map(b => blastCells(s, b));
+  const blasts = bombs.map(b => blastCells(s, b, cells));
   for (let changed = true, guard = 0; changed && guard < bombs.length + 1; guard++) {
     changed = false;
     bombs.forEach((a, ia) => {
@@ -92,14 +115,15 @@ export function dangerMap(s: RoundState, extra?: { gx: number; gy: number; range
     for (let j = pr.next; j < pr.order.length && k < 12; j++) {
       const i = pr.order[j];
       if (s.arena.cells[i] === CELL.HARD) continue;
-      danger[i] = Math.min(danger[i], Math.max(0, k * every - pr.timer));
+      danger[i] = Math.min(danger[i], Math.max(0, (k + 1) * every - pr.timer));
       k++;
     }
   }
   return danger;
 }
 
-/** Casa andável para a IA: vazia, sem bomba (a não ser a de partida) e sem chama agora. */
+/** Casa andável para a IA: vazia, sem bomba (a não ser a de partida) e sem chama agora.
+ *  Aproximação: qualquer bomba fora da casa de partida bloqueia (o core libera `passers` assim que o jogador sai da casa da bomba, então na prática dá no mesmo). */
 function walkable(s: RoundState, i: number, start: number, danger: Int32Array): boolean {
   if (s.arena.cells[i] !== CELL.EMPTY) return false;
   if (danger[i] === 0) return false;
@@ -161,7 +185,7 @@ function escapePath(s: RoundState, p: Player, start: number, danger: Int32Array,
 
 /** Uma bomba aqui atingiria um bloco destrutível ou (se `hunt`) outro jogador? */
 function bombUseful(s: RoundState, p: Player, gx: number, gy: number, hunt: boolean): boolean {
-  const cells = blastCells(s, { gx, gy, t: 0, range: flameRange(p), pierce: p.pierce });
+  const cells = blastCells(s, { gx, gy, t: 0, range: flameRange(p), pierce: p.pierce }, groundBombCells(s));
   for (const i of cells) {
     if (s.arena.cells[i] === CELL.SOFT && s.arena.burning[i] === 0) return true;
     if (hunt && s.players.some(q => q !== p && q.active && q.alive && q.dying === 0 && idx(cellX(q.x), cellY(q.y)) === i)) return true;
@@ -268,14 +292,14 @@ export function aiInputs(s: RoundState, ai: AiState, cpu: readonly boolean[], le
   for (const p of s.players) {
     if (!cpu[p.slot] || !p.active || !p.alive || p.dying > 0) continue;
     const brain = ai.brains[p.slot];
-    const buttons = 0;
+    const react = p.disease === DISEASE.DIARRHEA ? 1 : level.react;
     if (s.frame >= brain.nextThink) {
       think(s, p, level, brain);
-      brain.nextThink = s.frame + level.react;
+      brain.nextThink = s.frame + react;
       // solta a bomba parado (neste quadro não anda) para ela cair exatamente na casa planejada
       if (brain.bomb) { out[p.slot] = BTN.A; continue; }
     }
-    out[p.slot] = buttons | steer(p, brain);
+    out[p.slot] = steer(p, brain);
   }
   return out;
 }

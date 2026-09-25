@@ -2,7 +2,7 @@ import { newRound, addBomb, place } from './helpers';
 import { createAi, aiInputs, dangerMap, aiRoll, SAFE, AI_LEVELS } from '../../src/core/ai';
 import { step, createRound } from '../../src/core/round';
 import { idx } from '../../src/core/grid';
-import { ITEM, CELL, defaultRules, type RoundState, type GameEvent } from '../../src/core/types';
+import { ITEM, CELL, DISEASE, defaultRules, type RoundState, type GameEvent } from '../../src/core/types';
 import { hashState } from '../../src/core/hash';
 import { INTRO_FRAMES } from '../../src/core/constants';
 
@@ -15,6 +15,15 @@ function play(s: RoundState, cpu: boolean[], level: number, frames: number): Gam
 }
 
 describe('mapa de perigo', () => {
+  it('braço da explosão para em outra bomba', () => {
+    const s = newRound({ clear: true });
+    addBomb(s, 2, 1, 40, 5);
+    addBomb(s, 4, 1, 200, 1);
+    const d = dangerMap(s);
+    expect(d[idx(5, 1)]).toBe(40);  // B explodes with A (chain reaction)
+    expect(d[idx(6, 1)]).toBe(SAFE);
+    expect(d[idx(7, 1)]).toBe(SAFE);
+  });
   it('marca o alcance da bomba com o tempo do pavio e deixa o resto seguro', () => {
     const s = newRound({ clear: true });
     addBomb(s, 7, 1, 50, 2);
@@ -51,6 +60,16 @@ describe('mapa de perigo', () => {
     expect(d[idx(5, 7)]).toBeLessThan(SAFE);
     expect(d[idx(5, 8)]).toBe(SAFE);
   });
+  it('bombas voando são previstas na casa de pouso', () => {
+    const s = newRound({ clear: true });
+    addBomb(s, 5, 5, 50, 2);
+    const b = s.bombs[0];
+    b.flight = { dx: 1, dy: 0, cellsLeft: 3, progress: 0, bounces: 0 };
+    const d = dangerMap(s);
+    expect(d[idx(8, 5)]).toBeLessThan(SAFE);
+    expect(d[idx(10, 5)]).toBeLessThan(SAFE);
+    expect(d[idx(5, 5)]).toBe(SAFE);
+  });
 });
 
 describe('comportamento', () => {
@@ -74,6 +93,15 @@ describe('comportamento', () => {
     place(s, 0, 5, 5);
     addBomb(s, 6, 5, 60, 3);
     play(s, [true, false, false, false, false], 2, 120);
+    expect(s.players[0].alive).toBe(true);
+  });
+  it('diarreia: CPU re-planeja a cada frame e sobrevive', () => {
+    const s = newRound({ clear: true, active: [true, true, false, false, false] });
+    place(s, 0, 5, 5);
+    place(s, 1, 12, 11);
+    s.players[0].disease = DISEASE.DIARRHEA;
+    s.players[0].diseaseTimer = 600;
+    play(s, [true, false, false, false, false], 1, 300);
     expect(s.players[0].alive).toBe(true);
   });
   it('partida só de CPUs termina, e nem sempre em empate', () => {
