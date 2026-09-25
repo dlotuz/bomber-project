@@ -2,27 +2,34 @@ import { BTN } from '../core';
 
 export interface KeyMap { up: string; down: string; left: string; right: string; a: string; b: string; y: string; start: string }
 
-/** Spec §11: P1 WASD + J/K/L + Enter; P2 setas + Numpad1/2/3 + NumpadEnter. */
-export const DEFAULT_KEYMAPS: KeyMap[] = [
+export const KEY_FIELDS: readonly (keyof KeyMap)[] = ['up', 'down', 'left', 'right', 'a', 'b', 'y', 'start'];
+
+/** Spec §11: Teclado 1 = WASD + J/K/L + Enter; Teclado 2 = setas + Numpad1/2/3 + NumpadEnter. */
+export const DEFAULT_KEYMAPS: readonly KeyMap[] = [
   { up: 'KeyW', down: 'KeyS', left: 'KeyA', right: 'KeyD', a: 'KeyJ', b: 'KeyK', y: 'KeyL', start: 'Enter' },
   { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', a: 'Numpad1', b: 'Numpad2', y: 'Numpad3', start: 'NumpadEnter' },
 ];
 
-export function readKeyboard(down: ReadonlySet<string>, maps: readonly KeyMap[]): number[] {
-  const out = [0, 0, 0, 0, 0];
-  maps.slice(0, 5).forEach((m, i) => {
-    let v = 0;
-    if (down.has(m.up)) v |= BTN.UP;
-    if (down.has(m.down)) v |= BTN.DOWN;
-    if (down.has(m.left)) v |= BTN.LEFT;
-    if (down.has(m.right)) v |= BTN.RIGHT;
-    if (down.has(m.a)) v |= BTN.A;
-    if (down.has(m.b)) v |= BTN.B;
-    if (down.has(m.y)) v |= BTN.Y;
-    if (down.has(m.start)) v |= BTN.START;
-    out[i] = v;
-  });
-  return out;
+/** Dispositivos de entrada que podem ser atribuídos a um jogador. */
+export type DeviceId = 'kb0' | 'kb1' | 'gp0' | 'gp1' | 'gp2' | 'gp3' | 'none';
+export const DEVICE_IDS: readonly DeviceId[] = ['kb0', 'kb1', 'gp0', 'gp1', 'gp2', 'gp3', 'none'];
+export type DeviceState = Record<DeviceId, number>;
+
+export function emptyDevices(): DeviceState {
+  return { kb0: 0, kb1: 0, gp0: 0, gp1: 0, gp2: 0, gp3: 0, none: 0 };
+}
+
+export function readKeyMap(down: ReadonlySet<string>, m: KeyMap): number {
+  let v = 0;
+  if (down.has(m.up)) v |= BTN.UP;
+  if (down.has(m.down)) v |= BTN.DOWN;
+  if (down.has(m.left)) v |= BTN.LEFT;
+  if (down.has(m.right)) v |= BTN.RIGHT;
+  if (down.has(m.a)) v |= BTN.A;
+  if (down.has(m.b)) v |= BTN.B;
+  if (down.has(m.y)) v |= BTN.Y;
+  if (down.has(m.start)) v |= BTN.START;
+  return v;
 }
 
 export interface GamepadLike { buttons: ReadonlyArray<{ pressed: boolean }>; axes: ReadonlyArray<number> }
@@ -46,26 +53,109 @@ export function readGamepad(gp: GamepadLike | null): number {
   return v;
 }
 
-export function mergePads(kb: number[], gps: (GamepadLike | null)[]): number[] {
-  return kb.map((v, i) => v | readGamepad(gps[i] ?? null));
+export function readDevices(down: ReadonlySet<string>, maps: readonly KeyMap[], gps: readonly (GamepadLike | null)[]): DeviceState {
+  return {
+    kb0: maps[0] ? readKeyMap(down, maps[0]) : 0,
+    kb1: maps[1] ? readKeyMap(down, maps[1]) : 0,
+    gp0: readGamepad(gps[0] ?? null), gp1: readGamepad(gps[1] ?? null),
+    gp2: readGamepad(gps[2] ?? null), gp3: readGamepad(gps[3] ?? null),
+    none: 0,
+  };
+}
+
+/** Entrada de um tick já resolvida: por jogador (via atribuição de dispositivo) e de qualquer dispositivo (menus). */
+export interface MenuInput {
+  pads: number[];      // botões segurados, por jogador
+  pressed: number[];   // botões recém-apertados, por jogador
+  any: number;         // OR de todos os dispositivos
+  pressedAny: number;  // recém-apertados em qualquer dispositivo
+  key: string | null;  // última tecla física apertada neste tick (para remapear)
+}
+
+export function buildInput(cur: DeviceState, prev: DeviceState, assign: readonly DeviceId[], key: string | null = null): MenuInput {
+  const edge = (d: DeviceId) => cur[d] & ~prev[d];
+  let any = 0, pressedAny = 0;
+  for (const d of DEVICE_IDS) { any |= cur[d]; pressedAny |= edge(d); }
+  return { pads: assign.map(d => cur[d]), pressed: assign.map(d => edge(d)), any, pressedAny, key };
+}
+
+export function idleInput(): MenuInput {
+  return { pads: [0, 0, 0, 0, 0], pressed: [0, 0, 0, 0, 0], any: 0, pressedAny: 0, key: null };
+}
+
+/** Nome legível de uma tecla (KeyboardEvent.code) para a tela de remapeamento. */
+export function keyLabel(code: string): string {
+  if (/^Key[A-Z]$/.test(code)) return code.slice(3);
+  if (/^Digit[0-9]$/.test(code)) return code.slice(5);
+  if (/^Numpad[0-9]$/.test(code)) return `NUM ${code.slice(6)}`;
+  const named: Record<string, string> = {
+    ArrowUp: 'SETA CIMA', ArrowDown: 'SETA BAIXO', ArrowLeft: 'SETA ESQ', ArrowRight: 'SETA DIR',
+    Enter: 'ENTER', NumpadEnter: 'NUM ENTER', Space: 'ESPAÇO', Tab: 'TAB', Backspace: 'BACKSPACE',
+    ShiftLeft: 'SHIFT ESQ', ShiftRight: 'SHIFT DIR', ControlLeft: 'CTRL ESQ', ControlRight: 'CTRL DIR',
+    AltLeft: 'ALT ESQ', AltRight: 'ALT DIR',
+  };
+  return named[code] ?? (code.toUpperCase().replace(/[^A-Z0-9 ]/g, '').slice(0, 10) || '?');
+}
+
+export interface KeyTarget {
+  addEventListener(type: string, fn: EventListener): void;
+  removeEventListener(type: string, fn: EventListener): void;
+}
+interface KeyEventLike { code: string; repeat?: boolean; target?: unknown; preventDefault(): void }
+
+function isEditable(t: unknown): boolean {
+  const el = t as { tagName?: string; isContentEditable?: boolean } | null | undefined;
+  if (!el) return false;
+  return el.isContentEditable === true || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT';
+}
+
+function browserGamepads(): (GamepadLike | null)[] {
+  return typeof navigator !== 'undefined' && navigator.getGamepads ? (Array.from(navigator.getGamepads()) as (GamepadLike | null)[]) : [];
 }
 
 export class InputManager {
   private down = new Set<string>();
-  private gameKeys: Set<string>;
+  private gameKeys = new Set<string>();
+  private lastKey: string | null = null;
+  private maps: KeyMap[] = [];
 
-  constructor(target: Window, private maps: KeyMap[] = DEFAULT_KEYMAPS) {
-    this.gameKeys = new Set(maps.flatMap(m => Object.values(m)));
-    target.addEventListener('keydown', e => {
-      if (this.gameKeys.has(e.code)) e.preventDefault();
-      this.down.add(e.code);
-    });
-    target.addEventListener('keyup', e => this.down.delete(e.code));
-    target.addEventListener('blur', () => this.down.clear());
+  private onDown = (e: KeyEventLike) => {
+    if (isEditable(e.target)) return;
+    if (this.gameKeys.has(e.code)) e.preventDefault();
+    this.down.add(e.code);
+    if (!e.repeat) this.lastKey = e.code;
+  };
+  private onUp = (e: KeyEventLike) => { this.down.delete(e.code); };
+  private onBlur = () => { this.down.clear(); };
+
+  constructor(private target: KeyTarget, maps: readonly KeyMap[] = DEFAULT_KEYMAPS,
+    private gamepads: () => readonly (GamepadLike | null)[] = browserGamepads) {
+    this.setKeymaps(maps);
+    target.addEventListener('keydown', this.onDown as unknown as EventListener);
+    target.addEventListener('keyup', this.onUp as unknown as EventListener);
+    target.addEventListener('blur', this.onBlur);
   }
 
-  poll(): number[] {
-    const gps = typeof navigator !== 'undefined' && navigator.getGamepads ? Array.from(navigator.getGamepads()) : [];
-    return mergePads(readKeyboard(this.down, this.maps), gps as (GamepadLike | null)[]);
+  setKeymaps(maps: readonly KeyMap[]): void {
+    this.maps = maps.map(m => ({ ...m }));
+    this.gameKeys = new Set(this.maps.flatMap(m => Object.values(m)));
+  }
+
+  poll(): DeviceState {
+    return readDevices(this.down, this.maps, this.gamepads());
+  }
+
+  /** Última tecla apertada (sem auto-repetição) desde a chamada anterior. */
+  takeLastKey(): string | null {
+    const k = this.lastKey;
+    this.lastKey = null;
+    return k;
+  }
+
+  dispose(): void {
+    this.target.removeEventListener('keydown', this.onDown as unknown as EventListener);
+    this.target.removeEventListener('keyup', this.onUp as unknown as EventListener);
+    this.target.removeEventListener('blur', this.onBlur);
+    this.down.clear();
   }
 }
