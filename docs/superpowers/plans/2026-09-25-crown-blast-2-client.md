@@ -1901,3 +1901,28 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 - **Plano 3, menus:** título, modo VS, jogadores (Humano/CPU e times), regras, personagem (um cursor por jogador), fase (miniatura + nome) e CONFIG (remapear teclas, volume, nomes, URL do webhook). Validação de regras degeneradas.
 - **Plano 4, conteúdo e integrações:** IA (Fraco/Normal/Forte, com `dangerMap` no core); mecânicas especiais das fases 2, 3, 6, 7, 8 e 9; Bad Bomber; áudio chiptune; webhook Crown Cup com retry e fila offline.
+
+---
+
+## Resultado da execução (2026-09-25)
+
+Branch `feat/client`: 128 testes passando (core + cliente), `tsc` limpo, `vite build` ok e screenshots conferidas (título, intro, batalha, explosão, fim de rodada, placar, vitória, fases 5 e 8).
+
+### Decisões tomadas durante a execução
+- `alphaAt` devolve 0 fora da imagem.
+- A parede de baixo fica cortada em 8 px de propósito, para reproduzir a composição da tela original.
+- A pausa congela tudo: o `tickGame` só avança a visão quando o core deu um passo, e a animação não anda durante a pausa.
+- O loop arredonda para exatamente 1 passo quando o frame dura 1/60 s ± 1 ms, o que evita engasgos em telas de 60 Hz.
+- O gancho `?debug` só existe no servidor de desenvolvimento e sai do build de produção.
+- A escala da tela é inteira em pixels do dispositivo (considera o devicePixelRatio). `base: './'` no Vite permite hospedar em subpasta.
+
+### Pendências para o Plano 3 (menus), a resolver no começo
+- **Entrada:** atribuir dispositivo → jogador. Hoje o Chrome expõe só 4 gamepads, então o P5 fica sem controle. Isso também permite teclado para P3 ou mais e checar `gp.mapping`.
+- **Arquitetura:**
+  - um roteador de telas em `screens/`;
+  - a sessão precisa sinalizar "partida terminou", e a VITÓRIA volta para a seleção de fase (hoje ela reinicia a partida);
+  - eventos de transição (coroa, fim de partida) para o áudio e o webhook;
+  - máscara de slots humanos no `hit()`, porque CPUs não pausam.
+- **Configuração:** `GameConfig` com nomes, times por jogador e mapa de teclas, salvo em `localStorage`. `InputManager.setKeymaps()` e `dispose()`, sem bloquear a digitação em campos de texto.
+- **Texto:** cache com limite (LRU) para textos que mudam; nomes normalizados (NFC, sem emoji).
+- **Visual:** marcador de time; poses de morte e de vitória.
