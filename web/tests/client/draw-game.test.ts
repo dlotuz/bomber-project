@@ -1,6 +1,7 @@
 import { drawRound, PLAYER_COLORS } from '../../src/render/draw-game';
 import { createView, updateView } from '../../src/render/view';
 import { newRound } from '../core/helpers';
+import { CELL, idx, GRID_W } from '../../src/core';
 import type { SpriteBank } from '../../src/render/sprite-bank';
 
 interface TagImg { width: number; height: number; tag: string }
@@ -25,15 +26,19 @@ function fakeBank(): SpriteBank {
 }
 
 interface DrawCall { img: unknown; x: number; y: number }
+interface FillRectCall { x: number; y: number; w: number; h: number }
 
 function fakeCtx() {
   const calls: DrawCall[] = [];
+  const fillRectCalls: FillRectCall[] = [];
   const ctx = {
     calls,
+    fillRectCalls,
     fillStyle: '', globalAlpha: 1,
-    fillRect() {}, drawImage(img: unknown, x: number, y: number) { calls.push({ img, x, y }); },
+    fillRect(x: number, y: number, w: number, h: number) { fillRectCalls.push({ x, y, w, h }); },
+    drawImage(img: unknown, x: number, y: number) { calls.push({ img, x, y }); },
   };
-  return ctx as unknown as CanvasRenderingContext2D & { calls: DrawCall[] };
+  return ctx as unknown as CanvasRenderingContext2D & { calls: DrawCall[]; fillRectCalls: FillRectCall[] };
 }
 
 function findTag(calls: DrawCall[], text: string, color: string): DrawCall | undefined {
@@ -91,5 +96,41 @@ describe('drawRound: identificador de jogador acima do bomber', () => {
     const call = findTag(ctx.calls, '1P', PLAYER_COLORS[0]);
     expect(call).toBeDefined();
     expect(call!.y).toBeGreaterThanOrEqual(24);
+  });
+});
+
+describe('drawRound: sombra no chão', () => {
+  it('desenha sombra 16×3 em célula EMPTY abaixo de pilar', () => {
+    const round = newRound({ clear: true, stage: 1 });
+    const view = createView();
+    updateView(view, round, []);
+    const bank = fakeBank();
+    const ctx = fakeCtx();
+
+    // Coloca um pilar em (2, 2) — célula EMPTY abaixo é (2, 3)
+    round.arena.cells[idx(2, 2)] = CELL.HARD;
+
+    drawRound(ctx, round, view, bank, [0, 1, 2, 3, 4], 0, [0, 0, 0, 0, 0]);
+
+    // Procura pela fillRect da sombra: x = 16*2+8 = 40, y = 16*3+24 = 72, w = 16, h = 3
+    const shadow = ctx.fillRectCalls.find(r => r.x === 40 && r.y === 72 && r.w === 16 && r.h === 3);
+    expect(shadow).toBeDefined();
+  });
+
+  it('não desenha sombra em célula EMPTY cujo vizinho superior é EMPTY', () => {
+    const round = newRound({ clear: true, stage: 1 });
+    const view = createView();
+    updateView(view, round, []);
+    const bank = fakeBank();
+    const ctx = fakeCtx();
+
+    // Ambas (3, 2) e (3, 3) começam vazias (EMPTY)
+    // Não deve haver sombra em (3, 3)
+
+    drawRound(ctx, round, view, bank, [0, 1, 2, 3, 4], 0, [0, 0, 0, 0, 0]);
+
+    // Procura por fillRect em (3, 3): x = 16*3+8 = 56, y = 16*3+24 = 72
+    const shadow = ctx.fillRectCalls.find(r => r.x === 56 && r.y === 72 && r.w === 16 && r.h === 3);
+    expect(shadow).toBeUndefined();
   });
 });

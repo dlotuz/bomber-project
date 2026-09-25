@@ -63,9 +63,8 @@ export function drawRound(ctx: CanvasRenderingContext2D, round: RoundState, view
     ctx.drawImage(base, x, y);
     if (border) continue;
     // sombra no chão logo abaixo de parede, pilar ou bloco
-    if (a.cells[i] !== CELL.HARD) {
-      const above = gy - 1 === 0 || a.cells[idx(gx, gy - 1)] !== CELL.EMPTY;
-      if (above) { ctx.fillStyle = 'rgba(0, 0, 0, 0.28)'; ctx.fillRect(x, y, 16, 3); }
+    if (a.cells[i] === CELL.EMPTY && a.cells[idx(gx, gy - 1)] !== CELL.EMPTY) {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.28)'; ctx.fillRect(x, y, 16, 3);
     }
     if (a.cells[i] === CELL.SOFT) ctx.drawImage(a.burning[i] > 0 ? tiles.burning[(frame >> 2) & 1] : tiles.soft, x, y);
     else if (a.items[i] !== ITEM.NONE) ctx.drawImage(bank.item(a.items[i]), x, y);
