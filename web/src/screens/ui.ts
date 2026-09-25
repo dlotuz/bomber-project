@@ -2,13 +2,12 @@ import type { SpriteBank } from '../render/sprite-bank';
 import { drawTextCentered, SCREEN_W, SCREEN_H } from '../render/draw-game';
 import type { MenuList } from './menu';
 
+export { PLAYER_COLORS } from '../render/draw-game';
+
 export const COLORS = {
   title: '#ffd23f', text: '#ffffff', dim: '#6f7a99', value: '#6ad0ff', error: '#ff5f5f', ok: '#5fe07a',
   bgA: '#141a3a', bgB: '#18204a', panel: '#0b1f3d', panelEdge: '#ffd23f', panelShadow: '#050b18',
 };
-
-/** Cores dos cursores de cada jogador (P1..P5). */
-export const PLAYER_COLORS = ['#ff5f5f', '#5fa8ff', '#ffd23f', '#5fe07a', '#c77dff'];
 
 export const ROW_H = 16;
 /** Linha de base do painel dos menus (o rodapé fica logo abaixo). */

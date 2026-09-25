@@ -31,19 +31,20 @@ export function charactersScreen(app: App): Screen & { readonly locked: readonly
     id: 'characters',
     get locked() { return locked; },
     update(inp) {
-      let wantsBack = false;
       for (let i = 0; i < 5; i++) {
         if (!human(i)) continue;
         const p = inp.pressed[i];
         if (!locked[i]) {
           moveCursor(i, p);
           if (p & BTN.A) locked[i] = true;
-          else if (p & BTN.B) wantsBack = true;
         } else if (p & BTN.B) {
           locked[i] = false;
         }
       }
-      if (wantsBack && [0, 1, 2, 3, 4].every(i => !human(i) || !locked[i] || app.settings.devices[i] === 'none')) {
+      // B de qualquer dispositivo serve de saída: um humano pode ter um controle desconectado
+      // (device atribuído mas sem sinal), e travar nessa tela sem forma de voltar seria um beco sem saída.
+      const noOneLockedIn = [0, 1, 2, 3, 4].every(i => !human(i) || !locked[i] || app.settings.devices[i] === 'none');
+      if ((inp.pressedAny & BTN.B) && noOneLockedIn) {
         app.save();
         app.go(rulesScreen(app));
         return;

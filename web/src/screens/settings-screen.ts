@@ -13,8 +13,12 @@ export const DEVICE_LABEL: Record<DeviceId, string> = {
 /** CONFIGURAÇÕES: qual dispositivo controla cada jogador, nomes, teclas e restaurar padrão. */
 export function settingsScreen(app: App): Screen {
   const st = app.settings;
+  // Um dispositivo (que não 'none') atribuído a mais de um jogador é um erro de configuração comum
+  // (dois jogadores compartilhando sem querer o mesmo teclado/controle): fica em vermelho para chamar atenção.
+  const isDuplicate = (i: number) => st.devices[i] !== 'none' && st.devices.filter(d => d === st.devices[i]).length > 1;
   const items: MenuItem[] = [0, 1, 2, 3, 4].map(i => ({
     label: `JOGADOR ${i + 1}`, value: () => DEVICE_LABEL[st.devices[i]],
+    valueColor: () => (isDuplicate(i) ? COLORS.error : COLORS.value),
     left: () => { st.devices[i] = cycle(DEVICE_IDS, st.devices[i], -1); app.save(); },
     right: () => { st.devices[i] = cycle(DEVICE_IDS, st.devices[i], 1); app.save(); },
   }));
@@ -82,7 +86,7 @@ export function namesScreen(app: App): Screen & { readonly editing: number } {
         const y = r.y + 7 + editing * ROW_H;
         const x0 = r.x + 16 + (r.w - 26) - NAME_MAX * 6;
         buf.forEach((ch, k) => {
-          const img = bank.text(ch === ' ' ? '-' : ch, k === pos ? COLORS.title : COLORS.value);
+          const img = bank.text(ch === ' ' ? '.' : ch, k === pos ? COLORS.title : COLORS.value);
           if (!(k === pos && ((frame >> 3) & 1))) ctx.drawImage(img, x0 + k * 6, y);
         });
         drawFooter(ctx, bank, 'CIMA/BAIXO: LETRA  A: PRÓXIMA  START: OK');
@@ -101,6 +105,10 @@ const ACTION_LABEL: Record<keyof KeyMap, string> = {
 export function remapScreen(app: App, k: 0 | 1): Screen & { readonly capturing: keyof KeyMap | null } {
   const map = app.settings.keymaps[k];
   let capturing: keyof KeyMap | null = null;
+  // Depois de capturar uma tecla (ou cancelar com Escape), ignora tudo até soltar todos os botões:
+  // sem isso, uma tecla recém-remapeada que ainda está pressionada aparece como "recém-apertada" no
+  // próximo tick (o mapeamento mudou, então a borda é nova) e sai da tela ou reabre a captura sozinha.
+  let suppress = false;
   const items: MenuItem[] = KEY_FIELDS.map(f => ({
     label: ACTION_LABEL[f],
     value: () => (capturing === f ? '...' : keyLabel(map[f])),
@@ -112,10 +120,15 @@ export function remapScreen(app: App, k: 0 | 1): Screen & { readonly capturing: 
     id: 'remap',
     get capturing() { return capturing; },
     update(inp) {
+      if (suppress) {
+        if (inp.any === 0) suppress = false;
+        return;
+      }
       if (capturing) {
         if (inp.key) {
           if (inp.key !== 'Escape') { map[capturing] = inp.key; app.applyKeymaps(); app.save(); }
           capturing = null;
+          suppress = true;
         }
         return;
       }

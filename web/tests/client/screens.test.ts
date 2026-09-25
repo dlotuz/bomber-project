@@ -1,14 +1,16 @@
 import { App } from '../../src/app/app';
 import { defaultSettings, type Settings } from '../../src/app/settings';
-import { idleInput } from '../../src/input/input';
-import { BTN } from '../../src/core';
+import { idleInput, buildInput, InputManager, emptyDevices, type DeviceState } from '../../src/input/input';
+import { BTN, INTRO_FRAMES } from '../../src/core';
 import type { Session } from '../../src/game/session';
+import { ROUND_OVER_FRAMES, SCOREBOARD_FRAMES, SKIP_AFTER } from '../../src/game/session';
 import { titleScreen } from '../../src/screens/title';
 import { playersScreen, ERROR_FRAMES } from '../../src/screens/players';
 import { rulesScreen } from '../../src/screens/rules';
 import { charactersScreen, AUTO_ADVANCE_FRAMES } from '../../src/screens/characters';
 import { stageScreen, START_DELAY_FRAMES } from '../../src/screens/stage';
 import { settingsScreen, namesScreen, remapScreen } from '../../src/screens/settings-screen';
+import { COLORS } from '../../src/screens/ui';
 
 function mkApp(settings: Settings = defaultSettings()) {
   let saves = 0;
@@ -162,6 +164,14 @@ describe('personagens', () => {
     press(app, BTN.B, 1);
     expect(app.screen.id).toBe('rules');
   });
+  it('B de qualquer dispositivo volta para regras mesmo com os controles dos humanos desconectados', () => {
+    const { app } = mkApp();
+    app.settings.setup.slots = ['human', 'human', 'off', 'off', 'off'];
+    app.settings.devices = ['gp2', 'gp3', 'gp0', 'gp1', 'none'];
+    app.go(charactersScreen(app));
+    press(app, BTN.B); // nenhum slot: um dispositivo não atribuído a ninguém aperta B
+    expect(app.screen.id).toBe('rules');
+  });
 });
 
 describe('fase e batalha', () => {
@@ -190,7 +200,7 @@ describe('fase e batalha', () => {
     expect(s.cfg.rules.active).toEqual([true, true, false, true, false]);
     expect(s.cfg.names[0]).toBe('ANA');
   });
-  it('sair pela pausa volta para a seleção de fase; a animação congela na pausa', () => {
+  it('sair pela pausa pede confirmação; volta para a seleção de fase só depois de A; a animação congela na pausa', () => {
     const { app } = mkApp();
     const scr = stageScreen(app);
     app.go(scr);
@@ -202,7 +212,59 @@ describe('fase e batalha', () => {
     idle(app, 10);
     expect(app.frame).toBe(f);
     press(app, BTN.B, 0);
+    expect(app.screen.id).toBe('battle');
+    const s = (app.screen as unknown as { session: Session }).session;
+    expect(s.confirmQuit).toBe(true);
+    press(app, BTN.A, 0);
     expect(app.screen.id).toBe('stage');
+  });
+  it('formação toda CPU: pausa e confirma a saída com um dispositivo sem jogador atribuído', () => {
+    const { app } = mkApp();
+    app.settings.setup.slots = ['cpu', 'cpu', 'off', 'off', 'off'];
+    const scr = stageScreen(app);
+    app.go(scr);
+    press(app, BTN.A);
+    idle(app, START_DELAY_FRAMES);
+    expect(app.screen.id).toBe('battle');
+    const s = (app.screen as unknown as { session: Session }).session;
+    expect(s.anyControl).toBe(true);
+    press(app, BTN.START);
+    const f = app.frame;
+    idle(app, 5);
+    expect(app.frame).toBe(f);
+    expect(s.paused).toBe(true);
+    press(app, BTN.B);
+    expect(s.confirmQuit).toBe(true);
+    press(app, BTN.A);
+    expect(app.screen.id).toBe('stage');
+  });
+  it('formação com humanos: partida vai à vitória e volta para a fase depois de START', () => {
+    const { app } = mkApp();
+    app.settings.setup.slots = ['human', 'human', 'off', 'off', 'off'];
+    app.settings.setup.rules.matches = 1;
+    app.go(stageScreen(app));
+    press(app, BTN.A);
+    idle(app, START_DELAY_FRAMES);
+    expect(app.screen.id).toBe('battle');
+    const s = (app.screen as unknown as { session: Session }).session;
+    idle(app, INTRO_FRAMES + 1);
+    s.round.players.forEach((p, i) => { if (i !== 0) p.alive = false; });
+    idle(app, 1);
+    expect(s.phase).toBe('roundOver');
+    idle(app, ROUND_OVER_FRAMES);
+    expect(s.phase).toBe('scoreboard');
+    idle(app, SCOREBOARD_FRAMES);
+    expect(s.phase).toBe('victory');
+    idle(app, SKIP_AFTER + 1);
+    press(app, BTN.START, 0);
+    expect(app.screen.id).toBe('stage');
+  });
+  it('formação inválida na fase: A/START voltam para jogadores em vez de começar', () => {
+    const { app } = mkApp();
+    app.settings.setup.slots = ['human', 'off', 'off', 'off', 'off'];
+    app.go(stageScreen(app));
+    press(app, BTN.A);
+    expect(app.screen.id).toBe('players');
   });
 });
 
@@ -215,6 +277,21 @@ describe('configurações', () => {
     press(app, BTN.LEFT); press(app, BTN.LEFT);
     expect(app.settings.devices[0]).toBe('none');
     expect(saves()).toBe(3);
+  });
+  it('dispositivo atribuído a mais de um jogador aparece em vermelho', () => {
+    const { app } = mkApp();
+    app.settings.devices = ['kb0', 'kb0', 'gp0', 'gp1', 'none'];
+    const scr = settingsScreen(app);
+    const calls: { text: string; color: string }[] = [];
+    const bank = { text: (s: string, color: string) => { calls.push({ text: s, color }); return { width: s.length * 6, height: 10 }; } };
+    const ctx = { fillStyle: '', fillRect() {}, drawImage() {} };
+    scr.draw(ctx as unknown as CanvasRenderingContext2D, bank as unknown as import('../../src/render/sprite-bank').SpriteBank, 0);
+    const duped = calls.filter(c => c.text === 'TECLADO 1');
+    expect(duped.length).toBeGreaterThan(0);
+    expect(duped.every(c => c.color === COLORS.error)).toBe(true);
+    const single = calls.filter(c => c.text === 'CONTROLE 1');
+    expect(single.length).toBeGreaterThan(0);
+    expect(single.every(c => c.color === COLORS.value)).toBe(true);
   });
   it('restaurar padrão volta controles, teclas e nomes', () => {
     const { app, keymaps } = mkApp();
@@ -267,5 +344,77 @@ describe('configurações', () => {
     app.update(esc);
     expect(scr.capturing).toBeNull();
     expect(app.settings.keymaps[0].up).toBe('KeyI');
+  });
+});
+
+describe('remap não se dispara de novo com a tecla ainda segurada', () => {
+  class FakeTarget {
+    handlers = new Map<string, Set<EventListener>>();
+    addEventListener(t: string, fn: EventListener) { if (!this.handlers.has(t)) this.handlers.set(t, new Set()); this.handlers.get(t)!.add(fn); }
+    removeEventListener(t: string, fn: EventListener) { this.handlers.get(t)?.delete(fn); }
+    fire(t: string, e: object = {}) { for (const fn of this.handlers.get(t) ?? []) fn(e as Event); }
+    key(t: 'keydown' | 'keyup', code: string, extra: object = {}) {
+      const ev = { code, prevented: false, preventDefault() { ev.prevented = true; }, ...extra };
+      this.fire(t, ev);
+      return ev;
+    }
+  }
+
+  function setup() {
+    const settings = defaultSettings();
+    const t = new FakeTarget();
+    const input = new InputManager(t, settings.keymaps, () => []);
+    const app = new App(settings, { save: () => {}, setKeymaps: m => input.setKeymaps(m), seed: () => 1 });
+    let prev: DeviceState = emptyDevices();
+    const drive = () => {
+      const cur = input.poll();
+      app.update(buildInput(cur, prev, app.settings.devices, input.takeLastKey()));
+      prev = cur;
+    };
+    const tapKey = (code: string) => { t.key('keydown', code); drive(); t.key('keyup', code); drive(); };
+    return { app, t, drive, tapKey };
+  }
+
+  it('remapear B para uma tecla segurada não sai do remap nem recaptura', () => {
+    const { app, t, drive, tapKey } = setup();
+    const scr = remapScreen(app, 0);
+    app.go(scr);
+    // KEY_FIELDS = up, down, left, right, a, b, y, start; 'b' está no índice 5.
+    for (let i = 0; i < 5; i++) tapKey('KeyS'); // baixo (kb0) 5x
+    tapKey('KeyJ'); // A (kb0): entra em captura no campo 'b'
+    expect(scr.capturing).toBe('b');
+    t.key('keydown', 'KeyX'); // segura a tecla nova sem soltar
+    drive(); // tick da captura: grava b = KeyX, entra em modo "ignorar até soltar"
+    expect(scr.capturing).toBeNull();
+    expect(app.settings.keymaps[0].b).toBe('KeyX');
+    for (let i = 0; i < 5; i++) drive(); // KeyX ainda segurada, agora mapeada para B
+    expect(app.screen.id).toBe('remap');
+    expect(scr.capturing).toBeNull();
+    t.key('keyup', 'KeyX');
+    drive();
+  });
+
+  it('remapear A para a mesma tecla não reentra em captura imediatamente', () => {
+    const { app, t, drive, tapKey } = setup();
+    const scr = remapScreen(app, 0);
+    app.go(scr);
+    for (let i = 0; i < 5; i++) tapKey('KeyS'); // até 'b'
+    tapKey('KeyJ');
+    t.key('keydown', 'KeyX');
+    drive();
+    t.key('keyup', 'KeyX');
+    drive(); // solta: sai do modo "ignorar"
+    tapKey('KeyW'); // sobe uma linha: volta para 'a'
+    tapKey('KeyJ'); // captura 'a'
+    expect(scr.capturing).toBe('a');
+    t.key('keydown', 'KeyX'); // mesma tecla já usada em 'b'
+    drive(); // grava a = KeyX também
+    expect(scr.capturing).toBeNull();
+    expect(app.settings.keymaps[0].a).toBe('KeyX');
+    for (let i = 0; i < 5; i++) drive(); // KeyX segurada mapeia A e B ao mesmo tempo
+    expect(scr.capturing).toBeNull();
+    expect(app.screen.id).toBe('remap');
+    t.key('keyup', 'KeyX');
+    drive();
   });
 });

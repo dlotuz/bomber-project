@@ -66,8 +66,14 @@ export function drawSession(ctx: CanvasRenderingContext2D, s: Session, view: Vie
       if (s.paused) {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
         ctx.fillRect(0, 24, SCREEN_W, SCREEN_H - 24);
-        drawTextCentered(ctx, bank, 'PAUSA', '#ffffff', 96, 2);
-        drawTextCentered(ctx, bank, 'START: CONTINUAR   B: SAIR', '#6ad0ff', 124, 1);
+        if (s.confirmQuit) {
+          drawTextCentered(ctx, bank, 'SAIR DA PARTIDA?', '#ffffff', 84, 2);
+          drawTextCentered(ctx, bank, 'SAIR DA PARTIDA?', '#ffffff', 108, 2);
+          drawTextCentered(ctx, bank, 'A: SIM   B: NÃO', '#6ad0ff', 136, 1);
+        } else {
+          drawTextCentered(ctx, bank, 'PAUSA', '#ffffff', 96, 2);
+          drawTextCentered(ctx, bank, 'START: CONTINUAR   B: SAIR', '#6ad0ff', 124, 1);
+        }
       }
       if (s.phase === 'roundOver') {
         drawTextCentered(ctx, bank, roundOverText(s.round.winners, s.cfg.rules.mode, s.cfg.rules.teams, s.cfg.names), '#ffd23f', 100, 2);

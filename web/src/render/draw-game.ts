@@ -5,9 +5,17 @@ import { flameCells, flameShrink, walkFrame, dyingVisible, formatClock, type Vie
 
 export { SCREEN_W, SCREEN_H };
 
+/** Cores dos cursores/etiquetas de cada jogador (P1..P5). */
+export const PLAYER_COLORS = ['#ff5f5f', '#5fa8ff', '#ffd23f', '#5fe07a', '#c77dff'];
+
+/** Cor da etiqueta acima do bomber em modo times (time 0 = vermelho, time 1 = branco). */
+const TEAM_TAG_COLORS = ['#ff5f5f', '#ffffff'];
+
 const tileX = (gx: number) => 16 * gx + 8;
 const tileY = (gy: number) => 16 * gy + 24;
 const toPx = (sub: number) => Math.floor(sub / 8);
+/** Abaixo desta linha começa o HUD; a etiqueta nunca pode subir até lá. */
+const HUD_BOTTOM = 24;
 
 export function drawTextCentered(ctx: CanvasRenderingContext2D, bank: SpriteBank, text: string, color: string, y: number, scale: number): void {
   const img = bank.text(text, color);
@@ -73,6 +81,14 @@ export function drawRound(ctx: CanvasRenderingContext2D, round: RoundState, view
     const frameIdx = p.dying > 0 ? 0 : walkFrame(view.walk[p.slot]);
     ctx.drawImage(bank.bomber(chars[p.slot], p.facing, frameIdx), sx, sy);
     if (p.carrying >= 0) ctx.drawImage(bank.bomb(0), sx, sy - 12);
+    // "NP" acima da cabeça: distingue bombers idênticos (mesmo personagem). Some durante a morte.
+    if (p.dying <= 0) {
+      const color = round.rules.mode === 'team' ? TEAM_TAG_COLORS[p.team] : PLAYER_COLORS[p.slot];
+      const tag = bank.text(`${p.slot + 1}P`, color);
+      const tagX = sx + 8 - Math.floor(tag.width / 2);
+      const tagY = Math.max(HUD_BOTTOM, sy - 9);
+      ctx.drawImage(tag, tagX, tagY);
+    }
   }
 
   drawHud(ctx, round, bank, chars, crowns);

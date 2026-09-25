@@ -2,10 +2,11 @@ import { BTN, LAYOUTS, STAGE_NAMES } from '../core';
 import type { App, Screen } from '../app/app';
 import { THEMES } from '../render/art/tiles';
 import { SCREEN_W, drawTextCentered } from '../render/draw-game';
-import { configFromSetup } from '../game/config';
+import { configFromSetup, validateSetup } from '../game/config';
 import { COLORS, drawBackground, drawFooter, drawPanel, drawTitleBar } from './ui';
 import { charactersScreen } from './characters';
 import { battleScreen } from './battle';
+import { playersScreen } from './players';
 
 export const START_DELAY_FRAMES = 45;
 const STAGES = 10;
@@ -42,7 +43,10 @@ export function stageScreen(app: App): Screen & { readonly starting: number } {
       const p = inp.pressedAny;
       if (p & BTN.LEFT) shift(-1);
       else if (p & BTN.RIGHT) shift(1);
-      else if (p & (BTN.A | BTN.START)) starting = START_DELAY_FRAMES;
+      else if (p & (BTN.A | BTN.START)) {
+        if (validateSetup(setup.mode, setup.slots, setup.teams)) app.go(playersScreen(app));
+        else starting = START_DELAY_FRAMES;
+      }
       else if (p & BTN.B) app.go(charactersScreen(app));
     },
     draw(ctx, bank, frame) {
