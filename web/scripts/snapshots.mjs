@@ -1,3 +1,4 @@
+// Requer o Google Chrome instalado (playwright-core usa channel 'chrome', não baixa o Chromium).
 // Abre o jogo no Chrome instalado, joga alguns frames e salva screenshots em web/snapshots/.
 import { chromium } from 'playwright-core';
 import { spawn } from 'node:child_process';
@@ -38,8 +39,10 @@ try {
   await shot('04-explosion');
   await page.evaluate(() => { window.__crown.session.round.players.forEach((p, i) => { if (i !== 2) p.alive = false; }); });
   await sleep(400); await shot('05-round-over');
-  await sleep(2600); await shot('06-scoreboard');
-  await sleep(9200); await shot('07-victory');
+  await page.waitForFunction(() => window.__crown.session?.phase === 'scoreboard', null, { timeout: 15000 });
+  await sleep(300); await shot('06-scoreboard');
+  await page.waitForFunction(() => window.__crown.session?.phase === 'victory', null, { timeout: 15000 });
+  await sleep(300); await shot('07-victory');
 
   for (const stage of [5, 8]) {
     await page.goto(`http://localhost:${PORT}/?seed=3&players=5&stage=${stage}&debug=1`);

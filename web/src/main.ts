@@ -1,11 +1,12 @@
 import { BTN } from './core';
 import { parseConfig } from './game/config';
-import { createSession, updateSession, type Session } from './game/session';
+import { createSession, type Session } from './game/session';
 import { InputManager } from './input/input';
 import { startLoop } from './app/loop';
+import { tickGame } from './app/tick';
 import { createDisplay } from './render/display';
 import { SpriteBank } from './render/sprite-bank';
-import { createView, updateView } from './render/view';
+import { createView } from './render/view';
 import { drawSession, drawTitle } from './render/draw-screens';
 
 const cfg = parseConfig(window.location.search);
@@ -17,25 +18,23 @@ let session: Session | null = null;
 let prevPads = [0, 0, 0, 0, 0];
 let frame = 0;
 
-// Gancho para as screenshots automáticas (web/scripts/snapshots.mjs); só existe com ?debug.
-if (new URLSearchParams(window.location.search).has('debug')) {
+// Gancho para as screenshots automáticas (web/scripts/snapshots.mjs); só existe em dev com ?debug.
+if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('debug')) {
   (window as unknown as { __crown: { readonly session: Session | null } }).__crown = { get session() { return session; } };
 }
 
 startLoop(() => {
-  frame++;
   const pads = input.poll();
   if (!session) {
+    frame++;
     const start = pads.some((p, i) => (p & ~prevPads[i] & (BTN.START | BTN.A)) !== 0);
     prevPads = pads;
-    if (start) {
-      session = createSession(cfg, cfg.seed ?? (Date.now() >>> 0));
-      session.prevPads = [...pads]; // o START que abriu a partida não pode pausá-la
-    }
+    if (start) session = createSession(cfg, cfg.seed ?? (Date.now() >>> 0), pads);
     return;
   }
-  const events = updateSession(session, pads);
-  updateView(view, session.round, events);
+  tickGame(session, view, pads);
+  // Congela a animação (bombas, blocos queimando) durante a pausa; o core já congela sozinho.
+  if (!session.paused) frame++;
 }, () => {
   if (session) drawSession(ctx, session, view, bank, frame);
   else drawTitle(ctx, bank, frame);

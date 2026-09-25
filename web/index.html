@@ -7,11 +7,22 @@
   <style>
     html, body { margin: 0; height: 100%; background: #000000; }
     body { display: flex; align-items: center; justify-content: center; overflow: hidden; }
-    canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+    canvas { image-rendering: crisp-edges; image-rendering: pixelated; display: block; }
+    .visually-hidden {
+      position: absolute; width: 1px; height: 1px; margin: -1px; border: 0; padding: 0;
+      overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap;
+    }
   </style>
 </head>
 <body>
-  <canvas id="screen"></canvas>
+  <canvas id="screen" role="img" aria-label="Crown Blast — arena de batalha">
+    Seu navegador não suporta canvas; não é possível exibir o jogo Crown Blast.
+  </canvas>
+  <p class="visually-hidden">
+    Controles: Jogador 1 usa WASD para mover, J/K/L para ações e Enter para START.
+    Jogador 2 usa as setas para mover, Numpad 1/2/3 para ações e Numpad Enter para START.
+    Controles também são lidos de gamepads conectados.
+  </p>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

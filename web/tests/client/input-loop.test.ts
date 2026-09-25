@@ -49,4 +49,13 @@ describe('loop de passo fixo', () => {
     expect(r.steps).toBe(MAX_STEPS);
     expect(r.acc).toBeLessThanOrEqual(STEP_MS);
   });
+  it('não deixa o jitter do rAF (±0.3ms) acumular passos extras ou faltantes', () => {
+    let acc = 0;
+    for (let i = 0; i < 600; i++) {
+      const dt = STEP_MS + (i % 2 === 0 ? 0.3 : -0.3);
+      const r = stepsFor(acc, dt);
+      expect(r.steps).toBe(1);
+      acc = r.acc;
+    }
+  });
 });

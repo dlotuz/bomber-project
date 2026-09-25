@@ -84,4 +84,34 @@ describe('sessão', () => {
     tap(s, 0, BTN.START);
     expect(s.paused).toBe(false);
   });
+  it('START já pressionado ao abrir a partida (initialPads) não pausa no primeiro tick', () => {
+    const pads = [BTN.START, 0, 0, 0, 0];
+    const s = createSession(parseConfig('?players=2'), 1, pads);
+    expect(s.prevPads).toEqual(pads);
+    updateSession(s, pads);
+    expect(s.paused).toBe(false);
+  });
+  it('modo time: time 0 vence → campeões são todos os slots do time 0', () => {
+    const s = createSession(parseConfig('?players=5&mode=team&matches=1'), 1);
+    run(s, INTRO_FRAMES + 1);
+    s.round.players.forEach(p => { if (p.team !== 0) p.alive = false; });
+    run(s, 1);
+    expect(s.phase).toBe('roundOver');
+    run(s, ROUND_OVER_FRAMES);
+    expect(s.phase).toBe('scoreboard');
+    expect(s.champions).toEqual([0, 2, 4]);
+    run(s, SCOREBOARD_FRAMES);
+    expect(s.phase).toBe('victory');
+  });
+  it('empate por tempo esgotado: sem vencedor, sem coroa, ainda vai a placar', () => {
+    const s = createSession(parseConfig('?players=2&matches=3'), 1);
+    run(s, INTRO_FRAMES + 1);
+    s.round.timeLeft = 1;
+    run(s, 1);
+    expect(s.phase).toBe('roundOver');
+    run(s, ROUND_OVER_FRAMES);
+    expect(s.phase).toBe('scoreboard');
+    expect(s.lastWinners).toEqual([]);
+    expect(s.match.crowns).toEqual([0, 0, 0, 0, 0]);
+  });
 });

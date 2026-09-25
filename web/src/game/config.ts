@@ -1,4 +1,5 @@
 import { defaultRules, type Rules } from '../core';
+import { CHARACTERS } from '../render/art/bomber';
 
 export interface GameConfig { rules: Rules; stage: number; chars: number[]; seed: number | null }
 
@@ -26,6 +27,6 @@ export function parseConfig(search: string): GameConfig {
     active: [0, 1, 2, 3, 4].map(i => i < players),
   };
   const raw = (q.get('chars') ?? '').split(',').map(s => Number.parseInt(s, 10));
-  const chars = [0, 1, 2, 3, 4].map(i => (Number.isInteger(raw[i]) && raw[i] >= 0 && raw[i] < 6 ? raw[i] : i));
+  const chars = [0, 1, 2, 3, 4].map(i => (Number.isInteger(raw[i]) && raw[i] >= 0 && raw[i] < CHARACTERS.length ? raw[i] : i));
   return { rules, stage: int(q.get('stage'), 1, 1, 10), chars, seed: q.has('seed') ? int(q.get('seed'), 0, 0, 2 ** 31 - 1) : null };
 }

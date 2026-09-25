@@ -10,15 +10,18 @@ export type SessionPhase = 'battle' | 'roundOver' | 'scoreboard' | 'victory';
 export interface Session {
   cfg: GameConfig; seed: number; matchNo: number;
   match: MatchState; round: RoundState;
-  phase: SessionPhase; timer: number; paused: boolean;
+  phase: SessionPhase; timer: number; paused: boolean; matchOver: boolean;
+  /** true só nos ticks em que `step()` do core de fato rodou (ver web/src/app/tick.ts). */
+  stepped: boolean;
   prevPads: number[]; lastWinners: number[]; champions: number[];
 }
 
-export function createSession(cfg: GameConfig, seed: number): Session {
+export function createSession(cfg: GameConfig, seed: number, initialPads: number[] = [0, 0, 0, 0, 0]): Session {
   const match = createMatch(cfg.rules, cfg.stage, seed);
   return {
-    cfg, seed, matchNo: 1, match, round: startRound(match), phase: 'battle', timer: 0, paused: false,
-    prevPads: [0, 0, 0, 0, 0], lastWinners: [], champions: [],
+    cfg, seed, matchNo: 1, match, round: startRound(match), phase: 'battle', timer: 0, paused: false, matchOver: false,
+    stepped: false,
+    prevPads: [...initialPads], lastWinners: [], champions: [],
   };
 }
 
@@ -28,11 +31,13 @@ export function updateSession(s: Session, pads: number[]): GameEvent[] {
   s.prevPads = [...pads];
   const hit = (mask: number) => pressed.some((p, i) => s.cfg.rules.active[i] && (p & mask) !== 0);
   let ev: GameEvent[] = [];
+  s.stepped = false;
   switch (s.phase) {
     case 'battle':
       if (hit(BTN.START)) s.paused = !s.paused;
       if (s.paused) break;
       ev = step(s.round, pads);
+      s.stepped = true;
       if (s.round.phase === 'result') { s.phase = 'roundOver'; s.timer = ROUND_OVER_FRAMES; }
       break;
     case 'roundOver':
@@ -40,6 +45,7 @@ export function updateSession(s: Session, pads: number[]): GameEvent[] {
         const r = finishRound(s.match, s.round);
         s.lastWinners = r.winners;
         s.champions = r.champions;
+        s.matchOver = r.matchOver;
         s.phase = 'scoreboard';
         s.timer = SCOREBOARD_FRAMES;
       }
@@ -47,7 +53,7 @@ export function updateSession(s: Session, pads: number[]): GameEvent[] {
     case 'scoreboard':
       s.timer--;
       if (s.timer <= 0 || (SCOREBOARD_FRAMES - s.timer > SKIP_AFTER && hit(BTN.START | BTN.A))) {
-        if (s.match.over) { s.phase = 'victory'; s.timer = 0; }
+        if (s.matchOver) { s.phase = 'victory'; s.timer = 0; }
         else { s.round = startRound(s.match); s.phase = 'battle'; }
       }
       break;
@@ -60,6 +66,7 @@ export function updateSession(s: Session, pads: number[]): GameEvent[] {
         s.phase = 'battle';
         s.lastWinners = [];
         s.champions = [];
+        s.matchOver = false;
       }
       break;
   }

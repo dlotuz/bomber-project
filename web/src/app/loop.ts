@@ -3,7 +3,8 @@ export const MAX_STEPS = 5;
 
 /** Quantos ticks de 60 Hz rodar para `dtMs` decorridos, e quanto sobra no acumulador. */
 export function stepsFor(acc: number, dtMs: number): { steps: number; acc: number } {
-  let a = acc + Math.max(0, Math.min(dtMs, 250));
+  const dt = Math.abs(dtMs - STEP_MS) < 1 ? STEP_MS : dtMs;
+  let a = acc + Math.max(0, Math.min(dt, 250));
   let steps = 0;
   while (a >= STEP_MS && steps < MAX_STEPS) { a -= STEP_MS; steps++; }
   if (steps === MAX_STEPS) a = Math.min(a, STEP_MS);

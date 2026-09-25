@@ -8,9 +8,10 @@ export function createDisplay(canvas: HTMLCanvasElement): CanvasRenderingContext
   const ctx = canvas.getContext('2d')!;
   ctx.imageSmoothingEnabled = false;
   const fit = () => {
-    const s = Math.max(1, Math.floor(Math.min(window.innerWidth / SCREEN_W, window.innerHeight / SCREEN_H)));
-    canvas.style.width = `${SCREEN_W * s}px`;
-    canvas.style.height = `${SCREEN_H * s}px`;
+    const dpr = window.devicePixelRatio || 1;
+    const s = Math.max(1, Math.floor(Math.min((window.innerWidth * dpr) / SCREEN_W, (window.innerHeight * dpr) / SCREEN_H)));
+    canvas.style.width = `${(SCREEN_W * s) / dpr}px`;
+    canvas.style.height = `${(SCREEN_H * s) / dpr}px`;
   };
   window.addEventListener('resize', fit);
   fit();
