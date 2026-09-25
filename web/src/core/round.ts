@@ -46,11 +46,14 @@ export function createRound(stage: number, rules: Rules, seed: number): RoundSta
   const rng = makeRng(seed);
   const arena = buildArena(stage, rng);
   const players = makePlayers(stage, rules, rng);
+  const totalFrames = TIME_OPTIONS_FRAMES[rules.timeIdx];
+  const startAt = totalFrames < 0 ? PRESSURE_START_FRAMES : Math.min(PRESSURE_START_FRAMES, Math.floor(totalFrames / 2));
   return {
     rng, frame: 0, phase: 'intro', introLeft: INTRO_FRAMES,
-    timeLeft: TIME_OPTIONS_FRAMES[rules.timeIdx], stage, rules,
+    timeLeft: totalFrames, stage, rules,
     players, bombs: [], nextBombId: 1, arena,
-    pressure: { order: TIME_OPTIONS_FRAMES[rules.timeIdx] < 0 ? [] : pressureOrder(0, PRESSURE_RINGS), next: 0, timer: 0, overtime: false }, winners: [],
+    pressure: { order: totalFrames < 0 ? [] : pressureOrder(0, PRESSURE_RINGS), next: 0, timer: 0, overtime: false, startAt },
+    winners: [], counted: false,
   };
 }
 
@@ -59,7 +62,14 @@ export function killPlayer(s: RoundState, p: Player, ev: GameEvent[]): void {
   p.dying = DEATH_FRAMES;
   if (p.carrying >= 0) {
     const b = s.bombs.find(x => x.id === p.carrying);
-    if (b) { b.carried = false; b.x = centerX(cellX(p.x)); b.y = centerY(cellY(p.y)); }
+    if (b) {
+      const gx = cellX(p.x), gy = cellY(p.y);
+      if (s.arena.cells[idx(gx, gy)] === CELL.HARD) {
+        s.bombs = s.bombs.filter(x => x.id !== b.id);
+      } else {
+        b.carried = false; b.x = centerX(gx); b.y = centerY(gy);
+      }
+    }
     p.carrying = -1;
   }
   ev.push({ type: 'player_hit', slot: p.slot });
@@ -83,18 +93,29 @@ function dropBlock(s: RoundState, i: number, ev: GameEvent[]): void {
   const a = s.arena;
   a.cells[i] = CELL.HARD; a.items[i] = ITEM.NONE; a.hidden[i] = ITEM.NONE; a.burning[i] = 0; a.flame[i] = 0;
   s.bombs = s.bombs.filter(b => b.carried || b.flight || idx(cellX(b.x), cellY(b.y)) !== i);
+  for (const p of s.players) {
+    if (p.active && p.alive && p.dying === 0 && idx(cellX(p.x), cellY(p.y)) === i) killPlayer(s, p, ev);
+  }
   ev.push({ type: 'pressure_block', gx: i % 15, gy: Math.floor(i / 15) });
+}
+
+/** Jogadores ainda de pé (ativos, vivos, sem animação de morte em curso); em modo `team`, times distintos entre eles. */
+function standingGroups(s: RoundState): number {
+  const standing = s.players.filter(p => p.active && p.alive && p.dying === 0);
+  if (s.rules.mode === 'team') return new Set(standing.map(p => p.team)).size;
+  return standing.length;
 }
 
 function tickClock(s: RoundState, ev: GameEvent[]): void {
   if (s.timeLeft < 0) return;
   if (s.timeLeft > 0) s.timeLeft--;
   const pr = s.pressure;
-  if (s.timeLeft === 0 && s.rules.suddenDeath && !pr.overtime) {
+  if (s.timeLeft === 0 && s.rules.suddenDeath && !pr.overtime && standingGroups(s) > 1) {
     pr.overtime = true;
     pr.order = pr.order.concat(pressureOrder(PRESSURE_RINGS, 6));
   }
-  if (s.timeLeft > PRESSURE_START_FRAMES) return;
+  if (s.timeLeft > pr.startAt) return;
+  if (pr.overtime && standingGroups(s) <= 1) return;
   if (!pr.overtime && ++pr.timer < PRESSURE_INTERVAL) return;
   pr.timer = 0;
   while (pr.next < pr.order.length && s.arena.cells[pr.order[pr.next]] === CELL.HARD) pr.next++;
