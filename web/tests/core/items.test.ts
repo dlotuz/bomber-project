@@ -59,6 +59,14 @@ describe('itens', () => {
     run(s, 1);
     expect(s.bombs).toHaveLength(1);
   });
+  it('diarreia respeita maxBombs (nunca mais que o limite de bombas próprias)', () => {
+    const s = newRound({ clear: true });
+    const p = s.players[0];
+    p.disease = DISEASE.DIARRHEA; p.diseaseTimer = 600; p.maxBombs = 2;
+    run(s, 250, input(0, BTN.RIGHT)); // anda por várias casas, tentando soltar bomba a cada frame
+    const own = s.bombs.filter(b => b.owner === 0);
+    expect(own.length).toBeLessThanOrEqual(2);
+  });
   it('contágio por contato', () => {
     const s = newRound({ clear: true });
     s.players[0].disease = DISEASE.SLOW; s.players[0].diseaseTimer = 600;
