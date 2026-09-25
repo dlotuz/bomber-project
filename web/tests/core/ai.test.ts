@@ -101,6 +101,37 @@ describe('mapa de perigo', () => {
     }
     expect(at).toBe(50);
   });
+  it('bomba chutada que entra numa chama explode na hora', () => {
+    const s = newRound({ clear: true });
+    s.arena.flame[idx(5, 5)] = 30;
+    const b = addBomb(s, 3, 5, 100, 1);
+    b.slide = DIR.RIGHT;
+    const d = dangerMap(s);
+    // entra em (5,5) no 12º tick (192 sub = 1,5 casa), com a chama ainda acesa; o core confirma
+    let at = -1, where: number[] = [];
+    const probe = structuredClone(s);
+    for (let f = 1; f <= 40 && at < 0; f++) {
+      for (const e of step(probe, [0, 0, 0, 0, 0])) if (e.type === 'explosion') { at = f; where = [e.gx, e.gy]; }
+    }
+    expect([at, ...where]).toEqual([12, 5, 5]);
+    expect(d[idx(5, 6)]).toBe(12);
+    expect(d[idx(6, 5)]).toBe(12);
+    expect(d[idx(7, 5)]).toBe(SAFE);
+  });
+  it('pressão: todas as casas que ainda vão cair, com o tick exato de cada uma (conferido no core)', () => {
+    const s = newRound({ clear: true, timeIdx: 0 });   // 1:00 → pressão começa com 30 s restantes
+    const total = s.timeLeft;
+    for (let f = 0; f < total - s.pressure.startAt - 200; f++) step(s, [0, 0, 0, 0, 0]);
+    const d = dangerMap(s);
+    const probe = structuredClone(s);
+    const drop = new Map<number, number>();
+    for (let f = 1; f <= 200 + 6 * 90 && drop.size < 20; f++) {
+      for (const e of step(probe, [0, 0, 0, 0, 0])) if (e.type === 'pressure_block') drop.set(idx(e.gx, e.gy), f);
+    }
+    expect(drop.size).toBe(20);
+    for (const [i, f] of drop) expect(d[i], `casa ${i}`).toBe(f);
+    expect(d[idx(7, 6)]).toBe(SAFE);                 // miolo não cai
+  });
 });
 
 describe('comportamento', () => {
@@ -125,6 +156,73 @@ describe('comportamento', () => {
     addBomb(s, 6, 5, 60, 3);
     play(s, [true, false, false, false, false], 2, 120);
     expect(s.players[0].alive).toBe(true);
+  });
+  it('fuga passa por uma casa cuja chama apaga antes de o CPU chegar', () => {
+    // (1,1) com bomba; (1,2) bloqueada; a única saída é (2,1), em chamas por mais 20 frames
+    const s = newRound({ clear: true, active: [true, true, false, false, false] });
+    s.arena.cells[idx(1, 2)] = CELL.SOFT;
+    s.arena.flame[idx(2, 1)] = 20;
+    addBomb(s, 1, 1, 72, 2);
+    play(s, [true, false, false, false, false], 2, 200);
+    expect(s.players[0].alive).toBe(true);
+  });
+  it('tempo de chegada conta o quanto o CPU já andou rumo à próxima casa', () => {
+    // quase na divisa de (5,5) para (6,5); bomba em (4,5) alcance 3; só dá tempo de fugir por (6,5)→(7,5)→(7,4)
+    const s = newRound({ clear: true, active: [true, true, false, false, false] });
+    s.arena.cells[idx(5, 4)] = CELL.SOFT;
+    s.arena.cells[idx(5, 6)] = CELL.SOFT;
+    place(s, 0, 5, 5);
+    s.players[0].x += 60;
+    addBomb(s, 4, 5, 50, 3);
+    play(s, [true, false, false, false, false], 2, 150);
+    expect(s.players[0].alive).toBe(true);
+  });
+  it('sem refúgio alcançável: vai para a casa que explode por último e espera as chamas passarem', () => {
+    // em (3,1): (3,2) bloqueada; à esquerda a bomba A (30 frames) pega (1..3,1); à direita a bomba B (100 frames)
+    // fecha o corredor em (5,1). Ir para (4,1) (explode só em 100) e voltar depois que as chamas de A apagam.
+    const s = newRound({ clear: true, active: [true, true, false, false, false] });
+    s.arena.cells[idx(3, 2)] = CELL.SOFT;
+    s.arena.cells[idx(1, 2)] = CELL.SOFT;
+    place(s, 0, 3, 1);
+    addBomb(s, 1, 1, 30, 2);
+    addBomb(s, 5, 1, 100, 1);
+    play(s, [true, false, false, false, false], 2, 200);
+    expect(s.players[0].alive).toBe(true);
+  });
+  it('Normal e Forte preferem refúgio com duas saídas a um beco igualmente perto', () => {
+    // em (5,5) sobre a própria bomba (alcance 1), laterais fechadas: refúgios a 2 casas são (5,3) e (5,7).
+    // (5,3) é beco (vizinhos fechados); (5,7) tem três saídas. O índice menor seria (5,3).
+    for (const level of [1, 2]) {
+      const s = newRound({ clear: true, active: [true, true, false, false, false] });
+      for (const [x, y] of [[4, 3], [6, 3], [5, 2], [4, 5], [6, 5]]) s.arena.cells[idx(x, y)] = CELL.SOFT;
+      place(s, 0, 5, 5);
+      addBomb(s, 5, 5, 128, 1, 0, [0]);
+      play(s, [true, false, false, false, false], level, 40);
+      expect(Math.floor(s.players[0].y / 128) - 2, `nível ${level}`).toBeGreaterThan(5);   // desceu rumo a (5,7)
+    }
+  });
+  it('não solta bomba na casa de outro jogador com Luva (ele pegaria e arremessaria)', () => {
+    const s = newRound({ active: [true, true, false, false, false], seed: 3 });
+    place(s, 0, 1, 1);
+    place(s, 1, 1, 1);
+    s.players[1].glove = true;
+    const ev = play(s, [true, true, false, false, false], 1, 300);
+    expect(ev.filter(e => e.type === 'bomb_thrown')).toEqual([]);
+    expect(ev.some(e => e.type === 'bomb_placed')).toBe(true);
+  });
+  it('bomba nova/chutada antecipa a próxima decisão conforme o nível', () => {
+    for (const level of [1, 2]) {
+      const s = newRound({ clear: true, active: [true, true, false, false, false] });
+      place(s, 0, 9, 5);
+      place(s, 1, 13, 11);
+      const ai = createAi();
+      const cpu = [true, false, false, false, false];
+      step(s, aiInputs(s, ai, cpu, level));
+      ai.brains[0].nextThink = s.frame + 50;
+      addBomb(s, 3, 5, 100, 2).slide = DIR.RIGHT;
+      step(s, aiInputs(s, ai, cpu, level));
+      expect(ai.brains[0].nextThink - s.frame, `nível ${level}`).toBeLessThanOrEqual(AI_LEVELS[level].react);
+    }
   });
   it('diarreia: CPU re-planeja a cada frame e sobrevive', () => {
     const s = newRound({ clear: true, active: [true, true, false, false, false] });
