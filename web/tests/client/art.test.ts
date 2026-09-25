@@ -30,6 +30,13 @@ describe('pix', () => {
     expect(alphaAt(dst, 1, 0)).toBe(255);
     expect(dst.data[4 + 1]).toBe(255); // pixel verde não foi apagado pelo transparente
   });
+  it('alphaAt retorna 0 para coordenadas fora dos limites', () => {
+    const p = makePix(2, 2);
+    expect(alphaAt(p, -1, 0)).toBe(0);
+    expect(alphaAt(p, 2, 0)).toBe(0);
+    expect(alphaAt(p, 0, -1)).toBe(0);
+    expect(alphaAt(p, 0, 2)).toBe(0);
+  });
 });
 
 describe('personagens', () => {

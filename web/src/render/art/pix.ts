@@ -20,6 +20,7 @@ export function setPx(p: Pix, x: number, y: number, hex: string): void {
 }
 
 export function alphaAt(p: Pix, x: number, y: number): number {
+  if (x < 0 || y < 0 || x >= p.w || y >= p.h) return 0;
   return p.data[(y * p.w + x) * 4 + 3];
 }
 
