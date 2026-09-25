@@ -1,6 +1,6 @@
 import { makePix, fillRect, setPx, noise, type Pix } from './pix';
 
-type FloorKind = 'grass' | 'checker' | 'planks' | 'plates' | 'stars' | 'tiles' | 'sand' | 'carpet';
+type FloorKind = 'hatch' | 'grass' | 'checker' | 'planks' | 'plates' | 'stars' | 'tiles' | 'sand' | 'carpet';
 type SoftKind = 'brick' | 'crate' | 'bush' | 'rock' | 'fabric';
 
 export interface Theme {
@@ -9,11 +9,14 @@ export interface Theme {
   wallFace: string; wallLight: string; wallDark: string;
   soft: SoftKind; softA: string; softB: string; softDark: string;
   bg: string;           // cor de fundo fora da arena
+  hardStyle?: 'bevel' | 'flat';   // pilar com relevo (padrão) ou chapado
+  wallStyle?: 'bevel' | 'plate';  // parede com relevo (padrão) ou placa rebitada
+  checker?: boolean;              // alterna dois pisos em xadrez (padrão: sim)
 }
 
 /** Um tema por fase, na ordem de STAGE_NAMES. */
 export const THEMES: readonly Theme[] = [
-  { floor: 'grass', floorA: '#3f9e4a', floorB: '#4cb058', hardFace: '#a9aeb8', hardLight: '#dde1e8', hardDark: '#666b75', wallFace: '#8a8f99', wallLight: '#b9bdc6', wallDark: '#4f535b', soft: 'brick', softA: '#c3c7cf', softB: '#9da2ac', softDark: '#6d727c', bg: '#2b3b2e' },
+  { floor: 'hatch', floorA: '#3a9f44', floorB: '#4fb453', hardFace: '#8c8f96', hardLight: '#a6a9b0', hardDark: '#5c5f66', wallFace: '#8f9491', wallLight: '#adb2ae', wallDark: '#5a5f5c', soft: 'brick', softA: '#c6c6be', softB: '#b4b4ac', softDark: '#74746e', bg: '#2e3a2f', hardStyle: 'flat', wallStyle: 'plate', checker: false },
   { floor: 'plates', floorA: '#4a5563', floorB: '#58646f', hardFace: '#6f86a3', hardLight: '#a9bdd6', hardDark: '#3e4e63', wallFace: '#8a5a36', wallLight: '#b98357', wallDark: '#51331d', soft: 'crate', softA: '#c48a45', softB: '#a36d31', softDark: '#6b4520', bg: '#1f242b' },
   { floor: 'stars', floorA: '#141a3a', floorB: '#1d2552', hardFace: '#7a7fa8', hardLight: '#b3b8e0', hardDark: '#44486b', wallFace: '#3a3f6b', wallLight: '#6b72b0', wallDark: '#20233f', soft: 'rock', softA: '#9a7a62', softB: '#7c5f49', softDark: '#4f3a2b', bg: '#070918' },
   { floor: 'grass', floorA: '#2f7d3a', floorB: '#378a43', hardFace: '#8d8a80', hardLight: '#bdbab0', hardDark: '#55534c', wallFace: '#5b4632', wallLight: '#806449', wallDark: '#34271b', soft: 'bush', softA: '#4fbf5f', softB: '#3a9a49', softDark: '#1f5e2a', bg: '#16301a' },
@@ -30,6 +33,13 @@ function paintFloor(t: Theme, alt: boolean, seed: number): Pix {
   const A = alt ? t.floorB : t.floorA, B = alt ? t.floorA : t.floorB;
   fillRect(p, 0, 0, 16, 16, A);
   switch (t.floor) {
+    case 'hatch':
+      // zigue-zague horizontal repetido a cada 8 px
+      for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+        const zig = x % 8 < 4 ? x % 8 : 7 - (x % 8);
+        if (y % 8 === zig) setPx(p, x, y, B);
+      }
+      break;
     case 'grass':
       for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (noise(x, y, seed) < 40) setPx(p, x, y, B);
       break;
@@ -68,6 +78,22 @@ function bevel(face: string, light: string, dark: string): Pix {
   fillRect(p, 1, 1, 13, 13, face);
   fillRect(p, 2, 2, 11, 1, light);
   fillRect(p, 2, 2, 1, 11, light);
+  return p;
+}
+
+/** Bloco chapado: face lisa, luz em cima/esquerda, sombra embaixo/direita. */
+function flat(face: string, light: string, dark: string): Pix {
+  const p = makePix(16, 16);
+  fillRect(p, 0, 0, 16, 16, face);
+  fillRect(p, 0, 0, 16, 1, light); fillRect(p, 0, 0, 1, 16, light);
+  fillRect(p, 0, 15, 16, 1, dark); fillRect(p, 15, 0, 1, 16, dark);
+  return p;
+}
+
+/** Placa de metal com emendas e 4 rebites. */
+function plate(face: string, light: string, dark: string): Pix {
+  const p = flat(face, light, dark);
+  for (const [x, y] of [[3, 3], [12, 3], [3, 12], [12, 12]]) { setPx(p, x, y, light); setPx(p, x + 1, y + 1, dark); }
   return p;
 }
 
@@ -128,8 +154,9 @@ export function stageTiles(stage: number): StageTiles {
   const t = THEMES[stage - 1];
   const soft = paintSoft(t, stage);
   return {
-    floor: paintFloor(t, false, stage), floorAlt: paintFloor(t, true, stage + 50),
-    hard: bevel(t.hardFace, t.hardLight, t.hardDark), wall: bevel(t.wallFace, t.wallLight, t.wallDark),
+    floor: paintFloor(t, false, stage), floorAlt: t.checker === false ? paintFloor(t, false, stage) : paintFloor(t, true, stage + 50),
+    hard: (t.hardStyle === 'flat' ? flat : bevel)(t.hardFace, t.hardLight, t.hardDark),
+    wall: (t.wallStyle === 'plate' ? plate : bevel)(t.wallFace, t.wallLight, t.wallDark),
     soft, burning: [burning(soft, 0, stage), burning(soft, 1, stage)], bg: t.bg,
   };
 }

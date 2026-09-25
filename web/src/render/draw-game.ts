@@ -24,19 +24,26 @@ export function drawTextCentered(ctx: CanvasRenderingContext2D, bank: SpriteBank
 }
 
 export function drawHud(ctx: CanvasRenderingContext2D, round: RoundState, bank: SpriteBank, chars: number[], crowns: number[]): void {
-  ctx.fillStyle = '#101428';
+  // barra verde com moldura dourada
+  ctx.fillStyle = '#0b3d16';
   ctx.fillRect(0, 0, SCREEN_W, 24);
-  ctx.fillStyle = '#ffd23f';
-  ctx.fillRect(0, 23, SCREEN_W, 1);
-  ctx.drawImage(bank.text(formatClock(round.timeLeft), '#ffffff'), 6, 6);
-  let x = 52;
+  ctx.fillStyle = '#e8a800';
+  ctx.fillRect(1, 1, SCREEN_W - 2, 22);
+  ctx.fillStyle = '#0b3d16';
+  ctx.fillRect(2, 2, SCREEN_W - 4, 20);
+  ctx.fillStyle = '#1b6a2a';
+  ctx.fillRect(3, 3, SCREEN_W - 6, 18);
+  ctx.drawImage(bank.clock(), 6, 4);
+  const clock = bank.plainText(formatClock(round.timeLeft), '#ffffff');
+  ctx.drawImage(clock, 24, 1, clock.width * 2, clock.height * 2);
+  let x = 82;
   round.players.forEach((p, i) => {
     if (!p.active) return;
     ctx.globalAlpha = p.alive ? 1 : 0.35;
     ctx.drawImage(bank.head(chars[i]), x, 5);
     ctx.globalAlpha = 1;
-    ctx.drawImage(bank.text(String(crowns[i]), '#ffd23f'), x + 17, 6);
-    x += 40;
+    ctx.drawImage(bank.text(String(crowns[i]), '#ffffff'), x + 17, 6);
+    x += 35;
   });
 }
 
@@ -55,6 +62,11 @@ export function drawRound(ctx: CanvasRenderingContext2D, round: RoundState, view
     const base = border ? tiles.wall : a.cells[i] === CELL.HARD ? tiles.hard : (gx + gy) % 2 ? tiles.floorAlt : tiles.floor;
     ctx.drawImage(base, x, y);
     if (border) continue;
+    // sombra no chão logo abaixo de parede, pilar ou bloco
+    if (a.cells[i] !== CELL.HARD) {
+      const above = gy - 1 === 0 || a.cells[idx(gx, gy - 1)] !== CELL.EMPTY;
+      if (above) { ctx.fillStyle = 'rgba(0, 0, 0, 0.28)'; ctx.fillRect(x, y, 16, 3); }
+    }
     if (a.cells[i] === CELL.SOFT) ctx.drawImage(a.burning[i] > 0 ? tiles.burning[(frame >> 2) & 1] : tiles.soft, x, y);
     else if (a.items[i] !== ITEM.NONE) ctx.drawImage(bank.item(a.items[i]), x, y);
   }

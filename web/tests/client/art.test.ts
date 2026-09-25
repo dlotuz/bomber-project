@@ -4,7 +4,7 @@ import { bombPix, itemIcon } from '../../src/render/art/items';
 import { flamePiece, type FlamePart } from '../../src/render/art/flames';
 import { THEMES, stageTiles } from '../../src/render/art/tiles';
 import { textPix, textWidth, hasGlyph } from '../../src/render/art/font';
-import { crownPix, trophyPix } from '../../src/render/art/trophy';
+import { crownPix, trophyPix, clockPix } from '../../src/render/art/trophy';
 import { STAGE_NAMES } from '../../src/core';
 
 const opaque = (p: { w: number; h: number; data: Uint8ClampedArray }) => {
@@ -117,6 +117,24 @@ describe('fonte', () => {
       'TIME BRANCO VENCEU!', 'PLACAR', 'VITÓRIA!', 'É O CAMPEÃO!', 'PRESSIONE START', 'CROWN BLAST', '--:--',
       'ENTER / START NO CONTROLE', '0123456789'];
     for (const t of texts) for (const ch of t.toUpperCase()) expect(hasGlyph(ch), `${t}: ${ch}`).toBe(true);
+  });
+});
+
+describe('visual da arena clássica', () => {
+  it('fase 1: chão sem xadrez, pilar chapado e parede de placa', () => {
+    const t = stageTiles(1);
+    expect(Array.from(t.floorAlt.data)).toEqual(Array.from(t.floor.data));
+    expect(Array.from(t.hard.data)).not.toEqual(Array.from(t.wall.data));
+    expect(opaque(t.hard)).toBe(256);
+  });
+  it('as outras fases continuam alternando o piso', () => {
+    const t = stageTiles(2);
+    expect(Array.from(t.floorAlt.data)).not.toEqual(Array.from(t.floor.data));
+  });
+  it('relógio do HUD 16×16', () => {
+    const c = clockPix();
+    expect([c.w, c.h]).toEqual([16, 16]);
+    expect(opaque(c)).toBeGreaterThan(150);
   });
 });
 

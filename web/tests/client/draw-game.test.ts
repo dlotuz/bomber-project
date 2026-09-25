@@ -16,7 +16,9 @@ function fakeBank(): SpriteBank {
     flame: () => ({ width: 16, height: 16 }),
     crown: () => ({ width: 16, height: 16 }),
     trophy: () => ({ width: 16, height: 16 }),
+    clock: () => ({ width: 16, height: 16 }),
     text: (s: string, color: string): TagImg => ({ width: Math.max(0, s.length * 6 - 1), height: 12, tag: `${s}|${color}` }),
+    plainText: (s: string, color: string): TagImg => ({ width: Math.max(0, s.length * 6 - 1), height: 10, tag: `plain:${s}|${color}` }),
     tiles: () => tiles,
   };
   return bank as unknown as SpriteBank;

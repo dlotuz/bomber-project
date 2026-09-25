@@ -34,3 +34,17 @@ export function trophyPix(): Pix {
   fillRect(p, 4, 20, 16, 4, ink); fillRect(p, 5, 20, 14, 3, shade); fillRect(p, 5, 20, 14, 1, gold);
   return p;
 }
+
+/** Relógio 16×16 do HUD: aro vermelho, mostrador branco, ponteiros pretos. */
+export function clockPix(): Pix {
+  const p = makePix(16, 16);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const d = Math.hypot(x - 7.5, y - 7.5);
+    if (d < 5.2) setPx(p, x, y, '#ffffff');
+    else if (d < 7) setPx(p, x, y, '#d8342c');
+    else if (d < 8) setPx(p, x, y, '#0b0b14');
+  }
+  fillRect(p, 7, 3, 2, 5, '#0b0b14');
+  fillRect(p, 8, 7, 4, 2, '#0b0b14');
+  return p;
+}

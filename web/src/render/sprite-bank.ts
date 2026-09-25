@@ -4,7 +4,7 @@ import { bombPix, itemIcon } from './art/items';
 import { flamePiece, type FlamePart } from './art/flames';
 import { stageTiles } from './art/tiles';
 import { textPix } from './art/font';
-import { crownPix, trophyPix } from './art/trophy';
+import { crownPix, trophyPix, clockPix } from './art/trophy';
 
 export type Img = HTMLCanvasElement;
 
@@ -35,7 +35,10 @@ export class SpriteBank {
   flame(part: FlamePart, shrink: number): Img { return this.get(`f${part}${shrink}`, () => flamePiece(part, shrink)); }
   crown(): Img { return this.get('crown', crownPix); }
   trophy(): Img { return this.get('trophy', trophyPix); }
+  clock(): Img { return this.get('clock', clockPix); }
   text(s: string, color: string): Img { return this.get(`t${color}:${s}`, () => textPix(s, color)); }
+  /** Texto sem contorno (para desenhar ampliado sem ficar pesado). */
+  plainText(s: string, color: string): Img { return this.get(`p${color}:${s}`, () => textPix(s, color, null)); }
 
   tiles(stage: number): TileImgs {
     let t = this.tileCache.get(stage);
