@@ -8,4 +8,5 @@ export { createRound, step, ringCells, pressureOrder } from './round';
 export { createMatch, startRound, finishRound, type MatchState } from './match';
 export { hashState } from './hash';
 export { speedSub, flameRange } from './player';
-export { bombAt, blocksPlayer, blocksBomb } from './query';
+export { bombAt, blocksPlayer, blocksBomb, playerAt } from './query';
+export { rollItem, applyItem } from './items';

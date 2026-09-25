@@ -51,7 +51,7 @@ export function movePlayer(s: RoundState, p: Player, dir: number, ev: GameEvent[
   }
 }
 
-/** Gancho para o chute (Task 6). */
+/** Quando o movimento é barrado por uma bomba parada e o jogador tem Chute, a bomba desliza na direção do movimento (até bater em obstáculo, jogador ou item). */
 function onBlocked(s: RoundState, p: Player, tx: number, ty: number, dir: number, ev: GameEvent[]): void {
   if (!p.kick) return;
   const b = bombAt(s, tx, ty);
