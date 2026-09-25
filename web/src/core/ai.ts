@@ -17,13 +17,15 @@ export interface AiLevel {
   margin: number;   // folga, em frames, exigida antes e depois de cada explosão prevista (busca estrita)
   open: boolean;    // entre refúgios igualmente próximos, prefere os com 2+ saídas (evita beco)
   alert: number;    // frames até replanejar quando surge/some/é chutada uma bomba (em vez de esperar `react`)
+  trap: boolean;    // procura casas onde uma bomba deixa um adversário sem refúgio (e bomba para encurralar)
+  wary: boolean;    // só bomba se a fuga resistir a cada adversário perto soltar uma bomba em seguida
 }
 
 /** Fraco, Normal, Forte (índice = rules.cpuLevel). */
 export const AI_LEVELS: readonly AiLevel[] = [
-  { react: 20, mistake: 20, hunt: false, margin: 4, open: false, alert: 20 },
-  { react: 8, mistake: 5, hunt: true, margin: 8, open: true, alert: 2 },
-  { react: 2, mistake: 0, hunt: true, margin: 12, open: true, alert: 0 },
+  { react: 20, mistake: 20, hunt: false, margin: 4, open: false, alert: 20, trap: false, wary: false },
+  { react: 8, mistake: 5, hunt: true, margin: 8, open: true, alert: 2, trap: false, wary: true },
+  { react: 2, mistake: 0, hunt: true, margin: 4, open: true, alert: 0, trap: true, wary: false },
 ];
 
 /** `go[k]`: frame (absoluto) a partir do qual pode andar rumo a `path[k]` (espera chamas passarem). */
@@ -46,7 +48,7 @@ export function aiRoll(frame: number, slot: number, salt: number): number {
 }
 
 interface BombInfo { gx: number; gy: number; t: number; range: number; pierce: boolean; trail?: number[]; flying?: boolean }
-interface Extra { gx: number; gy: number; range: number; pierce: boolean }
+interface Extra { gx: number; gy: number; range: number; pierce: boolean; t?: number }
 
 /** Casas ocupadas por bombas no chão (seguram o braço de uma explosão e barram o caminho). */
 function groundBombCells(s: RoundState): Set<number> {
@@ -98,7 +100,7 @@ function blastCells(s: RoundState, b: BombInfo, bombCells: ReadonlySet<number>):
  */
 interface Hazard { at: Int32Array; end: Int32Array }
 
-function hazards(s: RoundState, extra?: Extra): Hazard {
+function hazards(s: RoundState, extra: readonly Extra[] = []): Hazard {
   const n = GRID_W * GRID_H;
   const at = new Int32Array(n).fill(SAFE);
   const last = new Int32Array(n).fill(-1);
@@ -128,7 +130,7 @@ function hazards(s: RoundState, extra?: Extra): Hazard {
     const t = s.arena.flame[idx(gx, gy)] > 1 ? 1 : Math.max(0, b.fuse);
     bombs.push({ gx, gy, t, range: b.range, pierce: b.pierce });
   }
-  if (extra) bombs.push({ ...extra, t: FUSE_FRAMES });
+  for (const e of extra) bombs.push({ ...e, t: e.t ?? FUSE_FRAMES });
 
   // casas que seguram o braço de uma explosão: bombas no chão (a chutada, onde vai parar) e a hipotética
   const cells = new Set<number>();
@@ -176,7 +178,7 @@ function hazards(s: RoundState, extra?: Extra): Hazard {
  * `extra`: bomba hipotética (para decidir se dá para fugir antes de colocá-la).
  */
 export function dangerMap(s: RoundState, extra?: Extra): Int32Array {
-  const danger = hazards(s, extra).at;
+  const danger = hazards(s, extra ? [extra] : []).at;
   for (let i = 0; i < danger.length; i++) if (s.arena.flame[i] > 0) danger[i] = 0;
   return danger;
 }
@@ -242,8 +244,11 @@ function heapPop(h: number[]): number {
  * Menor tempo de chegada a cada casa (Dijkstra), a partir da posição real do jogador (não do centro), passando só
  * por casas que não explodem enquanto ele está nelas. Pode esperar parado numa casa segura até a chama da próxima
  * apagar (chama atual ou explosão prevista). `delay`: frames parado antes de começar (ex.: o tick de soltar a bomba).
+ * `stop(c, t)`: chamado quando o tempo de `c` fica definitivo; true encerra a busca (as casas com tempo ≤ t já estão
+ * definitivas).
  */
-function search(s: RoundState, p: Player, hz: Hazard, blocked: ReadonlySet<number>, margin: number, delay: number): Search {
+function search(s: RoundState, p: Player, hz: Hazard, blocked: ReadonlySet<number>, margin: number, delay: number,
+  stop?: (c: number, t: number) => boolean): Search {
   const n = GRID_W * GRID_H;
   const prev = new Int32Array(n).fill(-1);
   const dist = new Int32Array(n).fill(-1);
@@ -251,6 +256,7 @@ function search(s: RoundState, p: Player, hz: Hazard, blocked: ReadonlySet<numbe
   const go = new Int32Array(n).fill(-1);
   const done = new Uint8Array(n);
   const spd = speedSub(p);
+  const fpc = Math.ceil(T / spd), inFwd = Math.ceil(64 / spd), inBack = Math.ceil(65 / spd);
   const start = idx(cellX(p.x), cellY(p.y));
   const ox = p.x - centerX(cellX(p.x)), oy = p.y - centerY(cellY(p.y));
   dist[start] = 0;
@@ -261,22 +267,27 @@ function search(s: RoundState, p: Player, hz: Hazard, blocked: ReadonlySet<numbe
     const c = heapPop(heap) & 255;
     if (done[c]) continue;
     done[c] = 1;
+    if (stop && stop(c, time[c])) break;
     const cx = c % GRID_W, cy = Math.floor(c / GRID_W);
     for (let d = 1; d <= 4; d++) {
       const x = cx + DX[d], y = cy + DY[d];
       if (!inPlayfield(x, y)) continue;
       const i = idx(x, y);
       if (done[i] || s.arena.cells[i] !== CELL.EMPTY || blocked.has(i)) continue;
-      const o = c === start ? offsets(p, d) : { along: 0, perp: 0 };
-      const k = stepFrames(d, o.along, o.perp, spd);
-      const from = c === start ? 1 : time[c];
-      let dep = Math.max(c === start ? delay : time[c], s.arena.flame[i] - k.enter);   // chama atual apaga antes de entrar
-      if (hits(hz, i, dep + k.enter, dep + k.arrive + Math.ceil(65 / spd), margin)) {
-        if (hz.end[i] === SAFE) continue;                   // pressão: nunca mais passa
-        dep = Math.max(dep, hz.end[i] + margin - k.enter);  // espera a explosão passar
+      let enter: number, arrive: number, dep: number, from: number;
+      if (c === start) {
+        const k = stepFrames(d, DX[d] !== 0 ? ox * DX[d] : oy * DY[d], DX[d] !== 0 ? oy : ox, spd);
+        enter = k.enter; arrive = k.arrive; dep = delay; from = 1;
+      } else {
+        enter = DX[d] + DY[d] > 0 ? inFwd : inBack; arrive = fpc; dep = time[c]; from = time[c];
       }
-      if (hits(hz, c, from, dep + k.enter - 1, margin)) continue;   // não dá para ficar em `c` até sair
-      const arr = dep + k.arrive;
+      dep = Math.max(dep, s.arena.flame[i] - enter);                // chama atual apaga antes de entrar
+      if (hits(hz, i, dep + enter, dep + arrive + inBack, margin)) {
+        if (hz.end[i] === SAFE) continue;                   // pressão: nunca mais passa
+        dep = Math.max(dep, hz.end[i] + margin - enter);    // espera a explosão passar
+      }
+      if (hits(hz, c, from, dep + enter - 1, margin)) continue;   // não dá para ficar em `c` até sair
+      const arr = dep + arrive;
       if (time[i] >= 0 && arr >= time[i]) continue;
       time[i] = arr; go[i] = dep; prev[i] = c; dist[i] = dist[c] + 1;
       heapPush(heap, arr * 256 + i);
@@ -304,10 +315,9 @@ function exits(s: RoundState, i: number, blocked: ReadonlySet<number>): number {
   return k;
 }
 
-/** Refúgio: casa onde dá para ficar parado depois de chegar (nenhuma explosão prevista dali em diante). */
-function refuge(hz: Hazard, sr: Search, i: number, margin: number): boolean {
-  if (sr.time[i] < 0) return false;
-  return hz.at[i] === SAFE || (hz.end[i] !== SAFE && sr.time[i] >= hz.end[i] + margin);
+/** Refúgio: casa onde dá para ficar parado depois de chegar no frame `t` (nenhuma explosão prevista dali em diante). */
+function refuge(hz: Hazard, i: number, t: number, margin: number): boolean {
+  return t >= 0 && (hz.at[i] === SAFE || (hz.end[i] !== SAFE && t >= hz.end[i] + margin));
 }
 
 /**
@@ -318,19 +328,25 @@ function refuge(hz: Hazard, sr: Search, i: number, margin: number): boolean {
 function escape(s: RoundState, p: Player, hz: Hazard, blocked: ReadonlySet<number>, level: AiLevel,
   strict: boolean, delay: number): Route | null {
   const fpc = Math.ceil(T / speedSub(p));
-  let sr: Search | null = null;
   for (const margin of strict ? [level.margin] : [level.margin, 0]) {
-    sr = search(s, p, hz, blocked, margin, delay);
+    // só compete quem fica à mesma distância (em casas) do primeiro refúgio encontrado
+    let bound = SAFE;
+    const sr = search(s, p, hz, blocked, margin, delay, (c, t) => {
+      if (t > bound) return true;
+      if (bound === SAFE && refuge(hz, c, t, margin)) bound = Math.max(1, Math.ceil(t / fpc)) * fpc;
+      return false;
+    });
     let best = -1, bestScore = 0;
     for (let i = 0; i < sr.time.length; i++) {
-      if (!refuge(hz, sr, i, margin)) continue;
+      if (sr.time[i] > bound || !refuge(hz, i, sr.time[i], margin)) continue;
       const cellsAway = Math.ceil(sr.time[i] / fpc);
       const score = (cellsAway * 2 + (level.open && exits(s, i, blocked) < 2 ? 1 : 0)) * 100_000 + sr.time[i];
       if (best < 0 || score < bestScore) { best = i; bestScore = score; }
     }
     if (best >= 0) return route(sr, best);
   }
-  if (strict || !sr) return null;
+  if (strict) return null;
+  const sr = search(s, p, hz, blocked, 0, delay);
   let best = -1;
   for (let i = 0; i < sr.time.length; i++) {
     if (sr.time[i] < 0) continue;
@@ -341,10 +357,15 @@ function escape(s: RoundState, p: Player, hz: Hazard, blocked: ReadonlySet<numbe
 
 /** `q` tem algum refúgio alcançável com este perigo (folga 0)? */
 function hasRefuge(s: RoundState, q: Player, hz: Hazard, blocked: ReadonlySet<number>): boolean {
-  const sr = search(s, q, hz, blocked, 0, 0);
-  for (let i = 0; i < sr.time.length; i++) if (refuge(hz, sr, i, 0)) return true;
-  return false;
+  let found = false;
+  search(s, q, hz, blocked, 0, 0, (c, t) => (found = refuge(hz, c, t, 0)));
+  return found;
 }
+
+/** Quantas casas candidatas (as mais próximas perto de adversários) a caça testa por decisão. */
+const HUNT_TRIES = 3;
+/** Distância (em casas, Manhattan) até onde um adversário conta como "perto" de uma bomba. */
+const HUNT_NEAR = 6;
 
 /** Jogadores de pé (ativos, vivos, sem animação de morte). */
 function standing(s: RoundState): Player[] {
@@ -356,14 +377,66 @@ function mate(s: RoundState, p: Player, q: Player): boolean {
   return q !== p && s.rules.mode === 'team' && q.team === p.team;
 }
 
-/** Uma bomba aqui atingiria um bloco destrutível ou (se `hunt`) um adversário? */
-function bombUseful(s: RoundState, p: Player, gx: number, gy: number, hunt: boolean): boolean {
-  const cells = blastCells(s, { gx, gy, t: 0, range: flameRange(p), pierce: p.pierce }, groundBombCells(s));
-  for (const i of cells) {
+/** Casas ocupadas por adversários de `p` (alvos da caça). */
+function foeCells(s: RoundState, p: Player): Set<number> {
+  const out = new Set<number>();
+  for (const q of standing(s)) if (q !== p && !mate(s, p, q)) out.add(idx(cellX(q.x), cellY(q.y)));
+  return out;
+}
+
+/** Uma bomba aqui atingiria um bloco destrutível ou um adversário (`foes`: casas dos alvos; vazio sem caça)? */
+function bombUseful(s: RoundState, p: Player, gx: number, gy: number, foes: ReadonlySet<number>, blocked: ReadonlySet<number>): boolean {
+  for (const i of blastCells(s, { gx, gy, t: 0, range: flameRange(p), pierce: p.pierce }, blocked)) {
     if (s.arena.cells[i] === CELL.SOFT && s.arena.burning[i] === 0) return true;
-    if (hunt && standing(s).some(q => q !== p && !mate(s, p, q) && idx(cellX(q.x), cellY(q.y)) === i)) return true;
+    if (foes.has(i)) return true;
   }
   return false;
+}
+
+/** Algum adversário perto da casa (gx, gy)? */
+function enemiesNear(s: RoundState, p: Player, gx: number, gy: number): boolean {
+  return standing(s).some(q => q !== p && !mate(s, p, q) && Math.abs(cellX(q.x) - gx) + Math.abs(cellY(q.y) - gy) <= HUNT_NEAR);
+}
+
+/** Efeito de uma bomba de `p` em (gx, gy): perigo e bloqueios com ela; se pega/encurrala um colega de time; se deixa
+ *  algum adversário perto sem refúgio. */
+function tryBomb(s: RoundState, p: Player, gx: number, gy: number, hz: Hazard, blocked: ReadonlySet<number>):
+  { hz: Hazard; blocked: Set<number>; hurtsMate: boolean; traps: boolean } {
+  const withBomb = hazards(s, [{ gx, gy, range: flameRange(p), pierce: p.pierce }]);
+  const blockedWith = new Set(blocked).add(idx(gx, gy));
+  let hurtsMate = false, traps = false;
+  let arm: number[] | null = null;
+  for (const q of standing(s)) {
+    if (q === p) continue;
+    const qx = cellX(q.x), qy = cellY(q.y), c = idx(qx, qy);
+    const near = Math.abs(qx - gx) + Math.abs(qy - gy);
+    if (mate(s, p, q)) {
+      // o colega não pode estar no braço da bomba (nem numa casa que a cadeia dela antecipa), nem perder a fuga
+      arm ??= blastCells(s, { gx, gy, t: 0, range: flameRange(p), pierce: p.pierce }, blockedWith);
+      // (colega com diarreia solta bombas sem parar e se prende sozinho: nem perto dele)
+      if (arm.includes(c) || withBomb.at[c] < hz.at[c] ||
+        (q.disease === DISEASE.DIARRHEA && near <= flameRange(p) + 2) ||
+        (near <= 10 && hasRefuge(s, q, hz, blocked) && !hasRefuge(s, q, withBomb, blockedWith))) hurtsMate = true;
+    } else if (!traps && near <= HUNT_NEAR && !hasRefuge(s, q, withBomb, blockedWith)) {
+      traps = true;
+    }
+  }
+  return { hz: withBomb, blocked: blockedWith, hurtsMate, traps };
+}
+
+/** Ainda haveria fuga da nossa bomba em (gx, gy) se cada adversário perto soltasse uma bomba agora mesmo? */
+function waryEscape(s: RoundState, p: Player, gx: number, gy: number, blocked: ReadonlySet<number>, level: AiLevel): boolean {
+  const extra: Extra[] = [{ gx, gy, range: flameRange(p), pierce: p.pierce }];
+  const blockedAll = new Set(blocked);
+  for (const q of standing(s)) {
+    if (q === p || mate(s, p, q) || ownBombs(s, q) >= q.maxBombs) continue;
+    const qx = cellX(q.x), qy = cellY(q.y);
+    if (Math.abs(qx - gx) + Math.abs(qy - gy) > HUNT_NEAR) continue;
+    extra.push({ gx: qx, gy: qy, range: flameRange(q), pierce: q.pierce, t: FUSE_FRAMES + 1 });
+    blockedAll.add(idx(qx, qy));
+  }
+  if (extra.length === 1) return true;
+  return escape(s, p, hazards(s, extra), blockedAll, level, true, 1) !== null;
 }
 
 function ownBombs(s: RoundState, p: Player): number {
@@ -377,6 +450,9 @@ function think(s: RoundState, p: Player, level: AiLevel, brain: Brain): void {
   const here = idx(gx, gy);
   const hz = hazards(s);
   const blocked = groundBombCells(s);
+  const foes = level.hunt ? foeCells(s, p) : new Set<number>();
+  // na pressão (fim de rodada), quem caça também tenta encurralar
+  const trap = level.trap || (level.hunt && s.timeLeft >= 0 && s.timeLeft <= s.pressure.startAt);
   const roll = aiRoll(s.frame, p.slot, 1);
   const follow = (r: Route | null) => {
     brain.path = r ? r.path : [];
@@ -410,32 +486,45 @@ function think(s: RoundState, p: Player, level: AiLevel, brain: Brain): void {
   }
   if (bestItem >= 0 && roll >= level.mistake) { follow(route(sr, bestItem)); return; }
 
-  // 3) bomba aqui, se for útil e der para fugir dela pela busca estrita (a relaxada fica só para emergências).
-  //    Estamos centrados: ela cai nesta casa. Neste tick só solta a bomba; a fuga começa no seguinte (delay 1).
-  // (com outro jogador com Luva na mesma casa, não: se ele também apertar A, pega a bomba e arremessa)
-  const crowded = s.players.some(q => q !== p && q.glove && q.active && q.alive && q.dying === 0 && idx(cellX(q.x), cellY(q.y)) === here);
+  // 3) bomba aqui, se for útil (bloco, adversário no alcance ou adversário encurralado) e der para fugir dela pela
+  //    busca estrita (a relaxada fica só para emergências). Estamos centrados: ela cai nesta casa. Neste tick só
+  //    solta a bomba; a fuga começa no seguinte (delay 1).
+  // Nunca com outro jogador com Luva na mesma casa (se ele também apertar A, pega a bomba e arremessa), nem com
+  // alguém com Chute na vizinha andando para cá (no mesmo tick a bomba nova é chutada — às vezes para dentro de chamas).
+  const crowded = standing(s).some(q => {
+    if (q === p) return false;
+    const qx = cellX(q.x), qy = cellY(q.y);
+    if (q.glove && qx === gx && qy === gy) return true;
+    return q.kick && qx + DX[q.facing] === gx && qy + DY[q.facing] === gy;
+  });
   const canPlace = ownBombs(s, p) < p.maxBombs && !blocked.has(here) && !crowded;
-  if (canPlace && bombUseful(s, p, gx, gy, level.hunt)) {
-    const withBomb = hazards(s, { gx, gy, range: flameRange(p), pierce: p.pierce });
-    const blockedWith = new Set(blocked).add(here);
-    // a bomba (ou a cadeia que ela antecipa) não pode chegar num colega de time, nem tirar a fuga dele
-    const hurtsMate = standing(s).some(q => {
-      if (!mate(s, p, q)) return false;
-      const c = idx(cellX(q.x), cellY(q.y));
-      if (withBomb.at[c] < hz.at[c]) return true;
-      return Math.abs(cellX(q.x) - gx) + Math.abs(cellY(q.y) - gy) <= 10 &&
-        hasRefuge(s, q, hz, blocked) && !hasRefuge(s, q, withBomb, blockedWith);
-    });
-    const out = hurtsMate ? null : escape(s, p, withBomb, blockedWith, level, true, 1);
-    if (out && out.path.length > 0) { brain.bomb = true; follow(out); return; }
+  if (canPlace) {
+    const useful = bombUseful(s, p, gx, gy, foes, blocked);
+    if (useful || (trap && enemiesNear(s, p, gx, gy))) {
+      const b = tryBomb(s, p, gx, gy, hz, blocked);
+      if (!b.hurtsMate && (useful || b.traps) && (!level.wary || waryEscape(s, p, gx, gy, b.blocked, level))) {
+        const out = escape(s, p, b.hz, b.blocked, level, true, 1);
+        if (out && out.path.length > 0) { brain.bomb = true; follow(out); return; }
+      }
+    }
   }
 
-  // 4) andar até uma casa de onde uma bomba seria útil (a mais próxima)
-  let bestSpot = -1;
+  // 4) andar até uma casa de onde uma bomba seria útil: a mais próxima; caçando, antes uma das mais próximas
+  //    que encurrale um adversário
+  const spots: number[] = [];
   for (let i = 0; i < sr.time.length; i++) {
-    if (!target(i) || i === here) continue;
-    if (!bombUseful(s, p, i % GRID_W, Math.floor(i / GRID_W), level.hunt)) continue;
-    if (bestSpot < 0 || sr.time[i] < sr.time[bestSpot]) bestSpot = i;
+    if (target(i) && i !== here && bombUseful(s, p, i % GRID_W, Math.floor(i / GRID_W), foes, blocked)) spots.push(i);
+  }
+  spots.sort((a, b) => sr.time[a] - sr.time[b] || a - b);
+  let bestSpot = spots.length ? spots[0] : -1;
+  if (trap) {
+    let tried = 0;
+    for (const i of spots) {
+      const x = i % GRID_W, y = Math.floor(i / GRID_W);
+      if (!enemiesNear(s, p, x, y)) continue;
+      if (tryBomb(s, p, x, y, hz, blocked).traps) { bestSpot = i; break; }
+      if (++tried >= HUNT_TRIES) break;
+    }
   }
   if (bestSpot >= 0 && roll >= level.mistake) { follow(route(sr, bestSpot)); return; }
 

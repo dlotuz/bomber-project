@@ -331,6 +331,8 @@ describe('níveis', () => {
     expect(AI_LEVELS[0].mistake).toBeGreaterThan(AI_LEVELS[2].mistake);
     expect(AI_LEVELS[0].hunt).toBe(false);
     expect(AI_LEVELS[2].hunt).toBe(true);
+    expect(AI_LEVELS[2].trap && !AI_LEVELS[0].trap).toBe(true);           // só o Forte procura encurralar
+    expect(AI_LEVELS[0].alert).toBeGreaterThan(AI_LEVELS[2].alert);      // e reage a bomba nova na hora
   });
   it('sorteio determinístico em 0..99', () => {
     expect(aiRoll(10, 2, 1)).toBe(aiRoll(10, 2, 1));
