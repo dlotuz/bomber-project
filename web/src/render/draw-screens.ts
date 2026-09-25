@@ -2,6 +2,7 @@ import type { Session } from '../game/session';
 import { SCOREBOARD_FRAMES, SKIP_AFTER } from '../game/session';
 import type { SpriteBank } from './sprite-bank';
 import { roundOverText, type ViewState } from './view';
+import { displayName } from '../game/config';
 import { drawRound, drawTextCentered, SCREEN_W, SCREEN_H } from './draw-game';
 
 export function drawTitle(ctx: CanvasRenderingContext2D, bank: SpriteBank, frame: number): void {
@@ -27,20 +28,20 @@ function drawScoreboard(ctx: CanvasRenderingContext2D, s: Session, bank: SpriteB
     if (!p.active) return;
     const y = 40 + row * 32;
     row++;
-    ctx.drawImage(bank.head(s.cfg.chars[i]), 20, y + 4);
-    ctx.drawImage(bank.text(`P${i + 1}`, '#ffffff'), 40, y + 6);
+    ctx.drawImage(bank.head(s.cfg.chars[i]), 18, y + 4);
+    ctx.drawImage(bank.text(displayName(s.cfg.names, i), '#ffffff'), 36, y + 6);
     for (let k = 0; k < s.match.rules.matches; k++) {
-      const x = 70 + k * 34;
+      const x = 92 + k * 31;
       ctx.fillStyle = '#050b18';
-      ctx.fillRect(x, y, 30, 22);
+      ctx.fillRect(x, y, 28, 22);
       ctx.fillStyle = '#2a4a7a';
-      ctx.fillRect(x + 1, y + 1, 28, 20);
+      ctx.fillRect(x + 1, y + 1, 26, 20);
       const won = k < s.match.crowns[i];
       const isNew = won && k === s.match.crowns[i] - 1 && s.lastWinners.includes(i);
-      if (won && (!isNew || age > 40 || ((age >> 2) & 1) === 0)) ctx.drawImage(bank.crown(), x + 3, y + 3, 24, 16);
+      if (won && (!isNew || age > 40 || ((age >> 2) & 1) === 0)) ctx.drawImage(bank.crown(), x + 2, y + 3, 24, 16);
     }
   });
-  drawTextCentered(ctx, bank, roundOverText(s.lastWinners, s.cfg.rules.mode, s.cfg.rules.teams), '#ffd23f', 208, 1);
+  drawTextCentered(ctx, bank, roundOverText(s.lastWinners, s.cfg.rules.mode, s.cfg.rules.teams, s.cfg.names), '#ffd23f', 208, 1);
 }
 
 function drawVictory(ctx: CanvasRenderingContext2D, s: Session, bank: SpriteBank, frame: number): void {
@@ -62,7 +63,7 @@ function drawVictory(ctx: CanvasRenderingContext2D, s: Session, bank: SpriteBank
   const rules = s.cfg.rules;
   const who = rules.mode === 'team'
     ? (rules.teams[champs[0]] === 0 ? 'TIME VERMELHO É O CAMPEÃO!' : 'TIME BRANCO É O CAMPEÃO!')
-    : `P${champs[0] + 1} É O CAMPEÃO!`;
+    : `${displayName(s.cfg.names, champs[0])} É O CAMPEÃO!`;
   drawTextCentered(ctx, bank, who, '#ffffff', 188, 1);
   if (s.timer > SKIP_AFTER && ((frame >> 5) & 1) === 0) drawTextCentered(ctx, bank, 'PRESSIONE START', '#6ad0ff', 206, 1);
 }
@@ -76,10 +77,11 @@ export function drawSession(ctx: CanvasRenderingContext2D, s: Session, view: Vie
       if (s.paused) {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
         ctx.fillRect(0, 24, SCREEN_W, SCREEN_H - 24);
-        drawTextCentered(ctx, bank, 'PAUSA', '#ffffff', 104, 2);
+        drawTextCentered(ctx, bank, 'PAUSA', '#ffffff', 96, 2);
+        drawTextCentered(ctx, bank, 'START: CONTINUAR   B: SAIR', '#6ad0ff', 124, 1);
       }
       if (s.phase === 'roundOver') {
-        drawTextCentered(ctx, bank, roundOverText(s.round.winners, s.cfg.rules.mode, s.cfg.rules.teams), '#ffd23f', 100, 2);
+        drawTextCentered(ctx, bank, roundOverText(s.round.winners, s.cfg.rules.mode, s.cfg.rules.teams, s.cfg.names), '#ffd23f', 100, 2);
       }
       break;
     case 'scoreboard':

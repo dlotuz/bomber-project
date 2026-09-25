@@ -1,5 +1,6 @@
 import { FLAME_FRAMES, type GameEvent, type RoundState } from '../core';
 import type { FlamePart } from './art/flames';
+import { displayName } from '../game/config';
 
 export interface ExplosionFx { gx: number; gy: number; arms: [number, number, number, number]; age: number }
 
@@ -75,8 +76,8 @@ export function dyingVisible(dying: number): boolean {
   return ((dying >> 2) & 1) === 0;
 }
 
-export function roundOverText(winners: number[], mode: 'ffa' | 'team', teams: number[]): string {
+export function roundOverText(winners: number[], mode: 'ffa' | 'team', teams: number[], names: readonly string[] = []): string {
   if (winners.length === 0) return 'EMPATE!';
   if (mode === 'team') return teams[winners[0]] === 0 ? 'TIME VERMELHO VENCEU!' : 'TIME BRANCO VENCEU!';
-  return `P${winners[0] + 1} VENCEU!`;
+  return `${displayName(names, winners[0])} VENCEU!`;
 }

@@ -37,6 +37,8 @@ startLoop(() => {
     return;
   }
   tickGame(session, view, pads);
+  // Partida encerrada (vitória confirmada ou saída pela pausa): volta ao título até os menus existirem.
+  if (session.finished) { session = null; return; }
   // Congela a animação (bombas, blocos queimando) durante a pausa; o core já congela sozinho.
   if (!session.paused) frame++;
 }, () => {

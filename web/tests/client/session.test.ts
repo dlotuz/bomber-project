@@ -59,17 +59,47 @@ describe('sessão', () => {
     run(s, SKIP_AFTER); tap(s, 0, BTN.START);
     expect(s.phase).toBe('battle');
   });
-  it('meta atingida → vitória → START começa partida nova zerada', () => {
+  it('meta atingida → vitória → START encerra a partida (a tela que hospeda decide o que vem depois)', () => {
     const s = createSession(parseConfig('?players=2&matches=1'), 1);
     winRound(s, 0); run(s, ROUND_OVER_FRAMES); run(s, SCOREBOARD_FRAMES);
     expect(s.phase).toBe('victory');
     expect(s.champions).toEqual([0]);
     tap(s, 0, BTN.START);
-    expect(s.phase).toBe('victory');
+    expect(s.finished).toBe(false);
     run(s, SKIP_AFTER); tap(s, 1, BTN.A);
-    expect(s.phase).toBe('battle');
-    expect(s.matchNo).toBe(2);
-    expect(s.match.crowns).toEqual([0, 0, 0, 0, 0]);
+    expect(s.finished).toBe(true);
+    expect(s.aborted).toBe(false);
+  });
+  it('avisos de fim de rodada e de fim de partida (para áudio e webhook)', () => {
+    const s = createSession(parseConfig('?players=2&matches=1'), 1);
+    winRound(s, 1); run(s, ROUND_OVER_FRAMES);
+    expect(s.notices).toEqual([
+      { type: 'round_over', winners: [1], crowns: [0, 1, 0, 0, 0] },
+      { type: 'match_over', champions: [1], crowns: [0, 1, 0, 0, 0] },
+    ]);
+  });
+  it('na pausa, B sai da partida', () => {
+    const s = createSession(parseConfig('?players=2'), 1);
+    run(s, 5);
+    tap(s, 0, BTN.B);
+    expect(s.finished).toBe(false);
+    tap(s, 0, BTN.START);
+    tap(s, 1, BTN.B);
+    expect(s.finished).toBe(true);
+    expect(s.aborted).toBe(true);
+  });
+  it('slots de CPU não pausam nem controlam o personagem', () => {
+    const cfg = parseConfig('?players=3');
+    cfg.humans = [true, true, false, false, false];
+    const s = createSession(cfg, 1);
+    run(s, INTRO_FRAMES + 1);
+    tap(s, 2, BTN.START);
+    expect(s.paused).toBe(false);
+    const x = s.round.players[2].x, y = s.round.players[2].y;
+    const p = [0, 0, BTN.A | BTN.DOWN | BTN.RIGHT, 0, 0];
+    for (let i = 0; i < 20; i++) updateSession(s, p);
+    expect([s.round.players[2].x, s.round.players[2].y]).toEqual([x, y]);
+    expect(s.round.bombs.filter(b => b.owner === 2)).toHaveLength(0);
   });
   it('START pausa e retoma; slot inativo não pausa', () => {
     const s = createSession(parseConfig('?players=2'), 1);
