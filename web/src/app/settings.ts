@@ -54,7 +54,7 @@ export function defaultSettings(): Settings {
 export function sanitizeName(s: unknown): string {
   if (typeof s !== 'string') return '';
   let out = '';
-  for (const ch of s.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase()) if (NAME_CHARS.includes(ch)) out += ch;
+  for (const ch of s.normalize('NFD').replace(/\p{M}/gu, '').toUpperCase()) if (NAME_CHARS.includes(ch)) out += ch;
   return out.trim().slice(0, NAME_MAX).trimEnd();
 }
 
@@ -107,12 +107,23 @@ export function normalizeSettings(raw: unknown): Settings {
   };
 }
 
+/**
+ * Gancho para migrações entre versões do formato salvo. Hoje só existe a versão 1, então
+ * qualquer coisa com `version: 1` (ou sem `version`, formato mais antigo) passa direto;
+ * futuras versões ganhariam um caso aqui antes de cair em `normalizeSettings`.
+ */
+export function migrate(raw: unknown): unknown {
+  const version = asObj(raw).version;
+  if (version === undefined || version === 1) return raw;
+  return raw;
+}
+
 export interface StorageLike { getItem(k: string): string | null; setItem(k: string, v: string): void }
 
 export function loadSettings(st: StorageLike | null): Settings {
   try {
     const raw = st?.getItem(STORAGE_KEY);
-    return normalizeSettings(raw ? JSON.parse(raw) : null);
+    return normalizeSettings(migrate(raw ? JSON.parse(raw) : null));
   } catch {
     return defaultSettings();
   }

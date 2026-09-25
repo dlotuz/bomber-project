@@ -1,5 +1,5 @@
 import {
-  defaultSettings, loadSettings, saveSettings, normalizeSettings, sanitizeName, STORAGE_KEY, type StorageLike,
+  defaultSettings, loadSettings, saveSettings, normalizeSettings, sanitizeName, migrate, STORAGE_KEY, type StorageLike,
 } from '../../src/app/settings';
 import { configFromSetup, validateSetup, displayName } from '../../src/game/config';
 
@@ -47,6 +47,18 @@ describe('configurações salvas', () => {
   it('falha ao gravar não derruba o jogo', () => {
     const st: StorageLike = { getItem: () => null, setItem: () => { throw new Error('quota'); } };
     expect(() => saveSettings(st, defaultSettings())).not.toThrow();
+  });
+  it('migrate: version 1 e sem version carregam sem mudanças (gancho para futuras migrações)', () => {
+    const withVersion = defaultSettings();
+    withVersion.names[0] = 'ANA';
+    expect(migrate(withVersion)).toEqual(withVersion);
+    const { version: _version, ...noVersion } = withVersion as unknown as Record<string, unknown>;
+    expect(migrate(noVersion)).toEqual(noVersion);
+
+    const st1 = memory({ [STORAGE_KEY]: JSON.stringify(withVersion) });
+    expect(loadSettings(st1)).toEqual(withVersion);
+    const st2 = memory({ [STORAGE_KEY]: JSON.stringify(noVersion) });
+    expect(loadSettings(st2)).toEqual(withVersion);
   });
   it('nomes: maiúsculas, caracteres permitidos, até 8', () => {
     expect(sanitizeName('joão da silva')).toBe('JOAO DA');
