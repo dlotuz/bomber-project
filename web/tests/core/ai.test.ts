@@ -66,8 +66,8 @@ describe('mapa de perigo', () => {
     const b = s.bombs[0];
     b.flight = { dx: 1, dy: 0, cellsLeft: 3, progress: 0, bounces: 0 };
     const d = dangerMap(s);
-    expect(d[idx(8, 5)]).toBeLessThan(SAFE);
-    expect(d[idx(10, 5)]).toBeLessThan(SAFE);
+    expect(d[idx(8, 5)]).toBe(74);
+    expect(d[idx(10, 5)]).toBe(74);
     expect(d[idx(5, 5)]).toBe(SAFE);
   });
 });
