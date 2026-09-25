@@ -1812,3 +1812,28 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 - **Plano 2, cliente jogável:** loop de 60 Hz com acumulador; Canvas 256×224 com escala inteira; sprites pixel art gerados por código (6 personagens, bombas, chamas, blocos por tema, itens, HUD, fonte bitmap); entrada por teclado + Gamepad API (5 controles virtuais); todas as telas (título, VS, jogadores, regras, personagem, fase, placar, VITÓRIA, CONFIG).
 - **Plano 3, conteúdo e integrações:** IA (Fraco/Normal/Forte); mecânicas especiais das fases 2, 3, 6, 7, 8 e 9; Bad Bomber; áudio chiptune; webhook Crown Cup com retry e fila offline.
+
+---
+
+## Resultado da execução (2026-09-25)
+
+14 commits em `feat/core`, 84 testes passando, `tsc` limpo. Golden hash de determinismo: `9426211e` (seed 5, 20.000 ticks).
+
+### Decisões tomadas durante a execução
+- Morte súbita: a pressão para quando resta ≤1 jogador (ou 1 time) de pé.
+- O bloco de pressão mata no mesmo frame em que cai.
+- A pressão começa em min(1:00, metade do tempo). Com Tempo 1:00, começa em 0:30.
+- O evento `explosion` traz `arms: [cima, baixo, esquerda, direita]` para o renderer.
+- Uma bomba em voo some depois de 20 quiques. A bomba de um carregador esmagado por pressão some.
+- `createMatch` copia as regras. `finishRound` não conta a mesma rodada duas vezes (flag `counted`).
+- O contágio copia a doença (os dois ficam doentes).
+
+### Pendências para os Planos 2 e 3
+- Não existe fase `ending`. O renderer deduz o fim pela contagem de `dying`, ou é preciso criar um helper `isDecided(s)`.
+- Os menus precisam impedir regras degeneradas: FFA com ≤1 ativo, ou times com um só time.
+- Faltam eventos para áudio e render: item queimado, bomba levantada, bomba pousou ou quicou, doença pega ou curada. `bomb_placed` não traz o id da bomba.
+- O hash depende da ordem das chaves do JSON. A sincronia online vai precisar de um serializador canônico.
+- Um `dangerMap` no core, compartilhado com a IA (Plano 3).
+- Fidelidade do chute: a bomba deslizando só checa obstáculos no alinhamento com o grid.
+- A fase 9 não tem casas `?`. O Plano 3 precisa posicionar as gangorras explicitamente.
+- Melhorias pequenas: enums com tipo literal em vez de `number`; `randInt` com viés de módulo (desprezível); doc em `match.ts`.
