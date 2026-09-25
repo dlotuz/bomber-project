@@ -64,7 +64,7 @@ web/src/
 
 - **Pavio de 128 frames. Chama de 33 frames.**
 - A explosão é em cruz, com alcance de fogo+2. Ela para em HARD, **destrói o primeiro SOFT** e para nele (exceto com P, §6), destrói itens no caminho e **detona outras bombas em cadeia** (a reação é imediata, no mesmo tick).
-- **Controles:** **A** = colocar bomba; segurar **A sobre a bomba** com Luva = levantar e soltar para arremessar. **B** = detonar bomba remota. **Y** = socar a bomba à frente (com Soco). **START** = pausa.
+- **Controles:** **A** = colocar bomba; segurar **A sobre a bomba** com Luva = levantar e soltar para arremessar. **B** = reservado (não há item de bomba remota no Battle; fica para o futuro). **Y** = socar a bomba à frente (com Soco). **START** = pausa.
 - **Chute:** andar contra uma bomba faz ela deslizar a 2 px/frame até bater em obstáculo, jogador ou item.
 - **Soco e arremesso:** a bomba voa 3 casas por cima de obstáculos. Se cair em célula ocupada, quica mais 1 casa. Se sair do campo, reaparece do lado oposto.
 - É possível atravessar a própria bomba recém-colocada até sair da casa dela.
@@ -91,7 +91,7 @@ Surgem sob soft blocks destruídos: **chance de 40%** de o bloco conter item. O 
 
 - **Estados da rodada:** `INTRO` (fade, ≈90 frames) → `PLAYING` → `ENDING` (espera terminarem as animações de morte) → `RESULT`.
 - **Relógio** conforme a regra Time (1:00, 2:00, 3:00, 5:00, ∞).
-- **Pressão:** com **1:00 restante**, blocos HARD caem em espiral de fora para dentro, 1 bloco a cada 6 frames. Quem estiver na casa morre. Isso é o que foi observado com Sudden Death = Off.
+- **Pressão:** com **1:00 restante**, blocos HARD caem em espiral de fora para dentro, 1 bloco a cada 6 frames, preenchendo os **2 anéis externos** e então param (o original deixa o miolo livre). Quem estiver na casa morre; bombas e itens na casa somem. Com Tempo ∞ não há pressão.
 - **Fim da rodada:** com ≤1 vivo depois das animações, 1 vivo ganha uma coroa e 0 vivos é **DRAW GAME**. Com o tempo esgotado e mais de 1 vivo, também é DRAW GAME (se Sudden Death estiver Off).
 - **Team Battle:** 2 times (Vermelho/Branco), escolhidos na tela de jogadores. Uma rodada termina quando só resta um time. Todos os membros do time vencedor ganham uma coroa. A partida é decidida pelo time.
 - **Partida:** acaba quando alguém (ou um time) chega a **Matches** coroas (1–5). Sequência: Score Board (≈9 s, com animação da coroa nova) → **VICTORY** (troféu, espera botão) → volta para "Selecionar fase" com as coroas zeradas.
@@ -102,7 +102,7 @@ Surgem sob soft blocks destruídos: **chance de 40%** de o bloco conter item. O 
 | Nível CPU | Fraco · **Normal** · Forte | parâmetros da IA (§9) |
 | Coroas (Matches) | 1 · 2 · **3** · 4 · 5 | meta de vitórias |
 | Tempo | 1:00 · 2:00 · **3:00** · 5:00 · ∞ | relógio; com ∞ não há pressão |
-| Morte Súbita | **Off** · On | On: no 0:00 com mais de 1 vivo, a pressão acelera para 1 bloco/frame até restar ≤1 *(interpretação nossa)* |
+| Morte Súbita | **Off** · On | On: no 0:00 com mais de 1 vivo, a pressão continua pelos anéis internos a 1 bloco/frame até restar ≤1 *(interpretação nossa)* |
 | Bomber Vingador (Bad Bomber) | **Off** · On | On: quem morreu anda pela borda externa e arremessa bombas para dentro (1 bomba por vez) |
 | Corrida (Racer Bomber) | **Off** · On | On: todos começam com velocidade 4 *(interpretação nossa)* |
 
