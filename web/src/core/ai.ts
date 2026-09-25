@@ -450,9 +450,10 @@ function think(s: RoundState, p: Player, level: AiLevel, brain: Brain): void {
   const here = idx(gx, gy);
   const hz = hazards(s);
   const blocked = groundBombCells(s);
-  const foes = level.hunt ? foeCells(s, p) : new Set<number>();
-  // na pressão (fim de rodada), quem caça também tenta encurralar
-  const trap = level.trap || (level.hunt && s.timeLeft >= 0 && s.timeLeft <= s.pressure.startAt);
+  // na pressão (fim de rodada) todo mundo caça, e quem já caçava também tenta encurralar
+  const late = s.timeLeft >= 0 && s.timeLeft <= s.pressure.startAt;
+  const foes = level.hunt || late ? foeCells(s, p) : new Set<number>();
+  const trap = level.trap || (level.hunt && late);
   const roll = aiRoll(s.frame, p.slot, 1);
   const follow = (r: Route | null) => {
     brain.path = r ? r.path : [];
