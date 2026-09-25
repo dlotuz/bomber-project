@@ -1,0 +1,74 @@
+--- snes9x/ppu.cpp	2026-09-25 11:20:49
++++ rom-audio/snes9x/ppu.cpp	2026-09-25 19:53:33
+@@ -5,6 +5,8 @@
+ \*****************************************************************************/
+ 
+ #include "snes9x.h"
++#include <stdio.h>
++extern "C" { extern FILE* aud_log; extern unsigned aud_frame; }
+ #include "memmap.h"
+ #include "dma.h"
+ #include "apu/apu.h"
+@@ -246,8 +248,11 @@
+ 		S9xMSU1WritePort(Address & 7, Byte);
+ 	else
+ 	if ((Address & 0xffc0) == 0x2140) // APUIO0, APUIO1, APUIO2, APUIO3
++	{
++		if (aud_log) fprintf(aud_log, "W %u %06X %d %02X\n", aud_frame, Registers.PBPC, Address & 3, Byte);
+ 		// write_port will run the APU until given clock before writing value
+ 		S9xAPUWritePort(Address & 3, Byte);
++	}
+ 	else
+ 	if (Address <= 0x2183)
+ 	{
+--- snes9x/cpuexec.cpp	2026-09-25 11:20:49
++++ rom-audio/snes9x/cpuexec.cpp	2026-09-25 19:53:33
+@@ -5,6 +5,8 @@
+ \*****************************************************************************/
+ 
+ #include "snes9x.h"
++#include <stdio.h>
++extern "C" { extern FILE* aud_log; extern unsigned aud_frame; extern unsigned aud_hooks[256]; extern int aud_nhooks; }
+ #include "memmap.h"
+ #include "cpuops.h"
+ #include "dma.h"
+@@ -176,6 +178,16 @@
+ 					Opcodes = S9xOpcodesSlow;
+ 			}
+ 
++			if (aud_nhooks && aud_log) {
++				uint32 pc = Registers.PBPC;
++				for (int hi = 0; hi < aud_nhooks; hi++) if (aud_hooks[hi] == pc) {
++					uint16 sp = Registers.S.W;
++					fprintf(aud_log, "H %u %06X A=%04X X=%04X Y=%04X P=%02X ret=%02X%02X%02X ret2=%02X%02X%02X\n", aud_frame, pc, Registers.A.W, Registers.X.W, Registers.Y.W, Registers.PL,
++						Memory.RAM[(sp+3)&0x1fff], Memory.RAM[(sp+2)&0x1fff], Memory.RAM[(sp+1)&0x1fff],
++						Memory.RAM[(sp+6)&0x1fff], Memory.RAM[(sp+5)&0x1fff], Memory.RAM[(sp+4)&0x1fff]);
++					break;
++				}
++			}
+ 			Registers.PCw++;
+ 			(*Opcodes[Op].S9xOpcode)();
+ 		}
+--- snes9x/libretro/libretro.cpp	2026-09-25 11:20:49
++++ rom-audio/snes9x/libretro/libretro.cpp	2026-09-25 19:53:15
+@@ -1817,8 +1817,20 @@
+     }
+ }
+ 
++extern "C" {
++FILE* aud_log = NULL; unsigned aud_frame = 0; unsigned aud_hooks[256]; int aud_nhooks = 0;
++RETRO_API void aud_set_log(const char* p) { if (aud_log) fclose(aud_log); aud_log = p ? fopen(p, "w") : NULL; }
++RETRO_API void aud_flush(void) { if (aud_log) fflush(aud_log); }
++RETRO_API void aud_add_hook(unsigned pc) { if (aud_nhooks < 256) aud_hooks[aud_nhooks++] = pc; }
++RETRO_API void aud_clear_hooks(void) { aud_nhooks = 0; }
++RETRO_API int aud_spc_dump(const char* p) { bool8 r = S9xSPCDump(p); S9xSetSoundMute(false); return r; }
++RETRO_API unsigned char* aud_apuram(void) { return SNES::smp.apuram; }
++RETRO_API unsigned aud_spc_pc(void) { return SNES::smp.regs.pc; }
++RETRO_API int aud_dsp_read(int i) { return SNES::dsp.read(i); }
++}
+ void retro_run()
+ {
++    aud_frame++;
+     static uint16 height = PPU.ScreenHeight;
+     bool updated = false;
+     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)

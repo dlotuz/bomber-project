@@ -1,0 +1,11 @@
+from harness import *
+e = fresh(7); e.run(1)
+clear_cells(e, [(3, c) for c in range(2, 15) if c not in (4, 12)] + [(r, 12) for r in range(4, 12) if r != 9] + [(r, 4) for r in range(1, 3)])
+for k in range(1, 5): setpos(e, k, 32 + 16 * k, 208)
+e.w8(0x34A, 0xFF)
+setpos(e, 0, 48, 80); e.run(4)
+e.log(SCR + '/rom-arenas/bomb.log'); e.watch('ww', 0x2800 + cell_addr(3, 3), 0x2800 + cell_addr(3, 3) + 1); e.watch('ww', 0x2800 + cell_addr(3, 5), 0x2800 + cell_addr(3, 5) + 1)
+e.run(3, p0=['A']); e.run(2)
+for f in range(24): e.run(1, p0=['LEFT'])
+for f in range(40): e.run(1, p0=['RIGHT'] if f < 12 else [])
+e.close()

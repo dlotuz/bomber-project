@@ -1,0 +1,12 @@
+from mec import *
+e=Dbg("st_arena01")
+bomb_at(e,0,8,1,back=(2,1))
+e.run(210)
+before=bytes(e.obj(0))
+tele(e,0,8,1); e.run(1)
+for i in range(20): e.run(1,p0=['RIGHT'])
+e.shot(OUT+"t19a.png")
+after=bytes(e.obj(0))
+print([ (hex(i),hex(a),hex(b)) for i,(a,b) in enumerate(zip(before,after)) if a!=b])
+for i in range(120): e.run(1)
+e.shot(OUT+"t19b.png"); print(pos(e))

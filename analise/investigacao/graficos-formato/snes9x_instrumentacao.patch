@@ -1,0 +1,292 @@
+--- a/getset.h
++++ b/getset.h
+@@ -16,6 +16,9 @@
+ #include "seta.h"
+ #include "bsx.h"
+ #include "msu1.h"
++#include "dbg.h"
++#define DBG_RD(p,n) { uint8 *_p=(p); if (!CPU.InDMAorHDMA && _p>=Memory.ROM && _p<Memory.ROM+0x400000) { uint32 _o=_p-Memory.ROM; dbg_rom_reader[_o]=dbg_op_pc; if(n>1&&_o+1<0x400000) dbg_rom_reader[_o+1]=dbg_op_pc; } }
++#define DBG_WR(p,n) { uint8 *_p=(p); if (_p>=Memory.RAM && _p<Memory.RAM+0x20000) { uint32 _o=_p-Memory.RAM; uint32 _v=dbg_op_pc|(CPU.InDMAorHDMA?0x80000000u:0); dbg_wram_writer[_o]=_v; if(n>1&&_o+1<0x20000) dbg_wram_writer[_o+1]=_v; } }
+ 
+ #define addCyclesInMemoryAccess \
+ 	if (!CPU.InDMAorHDMA) \
+@@ -64,6 +67,7 @@
+ 	if (GetAddress >= (uint8 *) CMemory::MAP_LAST)
+ 	{
+ 		byte = *(GetAddress + (Address & 0xffff));
++		DBG_RD(GetAddress + (Address & 0xffff),1);
+ 		addCyclesInMemoryAccess;
+ 		return (byte);
+ 	}
+@@ -193,6 +197,7 @@
+ 	if (GetAddress >= (uint8 *) CMemory::MAP_LAST)
+ 	{
+ 		word = READ_WORD(GetAddress + (Address & 0xffff));
++		DBG_RD(GetAddress + (Address & 0xffff),2);
+ 		addCyclesInMemoryAccess_x2;
+ 		return (word);
+ 	}
+@@ -326,6 +331,7 @@
+ 	if (SetAddress >= (uint8 *) CMemory::MAP_LAST)
+ 	{
+ 		*(SetAddress + (Address & 0xffff)) = Byte;
++		DBG_WR(SetAddress + (Address & 0xffff),1);
+ 		addCyclesInMemoryAccess;
+ 		return;
+ 	}
+@@ -466,6 +472,7 @@
+ 	if (SetAddress >= (uint8 *) CMemory::MAP_LAST)
+ 	{
+ 		WRITE_WORD(SetAddress + (Address & 0xffff), Word);
++		DBG_WR(SetAddress + (Address & 0xffff),2);
+ 		addCyclesInMemoryAccess_x2;
+ 		return;
+ 	}
+--- a/cpuexec.cpp
++++ b/cpuexec.cpp
+@@ -5,6 +5,7 @@
+ \*****************************************************************************/
+ 
+ #include "snes9x.h"
++#include "dbg.h"
+ #include "memmap.h"
+ #include "cpuops.h"
+ #include "dma.h"
+@@ -146,6 +147,9 @@
+ 			uint8				Op;
+ 			struct	SOpcodes	*Opcodes;
+ 
++			dbg_op_pc = Registers.PBPC & 0xffffff;
++			dbg_exec[dbg_op_pc >> 3] |= 1 << (dbg_op_pc & 7);
++			if (dbg_bpmap[dbg_op_pc >> 3] & (1 << (dbg_op_pc & 7))) dbg_on_bp();
+ 			if (CPU.PCBase)
+ 			{
+ 				Op = CPU.PCBase[Registers.PCw];
+--- a/dma.cpp
++++ b/dma.cpp
+@@ -5,6 +5,7 @@
+ \*****************************************************************************/
+ 
+ #include "snes9x.h"
++#include "dbg.h"
+ #include "memmap.h"
+ #include "dma.h"
+ #include "apu/apu.h"
+@@ -106,6 +107,7 @@
+ 		return (TRUE);
+ 	}
+ 
++	dbg_on_dma(Channel);
+ 	// Prepare for accessing $2118-2119
+ 	switch (d->BAddress)
+ 	{
+--- a/ppu.cpp
++++ b/ppu.cpp
+@@ -5,6 +5,7 @@
+ \*****************************************************************************/
+ 
+ #include "snes9x.h"
++#include "dbg.h"
+ #include "memmap.h"
+ #include "dma.h"
+ #include "apu/apu.h"
+@@ -553,10 +554,12 @@
+ 				break;
+ 
+ 			case 0x2118: // VMDATAL
++				if (!CPU.InDMAorHDMA) dbg_on_vram_cpu(0, Byte);
+ 				REGISTER_2118(Byte);
+ 				break;
+ 
+ 			case 0x2119: // VMDATAH
++				if (!CPU.InDMAorHDMA) dbg_on_vram_cpu(1, Byte);
+ 				REGISTER_2119(Byte);
+ 				break;
+ 
+@@ -614,6 +617,7 @@
+ 				break;
+ 
+ 			case 0x2122: // CGDATA
++				if (!CPU.InDMAorHDMA) dbg_on_cg_cpu(Byte);
+ 				REGISTER_2122(Byte);
+ 				break;
+ 
+--- a/libretro/libretro.cpp
++++ b/libretro/libretro.cpp
+@@ -1817,8 +1817,10 @@
+     }
+ }
+ 
++extern uint32_t dbg_frame;
+ void retro_run()
+ {
++    dbg_frame++;
+     static uint16 height = PPU.ScreenHeight;
+     bool updated = false;
+     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
+--- a/libretro/Makefile.common
++++ b/libretro/Makefile.common
+@@ -26,6 +26,7 @@
+ 				 $(CORE_DIR)/cpuops.cpp \
+ 				 $(CORE_DIR)/crosshairs.cpp \
+ 				 $(CORE_DIR)/dma.cpp \
++				 $(CORE_DIR)/dbg.cpp \
+ 				 $(CORE_DIR)/dsp.cpp \
+ 				 $(CORE_DIR)/dsp1.cpp \
+ 				 $(CORE_DIR)/dsp2.cpp \
+--- /dev/null
++++ b/dbg.h
+@@ -0,0 +1,17 @@
++#ifndef _DBG_H_
++#define _DBG_H_
++#include <stdio.h>
++#include <stdint.h>
++extern uint32_t dbg_op_pc;
++extern uint32_t dbg_frame;
++extern uint32_t dbg_wram_writer[0x20000];
++extern uint32_t dbg_rom_reader[0x400000];
++extern uint8_t  dbg_exec[0x200000];
++extern FILE *dbg_log;
++extern uint8_t dbg_bpmap[0x200000];
++void dbg_on_bp(void);
++extern FILE *dbg_bin;
++void dbg_on_dma(int ch);
++void dbg_on_vram_cpu(int hi, uint8_t byte);
++void dbg_on_cg_cpu(uint8_t byte);
++#endif
+--- /dev/null
++++ b/dbg.cpp
+@@ -0,0 +1,133 @@
++#include "snes9x.h"
++#include "memmap.h"
++#include "dma.h"
++#include "ppu.h"
++#include "cpuexec.h"
++#include "dbg.h"
++uint32_t dbg_op_pc;
++uint32_t dbg_frame;
++uint32_t dbg_wram_writer[0x20000];
++uint32_t dbg_rom_reader[0x400000];
++uint8_t  dbg_exec[0x200000];
++FILE *dbg_log = NULL;
++uint8_t dbg_bpmap[0x200000];
++FILE *dbg_bin = NULL;
++static long dbg_binpos = 0;
++static uint32_t last_vpc = 0xffffffff, last_vaddr = 0, vcount = 0;
++
++static uint8_t peek(uint32_t a)
++{
++	uint32_t bank = (a >> 16) & 0xff, off = a & 0xffff;
++	if (bank == 0x7e || bank == 0x7f) return Memory.RAM[((bank & 1) << 16) | off];
++	if ((bank < 0x40 || (bank >= 0x80 && bank < 0xc0)) && off < 0x2000) return Memory.RAM[off];
++	if (bank >= 0xc0) return Memory.ROM[((bank - 0xc0) << 16) | off];
++	if (bank >= 0x40 && bank < 0x7e) return Memory.ROM[((bank - 0x40) << 16) | off];
++	if (off >= 0x8000) return Memory.ROM[((bank & 0x3f) << 16) | off];
++	return 0;
++}
++
++void dbg_on_dma(int ch)
++{
++	if (!dbg_log) return;
++	SDMA *d = &DMA[ch];
++	int32 count = d->TransferBytes; if (count == 0) count = 0x10000;
++	uint16 s = Registers.S.W;
++	uint8 st[9]; for (int i = 0; i < 9; i++) st[i] = Memory.RAM[(uint16)(s + 1 + i)];
++	fprintf(dbg_log, "D f=%u pc=%06X ch=%d mode=%d rev=%d fix=%d dec=%d src=%02X%04X n=%d b=21%02X vma=%04X vinc=%d vhigh=%d cg=%02X oam=%03X bin=%ld stk=",
++		dbg_frame, dbg_op_pc, ch, d->TransferMode, d->ReverseTransfer, d->AAddressFixed, d->AAddressDecrement,
++		d->ABank, d->AAddress, count, d->BAddress, PPU.VMA.Address, PPU.VMA.Increment, PPU.VMA.High, PPU.CGADD, PPU.OAMAddr, dbg_binpos);
++	for (int i = 0; i < 9; i++) fprintf(dbg_log, "%02X", st[i]);
++	if (d->ABank == 0x7e || d->ABank == 0x7f || ((d->ABank < 0x40 || (d->ABank >= 0x80 && d->ABank < 0xc0)) && d->AAddress < 0x2000))
++	{
++		uint32_t w[8]; int nw = 0;
++		int inc = d->AAddressFixed ? 0 : (d->AAddressDecrement ? -1 : 1);
++		uint16 a = d->AAddress;
++		uint32_t base = (d->ABank == 0x7f) ? 0x10000 : 0;
++		for (int i = 0; i < count; i++) {
++			uint32_t wp = dbg_wram_writer[base + a];
++			int k; for (k = 0; k < nw; k++) if (w[k] == wp) break;
++			if (k == nw && nw < 8) w[nw++] = wp;
++			a += inc;
++		}
++		fprintf(dbg_log, " writers=");
++		for (int k = 0; k < nw; k++) fprintf(dbg_log, "%s%08X", k ? "," : "", w[k]);
++	}
++	fprintf(dbg_log, "\n");
++	if (dbg_bin && !d->ReverseTransfer)
++	{
++		int inc = d->AAddressFixed ? 0 : (d->AAddressDecrement ? -1 : 1);
++		uint16 a = d->AAddress;
++		for (int i = 0; i < count; i++) { fputc(peek((d->ABank << 16) | a), dbg_bin); a += inc; }
++		dbg_binpos += count;
++	}
++}
++
++void dbg_on_vram_cpu(int hi, uint8_t byte)
++{
++	if (!dbg_log) return;
++	uint32_t a = PPU.VMA.Address;
++	if (dbg_op_pc != last_vpc || (a != last_vaddr && a != last_vaddr + 1 && a != last_vaddr + 32))
++	{
++		fprintf(dbg_log, "V f=%u pc=%06X vma=%04X hi=%d (prev run %u)\n", dbg_frame, dbg_op_pc, a, hi, vcount);
++		vcount = 0;
++	}
++	vcount++;
++	last_vpc = dbg_op_pc; last_vaddr = a;
++}
++
++void dbg_on_cg_cpu(uint8_t byte)
++{
++	if (!dbg_log) return;
++	fprintf(dbg_log, "C f=%u pc=%06X cg=%02X byte=%02X\n", dbg_frame, dbg_op_pc, PPU.CGADD, byte);
++}
++
++void dbg_on_bp(void)
++{
++	if (!dbg_log) return;
++	uint16 d = Registers.D.W, s = Registers.S.W;
++	fprintf(dbg_log, "B f=%u pc=%06X A=%04X X=%04X Y=%04X P=%02X DB=%02X D=%04X S=%04X dp=", dbg_frame, dbg_op_pc,
++		Registers.A.W, Registers.X.W, Registers.Y.W, Registers.PL, Registers.DB, d, s);
++	for (int i = 0x40; i < 0x80; i++) fprintf(dbg_log, "%02X", Memory.RAM[(uint16)(d + i)]);
++	fprintf(dbg_log, " stk=");
++	for (int i = 1; i <= 12; i++) fprintf(dbg_log, "%02X", Memory.RAM[(uint16)(s + i)]);
++	static uint32_t start_a = 0, start_b = 0;
++	uint32_t p68 = Memory.RAM[(uint16)(d+0x68)] | (Memory.RAM[(uint16)(d+0x69)] << 8) | (Memory.RAM[(uint16)(d+0x6a)] << 16);
++	uint32_t p58 = Memory.RAM[(uint16)(d+0x58)] | (Memory.RAM[(uint16)(d+0x59)] << 8) | (Memory.RAM[(uint16)(d+0x5a)] << 16);
++	if (dbg_op_pc == 0xC409A5) start_a = p68;
++	if (dbg_op_pc == 0xC1874D) start_b = p58;
++	if (dbg_op_pc == 0xC409D6 || dbg_op_pc == 0xC1876E)
++	{
++		uint32_t st = dbg_op_pc == 0xC409D6 ? start_a : start_b, en = dbg_op_pc == 0xC409D6 ? p68 : p58;
++		uint32_t n = (en - st) & 0xffff;
++		fprintf(dbg_log, " out=%06X n=%u bin=%ld", st, n, dbg_binpos);
++		if (dbg_bin) { for (uint32_t i = 0; i < n; i++) fputc(peek((st & 0xff0000) | ((st + i) & 0xffff)), dbg_bin); dbg_binpos += n; }
++	}
++	fprintf(dbg_log, "\n");
++}
++extern "C" {
++int dbg_open(const char *logpath, const char *binpath)
++{
++	if (dbg_log) fclose(dbg_log);
++	if (dbg_bin) fclose(dbg_bin);
++	dbg_log = fopen(logpath, "w"); dbg_bin = binpath ? fopen(binpath, "wb") : NULL; dbg_binpos = 0;
++	return dbg_log != NULL;
++}
++void dbg_close(void) { if (dbg_log) fclose(dbg_log); if (dbg_bin) fclose(dbg_bin); dbg_log = dbg_bin = NULL; }
++void dbg_mark(const char *s) { if (dbg_log) { fprintf(dbg_log, "M f=%u %s\n", dbg_frame, s); fflush(dbg_log);} }
++void dbg_flush(void) { if (dbg_log) fflush(dbg_log); if (dbg_bin) fflush(dbg_bin); }
++void *dbg_ptr(int which)
++{
++	switch (which) {
++	case 0: return dbg_wram_writer;
++	case 1: return dbg_rom_reader;
++	case 2: return dbg_exec;
++	case 3: return &dbg_frame;
++	case 4: return PPU.CGDATA;
++	case 5: return Memory.VRAM;
++	case 6: return PPU.OAMData;
++	case 7: return dbg_bpmap;
++	case 8: return Memory.FillRAM;
++	}
++	return NULL;
++}
++}

@@ -4,6 +4,10 @@
 # build / deps
 node_modules/
 web/dist/
-web/snapshots/
 .DS_Store
 *.log
+
+# análise: binários locais e estados do emulador (contêm dados da ROM)
+analise/ferramentas/*.dylib
+analise/estados/
+analise/extraido/

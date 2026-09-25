@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /private/tmp/claude-501/-Users-dlotuz-Projetos-Claude-Bomber-Project/189281cc-52ae-4614-9c45-1f93ec4bdecb/scratchpad/venv/bin/python "$@" 2>&1 | grep -v '^Map_'

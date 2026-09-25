@@ -1,0 +1,11 @@
+from mec import *
+e = Dbg("st_arena01")
+walk_to(e,0,tx=47); print(pos(e))
+e.run(2,p0=['A']); e.run(1)
+walk_to(e,0,tx=31); walk_to(e,0,ty=63); print(pos(e))
+print(gridstr(e))
+e.ww(0x2800,0x2BFF)
+for i in range(200): e.run(1)
+for r in e.log(): print(fmt(r))
+print(gridstr(e))
+e.shot(OUT+"t6.png")

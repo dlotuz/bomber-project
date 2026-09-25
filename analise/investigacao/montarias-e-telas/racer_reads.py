@@ -1,0 +1,10 @@
+import mt, collections
+e=mt.new('st_rules')
+for i in range(5): e.tap('DOWN',0,3,30)
+mt.watch(e, wlo=0x1f50, whi=0x1f51, rlo=0x1f50, rhi=0x1f51)
+e.tap('RIGHT',0,3,30)
+print('toggle', collections.Counter((hex(pc),k) for pc,k,a,v in mt.log(e)))
+e=mt.new(mt.OUT+'st_racer_battle2.bin')
+mt.watch(e, wlo=0x1f50, whi=0x1f51, rlo=0x1f50, rhi=0x1f51)
+e.run(900)
+print('battle', collections.Counter((hex(pc),k) for pc,k,a,v in mt.log(e)))

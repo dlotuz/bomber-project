@@ -1,0 +1,118 @@
+diff --git a/cpuexec.cpp b/cpuexec.cpp
+index ae00a5f..e61112f 100644
+--- a/cpuexec.cpp
++++ b/cpuexec.cpp
+@@ -1,3 +1,4 @@
++#include "dbg.h"
+ /*****************************************************************************\
+      Snes9x - Portable Super Nintendo Entertainment System (TM) emulator.
+                 This file is licensed under the Snes9x License.
+@@ -176,6 +177,7 @@ void S9xMainLoop (void)
+ 					Opcodes = S9xOpcodesSlow;
+ 			}
+ 
++			dbg_pc = Registers.PBPC; if(dbg_n||dbg_trace) dbg_exec(Op);
+ 			Registers.PCw++;
+ 			(*Opcodes[Op].S9xOpcode)();
+ 		}
+diff --git a/dma.cpp b/dma.cpp
+index e1ad324..9c39b26 100644
+--- a/dma.cpp
++++ b/dma.cpp
+@@ -1,3 +1,4 @@
++#include "dbg.h"
+ /*****************************************************************************\
+      Snes9x - Portable Super Nintendo Entertainment System (TM) emulator.
+                 This file is licensed under the Snes9x License.
+@@ -51,6 +52,7 @@ static inline bool8 addCyclesInDMA (uint8 dma_channel)
+ 
+ bool8 S9xDoDMA (uint8 Channel)
+ {
++	if(dbg_dma) dbg_dmalog(Channel);
+ 	CPU.InDMA = TRUE;
+     CPU.InDMAorHDMA = TRUE;
+ 	CPU.CurrentDMAorHDMAChannel = Channel;
+diff --git a/getset.h b/getset.h
+index ec55ea9..877c6aa 100644
+--- a/getset.h
++++ b/getset.h
+@@ -54,7 +54,12 @@ static inline int32 memory_speed (uint32 address)
+ 	return (TWO_CYCLES);
+ }
+ 
+-inline uint8 S9xGetByte (uint32 Address)
++#include "dbg.h"
++inline uint8 S9xGetByte_raw (uint32 Address);
++inline void S9xSetByte_raw (uint8 Byte, uint32 Address);
++#define S9xGetByte S9xGetByte_raw
++#define S9xSetByte S9xSetByte_raw
++inline uint8 S9xGetByte_raw (uint32 Address)
+ {
+ 	int		block = (Address & 0xffffff) >> MEMMAP_SHIFT;
+ 	uint8	*GetAddress = Memory.Map[block];
+@@ -157,7 +162,7 @@ inline uint8 S9xGetByte (uint32 Address)
+ 	}
+ }
+ 
+-inline uint16 S9xGetWord (uint32 Address, enum s9xwrap_t w = WRAP_NONE)
++inline uint16 S9xGetWord_raw (uint32 Address, enum s9xwrap_t w = WRAP_NONE)
+ {
+ 	uint16	word;
+ 
+@@ -317,7 +322,7 @@ inline uint16 S9xGetWord (uint32 Address, enum s9xwrap_t w = WRAP_NONE)
+ 	}
+ }
+ 
+-inline void S9xSetByte (uint8 Byte, uint32 Address)
++inline void S9xSetByte_raw (uint8 Byte, uint32 Address)
+ {
+ 	int		block = (Address & 0xffffff) >> MEMMAP_SHIFT;
+ 	uint8	*SetAddress = Memory.WriteMap[block];
+@@ -423,7 +428,7 @@ inline void S9xSetByte (uint8 Byte, uint32 Address)
+ 	}
+ }
+ 
+-inline void S9xSetWord (uint16 Word, uint32 Address, enum s9xwrap_t w = WRAP_NONE, enum s9xwriteorder_t o = WRITE_01)
++inline void S9xSetWord_raw (uint16 Word, uint32 Address, enum s9xwrap_t w = WRAP_NONE, enum s9xwriteorder_t o = WRITE_01)
+ {
+ 	uint32	mask = MEMMAP_MASK & (w == WRAP_PAGE ? 0xff : (w == WRAP_BANK ? 0xffff : 0xffffff));
+ 	if ((Address & mask) == mask)
+@@ -854,4 +859,11 @@ inline uint8 * S9xGetMemPointer (uint32 Address)
+ 	}
+ }
+ 
++
++#undef S9xGetByte
++#undef S9xSetByte
++inline uint8 S9xGetByte (uint32 Address){ uint8 v=S9xGetByte_raw(Address); if(dbg_n) dbg_access(0,Address,v,1); return v; }
++inline uint16 S9xGetWord (uint32 Address, enum s9xwrap_t w = WRAP_NONE){ uint16 v=S9xGetWord_raw(Address,w); if(dbg_n) dbg_access(0,Address,v,2); return v; }
++inline void S9xSetByte (uint8 Byte, uint32 Address){ if(dbg_n) dbg_access(1,Address,Byte,1); S9xSetByte_raw(Byte,Address); }
++inline void S9xSetWord (uint16 Word, uint32 Address, enum s9xwrap_t w = WRAP_NONE, enum s9xwriteorder_t o = WRITE_01){ if(dbg_n) dbg_access(1,Address,Word,2); S9xSetWord_raw(Word,Address,w,o); }
+ #endif
+diff --git a/libretro/Makefile.common b/libretro/Makefile.common
+index ccb29c3..5dd5a01 100644
+--- a/libretro/Makefile.common
++++ b/libretro/Makefile.common
+@@ -26,6 +26,7 @@ SOURCES_CXX := $(CORE_DIR)/apu/apu.cpp \
+ 				 $(CORE_DIR)/cpuops.cpp \
+ 				 $(CORE_DIR)/crosshairs.cpp \
+ 				 $(CORE_DIR)/dma.cpp \
++				 $(CORE_DIR)/dbg.cpp \
+ 				 $(CORE_DIR)/dsp.cpp \
+ 				 $(CORE_DIR)/dsp1.cpp \
+ 				 $(CORE_DIR)/dsp2.cpp \
+diff --git a/libretro/libretro.cpp b/libretro/libretro.cpp
+index 6060767..3cd6038 100644
+--- a/libretro/libretro.cpp
++++ b/libretro/libretro.cpp
+@@ -1817,8 +1817,10 @@ static void report_buttons()
+     }
+ }
+ 
++#include "../dbg.h"
+ void retro_run()
+ {
++   dbg_frame++;
+     static uint16 height = PPU.ScreenHeight;
+     bool updated = false;
+     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)

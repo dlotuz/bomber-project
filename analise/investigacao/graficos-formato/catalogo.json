@@ -1,0 +1,6281 @@
+{
+ "versao": 1,
+ "rom": {
+  "arquivo": "Super Bomberman 4 (USA).sfc",
+  "tamanho": 4194304,
+  "sha1": "38f4394986bd39fcbe32a722a3fe103ee6177d9b",
+  "crc_md5_na_analise": "CRC32 4DC7D0D3",
+  "mapeamento": "HiROM: offset = ((banco & 0x3F) << 16) | endereço (bancos $C0-$FF); os bancos $E0-$E2 são do patch de tradução"
+ },
+ "formatos": {
+  "zte": "Tiles com elisão de tile zerado. byte Z, byte E; depois: b==Z -> 32 zeros (consome 1); b==E -> fim (consome 1); senão 32 bytes literais (consome 32). Rotinas $C4:09A5 e $C1:874D.",
+  "raw_4bpp": "Tiles 4bpp planares do SNES sem compressão (32 bytes/tile), lidos por DMA direto da ROM.",
+  "raw_2bpp": "Tiles 2bpp planares (16 bytes/tile), DMA direto.",
+  "m7rle": "RLE duplo do Modo 7 ($C4:6201): fluxo de pixels (b<$80 literal; b>=$80 -> valor b&$7F repetido N=próximo byte) e fluxo de mapa (b!=$01 literal; b==$01 -> N, valor); intercalados em palavras (baixo=mapa, alto=pixel).",
+  "paleta": "BGR555 little-endian, 16 cores = 32 bytes, sem compressão.",
+  "composicao_piso": "$C4:4BDD/$C4:4C5C: nos tiles 768-1023 do buffer de 32 KB, pixel de cor 0 recebe o pixel do tile 8+(n&1)+16*((n>>4)&1).",
+  "arena9_post": "$C3:215C: cópias $7F:A000->AC00 ($400), $7F:B800->A400 ($800), $7F:B800->B000 ($800); composição de $7F:9D80 sob $7F:A000 (96 tiles) e de $7F:9C80 sob $7F:AC00 (96 tiles)."
+ },
+ "vram_layout": {
+  "BGMODE": "Modo 1 (+prioridade BG3); tiles 16x16 em BG1/BG2 (menus) e BG1-3 (partida)",
+  "BG1_mapa": "$4000",
+  "BG2_mapa": "$4400",
+  "BG3_mapa": "$5400 (64x64)",
+  "BG12_tiles": "$0000 (4bpp, 1024 tiles)",
+  "BG3_tiles": "$5000 (2bpp)",
+  "OBJ": "$6000 (OBSEL=$63: 16x16 e 32x32, 512 tiles)",
+  "observacao": "endereços em palavras de VRAM"
+ },
+ "arenas": {
+  "tabela_descritores": "$C3:6233 (3 bytes por arena; 12 entradas, 10 usadas no Battle)",
+  "tamanho_registro": "$88 por arena = 4 variantes de $22 bytes (+0 ponteiro do script gráfico, +3.. mapas)",
+  "script_gfx": "48 bytes: 8 ponteiros de blocos ZTE (-> $7F:8000 + $1000*i) + 8 ponteiros de paleta BG (32 bytes cada -> CGRAM 16*i)",
+  "fixup_paleta": "$C4:4E2F: cores 13-15 da paleta 7 copiadas para as cores 13-15 das paletas 2 e 3",
+  "lista": [
+   {
+    "arena": 1,
+    "nome": "The Classic",
+    "descritor": "$C3:62DB",
+    "variantes_descritor": [
+     "$C3:62DB",
+     "$C3:62FD",
+     "$C3:631F",
+     "$C3:6341"
+    ],
+    "script_gfx": "$C3:7542",
+    "blocos_bg": [
+     {
+      "rom": "$D2:C35F",
+      "arquivo": "0x12C35F",
+      "formato": "zte",
+      "comprimido": 1867,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 0,
+      "buffer_wram": "$7F:8000",
+      "vram_word": "$0000",
+      "tiles": "0-127",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$D2:C35F",
+      "arquivo": "0x12C35F",
+      "formato": "zte",
+      "comprimido": 1867,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 1,
+      "buffer_wram": "$7F:9000",
+      "vram_word": "$0800",
+      "tiles": "128-255",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$D2:C35F",
+      "arquivo": "0x12C35F",
+      "formato": "zte",
+      "comprimido": 1867,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 2,
+      "buffer_wram": "$7F:A000",
+      "vram_word": "$1000",
+      "tiles": "256-383",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$D2:C35F",
+      "arquivo": "0x12C35F",
+      "formato": "zte",
+      "comprimido": 1867,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 3,
+      "buffer_wram": "$7F:B000",
+      "vram_word": "$1800",
+      "tiles": "384-511",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$CF:93B4",
+      "arquivo": "0x0F93B4",
+      "formato": "zte",
+      "comprimido": 3014,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 4,
+      "buffer_wram": "$7F:C000",
+      "vram_word": "$2000",
+      "tiles": "512-639",
+      "conteudo": "HUD da partida (barra do topo: relógio, cabeças dos jogadores, dígitos, contadores)"
+     },
+     {
+      "rom": "$D1:C016",
+      "arquivo": "0x11C016",
+      "formato": "zte",
+      "comprimido": 4099,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 5,
+      "buffer_wram": "$7F:D000",
+      "vram_word": "$2800",
+      "tiles": "640-767",
+      "conteudo": "painéis de itens (power-ups: bomba, fogo, patins, luva, soco, chute, P, caveira, ...) e ícones"
+     },
+     {
+      "rom": "$D1:D019",
+      "arquivo": "0x11D019",
+      "formato": "zte",
+      "comprimido": 4099,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 6,
+      "buffer_wram": "$7F:E000",
+      "vram_word": "$3000",
+      "tiles": "768-895",
+      "conteudo": "bombas e chamas da explosão (parte 1); recebem o piso por baixo ($C4:4BDD)"
+     },
+     {
+      "rom": "$D1:E01C",
+      "arquivo": "0x11E01C",
+      "formato": "zte",
+      "comprimido": 3975,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 7,
+      "buffer_wram": "$7F:F000",
+      "vram_word": "$3800",
+      "tiles": "896-1023",
+      "conteudo": "bombas e chamas da explosão (parte 2), variantes de bomba (D/S/H...); recebem o piso por baixo"
+     }
+    ],
+    "paletas_bg": [
+     {
+      "slot": 0,
+      "rom": "$D6:9172",
+      "arquivo": "0x169172",
+      "cgram": "0-15"
+     },
+     {
+      "slot": 1,
+      "rom": "$D6:9192",
+      "arquivo": "0x169192",
+      "cgram": "16-31"
+     },
+     {
+      "slot": 2,
+      "rom": "$D7:E65C",
+      "arquivo": "0x17E65C",
+      "cgram": "32-47"
+     },
+     {
+      "slot": 3,
+      "rom": "$D7:E67C",
+      "arquivo": "0x17E67C",
+      "cgram": "48-63"
+     },
+     {
+      "slot": 4,
+      "rom": "$D6:FFD9",
+      "arquivo": "0x16FFD9",
+      "cgram": "64-79"
+     },
+     {
+      "slot": 5,
+      "rom": "$D7:E13C",
+      "arquivo": "0x17E13C",
+      "cgram": "80-95"
+     },
+     {
+      "slot": 6,
+      "rom": "$D7:E15C",
+      "arquivo": "0x17E15C",
+      "cgram": "96-111"
+     },
+     {
+      "slot": 7,
+      "rom": "$D7:E15C",
+      "arquivo": "0x17E15C",
+      "cgram": "112-127"
+     }
+    ],
+    "pos_processamento": [
+     "composicao_piso"
+    ],
+    "paleta_animada_em_jogo": "pal4 cor15"
+   },
+   {
+    "arena": 2,
+    "nome": "Fast 'n' Slow",
+    "descritor": "$C3:6363",
+    "variantes_descritor": [
+     "$C3:6363",
+     "$C3:6385",
+     "$C3:63A7",
+     "$C3:63C9"
+    ],
+    "script_gfx": "$C3:7572",
+    "blocos_bg": [
+     {
+      "rom": "$D2:CAAA",
+      "arquivo": "0x12CAAA",
+      "formato": "zte",
+      "comprimido": 3355,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 0,
+      "buffer_wram": "$7F:8000",
+      "vram_word": "$0000",
+      "tiles": "0-127",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$D2:D7C5",
+      "arquivo": "0x12D7C5",
+      "formato": "zte",
+      "comprimido": 1061,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 1,
+      "buffer_wram": "$7F:9000",
+      "vram_word": "$0800",
+      "tiles": "128-255",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$D2:DBEA",
+      "arquivo": "0x12DBEA",
+      "formato": "zte",
+      "comprimido": 3603,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 2,
+      "buffer_wram": "$7F:A000",
+      "vram_word": "$1000",
+      "tiles": "256-383",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$D2:E9FD",
+      "arquivo": "0x12E9FD",
+      "formato": "zte",
+      "comprimido": 3603,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 3,
+      "buffer_wram": "$7F:B000",
+      "vram_word": "$1800",
+      "tiles": "384-511",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$CF:93B4",
+      "arquivo": "0x0F93B4",
+      "formato": "zte",
+      "comprimido": 3014,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 4,
+      "buffer_wram": "$7F:C000",
+      "vram_word": "$2000",
+      "tiles": "512-639",
+      "conteudo": "HUD da partida (barra do topo: relógio, cabeças dos jogadores, dígitos, contadores)"
+     },
+     {
+      "rom": "$D1:C016",
+      "arquivo": "0x11C016",
+      "formato": "zte",
+      "comprimido": 4099,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 5,
+      "buffer_wram": "$7F:D000",
+      "vram_word": "$2800",
+      "tiles": "640-767",
+      "conteudo": "painéis de itens (power-ups: bomba, fogo, patins, luva, soco, chute, P, caveira, ...) e ícones"
+     },
+     {
+      "rom": "$D1:D019",
+      "arquivo": "0x11D019",
+      "formato": "zte",
+      "comprimido": 4099,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 6,
+      "buffer_wram": "$7F:E000",
+      "vram_word": "$3000",
+      "tiles": "768-895",
+      "conteudo": "bombas e chamas da explosão (parte 1); recebem o piso por baixo ($C4:4BDD)"
+     },
+     {
+      "rom": "$D1:E01C",
+      "arquivo": "0x11E01C",
+      "formato": "zte",
+      "comprimido": 3975,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 7,
+      "buffer_wram": "$7F:F000",
+      "vram_word": "$3800",
+      "tiles": "896-1023",
+      "conteudo": "bombas e chamas da explosão (parte 2), variantes de bomba (D/S/H...); recebem o piso por baixo"
+     }
+    ],
+    "paletas_bg": [
+     {
+      "slot": 0,
+      "rom": "$D6:9172",
+      "arquivo": "0x169172",
+      "cgram": "0-15"
+     },
+     {
+      "slot": 1,
+      "rom": "$D6:9192",
+      "arquivo": "0x169192",
+      "cgram": "16-31"
+     },
+     {
+      "slot": 2,
+      "rom": "$D7:E65C",
+      "arquivo": "0x17E65C",
+      "cgram": "32-47"
+     },
+     {
+      "slot": 3,
+      "rom": "$D7:E67C",
+      "arquivo": "0x17E67C",
+      "cgram": "48-63"
+     },
+     {
+      "slot": 4,
+      "rom": "$D6:FFD9",
+      "arquivo": "0x16FFD9",
+      "cgram": "64-79"
+     },
+     {
+      "slot": 5,
+      "rom": "$D7:E19C",
+      "arquivo": "0x17E19C",
+      "cgram": "80-95"
+     },
+     {
+      "slot": 6,
+      "rom": "$D7:E1BC",
+      "arquivo": "0x17E1BC",
+      "cgram": "96-111"
+     },
+     {
+      "slot": 7,
+      "rom": "$D7:E1DC",
+      "arquivo": "0x17E1DC",
+      "cgram": "112-127"
+     }
+    ],
+    "pos_processamento": [
+     "composicao_piso"
+    ],
+    "paleta_animada_em_jogo": "pal4 cor15"
+   },
+   {
+    "arena": 3,
+    "nome": "Orb-ital Bombardment",
+    "descritor": "$C3:63EB",
+    "variantes_descritor": [
+     "$C3:63EB",
+     "$C3:640D",
+     "$C3:642F",
+     "$C3:6451"
+    ],
+    "script_gfx": "$C3:75D2",
+    "blocos_bg": [
+     {
+      "rom": "$D1:3944",
+      "arquivo": "0x113944",
+      "formato": "zte",
+      "comprimido": 3603,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 0,
+      "buffer_wram": "$7F:8000",
+      "vram_word": "$0000",
+      "tiles": "0-127",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$D1:4757",
+      "arquivo": "0x114757",
+      "formato": "zte",
+      "comprimido": 2115,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 1,
+      "buffer_wram": "$7F:9000",
+      "vram_word": "$0800",
+      "tiles": "128-255",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$D1:4F9A",
+      "arquivo": "0x114F9A",
+      "formato": "zte",
+      "comprimido": 4099,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 2,
+      "buffer_wram": "$7F:A000",
+      "vram_word": "$1000",
+      "tiles": "256-383",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$D1:5F9D",
+      "arquivo": "0x115F9D",
+      "formato": "zte",
+      "comprimido": 2115,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 3,
+      "buffer_wram": "$7F:B000",
+      "vram_word": "$1800",
+      "tiles": "384-511",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$CF:93B4",
+      "arquivo": "0x0F93B4",
+      "formato": "zte",
+      "comprimido": 3014,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 4,
+      "buffer_wram": "$7F:C000",
+      "vram_word": "$2000",
+      "tiles": "512-639",
+      "conteudo": "HUD da partida (barra do topo: relógio, cabeças dos jogadores, dígitos, contadores)"
+     },
+     {
+      "rom": "$D1:C016",
+      "arquivo": "0x11C016",
+      "formato": "zte",
+      "comprimido": 4099,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 5,
+      "buffer_wram": "$7F:D000",
+      "vram_word": "$2800",
+      "tiles": "640-767",
+      "conteudo": "painéis de itens (power-ups: bomba, fogo, patins, luva, soco, chute, P, caveira, ...) e ícones"
+     },
+     {
+      "rom": "$D1:D019",
+      "arquivo": "0x11D019",
+      "formato": "zte",
+      "comprimido": 4099,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 6,
+      "buffer_wram": "$7F:E000",
+      "vram_word": "$3000",
+      "tiles": "768-895",
+      "conteudo": "bombas e chamas da explosão (parte 1); recebem o piso por baixo ($C4:4BDD)"
+     },
+     {
+      "rom": "$D1:E01C",
+      "arquivo": "0x11E01C",
+      "formato": "zte",
+      "comprimido": 3975,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 7,
+      "buffer_wram": "$7F:F000",
+      "vram_word": "$3800",
+      "tiles": "896-1023",
+      "conteudo": "bombas e chamas da explosão (parte 2), variantes de bomba (D/S/H...); recebem o piso por baixo"
+     }
+    ],
+    "paletas_bg": [
+     {
+      "slot": 0,
+      "rom": "$D6:9172",
+      "arquivo": "0x169172",
+      "cgram": "0-15"
+     },
+     {
+      "slot": 1,
+      "rom": "$D6:9192",
+      "arquivo": "0x169192",
+      "cgram": "16-31"
+     },
+     {
+      "slot": 2,
+      "rom": "$D7:E65C",
+      "arquivo": "0x17E65C",
+      "cgram": "32-47"
+     },
+     {
+      "slot": 3,
+      "rom": "$D7:E67C",
+      "arquivo": "0x17E67C",
+      "cgram": "48-63"
+     },
+     {
+      "slot": 4,
+      "rom": "$D6:FFD9",
+      "arquivo": "0x16FFD9",
+      "cgram": "64-79"
+     },
+     {
+      "slot": 5,
+      "rom": "$D7:E03C",
+      "arquivo": "0x17E03C",
+      "cgram": "80-95"
+     },
+     {
+      "slot": 6,
+      "rom": "$D7:E05C",
+      "arquivo": "0x17E05C",
+      "cgram": "96-111"
+     },
+     {
+      "slot": 7,
+      "rom": "$D7:E07C",
+      "arquivo": "0x17E07C",
+      "cgram": "112-127"
+     }
+    ],
+    "pos_processamento": [
+     "composicao_piso"
+    ],
+    "paleta_animada_em_jogo": "pal4 cor15"
+   },
+   {
+    "arena": 4,
+    "nome": "Don't Push Me",
+    "descritor": "$C3:6473",
+    "variantes_descritor": [
+     "$C3:6473",
+     "$C3:6495",
+     "$C3:64B7",
+     "$C3:64D9"
+    ],
+    "script_gfx": "$C3:7602",
+    "blocos_bg": [
+     {
+      "rom": "$D0:0000",
+      "arquivo": "0x100000",
+      "formato": "zte",
+      "comprimido": 3665,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 0,
+      "buffer_wram": "$7F:8000",
+      "vram_word": "$0000",
+      "tiles": "0-127",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$D0:0E51",
+      "arquivo": "0x100E51",
+      "formato": "zte",
+      "comprimido": 3696,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 1,
+      "buffer_wram": "$7F:9000",
+      "vram_word": "$0800",
+      "tiles": "128-255",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$D3:321F",
+      "arquivo": "0x13321F",
+      "formato": "zte",
+      "comprimido": 4099,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 2,
+      "buffer_wram": "$7F:A000",
+      "vram_word": "$1000",
+      "tiles": "256-383",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$D3:4222",
+      "arquivo": "0x134222",
+      "formato": "zte",
+      "comprimido": 4037,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 3,
+      "buffer_wram": "$7F:B000",
+      "vram_word": "$1800",
+      "tiles": "384-511",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$CF:93B4",
+      "arquivo": "0x0F93B4",
+      "formato": "zte",
+      "comprimido": 3014,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 4,
+      "buffer_wram": "$7F:C000",
+      "vram_word": "$2000",
+      "tiles": "512-639",
+      "conteudo": "HUD da partida (barra do topo: relógio, cabeças dos jogadores, dígitos, contadores)"
+     },
+     {
+      "rom": "$D1:C016",
+      "arquivo": "0x11C016",
+      "formato": "zte",
+      "comprimido": 4099,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 5,
+      "buffer_wram": "$7F:D000",
+      "vram_word": "$2800",
+      "tiles": "640-767",
+      "conteudo": "painéis de itens (power-ups: bomba, fogo, patins, luva, soco, chute, P, caveira, ...) e ícones"
+     },
+     {
+      "rom": "$D1:D019",
+      "arquivo": "0x11D019",
+      "formato": "zte",
+      "comprimido": 4099,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 6,
+      "buffer_wram": "$7F:E000",
+      "vram_word": "$3000",
+      "tiles": "768-895",
+      "conteudo": "bombas e chamas da explosão (parte 1); recebem o piso por baixo ($C4:4BDD)"
+     },
+     {
+      "rom": "$D1:E01C",
+      "arquivo": "0x11E01C",
+      "formato": "zte",
+      "comprimido": 3975,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 7,
+      "buffer_wram": "$7F:F000",
+      "vram_word": "$3800",
+      "tiles": "896-1023",
+      "conteudo": "bombas e chamas da explosão (parte 2), variantes de bomba (D/S/H...); recebem o piso por baixo"
+     }
+    ],
+    "paletas_bg": [
+     {
+      "slot": 0,
+      "rom": "$D6:9172",
+      "arquivo": "0x169172",
+      "cgram": "0-15"
+     },
+     {
+      "slot": 1,
+      "rom": "$D6:9192",
+      "arquivo": "0x169192",
+      "cgram": "16-31"
+     },
+     {
+      "slot": 2,
+      "rom": "$D7:E65C",
+      "arquivo": "0x17E65C",
+      "cgram": "32-47"
+     },
+     {
+      "slot": 3,
+      "rom": "$D7:E67C",
+      "arquivo": "0x17E67C",
+      "cgram": "48-63"
+     },
+     {
+      "slot": 4,
+      "rom": "$D6:FFD9",
+      "arquivo": "0x16FFD9",
+      "cgram": "64-79"
+     },
+     {
+      "slot": 5,
+      "rom": "$D7:DB3C",
+      "arquivo": "0x17DB3C",
+      "cgram": "80-95"
+     },
+     {
+      "slot": 6,
+      "rom": "$D7:DB5C",
+      "arquivo": "0x17DB5C",
+      "cgram": "96-111"
+     },
+     {
+      "slot": 7,
+      "rom": "$D7:DB7C",
+      "arquivo": "0x17DB7C",
+      "cgram": "112-127"
+     }
+    ],
+    "pos_processamento": [
+     "composicao_piso"
+    ],
+    "paleta_animada_em_jogo": "pal4 cor15"
+   },
+   {
+    "arena": 5,
+    "nome": "School of Hard Shocks",
+    "descritor": "$C3:64FB",
+    "variantes_descritor": [
+     "$C3:64FB",
+     "$C3:651D",
+     "$C3:653F",
+     "$C3:6561"
+    ],
+    "script_gfx": "$C3:7632",
+    "blocos_bg": [
+     {
+      "rom": "$D1:67E0",
+      "arquivo": "0x1167E0",
+      "formato": "zte",
+      "comprimido": 3107,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 0,
+      "buffer_wram": "$7F:8000",
+      "vram_word": "$0000",
+      "tiles": "0-127",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$D1:7403",
+      "arquivo": "0x117403",
+      "formato": "zte",
+      "comprimido": 1557,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 1,
+      "buffer_wram": "$7F:9000",
+      "vram_word": "$0800",
+      "tiles": "128-255",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$D1:67E0",
+      "arquivo": "0x1167E0",
+      "formato": "zte",
+      "comprimido": 3107,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 2,
+      "buffer_wram": "$7F:A000",
+      "vram_word": "$1000",
+      "tiles": "256-383",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$D1:7A18",
+      "arquivo": "0x117A18",
+      "formato": "zte",
+      "comprimido": 3510,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 3,
+      "buffer_wram": "$7F:B000",
+      "vram_word": "$1800",
+      "tiles": "384-511",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$CF:93B4",
+      "arquivo": "0x0F93B4",
+      "formato": "zte",
+      "comprimido": 3014,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 4,
+      "buffer_wram": "$7F:C000",
+      "vram_word": "$2000",
+      "tiles": "512-639",
+      "conteudo": "HUD da partida (barra do topo: relógio, cabeças dos jogadores, dígitos, contadores)"
+     },
+     {
+      "rom": "$D1:C016",
+      "arquivo": "0x11C016",
+      "formato": "zte",
+      "comprimido": 4099,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 5,
+      "buffer_wram": "$7F:D000",
+      "vram_word": "$2800",
+      "tiles": "640-767",
+      "conteudo": "painéis de itens (power-ups: bomba, fogo, patins, luva, soco, chute, P, caveira, ...) e ícones"
+     },
+     {
+      "rom": "$D1:D019",
+      "arquivo": "0x11D019",
+      "formato": "zte",
+      "comprimido": 4099,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 6,
+      "buffer_wram": "$7F:E000",
+      "vram_word": "$3000",
+      "tiles": "768-895",
+      "conteudo": "bombas e chamas da explosão (parte 1); recebem o piso por baixo ($C4:4BDD)"
+     },
+     {
+      "rom": "$D1:E01C",
+      "arquivo": "0x11E01C",
+      "formato": "zte",
+      "comprimido": 3975,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 7,
+      "buffer_wram": "$7F:F000",
+      "vram_word": "$3800",
+      "tiles": "896-1023",
+      "conteudo": "bombas e chamas da explosão (parte 2), variantes de bomba (D/S/H...); recebem o piso por baixo"
+     }
+    ],
+    "paletas_bg": [
+     {
+      "slot": 0,
+      "rom": "$D6:9172",
+      "arquivo": "0x169172",
+      "cgram": "0-15"
+     },
+     {
+      "slot": 1,
+      "rom": "$D6:9192",
+      "arquivo": "0x169192",
+      "cgram": "16-31"
+     },
+     {
+      "slot": 2,
+      "rom": "$D7:E65C",
+      "arquivo": "0x17E65C",
+      "cgram": "32-47"
+     },
+     {
+      "slot": 3,
+      "rom": "$D7:E67C",
+      "arquivo": "0x17E67C",
+      "cgram": "48-63"
+     },
+     {
+      "slot": 4,
+      "rom": "$D6:FFD9",
+      "arquivo": "0x16FFD9",
+      "cgram": "64-79"
+     },
+     {
+      "slot": 5,
+      "rom": "$D7:E0BC",
+      "arquivo": "0x17E0BC",
+      "cgram": "80-95"
+     },
+     {
+      "slot": 6,
+      "rom": "$D7:E0DC",
+      "arquivo": "0x17E0DC",
+      "cgram": "96-111"
+     },
+     {
+      "slot": 7,
+      "rom": "$D7:E0FC",
+      "arquivo": "0x17E0FC",
+      "cgram": "112-127"
+     }
+    ],
+    "pos_processamento": [
+     "composicao_piso"
+    ],
+    "paleta_animada_em_jogo": "pal4 cor15"
+   },
+   {
+    "arena": 6,
+    "nome": "Totally Floored",
+    "descritor": "$C3:6583",
+    "variantes_descritor": [
+     "$C3:6583",
+     "$C3:65A5",
+     "$C3:65C7",
+     "$C3:65E9"
+    ],
+    "script_gfx": "$C3:7662",
+    "blocos_bg": [
+     {
+      "rom": "$D3:5E4B",
+      "arquivo": "0x135E4B",
+      "formato": "zte",
+      "comprimido": 3665,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 0,
+      "buffer_wram": "$7F:8000",
+      "vram_word": "$0000",
+      "tiles": "0-127",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$D3:6C9C",
+      "arquivo": "0x136C9C",
+      "formato": "zte",
+      "comprimido": 3107,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 1,
+      "buffer_wram": "$7F:9000",
+      "vram_word": "$0800",
+      "tiles": "128-255",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$D3:5E4B",
+      "arquivo": "0x135E4B",
+      "formato": "zte",
+      "comprimido": 3665,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 2,
+      "buffer_wram": "$7F:A000",
+      "vram_word": "$1000",
+      "tiles": "256-383",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$D3:5E4B",
+      "arquivo": "0x135E4B",
+      "formato": "zte",
+      "comprimido": 3665,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 3,
+      "buffer_wram": "$7F:B000",
+      "vram_word": "$1800",
+      "tiles": "384-511",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$CF:93B4",
+      "arquivo": "0x0F93B4",
+      "formato": "zte",
+      "comprimido": 3014,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 4,
+      "buffer_wram": "$7F:C000",
+      "vram_word": "$2000",
+      "tiles": "512-639",
+      "conteudo": "HUD da partida (barra do topo: relógio, cabeças dos jogadores, dígitos, contadores)"
+     },
+     {
+      "rom": "$D1:C016",
+      "arquivo": "0x11C016",
+      "formato": "zte",
+      "comprimido": 4099,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 5,
+      "buffer_wram": "$7F:D000",
+      "vram_word": "$2800",
+      "tiles": "640-767",
+      "conteudo": "painéis de itens (power-ups: bomba, fogo, patins, luva, soco, chute, P, caveira, ...) e ícones"
+     },
+     {
+      "rom": "$D1:D019",
+      "arquivo": "0x11D019",
+      "formato": "zte",
+      "comprimido": 4099,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 6,
+      "buffer_wram": "$7F:E000",
+      "vram_word": "$3000",
+      "tiles": "768-895",
+      "conteudo": "bombas e chamas da explosão (parte 1); recebem o piso por baixo ($C4:4BDD)"
+     },
+     {
+      "rom": "$D1:E01C",
+      "arquivo": "0x11E01C",
+      "formato": "zte",
+      "comprimido": 3975,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 7,
+      "buffer_wram": "$7F:F000",
+      "vram_word": "$3800",
+      "tiles": "896-1023",
+      "conteudo": "bombas e chamas da explosão (parte 2), variantes de bomba (D/S/H...); recebem o piso por baixo"
+     }
+    ],
+    "paletas_bg": [
+     {
+      "slot": 0,
+      "rom": "$D6:9172",
+      "arquivo": "0x169172",
+      "cgram": "0-15"
+     },
+     {
+      "slot": 1,
+      "rom": "$D6:9192",
+      "arquivo": "0x169192",
+      "cgram": "16-31"
+     },
+     {
+      "slot": 2,
+      "rom": "$D7:E65C",
+      "arquivo": "0x17E65C",
+      "cgram": "32-47"
+     },
+     {
+      "slot": 3,
+      "rom": "$D7:E67C",
+      "arquivo": "0x17E67C",
+      "cgram": "48-63"
+     },
+     {
+      "slot": 4,
+      "rom": "$D6:FFD9",
+      "arquivo": "0x16FFD9",
+      "cgram": "64-79"
+     },
+     {
+      "slot": 5,
+      "rom": "$D7:E2DC",
+      "arquivo": "0x17E2DC",
+      "cgram": "80-95"
+     },
+     {
+      "slot": 6,
+      "rom": "$D7:E2FC",
+      "arquivo": "0x17E2FC",
+      "cgram": "96-111"
+     },
+     {
+      "slot": 7,
+      "rom": "$D7:E31C",
+      "arquivo": "0x17E31C",
+      "cgram": "112-127"
+     }
+    ],
+    "pos_processamento": [
+     "composicao_piso"
+    ],
+    "paleta_animada_em_jogo": "pal4 cor15"
+   },
+   {
+    "arena": 7,
+    "nome": "Hide and Blow Seek",
+    "descritor": "$C3:660B",
+    "variantes_descritor": [
+     "$C3:660B",
+     "$C3:662D",
+     "$C3:664F",
+     "$C3:6671"
+    ],
+    "script_gfx": "$C3:7692",
+    "blocos_bg": [
+     {
+      "rom": "$D0:C8CF",
+      "arquivo": "0x10C8CF",
+      "formato": "zte",
+      "comprimido": 3603,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 0,
+      "buffer_wram": "$7F:8000",
+      "vram_word": "$0000",
+      "tiles": "0-127",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$D0:D6E2",
+      "arquivo": "0x10D6E2",
+      "formato": "zte",
+      "comprimido": 3603,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 1,
+      "buffer_wram": "$7F:9000",
+      "vram_word": "$0800",
+      "tiles": "128-255",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$D0:E4F5",
+      "arquivo": "0x10E4F5",
+      "formato": "zte",
+      "comprimido": 1743,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 2,
+      "buffer_wram": "$7F:A000",
+      "vram_word": "$1000",
+      "tiles": "256-383",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$D0:EBC4",
+      "arquivo": "0x10EBC4",
+      "formato": "zte",
+      "comprimido": 2487,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 3,
+      "buffer_wram": "$7F:B000",
+      "vram_word": "$1800",
+      "tiles": "384-511",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$CF:93B4",
+      "arquivo": "0x0F93B4",
+      "formato": "zte",
+      "comprimido": 3014,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 4,
+      "buffer_wram": "$7F:C000",
+      "vram_word": "$2000",
+      "tiles": "512-639",
+      "conteudo": "HUD da partida (barra do topo: relógio, cabeças dos jogadores, dígitos, contadores)"
+     },
+     {
+      "rom": "$D1:C016",
+      "arquivo": "0x11C016",
+      "formato": "zte",
+      "comprimido": 4099,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 5,
+      "buffer_wram": "$7F:D000",
+      "vram_word": "$2800",
+      "tiles": "640-767",
+      "conteudo": "painéis de itens (power-ups: bomba, fogo, patins, luva, soco, chute, P, caveira, ...) e ícones"
+     },
+     {
+      "rom": "$D1:D019",
+      "arquivo": "0x11D019",
+      "formato": "zte",
+      "comprimido": 4099,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 6,
+      "buffer_wram": "$7F:E000",
+      "vram_word": "$3000",
+      "tiles": "768-895",
+      "conteudo": "bombas e chamas da explosão (parte 1); recebem o piso por baixo ($C4:4BDD)"
+     },
+     {
+      "rom": "$D1:E01C",
+      "arquivo": "0x11E01C",
+      "formato": "zte",
+      "comprimido": 3975,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 7,
+      "buffer_wram": "$7F:F000",
+      "vram_word": "$3800",
+      "tiles": "896-1023",
+      "conteudo": "bombas e chamas da explosão (parte 2), variantes de bomba (D/S/H...); recebem o piso por baixo"
+     }
+    ],
+    "paletas_bg": [
+     {
+      "slot": 0,
+      "rom": "$D6:9172",
+      "arquivo": "0x169172",
+      "cgram": "0-15"
+     },
+     {
+      "slot": 1,
+      "rom": "$D6:9192",
+      "arquivo": "0x169192",
+      "cgram": "16-31"
+     },
+     {
+      "slot": 2,
+      "rom": "$D7:E65C",
+      "arquivo": "0x17E65C",
+      "cgram": "32-47"
+     },
+     {
+      "slot": 3,
+      "rom": "$D7:E67C",
+      "arquivo": "0x17E67C",
+      "cgram": "48-63"
+     },
+     {
+      "slot": 4,
+      "rom": "$D6:FFD9",
+      "arquivo": "0x16FFD9",
+      "cgram": "64-79"
+     },
+     {
+      "slot": 5,
+      "rom": "$D7:DFBC",
+      "arquivo": "0x17DFBC",
+      "cgram": "80-95"
+     },
+     {
+      "slot": 6,
+      "rom": "$D7:DFDC",
+      "arquivo": "0x17DFDC",
+      "cgram": "96-111"
+     },
+     {
+      "slot": 7,
+      "rom": "$D7:DFFC",
+      "arquivo": "0x17DFFC",
+      "cgram": "112-127"
+     }
+    ],
+    "pos_processamento": [
+     "composicao_piso"
+    ],
+    "paleta_animada_em_jogo": "pal4 cor15"
+   },
+   {
+    "arena": 8,
+    "nome": "Spinny Slots",
+    "descritor": "$C3:6693",
+    "variantes_descritor": [
+     "$C3:6693",
+     "$C3:66B5",
+     "$C3:66D7",
+     "$C3:66F9"
+    ],
+    "script_gfx": "$C3:76C2",
+    "blocos_bg": [
+     {
+      "rom": "$D3:78BF",
+      "arquivo": "0x1378BF",
+      "formato": "zte",
+      "comprimido": 2239,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 0,
+      "buffer_wram": "$7F:8000",
+      "vram_word": "$0000",
+      "tiles": "0-127",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$D3:817E",
+      "arquivo": "0x13817E",
+      "formato": "zte",
+      "comprimido": 4006,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 1,
+      "buffer_wram": "$7F:9000",
+      "vram_word": "$0800",
+      "tiles": "128-255",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$D3:9124",
+      "arquivo": "0x139124",
+      "formato": "zte",
+      "comprimido": 1867,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 2,
+      "buffer_wram": "$7F:A000",
+      "vram_word": "$1000",
+      "tiles": "256-383",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$D3:817E",
+      "arquivo": "0x13817E",
+      "formato": "zte",
+      "comprimido": 4006,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 3,
+      "buffer_wram": "$7F:B000",
+      "vram_word": "$1800",
+      "tiles": "384-511",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$CF:93B4",
+      "arquivo": "0x0F93B4",
+      "formato": "zte",
+      "comprimido": 3014,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 4,
+      "buffer_wram": "$7F:C000",
+      "vram_word": "$2000",
+      "tiles": "512-639",
+      "conteudo": "HUD da partida (barra do topo: relógio, cabeças dos jogadores, dígitos, contadores)"
+     },
+     {
+      "rom": "$D1:C016",
+      "arquivo": "0x11C016",
+      "formato": "zte",
+      "comprimido": 4099,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 5,
+      "buffer_wram": "$7F:D000",
+      "vram_word": "$2800",
+      "tiles": "640-767",
+      "conteudo": "painéis de itens (power-ups: bomba, fogo, patins, luva, soco, chute, P, caveira, ...) e ícones"
+     },
+     {
+      "rom": "$D1:D019",
+      "arquivo": "0x11D019",
+      "formato": "zte",
+      "comprimido": 4099,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 6,
+      "buffer_wram": "$7F:E000",
+      "vram_word": "$3000",
+      "tiles": "768-895",
+      "conteudo": "bombas e chamas da explosão (parte 1); recebem o piso por baixo ($C4:4BDD)"
+     },
+     {
+      "rom": "$D1:E01C",
+      "arquivo": "0x11E01C",
+      "formato": "zte",
+      "comprimido": 3975,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 7,
+      "buffer_wram": "$7F:F000",
+      "vram_word": "$3800",
+      "tiles": "896-1023",
+      "conteudo": "bombas e chamas da explosão (parte 2), variantes de bomba (D/S/H...); recebem o piso por baixo"
+     }
+    ],
+    "paletas_bg": [
+     {
+      "slot": 0,
+      "rom": "$D6:9172",
+      "arquivo": "0x169172",
+      "cgram": "0-15"
+     },
+     {
+      "slot": 1,
+      "rom": "$D6:9192",
+      "arquivo": "0x169192",
+      "cgram": "16-31"
+     },
+     {
+      "slot": 2,
+      "rom": "$D7:E65C",
+      "arquivo": "0x17E65C",
+      "cgram": "32-47"
+     },
+     {
+      "slot": 3,
+      "rom": "$D7:E67C",
+      "arquivo": "0x17E67C",
+      "cgram": "48-63"
+     },
+     {
+      "slot": 4,
+      "rom": "$D6:FFD9",
+      "arquivo": "0x16FFD9",
+      "cgram": "64-79"
+     },
+     {
+      "slot": 5,
+      "rom": "$D7:E35C",
+      "arquivo": "0x17E35C",
+      "cgram": "80-95"
+     },
+     {
+      "slot": 6,
+      "rom": "$D7:E37C",
+      "arquivo": "0x17E37C",
+      "cgram": "96-111"
+     },
+     {
+      "slot": 7,
+      "rom": "$D7:E39C",
+      "arquivo": "0x17E39C",
+      "cgram": "112-127"
+     }
+    ],
+    "pos_processamento": [
+     "composicao_piso"
+    ],
+    "paleta_animada_em_jogo": "pal0 cor0, pal4 cor15"
+   },
+   {
+    "arena": 9,
+    "nome": "Seesaw Yeehaw",
+    "descritor": "$C3:671B",
+    "variantes_descritor": [
+     "$C3:671B",
+     "$C3:673D",
+     "$C3:675F",
+     "$C3:6781"
+    ],
+    "script_gfx": "$C3:7722",
+    "blocos_bg": [
+     {
+      "rom": "$D1:0000",
+      "arquivo": "0x110000",
+      "formato": "zte",
+      "comprimido": 3727,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 0,
+      "buffer_wram": "$7F:8000",
+      "vram_word": "$0000",
+      "tiles": "0-127",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$D1:0E8F",
+      "arquivo": "0x110E8F",
+      "formato": "zte",
+      "comprimido": 3479,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 1,
+      "buffer_wram": "$7F:9000",
+      "vram_word": "$0800",
+      "tiles": "128-255",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$D1:D019",
+      "arquivo": "0x11D019",
+      "formato": "zte",
+      "comprimido": 4099,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 2,
+      "buffer_wram": "$7F:A000",
+      "vram_word": "$1000",
+      "tiles": "256-383",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$D1:E01C",
+      "arquivo": "0x11E01C",
+      "formato": "zte",
+      "comprimido": 3975,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 3,
+      "buffer_wram": "$7F:B000",
+      "vram_word": "$1800",
+      "tiles": "384-511",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$CF:93B4",
+      "arquivo": "0x0F93B4",
+      "formato": "zte",
+      "comprimido": 3014,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 4,
+      "buffer_wram": "$7F:C000",
+      "vram_word": "$2000",
+      "tiles": "512-639",
+      "conteudo": "HUD da partida (barra do topo: relógio, cabeças dos jogadores, dígitos, contadores)"
+     },
+     {
+      "rom": "$D1:C016",
+      "arquivo": "0x11C016",
+      "formato": "zte",
+      "comprimido": 4099,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 5,
+      "buffer_wram": "$7F:D000",
+      "vram_word": "$2800",
+      "tiles": "640-767",
+      "conteudo": "painéis de itens (power-ups: bomba, fogo, patins, luva, soco, chute, P, caveira, ...) e ícones"
+     },
+     {
+      "rom": "$D1:D019",
+      "arquivo": "0x11D019",
+      "formato": "zte",
+      "comprimido": 4099,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 6,
+      "buffer_wram": "$7F:E000",
+      "vram_word": "$3000",
+      "tiles": "768-895",
+      "conteudo": "bombas e chamas da explosão (parte 1); recebem o piso por baixo ($C4:4BDD)"
+     },
+     {
+      "rom": "$D1:E01C",
+      "arquivo": "0x11E01C",
+      "formato": "zte",
+      "comprimido": 3975,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 7,
+      "buffer_wram": "$7F:F000",
+      "vram_word": "$3800",
+      "tiles": "896-1023",
+      "conteudo": "bombas e chamas da explosão (parte 2), variantes de bomba (D/S/H...); recebem o piso por baixo"
+     }
+    ],
+    "paletas_bg": [
+     {
+      "slot": 0,
+      "rom": "$D6:9172",
+      "arquivo": "0x169172",
+      "cgram": "0-15"
+     },
+     {
+      "slot": 1,
+      "rom": "$D6:9192",
+      "arquivo": "0x169192",
+      "cgram": "16-31"
+     },
+     {
+      "slot": 2,
+      "rom": "$D7:E65C",
+      "arquivo": "0x17E65C",
+      "cgram": "32-47"
+     },
+     {
+      "slot": 3,
+      "rom": "$D7:E67C",
+      "arquivo": "0x17E67C",
+      "cgram": "48-63"
+     },
+     {
+      "slot": 4,
+      "rom": "$D6:FFD9",
+      "arquivo": "0x16FFD9",
+      "cgram": "64-79"
+     },
+     {
+      "slot": 5,
+      "rom": "$D7:DD7C",
+      "arquivo": "0x17DD7C",
+      "cgram": "80-95"
+     },
+     {
+      "slot": 6,
+      "rom": "$D7:DD9C",
+      "arquivo": "0x17DD9C",
+      "cgram": "96-111"
+     },
+     {
+      "slot": 7,
+      "rom": "$D7:DDBC",
+      "arquivo": "0x17DDBC",
+      "cgram": "112-127"
+     }
+    ],
+    "pos_processamento": [
+     "composicao_piso",
+     "arena9_post"
+    ],
+    "paleta_animada_em_jogo": "pal4 cor15, pal5 cores 12-15"
+   },
+   {
+    "arena": 10,
+    "nome": "Sartorial Shenanigans",
+    "descritor": "$C3:67A3",
+    "variantes_descritor": [
+     "$C3:67A3",
+     "$C3:67C5",
+     "$C3:67E7",
+     "$C3:6809"
+    ],
+    "script_gfx": "$C3:7752",
+    "blocos_bg": [
+     {
+      "rom": "$D3:ABDD",
+      "arquivo": "0x13ABDD",
+      "formato": "zte",
+      "comprimido": 3355,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 0,
+      "buffer_wram": "$7F:8000",
+      "vram_word": "$0000",
+      "tiles": "0-127",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$D3:B8F8",
+      "arquivo": "0x13B8F8",
+      "formato": "zte",
+      "comprimido": 1340,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 1,
+      "buffer_wram": "$7F:9000",
+      "vram_word": "$0800",
+      "tiles": "128-255",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$D3:B8F8",
+      "arquivo": "0x13B8F8",
+      "formato": "zte",
+      "comprimido": 1340,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 2,
+      "buffer_wram": "$7F:A000",
+      "vram_word": "$1000",
+      "tiles": "256-383",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$D3:BE34",
+      "arquivo": "0x13BE34",
+      "formato": "zte",
+      "comprimido": 503,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 3,
+      "buffer_wram": "$7F:B000",
+      "vram_word": "$1800",
+      "tiles": "384-511",
+      "conteudo": "cenário próprio da arena (piso, paredes, blocos fixos e destrutíveis, bordas, objetos)"
+     },
+     {
+      "rom": "$CF:93B4",
+      "arquivo": "0x0F93B4",
+      "formato": "zte",
+      "comprimido": 3014,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 4,
+      "buffer_wram": "$7F:C000",
+      "vram_word": "$2000",
+      "tiles": "512-639",
+      "conteudo": "HUD da partida (barra do topo: relógio, cabeças dos jogadores, dígitos, contadores)"
+     },
+     {
+      "rom": "$D1:C016",
+      "arquivo": "0x11C016",
+      "formato": "zte",
+      "comprimido": 4099,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 5,
+      "buffer_wram": "$7F:D000",
+      "vram_word": "$2800",
+      "tiles": "640-767",
+      "conteudo": "painéis de itens (power-ups: bomba, fogo, patins, luva, soco, chute, P, caveira, ...) e ícones"
+     },
+     {
+      "rom": "$D1:D019",
+      "arquivo": "0x11D019",
+      "formato": "zte",
+      "comprimido": 4099,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 6,
+      "buffer_wram": "$7F:E000",
+      "vram_word": "$3000",
+      "tiles": "768-895",
+      "conteudo": "bombas e chamas da explosão (parte 1); recebem o piso por baixo ($C4:4BDD)"
+     },
+     {
+      "rom": "$D1:E01C",
+      "arquivo": "0x11E01C",
+      "formato": "zte",
+      "comprimido": 3975,
+      "bytes": 4096,
+      "tiles_4bpp": 128,
+      "slot": 7,
+      "buffer_wram": "$7F:F000",
+      "vram_word": "$3800",
+      "tiles": "896-1023",
+      "conteudo": "bombas e chamas da explosão (parte 2), variantes de bomba (D/S/H...); recebem o piso por baixo"
+     }
+    ],
+    "paletas_bg": [
+     {
+      "slot": 0,
+      "rom": "$D6:9172",
+      "arquivo": "0x169172",
+      "cgram": "0-15"
+     },
+     {
+      "slot": 1,
+      "rom": "$D6:9192",
+      "arquivo": "0x169192",
+      "cgram": "16-31"
+     },
+     {
+      "slot": 2,
+      "rom": "$D7:E65C",
+      "arquivo": "0x17E65C",
+      "cgram": "32-47"
+     },
+     {
+      "slot": 3,
+      "rom": "$D7:E67C",
+      "arquivo": "0x17E67C",
+      "cgram": "48-63"
+     },
+     {
+      "slot": 4,
+      "rom": "$D6:FFD9",
+      "arquivo": "0x16FFD9",
+      "cgram": "64-79"
+     },
+     {
+      "slot": 5,
+      "rom": "$D7:E41C",
+      "arquivo": "0x17E41C",
+      "cgram": "80-95"
+     },
+     {
+      "slot": 6,
+      "rom": "$D7:E43C",
+      "arquivo": "0x17E43C",
+      "cgram": "96-111"
+     },
+     {
+      "slot": 7,
+      "rom": "$D7:E45C",
+      "arquivo": "0x17E45C",
+      "cgram": "112-127"
+     }
+    ],
+    "pos_processamento": [
+     "composicao_piso"
+    ],
+    "paleta_animada_em_jogo": "pal4 cor15, pal5 cores 4-8"
+   }
+  ]
+ },
+ "partida_comum": {
+  "bg3": [
+   {
+    "rom": "$D1:BC16",
+    "arquivo": "0x11BC16",
+    "formato": "raw_2bpp",
+    "bytes": 1024,
+    "vram_word": "$5000",
+    "conteudo": "fonte ASCII 8x8 (64 tiles)"
+   },
+   {
+    "rom": "$D0:F57B",
+    "arquivo": "0x10F57B",
+    "formato": "raw_2bpp",
+    "bytes": 1024,
+    "vram_word": "$5200",
+    "conteudo": "faixas \"PAUSE!\", \"HURRY!\", \"TIME UP!\""
+   }
+  ],
+  "obj": [
+   {
+    "rom": "$C8:FD36",
+    "arquivo": "0x08FD36",
+    "formato": "zte",
+    "comprimido": 439,
+    "bytes": 2048,
+    "tiles_4bpp": 64,
+    "vram_word": "$6800",
+    "conteudo": "efeitos pequenos (faíscas/fragmentos)"
+   },
+   {
+    "rom": "$D1:87CE",
+    "arquivo": "0x1187CE",
+    "formato": "zte",
+    "comprimido": 1989,
+    "bytes": 2048,
+    "tiles_4bpp": 64,
+    "vram_word": "$7000",
+    "conteudo": "esferas e cilindros grandes, rastro de fogo"
+   },
+   {
+    "rom": "$D1:8F93",
+    "arquivo": "0x118F93",
+    "formato": "zte",
+    "comprimido": 1772,
+    "bytes": 2048,
+    "tiles_4bpp": 64,
+    "vram_word": "$7400",
+    "conteudo": "nuvens de fumaça/poeira, brilhos, sombra"
+   },
+   {
+    "rom": "$D1:967F",
+    "arquivo": "0x11967F",
+    "formato": "zte",
+    "comprimido": 1431,
+    "bytes": 2048,
+    "tiles_4bpp": 64,
+    "vram_word": "$7800",
+    "conteudo": "bombas (normal, remota, espinhos, D/S/H), números 0-1"
+   },
+   {
+    "rom": "$C5:013B",
+    "arquivo": "0x05013B",
+    "formato": "zte",
+    "comprimido": 1245,
+    "bytes": 2048,
+    "tiles_4bpp": 64,
+    "vram_word": "$7C00",
+    "conteudo": "números 2-9, ícones (lança-chamas, notas musicais, placas)"
+   },
+   {
+    "rom": "$C8:FA44",
+    "arquivo": "0x08FA44",
+    "formato": "zte",
+    "comprimido": 439,
+    "bytes": 2048,
+    "tiles_4bpp": 64,
+    "vram_word": "$7C00 (só arena 3, sobrepõe parte de $C5:013B)",
+    "conteudo": "objetos da arena 3"
+   },
+   {
+    "rom": "$C7:FEA1",
+    "arquivo": "0x07FEA1",
+    "formato": "zte",
+    "comprimido": 315,
+    "bytes": 2048,
+    "tiles_4bpp": 64,
+    "vram_word": "$64C0 e $65C0 (2 x 4 tiles)",
+    "conteudo": "caixa/ícone 32x16"
+   },
+   {
+    "rom": "$C5:FE5C",
+    "arquivo": "0x05FE5C",
+    "formato": "zte",
+    "comprimido": 191,
+    "bytes": 2048,
+    "tiles_4bpp": 64,
+    "vram_word": "$02E0 e $03E0 (BG, 2 x 2 tiles)",
+    "conteudo": "tiles de BG animados"
+   }
+  ],
+  "hud_rostos": {
+   "tabela": "$C4:6170",
+   "blocos": [
+    "$CF:93B4",
+    "$CF:9F7A",
+    "$CF:AF7D",
+    "$CF:BD90",
+    "$CF:CBA3"
+   ],
+   "destino": "$7F:208C + $1000*i, depois pedaços de 64 bytes por DMA ($C4:6157) para VRAM word $2010.. (cabeças do HUD de cada jogador)"
+  },
+  "paleta_obj": {
+   "slot15": {
+    "rom": "$D7:E6DC",
+    "uso": "bombas, chamas e efeitos (OBJ pal 7)"
+   },
+   "jogadores": "tabela $C2:779D: índice = personagem*32 + jogador*4 -> ponteiro 24 bits + byte de atributo; slot OBJ = 8 + (atributo>>1) -> 8,9,12,13,14 para P1..P5",
+   "tabela_times": "$C2:7B9D (mesma estrutura; uma cor por personagem)"
+  },
+  "vram_observada_arena01": [
+   {
+    "vram_word": "$5000",
+    "vram_byte": "$A000",
+    "bytes": 1024,
+    "tipo": "raw",
+    "origem": "$D1:BC16",
+    "offset": 0
+   },
+   {
+    "vram_word": "$5200",
+    "vram_byte": "$A400",
+    "bytes": 1024,
+    "tipo": "raw",
+    "origem": "$D0:F57B",
+    "offset": 0
+   },
+   {
+    "vram_word": "$6000",
+    "vram_byte": "$C000",
+    "bytes": 128,
+    "tipo": "raw",
+    "origem": "$D2:0900",
+    "offset": 0
+   },
+   {
+    "vram_word": "$6040",
+    "vram_byte": "$C080",
+    "bytes": 128,
+    "tipo": "raw",
+    "origem": "$CB:0900",
+    "offset": 0
+   },
+   {
+    "vram_word": "$6080",
+    "vram_byte": "$C100",
+    "bytes": 256,
+    "tipo": "fill",
+    "valor": 0
+   },
+   {
+    "vram_word": "$6100",
+    "vram_byte": "$C200",
+    "bytes": 128,
+    "tipo": "raw",
+    "origem": "$D2:0B00",
+    "offset": 0
+   },
+   {
+    "vram_word": "$6140",
+    "vram_byte": "$C280",
+    "bytes": 128,
+    "tipo": "raw",
+    "origem": "$CB:0B00",
+    "offset": 0
+   },
+   {
+    "vram_word": "$6180",
+    "vram_byte": "$C300",
+    "bytes": 256,
+    "tipo": "fill",
+    "valor": 0
+   },
+   {
+    "vram_word": "$6200",
+    "vram_byte": "$C400",
+    "bytes": 128,
+    "tipo": "raw",
+    "origem": "$D2:0D00",
+    "offset": 0
+   },
+   {
+    "vram_word": "$6240",
+    "vram_byte": "$C480",
+    "bytes": 128,
+    "tipo": "raw",
+    "origem": "$CB:0D00",
+    "offset": 0
+   },
+   {
+    "vram_word": "$6280",
+    "vram_byte": "$C500",
+    "bytes": 256,
+    "tipo": "fill",
+    "valor": 0
+   },
+   {
+    "vram_word": "$6300",
+    "vram_byte": "$C600",
+    "bytes": 128,
+    "tipo": "raw",
+    "origem": "$D2:0600",
+    "offset": 0
+   },
+   {
+    "vram_word": "$6340",
+    "vram_byte": "$C680",
+    "bytes": 128,
+    "tipo": "raw",
+    "origem": "$CB:0F00",
+    "offset": 0
+   },
+   {
+    "vram_word": "$6380",
+    "vram_byte": "$C700",
+    "bytes": 256,
+    "tipo": "fill",
+    "valor": 0
+   },
+   {
+    "vram_word": "$6400",
+    "vram_byte": "$C800",
+    "bytes": 128,
+    "tipo": "raw",
+    "origem": "$CB:8900",
+    "offset": 0
+   },
+   {
+    "vram_word": "$6440",
+    "vram_byte": "$C880",
+    "bytes": 128,
+    "tipo": "raw",
+    "origem": "$CA:0DC3",
+    "offset": 0
+   },
+   {
+    "vram_word": "$6480",
+    "vram_byte": "$C900",
+    "bytes": 128,
+    "tipo": "raw",
+    "origem": "$CC:8900",
+    "offset": 0
+   },
+   {
+    "vram_word": "$64C0",
+    "vram_byte": "$C980",
+    "bytes": 128,
+    "tipo": "zte",
+    "origem": "$C7:FEA1",
+    "offset": 0
+   },
+   {
+    "vram_word": "$6500",
+    "vram_byte": "$CA00",
+    "bytes": 128,
+    "tipo": "raw",
+    "origem": "$CB:8B00",
+    "offset": 0
+   },
+   {
+    "vram_word": "$6540",
+    "vram_byte": "$CA80",
+    "bytes": 128,
+    "tipo": "raw",
+    "origem": "$CA:0F47",
+    "offset": 0
+   },
+   {
+    "vram_word": "$6580",
+    "vram_byte": "$CB00",
+    "bytes": 128,
+    "tipo": "raw",
+    "origem": "$CC:8B00",
+    "offset": 0
+   },
+   {
+    "vram_word": "$65C0",
+    "vram_byte": "$CB80",
+    "bytes": 128,
+    "tipo": "zte",
+    "origem": "$C7:FEA1",
+    "offset": 512
+   },
+   {
+    "vram_word": "$6600",
+    "vram_byte": "$CC00",
+    "bytes": 128,
+    "tipo": "raw",
+    "origem": "$CB:8D00",
+    "offset": 0
+   },
+   {
+    "vram_word": "$6640",
+    "vram_byte": "$CC80",
+    "bytes": 128,
+    "tipo": "raw",
+    "origem": "$CA:10EA",
+    "offset": 0
+   },
+   {
+    "vram_word": "$6680",
+    "vram_byte": "$CD00",
+    "bytes": 128,
+    "tipo": "raw",
+    "origem": "$CC:8D00",
+    "offset": 0
+   },
+   {
+    "vram_word": "$66C0",
+    "vram_byte": "$CD80",
+    "bytes": 128,
+    "tipo": "fill",
+    "valor": 0
+   },
+   {
+    "vram_word": "$6700",
+    "vram_byte": "$CE00",
+    "bytes": 128,
+    "tipo": "raw",
+    "origem": "$CB:8F00",
+    "offset": 0
+   },
+   {
+    "vram_word": "$6740",
+    "vram_byte": "$CE80",
+    "bytes": 128,
+    "tipo": "raw",
+    "origem": "$CA:128D",
+    "offset": 0
+   },
+   {
+    "vram_word": "$6780",
+    "vram_byte": "$CF00",
+    "bytes": 128,
+    "tipo": "raw",
+    "origem": "$CC:8F00",
+    "offset": 0
+   },
+   {
+    "vram_word": "$67C0",
+    "vram_byte": "$CF80",
+    "bytes": 128,
+    "tipo": "fill",
+    "valor": 0
+   },
+   {
+    "vram_word": "$6800",
+    "vram_byte": "$D000",
+    "bytes": 2048,
+    "tipo": "zte",
+    "origem": "$C8:FD36",
+    "offset": 0
+   },
+   {
+    "vram_word": "$6C00",
+    "vram_byte": "$D800",
+    "bytes": 2048,
+    "tipo": "fill",
+    "valor": 0
+   },
+   {
+    "vram_word": "$7000",
+    "vram_byte": "$E000",
+    "bytes": 2048,
+    "tipo": "zte",
+    "origem": "$D1:87CE",
+    "offset": 0
+   },
+   {
+    "vram_word": "$7400",
+    "vram_byte": "$E800",
+    "bytes": 2048,
+    "tipo": "zte",
+    "origem": "$D1:8F93",
+    "offset": 0
+   },
+   {
+    "vram_word": "$7800",
+    "vram_byte": "$F000",
+    "bytes": 2048,
+    "tipo": "zte",
+    "origem": "$D1:967F",
+    "offset": 0
+   },
+   {
+    "vram_word": "$7C00",
+    "vram_byte": "$F800",
+    "bytes": 2048,
+    "tipo": "zte",
+    "origem": "$C5:013B",
+    "offset": 0
+   }
+  ]
+ },
+ "personagens": [
+  {
+   "id": 0,
+   "nome": "Bomberman branco",
+   "sprites": "$D2:0000-$D2:7FFF",
+   "formato": "raw_4bpp, folha de 16 tiles de largura (linha = $200 bytes), quadros 32x32; enviado quadro a quadro por DMA ($C1:8949..$C1:8A84, 4 linhas de 128 bytes)",
+   "paletas_por_jogador": [
+    {
+     "jogador": 1,
+     "rom": "$D7:E7DC",
+     "atributo": "$00"
+    },
+    {
+     "jogador": 2,
+     "rom": "$D7:E7FC",
+     "atributo": "$02"
+    },
+    {
+     "jogador": 3,
+     "rom": "$D7:E81C",
+     "atributo": "$08"
+    },
+    {
+     "jogador": 4,
+     "rom": "$D7:E83C",
+     "atributo": "$0A"
+    },
+    {
+     "jogador": 5,
+     "rom": "$D7:E85C",
+     "atributo": "$0C"
+    }
+   ]
+  },
+  {
+   "id": 1,
+   "nome": "ciborgue de monóculo",
+   "sprites": "$CB:0000-$CB:7FFF",
+   "formato": "raw_4bpp, folha de 16 tiles de largura (linha = $200 bytes), quadros 32x32; enviado quadro a quadro por DMA ($C1:8949..$C1:8A84, 4 linhas de 128 bytes)",
+   "paletas_por_jogador": [
+    {
+     "jogador": 1,
+     "rom": "$D6:6D9B",
+     "atributo": "$00"
+    },
+    {
+     "jogador": 2,
+     "rom": "$D6:6DBB",
+     "atributo": "$02"
+    },
+    {
+     "jogador": 3,
+     "rom": "$D6:6DDB",
+     "atributo": "$08"
+    },
+    {
+     "jogador": 4,
+     "rom": "$D6:6DFB",
+     "atributo": "$0A"
+    },
+    {
+     "jogador": 5,
+     "rom": "$D6:6E1B",
+     "atributo": "$0C"
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "nome": "bomber de capacete amarelo (\"felino laranja\" na análise anterior)",
+   "sprites": "$CB:8000-$CB:FFFF",
+   "formato": "raw_4bpp, folha de 16 tiles de largura (linha = $200 bytes), quadros 32x32; enviado quadro a quadro por DMA ($C1:8949..$C1:8A84, 4 linhas de 128 bytes)",
+   "paletas_por_jogador": [
+    {
+     "jogador": 1,
+     "rom": "$D6:6CDB",
+     "atributo": "$00"
+    },
+    {
+     "jogador": 2,
+     "rom": "$D6:6CFB",
+     "atributo": "$02"
+    },
+    {
+     "jogador": 3,
+     "rom": "$D6:6D1B",
+     "atributo": "$08"
+    },
+    {
+     "jogador": 4,
+     "rom": "$D6:6D3B",
+     "atributo": "$0A"
+    },
+    {
+     "jogador": 5,
+     "rom": "$D6:6D5B",
+     "atributo": "$0C"
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "nome": "cavaleiro alado (mochila de asas)",
+   "sprites": "$CC:0000-$CC:7FFF (+ quadros com ponteiros por linha em $CA, ex. $CA:0DC3)",
+   "formato": "raw_4bpp, folha de 16 tiles de largura (linha = $200 bytes), quadros 32x32; enviado quadro a quadro por DMA ($C1:8949..$C1:8A84, 4 linhas de 128 bytes)",
+   "paletas_por_jogador": [
+    {
+     "jogador": 1,
+     "rom": "$D6:5FF9",
+     "atributo": "$00"
+    },
+    {
+     "jogador": 2,
+     "rom": "$D6:6019",
+     "atributo": "$02"
+    },
+    {
+     "jogador": 3,
+     "rom": "$D6:6039",
+     "atributo": "$08"
+    },
+    {
+     "jogador": 4,
+     "rom": "$D6:6059",
+     "atributo": "$0A"
+    },
+    {
+     "jogador": 5,
+     "rom": "$D6:6079",
+     "atributo": "$0C"
+    }
+   ]
+  },
+  {
+   "id": 4,
+   "nome": "verde blindado",
+   "sprites": "$CC:8000-$CC:FFFF",
+   "formato": "raw_4bpp, folha de 16 tiles de largura (linha = $200 bytes), quadros 32x32; enviado quadro a quadro por DMA ($C1:8949..$C1:8A84, 4 linhas de 128 bytes)",
+   "paletas_por_jogador": [
+    {
+     "jogador": 1,
+     "rom": "$D6:5E39",
+     "atributo": "$00"
+    },
+    {
+     "jogador": 2,
+     "rom": "$D6:5E59",
+     "atributo": "$02"
+    },
+    {
+     "jogador": 3,
+     "rom": "$D6:5E79",
+     "atributo": "$08"
+    },
+    {
+     "jogador": 4,
+     "rom": "$D6:5E99",
+     "atributo": "$0A"
+    },
+    {
+     "jogador": 5,
+     "rom": "$D6:5EB9",
+     "atributo": "$0C"
+    }
+   ]
+  },
+  {
+   "id": 5,
+   "nome": "vermelho/roxo",
+   "sprites": "$CD:0000-$CD:7FFF",
+   "formato": "raw_4bpp, folha de 16 tiles de largura (linha = $200 bytes), quadros 32x32; enviado quadro a quadro por DMA ($C1:8949..$C1:8A84, 4 linhas de 128 bytes)",
+   "paletas_por_jogador": [
+    {
+     "jogador": 1,
+     "rom": "$D6:5EF9",
+     "atributo": "$00"
+    },
+    {
+     "jogador": 2,
+     "rom": "$D6:5F19",
+     "atributo": "$02"
+    },
+    {
+     "jogador": 3,
+     "rom": "$D6:5F39",
+     "atributo": "$08"
+    },
+    {
+     "jogador": 4,
+     "rom": "$D6:5F59",
+     "atributo": "$0A"
+    },
+    {
+     "jogador": 5,
+     "rom": "$D6:5F79",
+     "atributo": "$0C"
+    }
+   ]
+  }
+ ],
+ "cenas": {
+  "title": {
+   "descricao": "Tela-título (menu NORMAL/BATTLE/PASSWORD da tradução)",
+   "script_gfx": "$C1:C182 (via $E0:FE44, rotina do patch)",
+   "obj": "ZTE $C8:0000,$C8:0670,$C8:0C64,$C7:FA7E,$C7:E1B6,$C7:E6F0,$C7:EE58,$C7:F46B -> $7F:0800 -> VRAM (rotina $C4:371D)",
+   "vram": [
+    {
+     "vram_word": "$0000",
+     "vram_byte": "$0000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:6B69",
+     "offset": 0
+    },
+    {
+     "vram_word": "$0800",
+     "vram_byte": "$1000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:795D",
+     "offset": 0
+    },
+    {
+     "vram_word": "$1000",
+     "vram_byte": "$2000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:87CD",
+     "offset": 0
+    },
+    {
+     "vram_word": "$1800",
+     "vram_byte": "$3000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:9564",
+     "offset": 0
+    },
+    {
+     "vram_word": "$2000",
+     "vram_byte": "$4000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$C8:3AEA",
+     "offset": 0
+    },
+    {
+     "vram_word": "$2800",
+     "vram_byte": "$5000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$C8:4A71",
+     "offset": 0
+    },
+    {
+     "vram_word": "$3000",
+     "vram_byte": "$6000",
+     "bytes": 2080,
+     "tipo": "zte",
+     "origem": "$C8:5A74",
+     "offset": 0
+    },
+    {
+     "vram_word": "$3410",
+     "vram_byte": "$6820",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$E2:3F4F",
+     "offset": 0
+    },
+    {
+     "vram_word": "$3420",
+     "vram_byte": "$6840",
+     "bytes": 32,
+     "tipo": "zte",
+     "origem": "$C8:5A74",
+     "offset": 2112
+    },
+    {
+     "vram_word": "$3430",
+     "vram_byte": "$6860",
+     "bytes": 256,
+     "tipo": "raw",
+     "origem": "$E2:3F8F",
+     "offset": 0
+    },
+    {
+     "vram_word": "$34B0",
+     "vram_byte": "$6960",
+     "bytes": 32,
+     "tipo": "zte",
+     "origem": "$C8:5A74",
+     "offset": 2400
+    },
+    {
+     "vram_word": "$34C0",
+     "vram_byte": "$6980",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$E2:40AF",
+     "offset": 0
+    },
+    {
+     "vram_word": "$3500",
+     "vram_byte": "$6A00",
+     "bytes": 32,
+     "tipo": "zte",
+     "origem": "$C8:5A74",
+     "offset": 2560
+    },
+    {
+     "vram_word": "$3510",
+     "vram_byte": "$6A20",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$E2:414F",
+     "offset": 0
+    },
+    {
+     "vram_word": "$3520",
+     "vram_byte": "$6A40",
+     "bytes": 32,
+     "tipo": "zte",
+     "origem": "$C8:5A74",
+     "offset": 2624
+    },
+    {
+     "vram_word": "$3530",
+     "vram_byte": "$6A60",
+     "bytes": 256,
+     "tipo": "raw",
+     "origem": "$E2:418F",
+     "offset": 0
+    },
+    {
+     "vram_word": "$35B0",
+     "vram_byte": "$6B60",
+     "bytes": 32,
+     "tipo": "zte",
+     "origem": "$C8:5A74",
+     "offset": 2912
+    },
+    {
+     "vram_word": "$35C0",
+     "vram_byte": "$6B80",
+     "bytes": 256,
+     "tipo": "raw",
+     "origem": "$E2:42AF",
+     "offset": 0
+    },
+    {
+     "vram_word": "$3640",
+     "vram_byte": "$6C80",
+     "bytes": 384,
+     "tipo": "zte",
+     "origem": "$C8:5A74",
+     "offset": 3200
+    },
+    {
+     "vram_word": "$3700",
+     "vram_byte": "$6E00",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$E2:452F",
+     "offset": 0
+    },
+    {
+     "vram_word": "$3740",
+     "vram_byte": "$6E80",
+     "bytes": 384,
+     "tipo": "zte",
+     "origem": "$C8:5A74",
+     "offset": 3712
+    },
+    {
+     "vram_word": "$3800",
+     "vram_byte": "$7000",
+     "bytes": 2656,
+     "tipo": "zte",
+     "origem": "$CE:A339",
+     "offset": 0
+    },
+    {
+     "vram_word": "$3D30",
+     "vram_byte": "$7A60",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$E2:24AB",
+     "offset": 0
+    },
+    {
+     "vram_word": "$3D40",
+     "vram_byte": "$7A80",
+     "bytes": 1408,
+     "tipo": "zte",
+     "origem": "$CE:A339",
+     "offset": 2688
+    },
+    {
+     "vram_word": "$6000",
+     "vram_byte": "$C000",
+     "bytes": 2048,
+     "tipo": "zte",
+     "origem": "$C8:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6400",
+     "vram_byte": "$C800",
+     "bytes": 2048,
+     "tipo": "zte",
+     "origem": "$C8:0670",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6800",
+     "vram_byte": "$D000",
+     "bytes": 2048,
+     "tipo": "zte",
+     "origem": "$C8:0C64",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6C00",
+     "vram_byte": "$D800",
+     "bytes": 2048,
+     "tipo": "zte",
+     "origem": "$C7:FA7E",
+     "offset": 0
+    },
+    {
+     "vram_word": "$7000",
+     "vram_byte": "$E000",
+     "bytes": 2048,
+     "tipo": "zte",
+     "origem": "$C7:E1B6",
+     "offset": 0
+    },
+    {
+     "vram_word": "$7400",
+     "vram_byte": "$E800",
+     "bytes": 2048,
+     "tipo": "zte",
+     "origem": "$C7:E6F0",
+     "offset": 0
+    },
+    {
+     "vram_word": "$7800",
+     "vram_byte": "$F000",
+     "bytes": 2048,
+     "tipo": "zte",
+     "origem": "$C7:EE58",
+     "offset": 0
+    },
+    {
+     "vram_word": "$7C00",
+     "vram_byte": "$F800",
+     "bytes": 2048,
+     "tipo": "zte",
+     "origem": "$C7:F46B",
+     "offset": 0
+    }
+   ],
+   "cgram": [
+    {
+     "paleta": 0,
+     "cgram": "0-15",
+     "camada": "BG",
+     "rom": "$D6:8B2C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 1,
+     "cgram": "16-31",
+     "camada": "BG",
+     "rom": "$D6:8B4C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 2,
+     "cgram": "32-47",
+     "camada": "BG",
+     "rom": "$D6:8CEC",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 3,
+     "cgram": "48-63",
+     "camada": "BG",
+     "rom": "$D6:427D",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 4,
+     "cgram": "64-79",
+     "camada": "BG",
+     "rom": "$D6:427D",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 5,
+     "cgram": "80-95",
+     "camada": "BG",
+     "rom": "$D6:429D",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 6,
+     "cgram": "96-111",
+     "camada": "BG",
+     "rom": "$D6:42BD",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 7,
+     "cgram": "112-127",
+     "camada": "BG",
+     "rom": "$D6:42BD",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 8,
+     "cgram": "128-143",
+     "camada": "OBJ",
+     "rom": "$D6:40BD",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 9,
+     "cgram": "144-159",
+     "camada": "OBJ",
+     "rom": "$D6:3EDD",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 10,
+     "cgram": "160-175",
+     "camada": "OBJ",
+     "rom": "$D6:40BD",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 11,
+     "cgram": "176-191",
+     "camada": "OBJ",
+     "rom": "$D6:3E3D",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 12,
+     "cgram": "192-207",
+     "camada": "OBJ",
+     "rom": "$D6:3E5D",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 13,
+     "cgram": "208-223",
+     "camada": "OBJ",
+     "rom": "$D6:3E7D",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 14,
+     "cgram": "224-239",
+     "camada": "OBJ",
+     "rom": "$D6:3E9D",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 15,
+     "cgram": "240-255",
+     "camada": "OBJ",
+     "rom": "$D6:3EBD",
+     "busca": "exato",
+     "candidatos": []
+    }
+   ]
+  },
+  "vsmode": {
+   "descricao": "\"Select a VS mode!\"",
+   "script_gfx": "$C1:C1B2 (via $E0:FE44) + textos crus do patch ($E0/$E1)",
+   "vram": [
+    {
+     "vram_word": "$0000",
+     "vram_byte": "$0000",
+     "bytes": 64,
+     "tipo": "zte",
+     "origem": "$CE:AF1E",
+     "offset": 0
+    },
+    {
+     "vram_word": "$0020",
+     "vram_byte": "$0040",
+     "bytes": 448,
+     "tipo": "raw",
+     "origem": "$E1:0067",
+     "offset": 0
+    },
+    {
+     "vram_word": "$0100",
+     "vram_byte": "$0200",
+     "bytes": 64,
+     "tipo": "zte",
+     "origem": "$CE:AF1E",
+     "offset": 512
+    },
+    {
+     "vram_word": "$0120",
+     "vram_byte": "$0240",
+     "bytes": 4288,
+     "tipo": "raw",
+     "origem": "$E1:0267",
+     "offset": 0
+    },
+    {
+     "vram_word": "$0980",
+     "vram_byte": "$1300",
+     "bytes": 3328,
+     "tipo": "zte",
+     "origem": "$CE:BE86",
+     "offset": 768
+    },
+    {
+     "vram_word": "$1000",
+     "vram_byte": "$2000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:CE4B",
+     "offset": 0
+    },
+    {
+     "vram_word": "$1800",
+     "vram_byte": "$3000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:DE4E",
+     "offset": 0
+    },
+    {
+     "vram_word": "$2000",
+     "vram_byte": "$4000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CD:E585",
+     "offset": 0
+    },
+    {
+     "vram_word": "$2800",
+     "vram_byte": "$5000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CD:F398",
+     "offset": 0
+    },
+    {
+     "vram_word": "$3000",
+     "vram_byte": "$6000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:EE13",
+     "offset": 0
+    },
+    {
+     "vram_word": "$3800",
+     "vram_byte": "$7000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CD:F398",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5000",
+     "vram_byte": "$A000",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C5:E4A3",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5010",
+     "vram_byte": "$A020",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5020",
+     "vram_byte": "$A040",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5030",
+     "vram_byte": "$A060",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5040",
+     "vram_byte": "$A080",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5050",
+     "vram_byte": "$A0A0",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5060",
+     "vram_byte": "$A0C0",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5070",
+     "vram_byte": "$A0E0",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5080",
+     "vram_byte": "$A100",
+     "bytes": 2240,
+     "tipo": "zero"
+    },
+    {
+     "vram_word": "$6000",
+     "vram_byte": "$C000",
+     "bytes": 2048,
+     "tipo": "zte",
+     "origem": "$C9:F997",
+     "offset": 0
+    }
+   ],
+   "cgram": [
+    {
+     "paleta": 0,
+     "cgram": "0-15",
+     "camada": "BG",
+     "rom": "$D6:8D2C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 1,
+     "cgram": "16-31",
+     "camada": "BG",
+     "rom": "$D6:8D2C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 2,
+     "cgram": "32-47",
+     "camada": "BG",
+     "rom": "$D6:8D4C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 3,
+     "cgram": "48-63",
+     "camada": "BG",
+     "rom": "$D6:8D6C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 4,
+     "cgram": "64-79",
+     "camada": "BG",
+     "rom": "$D6:8D8C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 5,
+     "cgram": "80-95",
+     "camada": "BG",
+     "rom": "$D6:8DAC",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 6,
+     "cgram": "96-111",
+     "camada": "BG",
+     "rom": "$D6:777C",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:781C"
+     ]
+    },
+    {
+     "paleta": 7,
+     "cgram": "112-127",
+     "camada": "BG",
+     "rom": "$D6:8DCC",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 8,
+     "cgram": "128-143",
+     "camada": "OBJ",
+     "rom": "$D6:7F3C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 9,
+     "cgram": "144-159",
+     "camada": "OBJ",
+     "rom": "$D6:3EDD",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 10,
+     "cgram": "160-175",
+     "camada": "OBJ",
+     "rom": "$D6:40BD",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 11,
+     "cgram": "176-191",
+     "camada": "OBJ",
+     "rom": "$D6:3E3D",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 12,
+     "cgram": "192-207",
+     "camada": "OBJ",
+     "rom": "$D6:3E5D",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 13,
+     "cgram": "208-223",
+     "camada": "OBJ",
+     "rom": "$D6:3E7D",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 14,
+     "cgram": "224-239",
+     "camada": "OBJ",
+     "rom": "$D6:3E9D",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 15,
+     "cgram": "240-255",
+     "camada": "OBJ",
+     "rom": "$D6:3EBD",
+     "busca": "exato",
+     "candidatos": []
+    }
+   ]
+  },
+  "ffa": {
+   "descricao": "Free-for-All / Team Battle",
+   "script_gfx": "$C1:C1B2 + textos do patch",
+   "vram": [
+    {
+     "vram_word": "$0000",
+     "vram_byte": "$0000",
+     "bytes": 64,
+     "tipo": "zte",
+     "origem": "$CE:AF1E",
+     "offset": 0
+    },
+    {
+     "vram_word": "$0020",
+     "vram_byte": "$0040",
+     "bytes": 448,
+     "tipo": "raw",
+     "origem": "$E1:0067",
+     "offset": 0
+    },
+    {
+     "vram_word": "$0100",
+     "vram_byte": "$0200",
+     "bytes": 64,
+     "tipo": "zte",
+     "origem": "$CE:AF1E",
+     "offset": 512
+    },
+    {
+     "vram_word": "$0120",
+     "vram_byte": "$0240",
+     "bytes": 3392,
+     "tipo": "raw",
+     "origem": "$E1:3575",
+     "offset": 0
+    },
+    {
+     "vram_word": "$07C0",
+     "vram_byte": "$0F80",
+     "bytes": 128,
+     "tipo": "zte",
+     "origem": "$CE:AF1E",
+     "offset": 3968
+    },
+    {
+     "vram_word": "$0800",
+     "vram_byte": "$1000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:BE86",
+     "offset": 0
+    },
+    {
+     "vram_word": "$1000",
+     "vram_byte": "$2000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:CE4B",
+     "offset": 0
+    },
+    {
+     "vram_word": "$1800",
+     "vram_byte": "$3000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:DE4E",
+     "offset": 0
+    },
+    {
+     "vram_word": "$2000",
+     "vram_byte": "$4000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CD:E585",
+     "offset": 0
+    },
+    {
+     "vram_word": "$2800",
+     "vram_byte": "$5000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CD:F398",
+     "offset": 0
+    },
+    {
+     "vram_word": "$3000",
+     "vram_byte": "$6000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:EE13",
+     "offset": 0
+    },
+    {
+     "vram_word": "$3800",
+     "vram_byte": "$7000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CD:F398",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5000",
+     "vram_byte": "$A000",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C5:E4A3",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5010",
+     "vram_byte": "$A020",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5020",
+     "vram_byte": "$A040",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5030",
+     "vram_byte": "$A060",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5040",
+     "vram_byte": "$A080",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5050",
+     "vram_byte": "$A0A0",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5060",
+     "vram_byte": "$A0C0",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5070",
+     "vram_byte": "$A0E0",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5080",
+     "vram_byte": "$A100",
+     "bytes": 2368,
+     "tipo": "zero"
+    },
+    {
+     "vram_word": "$6000",
+     "vram_byte": "$C000",
+     "bytes": 2048,
+     "tipo": "zte",
+     "origem": "$C9:F997",
+     "offset": 0
+    }
+   ],
+   "cgram": [
+    {
+     "paleta": 0,
+     "cgram": "0-15",
+     "camada": "BG",
+     "rom": "$D6:8D2C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 1,
+     "cgram": "16-31",
+     "camada": "BG",
+     "rom": "$D6:8D2C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 2,
+     "cgram": "32-47",
+     "camada": "BG",
+     "rom": "$D6:8D4C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 3,
+     "cgram": "48-63",
+     "camada": "BG",
+     "rom": "$D6:8D6C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 4,
+     "cgram": "64-79",
+     "camada": "BG",
+     "rom": "$D6:8D8C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 5,
+     "cgram": "80-95",
+     "camada": "BG",
+     "rom": "$D6:8DAC",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 6,
+     "cgram": "96-111",
+     "camada": "BG",
+     "rom": "$D6:773C",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:77DC"
+     ]
+    },
+    {
+     "paleta": 7,
+     "cgram": "112-127",
+     "camada": "BG",
+     "rom": "$D6:8DCC",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 8,
+     "cgram": "128-143",
+     "camada": "OBJ",
+     "rom": "$D6:7F3C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 9,
+     "cgram": "144-159",
+     "camada": "OBJ",
+     "rom": "$D6:3EDD",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 10,
+     "cgram": "160-175",
+     "camada": "OBJ",
+     "rom": "$D6:40BD",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 11,
+     "cgram": "176-191",
+     "camada": "OBJ",
+     "rom": "$D6:3E3D",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 12,
+     "cgram": "192-207",
+     "camada": "OBJ",
+     "rom": "$D6:3E5D",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 13,
+     "cgram": "208-223",
+     "camada": "OBJ",
+     "rom": "$D6:3E7D",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 14,
+     "cgram": "224-239",
+     "camada": "OBJ",
+     "rom": "$D6:3E9D",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 15,
+     "cgram": "240-255",
+     "camada": "OBJ",
+     "rom": "$D6:3EBD",
+     "busca": "exato",
+     "candidatos": []
+    }
+   ]
+  },
+  "players": {
+   "descricao": "\"Decide on the players!\"",
+   "script_gfx": "$C1:C1B2 + textos do patch",
+   "vram": [
+    {
+     "vram_word": "$0000",
+     "vram_byte": "$0000",
+     "bytes": 64,
+     "tipo": "zte",
+     "origem": "$CE:AF1E",
+     "offset": 0
+    },
+    {
+     "vram_word": "$0020",
+     "vram_byte": "$0040",
+     "bytes": 448,
+     "tipo": "raw",
+     "origem": "$E0:D5DC",
+     "offset": 0
+    },
+    {
+     "vram_word": "$0100",
+     "vram_byte": "$0200",
+     "bytes": 64,
+     "tipo": "zte",
+     "origem": "$CE:AF1E",
+     "offset": 512
+    },
+    {
+     "vram_word": "$0120",
+     "vram_byte": "$0240",
+     "bytes": 4416,
+     "tipo": "raw",
+     "origem": "$E0:D7DC",
+     "offset": 0
+    },
+    {
+     "vram_word": "$09C0",
+     "vram_byte": "$1380",
+     "bytes": 3200,
+     "tipo": "zte",
+     "origem": "$CE:BE86",
+     "offset": 896
+    },
+    {
+     "vram_word": "$1000",
+     "vram_byte": "$2000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:CE4B",
+     "offset": 0
+    },
+    {
+     "vram_word": "$1800",
+     "vram_byte": "$3000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:DE4E",
+     "offset": 0
+    },
+    {
+     "vram_word": "$2000",
+     "vram_byte": "$4000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CD:E585",
+     "offset": 0
+    },
+    {
+     "vram_word": "$2800",
+     "vram_byte": "$5000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CD:F398",
+     "offset": 0
+    },
+    {
+     "vram_word": "$3000",
+     "vram_byte": "$6000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:EE13",
+     "offset": 0
+    },
+    {
+     "vram_word": "$3800",
+     "vram_byte": "$7000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CD:F398",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5000",
+     "vram_byte": "$A000",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C5:E4A3",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5010",
+     "vram_byte": "$A020",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5020",
+     "vram_byte": "$A040",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5030",
+     "vram_byte": "$A060",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5040",
+     "vram_byte": "$A080",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5050",
+     "vram_byte": "$A0A0",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5060",
+     "vram_byte": "$A0C0",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5070",
+     "vram_byte": "$A0E0",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5080",
+     "vram_byte": "$A100",
+     "bytes": 1984,
+     "tipo": "zero"
+    },
+    {
+     "vram_word": "$6000",
+     "vram_byte": "$C000",
+     "bytes": 2048,
+     "tipo": "zte",
+     "origem": "$C9:F997",
+     "offset": 0
+    }
+   ],
+   "cgram": [
+    {
+     "paleta": 0,
+     "cgram": "0-15",
+     "camada": "BG",
+     "rom": "$D6:8D2C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 1,
+     "cgram": "16-31",
+     "camada": "BG",
+     "rom": "$D6:8D2C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 2,
+     "cgram": "32-47",
+     "camada": "BG",
+     "rom": "$D6:8D4C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 3,
+     "cgram": "48-63",
+     "camada": "BG",
+     "rom": "$D6:8D6C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 4,
+     "cgram": "64-79",
+     "camada": "BG",
+     "rom": "$D6:8D8C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 5,
+     "cgram": "80-95",
+     "camada": "BG",
+     "rom": "$D6:8DAC",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 6,
+     "cgram": "96-111",
+     "camada": "BG",
+     "rom": "$D6:775C",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:77FC"
+     ]
+    },
+    {
+     "paleta": 7,
+     "cgram": "112-127",
+     "camada": "BG",
+     "rom": "$D6:8DCC",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 8,
+     "cgram": "128-143",
+     "camada": "OBJ",
+     "rom": "$D6:7F3C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 9,
+     "cgram": "144-159",
+     "camada": "OBJ",
+     "rom": "$D6:3EDD",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 10,
+     "cgram": "160-175",
+     "camada": "OBJ",
+     "rom": "$D6:40BD",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 11,
+     "cgram": "176-191",
+     "camada": "OBJ",
+     "rom": "$D6:3E3D",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 12,
+     "cgram": "192-207",
+     "camada": "OBJ",
+     "rom": "$D6:3E5D",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 13,
+     "cgram": "208-223",
+     "camada": "OBJ",
+     "rom": "$D6:3E7D",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 14,
+     "cgram": "224-239",
+     "camada": "OBJ",
+     "rom": "$D6:3E9D",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 15,
+     "cgram": "240-255",
+     "camada": "OBJ",
+     "rom": "$D6:3EBD",
+     "busca": "exato",
+     "candidatos": []
+    }
+   ]
+  },
+  "rules": {
+   "descricao": "\"Configure the rules!\"",
+   "script_gfx": "$C1:C1B2 + textos do patch",
+   "vram": [
+    {
+     "vram_word": "$0000",
+     "vram_byte": "$0000",
+     "bytes": 64,
+     "tipo": "zte",
+     "origem": "$CE:AF1E",
+     "offset": 0
+    },
+    {
+     "vram_word": "$0020",
+     "vram_byte": "$0040",
+     "bytes": 448,
+     "tipo": "raw",
+     "origem": "$E0:4240",
+     "offset": 0
+    },
+    {
+     "vram_word": "$0100",
+     "vram_byte": "$0200",
+     "bytes": 64,
+     "tipo": "zte",
+     "origem": "$CE:AF1E",
+     "offset": 512
+    },
+    {
+     "vram_word": "$0120",
+     "vram_byte": "$0240",
+     "bytes": 9280,
+     "tipo": "raw",
+     "origem": "$E0:4440",
+     "offset": 0
+    },
+    {
+     "vram_word": "$1340",
+     "vram_byte": "$2680",
+     "bytes": 2432,
+     "tipo": "zte",
+     "origem": "$CE:CE4B",
+     "offset": 1664
+    },
+    {
+     "vram_word": "$1800",
+     "vram_byte": "$3000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:DE4E",
+     "offset": 0
+    },
+    {
+     "vram_word": "$2000",
+     "vram_byte": "$4000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CD:E585",
+     "offset": 0
+    },
+    {
+     "vram_word": "$2800",
+     "vram_byte": "$5000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CD:F398",
+     "offset": 0
+    },
+    {
+     "vram_word": "$3000",
+     "vram_byte": "$6000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:EE13",
+     "offset": 0
+    },
+    {
+     "vram_word": "$3800",
+     "vram_byte": "$7000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CD:F398",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5000",
+     "vram_byte": "$A000",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C5:E4A3",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5010",
+     "vram_byte": "$A020",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5020",
+     "vram_byte": "$A040",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5030",
+     "vram_byte": "$A060",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5040",
+     "vram_byte": "$A080",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5050",
+     "vram_byte": "$A0A0",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5060",
+     "vram_byte": "$A0C0",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5070",
+     "vram_byte": "$A0E0",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5080",
+     "vram_byte": "$A100",
+     "bytes": 2048,
+     "tipo": "zero"
+    },
+    {
+     "vram_word": "$6000",
+     "vram_byte": "$C000",
+     "bytes": 2048,
+     "tipo": "zte",
+     "origem": "$C9:F997",
+     "offset": 0
+    }
+   ],
+   "cgram": [
+    {
+     "paleta": 0,
+     "cgram": "0-15",
+     "camada": "BG",
+     "rom": "$D6:8D2C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 1,
+     "cgram": "16-31",
+     "camada": "BG",
+     "rom": "$D6:8D2C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 2,
+     "cgram": "32-47",
+     "camada": "BG",
+     "rom": "$D6:8D4C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 3,
+     "cgram": "48-63",
+     "camada": "BG",
+     "rom": "$D6:8D6C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 4,
+     "cgram": "64-79",
+     "camada": "BG",
+     "rom": "$D6:8D8C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 5,
+     "cgram": "80-95",
+     "camada": "BG",
+     "rom": "$D6:8DAC",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 6,
+     "cgram": "96-111",
+     "camada": "BG",
+     "rom": "$D6:777C",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:781C"
+     ]
+    },
+    {
+     "paleta": 7,
+     "cgram": "112-127",
+     "camada": "BG",
+     "rom": "$D6:8DCC",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 8,
+     "cgram": "128-143",
+     "camada": "OBJ",
+     "rom": "$D6:7F3C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 9,
+     "cgram": "144-159",
+     "camada": "OBJ",
+     "rom": "$D6:3EDD",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 10,
+     "cgram": "160-175",
+     "camada": "OBJ",
+     "rom": "$D6:40BD",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 11,
+     "cgram": "176-191",
+     "camada": "OBJ",
+     "rom": "$D6:3E3D",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 12,
+     "cgram": "192-207",
+     "camada": "OBJ",
+     "rom": "$D6:3E5D",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 13,
+     "cgram": "208-223",
+     "camada": "OBJ",
+     "rom": "$D6:3E7D",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 14,
+     "cgram": "224-239",
+     "camada": "OBJ",
+     "rom": "$D6:3E9D",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 15,
+     "cgram": "240-255",
+     "camada": "OBJ",
+     "rom": "$D6:3EBD",
+     "busca": "exato",
+     "candidatos": []
+    }
+   ]
+  },
+  "charsel": {
+   "descricao": "\"Select a character!\"",
+   "script_gfx": "$C1:C1E2 (via $E0:FE44) + textos do patch; OBJ ZTE $CE:53D7,$CE:5BBB,$CE:60F5",
+   "vram": [
+    {
+     "vram_word": "$0000",
+     "vram_byte": "$0000",
+     "bytes": 64,
+     "tipo": "zte",
+     "origem": "$CE:AF1E",
+     "offset": 0
+    },
+    {
+     "vram_word": "$0020",
+     "vram_byte": "$0040",
+     "bytes": 448,
+     "tipo": "raw",
+     "origem": "$E1:B699",
+     "offset": 0
+    },
+    {
+     "vram_word": "$0100",
+     "vram_byte": "$0200",
+     "bytes": 64,
+     "tipo": "zte",
+     "origem": "$CE:AF1E",
+     "offset": 512
+    },
+    {
+     "vram_word": "$0120",
+     "vram_byte": "$0240",
+     "bytes": 2240,
+     "tipo": "raw",
+     "origem": "$E1:B899",
+     "offset": 0
+    },
+    {
+     "vram_word": "$0580",
+     "vram_byte": "$0B00",
+     "bytes": 1280,
+     "tipo": "zte",
+     "origem": "$CE:AF1E",
+     "offset": 2816
+    },
+    {
+     "vram_word": "$0800",
+     "vram_byte": "$1000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:BE86",
+     "offset": 0
+    },
+    {
+     "vram_word": "$1000",
+     "vram_byte": "$2000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:CE4B",
+     "offset": 0
+    },
+    {
+     "vram_word": "$1800",
+     "vram_byte": "$3000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:DE4E",
+     "offset": 0
+    },
+    {
+     "vram_word": "$2000",
+     "vram_byte": "$4000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CD:E585",
+     "offset": 0
+    },
+    {
+     "vram_word": "$2800",
+     "vram_byte": "$5000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CD:F398",
+     "offset": 0
+    },
+    {
+     "vram_word": "$3000",
+     "vram_byte": "$6000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:EE13",
+     "offset": 0
+    },
+    {
+     "vram_word": "$3800",
+     "vram_byte": "$7000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CD:F398",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5000",
+     "vram_byte": "$A000",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C5:E4A3",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5010",
+     "vram_byte": "$A020",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5020",
+     "vram_byte": "$A040",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5030",
+     "vram_byte": "$A060",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5040",
+     "vram_byte": "$A080",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5050",
+     "vram_byte": "$A0A0",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5060",
+     "vram_byte": "$A0C0",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5070",
+     "vram_byte": "$A0E0",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5080",
+     "vram_byte": "$A100",
+     "bytes": 2112,
+     "tipo": "zero"
+    },
+    {
+     "vram_word": "$6000",
+     "vram_byte": "$C000",
+     "bytes": 2048,
+     "tipo": "zte",
+     "origem": "$C9:F997",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6400",
+     "vram_byte": "$C800",
+     "bytes": 2048,
+     "tipo": "zte",
+     "origem": "$CE:5BBB",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6800",
+     "vram_byte": "$D000",
+     "bytes": 2048,
+     "tipo": "zte",
+     "origem": "$CE:60F5",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6C00",
+     "vram_byte": "$D800",
+     "bytes": 2048,
+     "tipo": "zte",
+     "origem": "$CE:53D7",
+     "offset": 0
+    }
+   ],
+   "cgram": [
+    {
+     "paleta": 0,
+     "cgram": "0-15",
+     "camada": "BG",
+     "rom": "$D6:7B3C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 1,
+     "cgram": "16-31",
+     "camada": "BG",
+     "rom": "$D6:8D2C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 2,
+     "cgram": "32-47",
+     "camada": "BG",
+     "rom": "$D6:779C",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:783C"
+     ]
+    },
+    {
+     "paleta": 3,
+     "cgram": "48-63",
+     "camada": "BG",
+     "rom": "$D6:79BC",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 4,
+     "cgram": "64-79",
+     "camada": "BG",
+     "rom": "$D6:7A7C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 5,
+     "cgram": "80-95",
+     "camada": "BG",
+     "rom": "$D6:8DAC",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 6,
+     "cgram": "96-111",
+     "camada": "BG",
+     "rom": "$D6:771C",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:77BC"
+     ]
+    },
+    {
+     "paleta": 7,
+     "cgram": "112-127",
+     "camada": "BG",
+     "rom": "$D6:7BFC",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 8,
+     "cgram": "128-143",
+     "camada": "OBJ",
+     "rom": "$D6:8E4C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 9,
+     "cgram": "144-159",
+     "camada": "OBJ",
+     "rom": "$D6:3EDD",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 10,
+     "cgram": "160-175",
+     "camada": "OBJ",
+     "rom": "$D6:40BD",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 11,
+     "cgram": "176-191",
+     "camada": "OBJ",
+     "rom": "$D6:3E3D",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 12,
+     "cgram": "192-207",
+     "camada": "OBJ",
+     "rom": "$D6:3E5D",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 13,
+     "cgram": "208-223",
+     "camada": "OBJ",
+     "rom": "$D6:8E0C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 14,
+     "cgram": "224-239",
+     "camada": "OBJ",
+     "rom": "$D6:8E2C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 15,
+     "cgram": "240-255",
+     "camada": "OBJ",
+     "rom": "$D6:3EBD",
+     "busca": "exato",
+     "candidatos": []
+    }
+   ]
+  },
+  "stagesel": {
+   "descricao": "\"Select a stage!\" (prévias das arenas)",
+   "script_gfx": "$C1:C1E2 e depois $C1:A901 (tiles das prévias, 8 blocos; carregado por $C1:A262); nomes das fases: tiles crus do patch $E0:0021.. (DMA direto $E0:401B..)",
+   "vram": [
+    {
+     "vram_word": "$0000",
+     "vram_byte": "$0000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$C5:07CF",
+     "offset": 0
+    },
+    {
+     "vram_word": "$0800",
+     "vram_byte": "$1000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$C5:1566",
+     "offset": 0
+    },
+    {
+     "vram_word": "$1000",
+     "vram_byte": "$2000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$C5:2281",
+     "offset": 0
+    },
+    {
+     "vram_word": "$1800",
+     "vram_byte": "$3000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$C5:2CB4",
+     "offset": 0
+    },
+    {
+     "vram_word": "$2000",
+     "vram_byte": "$4000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$C5:3B43",
+     "offset": 0
+    },
+    {
+     "vram_word": "$2800",
+     "vram_byte": "$5000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CD:F398",
+     "offset": 0
+    },
+    {
+     "vram_word": "$3000",
+     "vram_byte": "$6000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$C5:4B46",
+     "offset": 0
+    },
+    {
+     "vram_word": "$3800",
+     "vram_byte": "$7000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$C5:4B46",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5000",
+     "vram_byte": "$A000",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C5:E4A3",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5010",
+     "vram_byte": "$A020",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5020",
+     "vram_byte": "$A040",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5030",
+     "vram_byte": "$A060",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5040",
+     "vram_byte": "$A080",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5050",
+     "vram_byte": "$A0A0",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5060",
+     "vram_byte": "$A0C0",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5070",
+     "vram_byte": "$A0E0",
+     "bytes": 32,
+     "tipo": "raw",
+     "origem": "$C0:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$5080",
+     "vram_byte": "$A100",
+     "bytes": 2112,
+     "tipo": "zero"
+    },
+    {
+     "vram_word": "$6000",
+     "vram_byte": "$C000",
+     "bytes": 2040,
+     "tipo": "raw",
+     "origem": "$E0:0021",
+     "offset": 0
+    },
+    {
+     "vram_word": "$63FC",
+     "vram_byte": "$C7F8",
+     "bytes": 2040,
+     "tipo": "raw",
+     "origem": "$E0:0819",
+     "offset": 0
+    },
+    {
+     "vram_word": "$67F8",
+     "vram_byte": "$CFF0",
+     "bytes": 2040,
+     "tipo": "raw",
+     "origem": "$E0:1011",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6BF4",
+     "vram_byte": "$D7E8",
+     "bytes": 2040,
+     "tipo": "raw",
+     "origem": "$E0:1809",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6FF0",
+     "vram_byte": "$DFE0",
+     "bytes": 2040,
+     "tipo": "raw",
+     "origem": "$E0:2001",
+     "offset": 0
+    },
+    {
+     "vram_word": "$73EC",
+     "vram_byte": "$E7D8",
+     "bytes": 2040,
+     "tipo": "raw",
+     "origem": "$E0:27F9",
+     "offset": 0
+    },
+    {
+     "vram_word": "$77E8",
+     "vram_byte": "$EFD0",
+     "bytes": 2040,
+     "tipo": "raw",
+     "origem": "$E0:2FF1",
+     "offset": 0
+    },
+    {
+     "vram_word": "$7BE4",
+     "vram_byte": "$F7C8",
+     "bytes": 2040,
+     "tipo": "raw",
+     "origem": "$E0:37E9",
+     "offset": 0
+    }
+   ],
+   "cgram": [
+    {
+     "paleta": 0,
+     "cgram": "0-15",
+     "camada": "BG",
+     "rom": "$D6:24AD",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 1,
+     "cgram": "16-31",
+     "camada": "BG",
+     "rom": "$D6:232D",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 2,
+     "cgram": "32-47",
+     "camada": "BG",
+     "rom": "$D6:234D",
+     "busca": "exato",
+     "candidatos": [
+      "$D7:E19C"
+     ]
+    },
+    {
+     "paleta": 3,
+     "cgram": "48-63",
+     "camada": "BG",
+     "rom": "$D6:79BC",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 4,
+     "cgram": "64-79",
+     "camada": "BG",
+     "rom": "$D6:7A7C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 5,
+     "cgram": "80-95",
+     "camada": "BG",
+     "rom": "$D6:8DAC",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 6,
+     "cgram": "96-111",
+     "camada": "BG",
+     "rom": "$D6:771C",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:77BC"
+     ]
+    },
+    {
+     "paleta": 7,
+     "cgram": "112-127",
+     "camada": "BG",
+     "rom": "$D6:773C",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:77DC"
+     ]
+    },
+    {
+     "paleta": 8,
+     "cgram": "128-143",
+     "camada": "OBJ",
+     "rom": "$D6:8E4C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 9,
+     "cgram": "144-159",
+     "camada": "OBJ",
+     "rom": "$D6:3DFD",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:8DEC"
+     ]
+    },
+    {
+     "paleta": 10,
+     "cgram": "160-175",
+     "camada": "OBJ",
+     "rom": "$D6:40BD",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 11,
+     "cgram": "176-191",
+     "camada": "OBJ",
+     "rom": "$D6:3E3D",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 12,
+     "cgram": "192-207",
+     "camada": "OBJ",
+     "rom": "$D6:3E5D",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 13,
+     "cgram": "208-223",
+     "camada": "OBJ",
+     "rom": "$D6:8E0C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 14,
+     "cgram": "224-239",
+     "camada": "OBJ",
+     "rom": "$D6:8E2C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 15,
+     "cgram": "240-255",
+     "camada": "OBJ",
+     "rom": "$D6:3EBD",
+     "busca": "exato",
+     "candidatos": []
+    }
+   ]
+  },
+  "scoreboard": {
+   "descricao": "SCORE BOARD (coroas)",
+   "script_gfx": "$C2:9C35 (mesmo tileset da vitória); OBJ ZTE $C9:F997,$CA:F0B0,$CA:F8B3,$CD:E585 (cabeças, coroas, troféu)",
+   "vram": [
+    {
+     "vram_word": "$0000",
+     "vram_byte": "$0000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$0800",
+     "vram_byte": "$1000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:0F87",
+     "offset": 0
+    },
+    {
+     "vram_word": "$1000",
+     "vram_byte": "$2000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:1F8A",
+     "offset": 0
+    },
+    {
+     "vram_word": "$1800",
+     "vram_byte": "$3000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:2DFA",
+     "offset": 0
+    },
+    {
+     "vram_word": "$2000",
+     "vram_byte": "$4000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:3C0D",
+     "offset": 0
+    },
+    {
+     "vram_word": "$2800",
+     "vram_byte": "$5000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:48EA",
+     "offset": 0
+    },
+    {
+     "vram_word": "$3000",
+     "vram_byte": "$6000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:3C0D",
+     "offset": 0
+    },
+    {
+     "vram_word": "$3800",
+     "vram_byte": "$7000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:48EA",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6080",
+     "vram_byte": "$C100",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$D3:E82B",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6180",
+     "vram_byte": "$C300",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$D3:EA2B",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6280",
+     "vram_byte": "$C500",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$D3:EC2B",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6380",
+     "vram_byte": "$C700",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$D3:EE2B",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6400",
+     "vram_byte": "$C800",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CB:B000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6440",
+     "vram_byte": "$C880",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CC:5900",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6500",
+     "vram_byte": "$CA00",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CB:B200",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6540",
+     "vram_byte": "$CA80",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CC:5B00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6600",
+     "vram_byte": "$CC00",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CB:B400",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6640",
+     "vram_byte": "$CC80",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CC:5D00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6700",
+     "vram_byte": "$CE00",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CB:B600",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6740",
+     "vram_byte": "$CE80",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CC:5F00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6800",
+     "vram_byte": "$D000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CD:E585",
+     "offset": 0
+    },
+    {
+     "vram_word": "$7000",
+     "vram_byte": "$E000",
+     "bytes": 2048,
+     "tipo": "zte",
+     "origem": "$CA:F0B0",
+     "offset": 0
+    },
+    {
+     "vram_word": "$7400",
+     "vram_byte": "$E800",
+     "bytes": 2048,
+     "tipo": "zte",
+     "origem": "$CA:F8B3",
+     "offset": 0
+    },
+    {
+     "vram_word": "$7C00",
+     "vram_byte": "$F800",
+     "bytes": 2048,
+     "tipo": "zte",
+     "origem": "$C9:F997",
+     "offset": 0
+    }
+   ],
+   "cgram": [
+    {
+     "paleta": 0,
+     "cgram": "0-15",
+     "camada": "BG",
+     "rom": "$D6:7DBC",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 1,
+     "cgram": "16-31",
+     "camada": "BG",
+     "rom": "$D6:7DDC",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 2,
+     "cgram": "32-47",
+     "camada": "BG",
+     "rom": "$D6:7DFC",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 3,
+     "cgram": "48-63",
+     "camada": "BG",
+     "rom": "$D6:7E1C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 4,
+     "cgram": "64-79",
+     "camada": "BG",
+     "rom": "$D6:7E3C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 5,
+     "cgram": "80-95",
+     "camada": "BG",
+     "rom": "$D6:7CBC",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:7E5C"
+     ]
+    },
+    {
+     "paleta": 6,
+     "cgram": "96-111",
+     "camada": "BG",
+     "rom": "$D6:7E7C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 7,
+     "cgram": "112-127",
+     "camada": "BG",
+     "rom": "$D6:7EFC",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 8,
+     "cgram": "128-143",
+     "camada": "OBJ",
+     "rom": "$D6:779C",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:783C"
+     ]
+    },
+    {
+     "paleta": 9,
+     "cgram": "144-159",
+     "camada": "OBJ",
+     "rom": "$D6:79BC",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 10,
+     "cgram": "160-175",
+     "camada": "OBJ",
+     "rom": "$D6:7A7C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 11,
+     "cgram": "176-191",
+     "camada": "OBJ",
+     "rom": "$D6:7B3C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 12,
+     "cgram": "192-207",
+     "camada": "OBJ",
+     "rom": "$D6:7BFC",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 13,
+     "cgram": "208-223",
+     "camada": "OBJ",
+     "rom": "$D6:7FDC",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 14,
+     "cgram": "224-239",
+     "camada": "OBJ",
+     "rom": "$C0:E320",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:04BA",
+      "$D6:5EB9"
+     ]
+    },
+    {
+     "paleta": 15,
+     "cgram": "240-255",
+     "camada": "OBJ",
+     "rom": "$D6:7F3C",
+     "busca": "exato",
+     "candidatos": []
+    }
+   ]
+  },
+  "victory": {
+   "descricao": "VICTORY! (troféu)",
+   "script_gfx": "$C2:9C35; OBJ ZTE $C9:F997,$CA:F0B0,$CA:F8B3,$CD:E585; poses dos personagens por DMA direto",
+   "vram": [
+    {
+     "vram_word": "$0000",
+     "vram_byte": "$0000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:0000",
+     "offset": 0
+    },
+    {
+     "vram_word": "$0800",
+     "vram_byte": "$1000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:0F87",
+     "offset": 0
+    },
+    {
+     "vram_word": "$1000",
+     "vram_byte": "$2000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:1F8A",
+     "offset": 0
+    },
+    {
+     "vram_word": "$1800",
+     "vram_byte": "$3000",
+     "bytes": 1024,
+     "tipo": "zte",
+     "origem": "$CE:2DFA",
+     "offset": 0
+    },
+    {
+     "vram_word": "$1A00",
+     "vram_byte": "$3400",
+     "bytes": 128,
+     "tipo": "zte",
+     "origem": "$CE:0000",
+     "offset": 192
+    },
+    {
+     "vram_word": "$1A40",
+     "vram_byte": "$3480",
+     "bytes": 64,
+     "tipo": "zte",
+     "origem": "$CE:0000",
+     "offset": 1024
+    },
+    {
+     "vram_word": "$1A60",
+     "vram_byte": "$34C0",
+     "bytes": 64,
+     "tipo": "zte",
+     "origem": "$CE:0000",
+     "offset": 1024
+    },
+    {
+     "vram_word": "$1A80",
+     "vram_byte": "$3500",
+     "bytes": 64,
+     "tipo": "zte",
+     "origem": "$CE:0F87",
+     "offset": 1088
+    },
+    {
+     "vram_word": "$1AA0",
+     "vram_byte": "$3540",
+     "bytes": 64,
+     "tipo": "zte",
+     "origem": "$CE:0F87",
+     "offset": 1024
+    },
+    {
+     "vram_word": "$1AC0",
+     "vram_byte": "$3580",
+     "bytes": 128,
+     "tipo": "zte",
+     "origem": "$CE:2DFA",
+     "offset": 1408
+    },
+    {
+     "vram_word": "$1B00",
+     "vram_byte": "$3600",
+     "bytes": 128,
+     "tipo": "zte",
+     "origem": "$CE:0000",
+     "offset": 704
+    },
+    {
+     "vram_word": "$1B40",
+     "vram_byte": "$3680",
+     "bytes": 64,
+     "tipo": "zte",
+     "origem": "$CE:0000",
+     "offset": 1536
+    },
+    {
+     "vram_word": "$1B60",
+     "vram_byte": "$36C0",
+     "bytes": 64,
+     "tipo": "zte",
+     "origem": "$CE:0000",
+     "offset": 1536
+    },
+    {
+     "vram_word": "$1B80",
+     "vram_byte": "$3700",
+     "bytes": 64,
+     "tipo": "zte",
+     "origem": "$CE:0F87",
+     "offset": 1600
+    },
+    {
+     "vram_word": "$1BA0",
+     "vram_byte": "$3740",
+     "bytes": 64,
+     "tipo": "zte",
+     "origem": "$CE:0F87",
+     "offset": 1536
+    },
+    {
+     "vram_word": "$1BC0",
+     "vram_byte": "$3780",
+     "bytes": 2176,
+     "tipo": "zte",
+     "origem": "$CE:2DFA",
+     "offset": 1920
+    },
+    {
+     "vram_word": "$2000",
+     "vram_byte": "$4000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:3C0D",
+     "offset": 0
+    },
+    {
+     "vram_word": "$2800",
+     "vram_byte": "$5000",
+     "bytes": 2496,
+     "tipo": "zte",
+     "origem": "$CE:48EA",
+     "offset": 0
+    },
+    {
+     "vram_word": "$2CE0",
+     "vram_byte": "$59C0",
+     "bytes": 64,
+     "tipo": "zte",
+     "origem": "$CE:0000",
+     "offset": 1088
+    },
+    {
+     "vram_word": "$2D00",
+     "vram_byte": "$5A00",
+     "bytes": 448,
+     "tipo": "zte",
+     "origem": "$CE:48EA",
+     "offset": 2560
+    },
+    {
+     "vram_word": "$2DE0",
+     "vram_byte": "$5BC0",
+     "bytes": 64,
+     "tipo": "zte",
+     "origem": "$CE:0000",
+     "offset": 1600
+    },
+    {
+     "vram_word": "$2E00",
+     "vram_byte": "$5C00",
+     "bytes": 64,
+     "tipo": "zte",
+     "origem": "$CE:0000",
+     "offset": 1088
+    },
+    {
+     "vram_word": "$2E20",
+     "vram_byte": "$5C40",
+     "bytes": 448,
+     "tipo": "zte",
+     "origem": "$CE:48EA",
+     "offset": 3136
+    },
+    {
+     "vram_word": "$2F00",
+     "vram_byte": "$5E00",
+     "bytes": 64,
+     "tipo": "zte",
+     "origem": "$CE:0000",
+     "offset": 1600
+    },
+    {
+     "vram_word": "$2F20",
+     "vram_byte": "$5E40",
+     "bytes": 448,
+     "tipo": "zte",
+     "origem": "$CE:48EA",
+     "offset": 3648
+    },
+    {
+     "vram_word": "$3000",
+     "vram_byte": "$6000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:3C0D",
+     "offset": 0
+    },
+    {
+     "vram_word": "$3800",
+     "vram_byte": "$7000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CE:48EA",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6000",
+     "vram_byte": "$C000",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$D2:0900",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6040",
+     "vram_byte": "$C080",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CB:0900",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6080",
+     "vram_byte": "$C100",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$D3:E82B",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6100",
+     "vram_byte": "$C200",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$D2:0B00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6140",
+     "vram_byte": "$C280",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CB:0B00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6180",
+     "vram_byte": "$C300",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$D3:EA2B",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6200",
+     "vram_byte": "$C400",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$D2:0D00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6240",
+     "vram_byte": "$C480",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CB:0D00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6280",
+     "vram_byte": "$C500",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$D3:EC2B",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6300",
+     "vram_byte": "$C600",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$D2:0600",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6340",
+     "vram_byte": "$C680",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CB:0F00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6380",
+     "vram_byte": "$C700",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$D3:EE2B",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6400",
+     "vram_byte": "$C800",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CB:8900",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6440",
+     "vram_byte": "$C880",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CA:0DC3",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6480",
+     "vram_byte": "$C900",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CC:8900",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6500",
+     "vram_byte": "$CA00",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CB:8B00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6540",
+     "vram_byte": "$CA80",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CA:0F47",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6580",
+     "vram_byte": "$CB00",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CC:8B00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6600",
+     "vram_byte": "$CC00",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CB:8D00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6640",
+     "vram_byte": "$CC80",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CA:10EA",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6680",
+     "vram_byte": "$CD00",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CC:8D00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6700",
+     "vram_byte": "$CE00",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CB:8F00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6740",
+     "vram_byte": "$CE80",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CA:128D",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6780",
+     "vram_byte": "$CF00",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CC:8F00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6800",
+     "vram_byte": "$D000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CD:E585",
+     "offset": 0
+    },
+    {
+     "vram_word": "$7000",
+     "vram_byte": "$E000",
+     "bytes": 2048,
+     "tipo": "zte",
+     "origem": "$CA:F0B0",
+     "offset": 0
+    },
+    {
+     "vram_word": "$7400",
+     "vram_byte": "$E800",
+     "bytes": 2048,
+     "tipo": "zte",
+     "origem": "$CA:F8B3",
+     "offset": 0
+    },
+    {
+     "vram_word": "$7C00",
+     "vram_byte": "$F800",
+     "bytes": 2048,
+     "tipo": "zte",
+     "origem": "$C9:F997",
+     "offset": 0
+    }
+   ],
+   "cgram": [
+    {
+     "paleta": 0,
+     "cgram": "0-15",
+     "camada": "BG",
+     "rom": "$D6:7DBC",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 1,
+     "cgram": "16-31",
+     "camada": "BG",
+     "rom": "$D6:7DDC",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 2,
+     "cgram": "32-47",
+     "camada": "BG",
+     "rom": "$D6:7DFC",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 3,
+     "cgram": "48-63",
+     "camada": "BG",
+     "rom": "$D6:7E1C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 4,
+     "cgram": "64-79",
+     "camada": "BG",
+     "rom": "$D6:7E3C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 5,
+     "cgram": "80-95",
+     "camada": "BG",
+     "rom": "$D6:7CBC",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:7E5C"
+     ]
+    },
+    {
+     "paleta": 6,
+     "cgram": "96-111",
+     "camada": "BG",
+     "rom": "$D6:7E7C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 7,
+     "cgram": "112-127",
+     "camada": "BG",
+     "rom": "$D6:7E9C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 8,
+     "cgram": "128-143",
+     "camada": "OBJ",
+     "rom": "$D6:779C",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:783C"
+     ]
+    },
+    {
+     "paleta": 9,
+     "cgram": "144-159",
+     "camada": "OBJ",
+     "rom": "$D6:79BC",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 10,
+     "cgram": "160-175",
+     "camada": "OBJ",
+     "rom": "$D6:7A7C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 11,
+     "cgram": "176-191",
+     "camada": "OBJ",
+     "rom": "$D6:7B3C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 12,
+     "cgram": "192-207",
+     "camada": "OBJ",
+     "rom": "$D6:7BFC",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 13,
+     "cgram": "208-223",
+     "camada": "OBJ",
+     "rom": "$D6:7FDC",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 14,
+     "cgram": "224-239",
+     "camada": "OBJ",
+     "rom": "$C0:E320",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:04BA",
+      "$D6:5EB9"
+     ]
+    },
+    {
+     "paleta": 15,
+     "cgram": "240-255",
+     "camada": "OBJ",
+     "rom": "$D6:7F3C",
+     "busca": "exato",
+     "candidatos": []
+    }
+   ]
+  },
+  "draw1": {
+   "descricao": "DRAW GAME (fase Modo 7, zoom)",
+   "script_gfx": "Modo 7: RLE duplo $C4:6201 com pixels $CD:9800 e mapa $D6:60D9 -> 32 KB VRAM $0000",
+   "vram": [
+    {
+     "vram_word": "$5000",
+     "vram_byte": "$A000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CD:D11F",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6000",
+     "vram_byte": "$C000",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$D2:6900",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6040",
+     "vram_byte": "$C080",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CB:6900",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6080",
+     "vram_byte": "$C100",
+     "bytes": 128,
+     "tipo": "zero"
+    },
+    {
+     "vram_word": "$6100",
+     "vram_byte": "$C200",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$D2:6B00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6140",
+     "vram_byte": "$C280",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CB:6B00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6200",
+     "vram_byte": "$C400",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$D2:6D00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6240",
+     "vram_byte": "$C480",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CB:6D00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6300",
+     "vram_byte": "$C600",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$D2:6F00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6340",
+     "vram_byte": "$C680",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CB:6F00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6400",
+     "vram_byte": "$C800",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CB:E900",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6440",
+     "vram_byte": "$C880",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CC:6900",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6480",
+     "vram_byte": "$C900",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CC:E900",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6500",
+     "vram_byte": "$CA00",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CB:EB00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6540",
+     "vram_byte": "$CA80",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CC:6B00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6580",
+     "vram_byte": "$CB00",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CC:EB00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6600",
+     "vram_byte": "$CC00",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CB:ED00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6640",
+     "vram_byte": "$CC80",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CC:6D00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6680",
+     "vram_byte": "$CD00",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CC:ED00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6700",
+     "vram_byte": "$CE00",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CB:EF00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6740",
+     "vram_byte": "$CE80",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CC:6F00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6780",
+     "vram_byte": "$CF00",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CC:EF00",
+     "offset": 0
+    }
+   ],
+   "cgram": [
+    {
+     "paleta": 0,
+     "cgram": "0-15",
+     "camada": "BG",
+     "rom": "$D6:62CC",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:634C",
+      "$D6:63CC",
+      "$D6:63EC"
+     ]
+    },
+    {
+     "paleta": 1,
+     "cgram": "16-31",
+     "camada": "BG",
+     "rom": "$D6:62EC",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:636C",
+      "$D6:638C",
+      "$D6:640C"
+     ]
+    },
+    {
+     "paleta": 2,
+     "cgram": "32-47",
+     "camada": "BG",
+     "rom": "$D6:630C",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:632C",
+      "$D6:63AC",
+      "$D6:642C"
+     ]
+    },
+    {
+     "paleta": 3,
+     "cgram": "48-63",
+     "camada": "BG",
+     "rom": "$D6:630C",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:632C",
+      "$D6:63AC",
+      "$D6:642C"
+     ]
+    },
+    {
+     "paleta": 4,
+     "cgram": "64-79",
+     "camada": "BG",
+     "rom": "$D6:630C",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:632C",
+      "$D6:63AC",
+      "$D6:642C"
+     ]
+    },
+    {
+     "paleta": 5,
+     "cgram": "80-95",
+     "camada": "BG",
+     "rom": "$D6:630C",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:632C",
+      "$D6:63AC",
+      "$D6:642C"
+     ]
+    },
+    {
+     "paleta": 6,
+     "cgram": "96-111",
+     "camada": "BG",
+     "rom": "$D6:630C",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:632C",
+      "$D6:63AC",
+      "$D6:642C"
+     ]
+    },
+    {
+     "paleta": 7,
+     "cgram": "112-127",
+     "camada": "BG",
+     "rom": "$D6:630C",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:632C",
+      "$D6:63AC",
+      "$D6:642C"
+     ]
+    },
+    {
+     "paleta": 8,
+     "cgram": "128-143",
+     "camada": "OBJ",
+     "rom": "$C0:E000",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:00DA",
+      "$D7:E73C",
+      "$D7:E7DC"
+     ]
+    },
+    {
+     "paleta": 9,
+     "cgram": "144-159",
+     "camada": "OBJ",
+     "rom": "$D6:021A",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:6DBB",
+      "$D7:FF5C"
+     ]
+    },
+    {
+     "paleta": 10,
+     "cgram": "160-175",
+     "camada": "OBJ",
+     "rom": "$D6:40BD",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 11,
+     "cgram": "176-191",
+     "camada": "OBJ",
+     "rom": "$D6:3E3D",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 12,
+     "cgram": "192-207",
+     "camada": "OBJ",
+     "rom": "$D6:02FA",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:6D1B"
+     ]
+    },
+    {
+     "paleta": 13,
+     "cgram": "208-223",
+     "camada": "OBJ",
+     "rom": "$C0:E240",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:03DA",
+      "$D6:6059"
+     ]
+    },
+    {
+     "paleta": 14,
+     "cgram": "224-239",
+     "camada": "OBJ",
+     "rom": "$C0:E320",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:04BA",
+      "$D6:5EB9"
+     ]
+    },
+    {
+     "paleta": 15,
+     "cgram": "240-255",
+     "camada": "OBJ",
+     "rom": "$D7:E6DC",
+     "busca": "exato",
+     "candidatos": []
+    }
+   ]
+  },
+  "draw2": {
+   "descricao": "DRAW GAME (fase final, BG2)",
+   "script_gfx": "ZTE $CD:B195,$CD:C11C,$CD:D11F,$CD:E122 (tabela $C2:DC09) -> $7F:208C -> VRAM word $4000-$5BFF (tiles do BG2, NBA=$44)",
+   "vram": [
+    {
+     "vram_word": "$5000",
+     "vram_byte": "$A000",
+     "bytes": 4096,
+     "tipo": "zte",
+     "origem": "$CD:D11F",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6000",
+     "vram_byte": "$C000",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$D2:6800",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6040",
+     "vram_byte": "$C080",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CB:6800",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6080",
+     "vram_byte": "$C100",
+     "bytes": 128,
+     "tipo": "zero"
+    },
+    {
+     "vram_word": "$6100",
+     "vram_byte": "$C200",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$D2:6A00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6140",
+     "vram_byte": "$C280",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CB:6A00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6200",
+     "vram_byte": "$C400",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$D2:6C00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6240",
+     "vram_byte": "$C480",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CB:6C00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6300",
+     "vram_byte": "$C600",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$D2:6E00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6340",
+     "vram_byte": "$C680",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CB:6E00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6400",
+     "vram_byte": "$C800",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CB:E800",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6440",
+     "vram_byte": "$C880",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CC:6800",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6480",
+     "vram_byte": "$C900",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CC:E800",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6500",
+     "vram_byte": "$CA00",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CB:EA00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6540",
+     "vram_byte": "$CA80",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CC:6A00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6580",
+     "vram_byte": "$CB00",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CC:EA00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6600",
+     "vram_byte": "$CC00",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CB:EC00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6640",
+     "vram_byte": "$CC80",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CC:6C00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6680",
+     "vram_byte": "$CD00",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CC:EC00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6700",
+     "vram_byte": "$CE00",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CB:EE00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6740",
+     "vram_byte": "$CE80",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CC:6E00",
+     "offset": 0
+    },
+    {
+     "vram_word": "$6780",
+     "vram_byte": "$CF00",
+     "bytes": 128,
+     "tipo": "raw",
+     "origem": "$CC:EE00",
+     "offset": 0
+    }
+   ],
+   "cgram": [
+    {
+     "paleta": 0,
+     "cgram": "0-15",
+     "camada": "BG",
+     "rom": "$D6:630C",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:632C",
+      "$D6:63AC",
+      "$D6:642C"
+     ]
+    },
+    {
+     "paleta": 1,
+     "cgram": "16-31",
+     "camada": "BG",
+     "rom": "$D6:62CC",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:634C",
+      "$D6:63CC",
+      "$D6:63EC"
+     ]
+    },
+    {
+     "paleta": 2,
+     "cgram": "32-47",
+     "camada": "BG",
+     "rom": "$D6:62EC",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:636C",
+      "$D6:638C",
+      "$D6:640C"
+     ]
+    },
+    {
+     "paleta": 3,
+     "cgram": "48-63",
+     "camada": "BG",
+     "rom": "$D6:644C",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 4,
+     "cgram": "64-79",
+     "camada": "BG",
+     "rom": "$D6:630C",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:632C",
+      "$D6:63AC",
+      "$D6:642C"
+     ]
+    },
+    {
+     "paleta": 5,
+     "cgram": "80-95",
+     "camada": "BG",
+     "rom": "$D6:630C",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:632C",
+      "$D6:63AC",
+      "$D6:642C"
+     ]
+    },
+    {
+     "paleta": 6,
+     "cgram": "96-111",
+     "camada": "BG",
+     "rom": "$D6:630C",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:632C",
+      "$D6:63AC",
+      "$D6:642C"
+     ]
+    },
+    {
+     "paleta": 7,
+     "cgram": "112-127",
+     "camada": "BG",
+     "rom": "$D6:630C",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:632C",
+      "$D6:63AC",
+      "$D6:642C"
+     ]
+    },
+    {
+     "paleta": 8,
+     "cgram": "128-143",
+     "camada": "OBJ",
+     "rom": "$C0:E000",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:00DA",
+      "$D7:E73C",
+      "$D7:E7DC"
+     ]
+    },
+    {
+     "paleta": 9,
+     "cgram": "144-159",
+     "camada": "OBJ",
+     "rom": "$D6:021A",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:6DBB",
+      "$D7:FF5C"
+     ]
+    },
+    {
+     "paleta": 10,
+     "cgram": "160-175",
+     "camada": "OBJ",
+     "rom": "$D6:40BD",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 11,
+     "cgram": "176-191",
+     "camada": "OBJ",
+     "rom": "$D6:3E3D",
+     "busca": "exato",
+     "candidatos": []
+    },
+    {
+     "paleta": 12,
+     "cgram": "192-207",
+     "camada": "OBJ",
+     "rom": "$D6:02FA",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:6D1B"
+     ]
+    },
+    {
+     "paleta": 13,
+     "cgram": "208-223",
+     "camada": "OBJ",
+     "rom": "$C0:E240",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:03DA",
+      "$D6:6059"
+     ]
+    },
+    {
+     "paleta": 14,
+     "cgram": "224-239",
+     "camada": "OBJ",
+     "rom": "$C0:E320",
+     "busca": "exato",
+     "candidatos": [
+      "$D6:04BA",
+      "$D6:5EB9"
+     ]
+    },
+    {
+     "paleta": 15,
+     "cgram": "240-255",
+     "camada": "OBJ",
+     "rom": "$D7:E6DC",
+     "busca": "exato",
+     "candidatos": []
+    }
+   ]
+  }
+ }
+}
