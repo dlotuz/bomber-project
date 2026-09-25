@@ -78,15 +78,71 @@ describe('sessão', () => {
       { type: 'match_over', champions: [1], crowns: [0, 1, 0, 0, 0] },
     ]);
   });
-  it('na pausa, B sai da partida', () => {
+  it('na pausa, B pede confirmação; B de novo cancela; A confirma e sai da partida', () => {
     const s = createSession(parseConfig('?players=2'), 1);
     run(s, 5);
     tap(s, 0, BTN.B);
     expect(s.finished).toBe(false);
+    expect(s.confirmQuit).toBe(false);
     tap(s, 0, BTN.START);
+    expect(s.paused).toBe(true);
     tap(s, 1, BTN.B);
+    expect(s.confirmQuit).toBe(true);
+    expect(s.finished).toBe(false);
+    expect(s.paused).toBe(true);
+    tap(s, 1, BTN.B);
+    expect(s.confirmQuit).toBe(false);
+    expect(s.paused).toBe(true);
+    tap(s, 1, BTN.B);
+    expect(s.confirmQuit).toBe(true);
+    tap(s, 0, BTN.A);
     expect(s.finished).toBe(true);
     expect(s.aborted).toBe(true);
+  });
+  it('despausar limpa o pedido de confirmação', () => {
+    const s = createSession(parseConfig('?players=2'), 1);
+    run(s, 5);
+    tap(s, 0, BTN.START);
+    tap(s, 0, BTN.B);
+    expect(s.confirmQuit).toBe(true);
+    tap(s, 1, BTN.START);
+    expect(s.paused).toBe(false);
+    expect(s.confirmQuit).toBe(false);
+  });
+  it('sessão sem controle humano: pressedAny pausa e confirma a saída', () => {
+    const cfg = parseConfig('?players=2');
+    cfg.humans = [false, false, false, false, false];
+    const s = createSession(cfg, 1);
+    expect(s.anyControl).toBe(true);
+    run(s, 5);
+    updateSession(s, idle, BTN.START); updateSession(s, idle, 0);
+    expect(s.paused).toBe(true);
+    updateSession(s, idle, BTN.B); updateSession(s, idle, 0);
+    expect(s.confirmQuit).toBe(true);
+    updateSession(s, idle, BTN.A); updateSession(s, idle, 0);
+    expect(s.finished).toBe(true);
+    expect(s.aborted).toBe(true);
+  });
+  it('sessão com humano: pressedAny sozinho não controla nada (só o próprio pad conta)', () => {
+    const s = createSession(parseConfig('?players=2'), 1);
+    expect(s.anyControl).toBe(false);
+    run(s, 5);
+    updateSession(s, idle, BTN.START); updateSession(s, idle, 0);
+    expect(s.paused).toBe(false);
+  });
+  it('vitória sem input humano: encerra sozinha depois de 900 frames quando anyControl', () => {
+    const cfg = parseConfig('?players=2&matches=1');
+    cfg.humans = [false, false, false, false, false];
+    const s = createSession(cfg, 1);
+    winRound(s, 0);
+    run(s, ROUND_OVER_FRAMES);
+    run(s, SCOREBOARD_FRAMES);
+    expect(s.phase).toBe('victory');
+    run(s, 899);
+    expect(s.finished).toBe(false);
+    run(s, 2);
+    expect(s.finished).toBe(true);
+    expect(s.aborted).toBe(false);
   });
   it('slots de CPU não pausam nem controlam o personagem', () => {
     const cfg = parseConfig('?players=3');

@@ -12,6 +12,9 @@ export type SessionNotice =
   | { type: 'round_over'; winners: number[]; crowns: number[] }
   | { type: 'match_over'; champions: number[]; crowns: number[] };
 
+/** Depois de quantos frames em vitória, sem ninguém controlando, a partida se encerra sozinha. */
+export const AUTO_VICTORY_FRAMES = 900;
+
 export interface Session {
   cfg: GameConfig; seed: number;
   match: MatchState; round: RoundState;
@@ -21,6 +24,11 @@ export interface Session {
   /** A partida acabou (vitória confirmada) ou foi abandonada pela pausa; quem hospeda a sessão troca de tela. */
   finished: boolean;
   aborted: boolean;
+  /** Enquanto pausado, aguardando confirmação (A: sai / B: cancela) do pedido de sair pela pausa. */
+  confirmQuit: boolean;
+  /** Nenhum slot humano tem um dispositivo de verdade (tudo CPU/desligado, ou humanos sem controle atribuído):
+   *  pausar/sair/confirmar aceita entrada de qualquer dispositivo (`anyPressed`) em vez de só a do próprio slot. */
+  anyControl: boolean;
   notices: SessionNotice[];
   prevPads: number[]; lastWinners: number[]; champions: number[];
 }
@@ -29,24 +37,36 @@ export function createSession(cfg: GameConfig, seed: number, initialPads: number
   const match = createMatch(cfg.rules, cfg.stage, seed);
   return {
     cfg, seed, match, round: startRound(match), phase: 'battle', timer: 0, paused: false, matchOver: false,
-    stepped: false, finished: false, aborted: false, notices: [],
-    prevPads: [...initialPads], lastWinners: [], champions: [],
+    stepped: false, finished: false, aborted: false, confirmQuit: false, anyControl: !cfg.humans.some(Boolean),
+    notices: [], prevPads: [...initialPads], lastWinners: [], champions: [],
   };
 }
 
-/** Avança um tick (1/60 s). Devolve os eventos do core deste tick (vazio fora da batalha). */
-export function updateSession(s: Session, pads: number[]): GameEvent[] {
+/** Avança um tick (1/60 s). Devolve os eventos do core deste tick (vazio fora da batalha).
+ *  `anyPressed`: apertados em qualquer dispositivo neste tick (só importa quando `anyControl`). */
+export function updateSession(s: Session, pads: number[], anyPressed = 0): GameEvent[] {
   const pressed = pads.map((p, i) => p & ~(s.prevPads[i] ?? 0));
   s.prevPads = [...pads];
   s.stepped = false;
   if (s.finished) return [];
   // Só jogadores humanos pausam, pulam telas ou controlam personagens; CPUs (Plano 4) ficam paradas.
-  const hit = (mask: number) => pressed.some((p, i) => s.cfg.humans[i] && (p & mask) !== 0);
+  // Sem ninguém no controle (anyControl), qualquer dispositivo serve para pausar/sair/confirmar.
+  const hit = (mask: number) =>
+    pressed.some((p, i) => s.cfg.humans[i] && (p & mask) !== 0) || (s.anyControl && (anyPressed & mask) !== 0);
   let ev: GameEvent[] = [];
   switch (s.phase) {
     case 'battle':
-      if (hit(BTN.START)) s.paused = !s.paused;
-      else if (s.paused && hit(BTN.B)) { s.finished = true; s.aborted = true; break; }
+      if (hit(BTN.START)) {
+        s.paused = !s.paused;
+        if (!s.paused) s.confirmQuit = false;
+      } else if (s.paused) {
+        if (s.confirmQuit) {
+          if (hit(BTN.A)) { s.finished = true; s.aborted = true; break; }
+          if (hit(BTN.B)) s.confirmQuit = false;
+        } else if (hit(BTN.B)) {
+          s.confirmQuit = true;
+        }
+      }
       if (s.paused) break;
       ev = step(s.round, pads.map((p, i) => (s.cfg.humans[i] ? p : 0)));
       s.stepped = true;
@@ -73,7 +93,8 @@ export function updateSession(s: Session, pads: number[]): GameEvent[] {
       break;
     case 'victory':
       s.timer++;
-      if (s.timer > SKIP_AFTER && hit(BTN.START | BTN.A)) s.finished = true;
+      if (s.anyControl && s.timer > AUTO_VICTORY_FRAMES) s.finished = true;
+      else if (s.timer > SKIP_AFTER && hit(BTN.START | BTN.A)) s.finished = true;
       break;
   }
   return ev;
