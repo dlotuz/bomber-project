@@ -1,7 +1,8 @@
 import { BASE_SPEED_SUB, CORNER_SUB, FUSE_FRAMES } from './constants';
 import { BTN, CELL, DIR, DISEASE, DX, DY, type GameEvent, type Player, type RoundState } from './types';
 import { cellX, cellY, centerX, centerY, idx } from './grid';
-import { blocksPlayer, bombAt } from './query';
+import { blocksPlayer, bombAt, blocksBomb } from './query';
+import { launch } from './bombs';
 
 export function speedSub(p: Player): number {
   if (p.disease === DISEASE.SLOW) return 4;
@@ -51,7 +52,15 @@ export function movePlayer(s: RoundState, p: Player, dir: number, ev: GameEvent[
 }
 
 /** Gancho para o chute (Task 6). */
-function onBlocked(_s: RoundState, _p: Player, _tx: number, _ty: number, _dir: number, _ev: GameEvent[]): void {}
+function onBlocked(s: RoundState, p: Player, tx: number, ty: number, dir: number, ev: GameEvent[]): void {
+  if (!p.kick) return;
+  const b = bombAt(s, tx, ty);
+  if (!b || b.slide !== DIR.NONE) return;
+  if (blocksBomb(s, tx + DX[dir], ty + DY[dir])) return;
+  b.slide = dir;
+  b.passers = [];
+  ev.push({ type: 'bomb_kicked', slot: p.slot });
+}
 
 export function steerPlayer(s: RoundState, p: Player, buttons: number, ev: GameEvent[]): void {
   const dirs: number[] = [];
@@ -81,6 +90,35 @@ export function placeBomb(s: RoundState, p: Player, gx: number, gy: number, ev: 
 
 export function playerActions(s: RoundState, p: Player, buttons: number, ev: GameEvent[]): void {
   const pressed = buttons & ~p.prevButtons;
+  const released = p.prevButtons & ~buttons;
   const gx = cellX(p.x), gy = cellY(p.y);
-  if ((pressed & BTN.A) || p.disease === DISEASE.DIARRHEA) placeBomb(s, p, gx, gy, ev);
+
+  if (p.carrying >= 0) {
+    if (released & BTN.A) {
+      const b = s.bombs.find(x => x.id === p.carrying);
+      p.carrying = -1;
+      if (b) {
+        b.x = centerX(gx); b.y = centerY(gy);
+        launch(b, p.facing);
+        ev.push({ type: 'bomb_thrown', slot: p.slot });
+      }
+    }
+    return;
+  }
+
+  if (pressed & BTN.A) {
+    const under = bombAt(s, gx, gy);
+    if (under && p.glove) {
+      under.carried = true; under.slide = DIR.NONE; p.carrying = under.id;
+      return;
+    }
+    placeBomb(s, p, gx, gy, ev);
+  } else if (p.disease === DISEASE.DIARRHEA) {
+    placeBomb(s, p, gx, gy, ev);
+  }
+
+  if ((pressed & BTN.Y) && p.punch) {
+    const b = bombAt(s, gx + DX[p.facing], gy + DY[p.facing]);
+    if (b) { launch(b, p.facing); ev.push({ type: 'bomb_punched', slot: p.slot }); }
+  }
 }
