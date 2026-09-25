@@ -133,7 +133,7 @@ Uma **máquina de estados por tick** com mapa de perigo (casas que serão atingi
 - **Atacar:** coloca bomba se houver rota de fuga e se um soft block ou inimigo estiver no alcance.
 - **Vagar:** caso contrário, anda.
 
-Os níveis mudam o tempo de reação, a margem de segurança e a agressividade: **Fraco** reage a cada 20 frames e erra 20% das fugas; **Normal** a cada 8 frames e erra 5%; **Forte** reage a cada 2 frames, não erra e usa Chute, Soco e Luva. A IA usa só o RNG do núcleo, o que mantém o determinismo.
+Os níveis mudam o tempo de reação, a margem de segurança e a agressividade: **Fraco** reage a cada 20 frames e erra 20% das fugas; **Normal** a cada 8 frames e erra 5%; **Forte** reage a cada 2 frames, não erra e usa Chute, Soco e Luva. A IA não consome o RNG da partida (isso mudaria sorteios de itens e spawns conforme o número de CPUs): suas escolhas "aleatórias" vêm de um hash `aiRoll(frame, slot, sal)` do próprio estado, então ela é uma função determinística do `RoundState` e da memória das CPUs (`AiState`).
 
 ## 10. Telas e fluxo (estrutura idêntica ao original, textos em PT-BR)
 

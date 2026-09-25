@@ -1,6 +1,7 @@
 import { newRound, addBomb, place } from './helpers';
 import { createAi, aiInputs, dangerMap, aiRoll, SAFE, AI_LEVELS } from '../../src/core/ai';
 import { step, createRound } from '../../src/core/round';
+import { createMatch, startRound, finishRound } from '../../src/core/match';
 import { cellX, cellY, idx } from '../../src/core/grid';
 import { ITEM, CELL, DIR, DISEASE, defaultRules, type RoundState, type GameEvent } from '../../src/core/types';
 import { hashState } from '../../src/core/hash';
@@ -140,6 +141,15 @@ describe('comportamento', () => {
     s.arena.items[idx(3, 1)] = ITEM.FIRE;
     play(s, [true, false, false, false, false], 1, 120);
     expect(s.players[0].fire).toBe(1);
+  });
+  it('não vai buscar item numa casa que uma bomba vai atingir', () => {
+    const s = newRound({ clear: true, active: [true, true, false, false, false] });
+    place(s, 1, 1, 11);                       // a caça leva o CPU coluna abaixo, longe do item
+    s.arena.items[idx(3, 1)] = ITEM.FIRE;
+    addBomb(s, 4, 1, 100, 1);                 // pega (3,1) daqui a 100 frames
+    play(s, [true, false, false, false, false], 1, 60);
+    expect(s.players[0].fire).toBe(0);
+    expect(s.players[0].alive).toBe(true);
   });
   it('explode blocos e sobrevive às próprias bombas', () => {
     for (const level of [0, 1, 2]) {
@@ -340,5 +350,36 @@ describe('níveis', () => {
     expect(Math.min(...vals)).toBeGreaterThanOrEqual(0);
     expect(Math.max(...vals)).toBeLessThan(100);
     expect(vals.size).toBeGreaterThan(50);
+  });
+});
+
+describe('determinismo (partida inteira só de CPUs, 20.000 ticks)', () => {
+  // Como o golden de match.test.ts, mas com as 5 CPUs no Normal jogando com as regras padrão de ?quick&humans=0
+  // (3 coroas, 3:00, spawns aleatórios, fase 1). Reinicia a partida quando acaba.
+  function play(seed: number): string[] {
+    let m = createMatch(defaultRules(), 1, seed);
+    let r = startRound(m);
+    const ai = createAi();
+    const cpu = [true, true, true, true, true];
+    const hashes: string[] = [];
+    for (let tick = 1; tick <= 20000; tick++) {
+      if (r.phase === 'result') {
+        finishRound(m, r);
+        if (m.over) m = createMatch(defaultRules(), 1, seed);
+        r = startRound(m);
+      }
+      step(r, aiInputs(r, ai, cpu, 1));
+      if (tick % 1000 === 0) hashes.push(hashState(r));
+    }
+    return hashes;
+  }
+
+  // GOLDEN: hash do estado no tick 20000 com a seed 11, calculado uma vez com este código. Muda sempre que o
+  // comportamento da IA (ou do core) mudar — atualizar deliberadamente, nunca para "fazer passar".
+  const GOLDEN = '9fb8728c';
+  it('mesma seed → mesmos hashes; hash final estável (golden)', () => {
+    const a = play(11);
+    expect(a).toEqual(play(11));
+    expect(a[a.length - 1]).toBe(GOLDEN);
   });
 });
