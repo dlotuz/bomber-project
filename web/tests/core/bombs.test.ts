@@ -94,4 +94,22 @@ describe('bomba', () => {
     run(s, 20, input(0, BTN.LEFT));
     expect(s.players[0].x).toBe((2 + 1) * 128);
   });
+  it('quem não é dono também vira passer ao estar na casa quando a bomba é colocada, e pode sair', () => {
+    const s = newRound({ clear: true });
+    place(s, 1, 1, 1); // P2 na mesma casa de spawn de P1
+    run(s, 1, input(0, BTN.A));
+    const b = s.bombs[0];
+    expect(b.passers).toContain(1);
+    const x0 = s.players[1].x;
+    run(s, 20, input(1, BTN.RIGHT));
+    expect(s.players[1].x).toBeGreaterThan(x0);
+  });
+  it('evento de explosão traz os braços (arms) na ordem UP, DOWN, LEFT, RIGHT', () => {
+    const s = newRound({ clear: true }); // linha 1 inteira aberta com clear
+    addBomb(s, 7, 1, 1, 2);
+    const ev = run(s, 1);
+    const explosion = ev.find(e => e.type === 'explosion');
+    expect(explosion).toBeDefined();
+    expect((explosion as any).arms).toEqual([0, 2, 2, 2]); // UP bate na parede, DOWN/LEFT/RIGHT livres por 2
+  });
 });

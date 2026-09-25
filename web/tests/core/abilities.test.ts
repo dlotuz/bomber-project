@@ -1,5 +1,5 @@
-import { newRound, run, input, addBomb } from './helpers';
-import { BTN, DIR, CELL } from '../../src/core/types';
+import { newRound, run, input, place, addBomb } from './helpers';
+import { BTN, DIR, CELL, ITEM } from '../../src/core/types';
 import { cellX, idx } from '../../src/core/grid';
 
 describe('habilidades', () => {
@@ -29,7 +29,7 @@ describe('habilidades', () => {
     expect(b.flight).toBeNull();
     expect(cellX(b.x)).toBe(5);
   });
-  it('voo quica quando a casa de pouso está ocupada', () => {
+  it('voo quica quando a casa de pouso está ocupada (por outra bomba)', () => {
     const s = newRound({ clear: true });
     s.players[0].punch = true; s.players[0].facing = DIR.RIGHT;
     const b = addBomb(s, 2, 1);
@@ -38,6 +38,47 @@ describe('habilidades', () => {
     run(s, 31);
     expect(b.flight).toBeNull();
     expect(cellX(b.x)).toBe(6);
+  });
+  it('voo quica quando a casa de pouso está ocupada por um jogador', () => {
+    const s = newRound({ clear: true });
+    s.players[0].punch = true; s.players[0].facing = DIR.RIGHT;
+    const b = addBomb(s, 2, 1);
+    place(s, 1, 5, 1);
+    run(s, 1, input(0, BTN.Y));
+    run(s, 31);
+    expect(b.flight).toBeNull();
+    expect(cellX(b.x)).toBe(6);
+  });
+  it('voo quica quando a casa de pouso está ocupada por um item', () => {
+    const s = newRound({ clear: true });
+    s.players[0].punch = true; s.players[0].facing = DIR.RIGHT;
+    const b = addBomb(s, 2, 1);
+    s.arena.items[idx(5, 1)] = ITEM.FIRE;
+    run(s, 1, input(0, BTN.Y));
+    run(s, 31);
+    expect(b.flight).toBeNull();
+    expect(cellX(b.x)).toBe(6);
+  });
+  it('voo: sai do campo por um lado e reaparece pelo lado oposto', () => {
+    const s = newRound({ clear: true });
+    s.players[0].punch = true;
+    place(s, 0, 3, 1); s.players[0].facing = DIR.LEFT;
+    const b = addBomb(s, 2, 1);
+    run(s, 1, input(0, BTN.Y));
+    expect(b.flight).not.toBeNull();
+    run(s, 30);
+    expect(b.flight).toBeNull();
+    expect(cellX(b.x)).toBe(12);
+  });
+  it('voo: depois de 20 quiques a bomba some (linha inteira bloqueada)', () => {
+    const s = newRound({ clear: true });
+    s.players[0].punch = true; s.players[0].facing = DIR.RIGHT;
+    const b = addBomb(s, 2, 1);
+    for (let x = 1; x <= 13; x++) s.arena.cells[idx(x, 1)] = CELL.HARD; // toda a linha bloqueada
+    run(s, 1, input(0, BTN.Y));
+    expect(b.flight).not.toBeNull();
+    run(s, 300);
+    expect(s.bombs.find(x => x.id === b.id)).toBeUndefined();
   });
   it('luva: segurar A sobre a bomba levanta; soltar arremessa 3 casas', () => {
     const s = newRound({ clear: true });

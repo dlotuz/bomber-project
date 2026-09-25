@@ -31,7 +31,7 @@ export interface Player {
   prevButtons: number; carrying: number; // id da bomba carregada ou -1
 }
 
-export interface Flight { dx: number; dy: number; cellsLeft: number; progress: number }
+export interface Flight { dx: number; dy: number; cellsLeft: number; progress: number; bounces: number }
 
 export interface Bomb {
   id: number; owner: number; x: number; y: number;
@@ -47,7 +47,7 @@ export interface Arena {
   flame: number[]; burning: number[];
 }
 
-export interface Pressure { order: number[]; next: number; timer: number; overtime: boolean }
+export interface Pressure { order: number[]; next: number; timer: number; overtime: boolean; startAt: number }
 
 export type Phase = 'intro' | 'playing' | 'result';
 
@@ -56,12 +56,12 @@ export interface RoundState {
   timeLeft: number;         // frames; -1 = infinito
   stage: number; rules: Rules;
   players: Player[]; bombs: Bomb[]; nextBombId: number;
-  arena: Arena; pressure: Pressure; winners: number[];
+  arena: Arena; pressure: Pressure; winners: number[]; counted: boolean;
 }
 
 export type GameEvent =
   | { type: 'bomb_placed'; slot: number; gx: number; gy: number }
-  | { type: 'explosion'; gx: number; gy: number }
+  | { type: 'explosion'; gx: number; gy: number; arms: [number, number, number, number] }
   | { type: 'block_destroyed'; gx: number; gy: number }
   | { type: 'player_hit'; slot: number }
   | { type: 'player_out'; slot: number }
