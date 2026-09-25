@@ -84,14 +84,14 @@ Surgem sob soft blocks destruídos: **chance de 40%** de o bloco conter item. O 
 | Luva | 7 | habilidade |
 | P (Perfurante) | 7 | chama atravessa soft blocks (destrói todos no alcance) *(interpretação nossa)* |
 
-- **Caveira**, com 4 doenças sorteadas *(interpretação nossa; o original tem 4 tipos)*: **Lento** (velocidade mínima), **Rápido demais** (velocidade 8), **Diarreia** (solta bombas sem parar) e **Fogo fraco** (alcance 1). Duração de 600 frames. **Passa para outro jogador por contato.**
+- **Caveira**, com 4 doenças sorteadas *(interpretação nossa; o original tem 4 tipos)*: **Lento** (velocidade mínima), **Rápido demais** (velocidade 8), **Diarreia** (solta bombas sem parar) e **Fogo fraco** (alcance 1). Duração de 600 frames. **Passa para outro jogador por contato** — o contágio copia a doença (os dois ficam doentes).
 - Um item atingido por chama é destruído.
 
 ## 7. Rodada e partida
 
 - **Estados da rodada:** `INTRO` (fade, ≈90 frames) → `PLAYING` → `ENDING` (espera terminarem as animações de morte) → `RESULT`.
 - **Relógio** conforme a regra Time (1:00, 2:00, 3:00, 5:00, ∞).
-- **Pressão:** com **1:00 restante**, blocos HARD caem em espiral de fora para dentro, 1 bloco a cada 6 frames, preenchendo os **2 anéis externos** e então param (o original deixa o miolo livre). Quem estiver na casa morre; bombas e itens na casa somem. Com Tempo ∞ não há pressão.
+- **Pressão:** começa com **1:00 restante** (ou na metade do tempo, se o tempo total for **1:00**), blocos HARD caem em espiral de fora para dentro, 1 bloco a cada 6 frames, preenchendo os **2 anéis externos** e então param (o original deixa o miolo livre). Quem estiver na casa morre no mesmo frame; bombas e itens na casa somem. Com Tempo ∞ não há pressão.
 - **Fim da rodada:** com ≤1 vivo depois das animações, 1 vivo ganha uma coroa e 0 vivos é **DRAW GAME**. Com o tempo esgotado e mais de 1 vivo, também é DRAW GAME (se Sudden Death estiver Off).
 - **Team Battle:** 2 times (Vermelho/Branco), escolhidos na tela de jogadores. Uma rodada termina quando só resta um time. Todos os membros do time vencedor ganham uma coroa. A partida é decidida pelo time.
 - **Partida:** acaba quando alguém (ou um time) chega a **Matches** coroas (1–5). Sequência: Score Board (≈9 s, com animação da coroa nova) → **VICTORY** (troféu, espera botão) → volta para "Selecionar fase" com as coroas zeradas.
@@ -102,7 +102,7 @@ Surgem sob soft blocks destruídos: **chance de 40%** de o bloco conter item. O 
 | Nível CPU | Fraco · **Normal** · Forte | parâmetros da IA (§9) |
 | Coroas (Matches) | 1 · 2 · **3** · 4 · 5 | meta de vitórias |
 | Tempo | 1:00 · 2:00 · **3:00** · 5:00 · ∞ | relógio; com ∞ não há pressão |
-| Morte Súbita | **Off** · On | On: no 0:00 com mais de 1 vivo, a pressão continua pelos anéis internos a 1 bloco/frame até restar ≤1 *(interpretação nossa)* |
+| Morte Súbita | **Off** · On | On: no 0:00 com mais de 1 vivo, a pressão continua pelos anéis internos a 1 bloco/frame até restar ≤1 jogador (ou 1 time); então para. *(interpretação nossa)* |
 | Bomber Vingador (Bad Bomber) | **Off** · On | On: quem morreu anda pela borda externa e arremessa bombas para dentro (1 bomba por vez) |
 | Corrida (Racer Bomber) | **Off** · On | On: todos começam com velocidade 4 *(interpretação nossa)* |
 
@@ -122,6 +122,8 @@ Surgem sob soft blocks destruídos: **chance de 40%** de o bloco conter item. O 
 | 10 | Alfaiataria | layout 10 | nenhuma (visual temático) |
 
 A seleção de fase replica a tela original: miniatura central, vizinhas nas laterais e "Fase N / Nome".
+
+- *Nota: o layout 9 não tem casas `?`; as 4 gangorras são posicionadas explicitamente no Plano 3 (não derivadas de marcações do layout).*
 
 ## 9. IA das CPUs
 
