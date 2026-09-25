@@ -30,7 +30,7 @@ function press(app: App, btn: number, slot?: number) {
 const idle = (app: App, n: number) => { for (let k = 0; k < n; k++) app.update(idleInput()); };
 
 describe('título e modos', () => {
-  it('cursor começa em JOGO DE BATALHA (JOGO NORMAL está "em breve")', () => {
+  it('título: BATALHA é a primeira opção', () => {
     const { app } = mkApp();
     app.go(titleScreen(app));
     press(app, BTN.A);
