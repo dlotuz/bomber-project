@@ -2620,3 +2620,28 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - Bad Bomber;
   - áudio chiptune (SFX pelos eventos do core e pelos `notices`; volume em CONFIGURAÇÕES);
   - webhook Crown Cup a partir do `match_over`, com URL configurável, retry e fila offline, e com os nomes dos jogadores no payload.
+
+---
+
+## Resultado da execução (2026-09-25)
+
+Branch `feat/menus`: 195 testes passando, `tsc` limpo, `vite build` ok e 21 screenshots conferidas.
+
+### Decisões tomadas durante a execução
+- **Partida sem controle humano** (só CPUs, ou humanos sem dispositivo): qualquer dispositivo pausa ou sai, e a VITÓRIA volta sozinha depois de 15 s.
+- **Remapear tecla:** depois de capturar, a tela espera todas as teclas serem soltas antes de aceitar comandos.
+- **Etiqueta "1P".."5P"** acima de cada bomber, na cor do jogador ou do time. Resolve personagens repetidos e serve de marcador de time.
+- **Sair pela pausa pede confirmação:** B e depois A.
+- **Recuperação:** a fase valida a formação antes de começar; a tela de personagens aceita B de qualquer dispositivo enquanto ninguém confirmou; Escape = voltar em qualquer menu; `?reset` restaura as configurações padrão.
+- **Configurações:** gancho `migrate()` para versões futuras; espaço aparece como "." no editor de nomes; dispositivo repetido aparece em vermelho; `sanitizeName` usa `/\p{M}/gu`.
+
+### Pendências para o Plano 4
+- **Controles:**
+  - remapear botões do gamepad e checar `gp.mapping` (controles USB genéricos no macOS costumam não ser "standard");
+  - pausar sozinho quando um controle desconecta.
+- **Avisos da sessão:** um canal (`AppHooks.notify` ou barramento) que consome `session.notices`. O `match_over` precisa levar uma cópia da configuração (modo, fase, personagens, nomes, humanos, times, meta). Faltam também avisos `match_start`/`match_aborted`.
+- **Configurações:** `volume`, `webhookUrl` e `webhookSecret` em `Settings` (padrão do normalizador). URL validada com `new URL()` e só http(s). Fila offline numa chave própria. RESTAURAR PADRÃO pede confirmação e não apaga a URL do webhook.
+- **Visual:** cache de texto com limite (LRU); poses de morte e de vitória; tela de intro curta (spec §10).
+- **Regras:** "Bomber Vingador" e "Nível da CPU" só passam a ter efeito com o Plano 4.
+- **`?quick`:** restringir ao ambiente de desenvolvimento, ou documentar.
+- **Controles SNES:** dica na tela de que o A (confirmar) é o botão da direita.
