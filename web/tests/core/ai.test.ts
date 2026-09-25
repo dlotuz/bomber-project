@@ -335,6 +335,17 @@ describe('velocidade alta', () => {
   });
 });
 
+describe('fim de rodada', () => {
+  it('na pressão até o Fraco caça (senão rodadas só de CPUs fracas acabam empatadas por tempo)', () => {
+    const s = newRound({ clear: true, active: [true, true, false, false, false] });
+    s.timeLeft = s.pressure.startAt;          // pressão começando; (5,5) e (7,5) ficam fora dos anéis que caem
+    place(s, 0, 5, 5);
+    place(s, 1, 7, 5);
+    const ev = play(s, [true, false, false, false, false], 0, 60);
+    expect(ev.some(e => e.type === 'bomb_placed' && e.slot === 0)).toBe(true);
+  });
+});
+
 describe('níveis', () => {
   it('Fraco reage mais devagar e erra mais que Forte', () => {
     expect(AI_LEVELS[0].react).toBeGreaterThan(AI_LEVELS[2].react);
