@@ -1,8 +1,9 @@
-import { DIR, type Player, type RoundState, type Rules } from './types';
+import { DIR, type GameEvent, type Player, type RoundState, type Rules } from './types';
 import { INTRO_FRAMES, SPAWNS, TIME_OPTIONS_FRAMES } from './constants';
 import { centerX, centerY } from './grid';
 import { buildArena } from './arena';
 import { makeRng, shuffle, type Rng } from './rng';
+import { steerPlayer } from './player';
 
 export function makePlayers(stage: number, rules: Rules, rng: Rng): Player[] {
   const order = [0, 1, 2, 3, 4];
@@ -32,4 +33,22 @@ export function createRound(stage: number, rules: Rules, seed: number): RoundSta
     players, bombs: [], nextBombId: 1, arena,
     pressure: { order: [], next: 0, timer: 0, overtime: false }, winners: [],
   };
+}
+
+export function step(s: RoundState, inputs: number[]): GameEvent[] {
+  const ev: GameEvent[] = [];
+  if (s.phase === 'result') return ev;
+  s.frame++;
+  if (s.phase === 'intro') {
+    if (--s.introLeft <= 0) s.phase = 'playing';
+    for (const p of s.players) p.prevButtons = inputs[p.slot] ?? 0;
+    return ev;
+  }
+  for (const p of s.players) {
+    if (!p.active || !p.alive) continue;
+    const btn = inputs[p.slot] ?? 0;
+    if (p.dying === 0) steerPlayer(s, p, btn, ev);
+    p.prevButtons = btn;
+  }
+  return ev;
 }

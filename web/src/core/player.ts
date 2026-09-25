@@ -1,0 +1,67 @@
+import { BASE_SPEED_SUB, CORNER_SUB } from './constants';
+import { BTN, DIR, DISEASE, DX, DY, type GameEvent, type Player, type RoundState } from './types';
+import { cellX, cellY, centerX, centerY } from './grid';
+import { blocksPlayer } from './query';
+
+export function speedSub(p: Player): number {
+  if (p.disease === DISEASE.SLOW) return 4;
+  if (p.disease === DISEASE.FAST) return BASE_SPEED_SUB + 7;
+  return BASE_SPEED_SUB + (p.speed - 1);
+}
+
+export function flameRange(p: Player): number {
+  return p.disease === DISEASE.LOW_FIRE ? 1 : p.fire + 2;
+}
+
+export function movePlayer(s: RoundState, p: Player, dir: number, ev: GameEvent[]): void {
+  if (dir === DIR.NONE) return;
+  p.facing = dir;
+  const spd = speedSub(p);
+  const gx = cellX(p.x), gy = cellY(p.y);
+  const dx = DX[dir], dy = DY[dir];
+  if (dx !== 0) {
+    const off = p.y - centerY(gy);
+    if (off !== 0) {
+      if (Math.abs(off) > CORNER_SUB || blocksPlayer(s, gx + dx, gy, p.slot)) return;
+      p.y -= Math.sign(off) * Math.min(Math.abs(off), spd);
+      return;
+    }
+    const cx = centerX(gx);
+    let nx = p.x + dx * spd;
+    if (blocksPlayer(s, gx + dx, gy, p.slot)) {
+      nx = dx > 0 ? Math.max(p.x, Math.min(nx, cx)) : Math.min(p.x, Math.max(nx, cx));
+      if (nx === p.x) onBlocked(s, p, gx + dx, gy, dir, ev);
+    }
+    p.x = nx;
+  } else {
+    const off = p.x - centerX(gx);
+    if (off !== 0) {
+      if (Math.abs(off) > CORNER_SUB || blocksPlayer(s, gx, gy + dy, p.slot)) return;
+      p.x -= Math.sign(off) * Math.min(Math.abs(off), spd);
+      return;
+    }
+    const cy = centerY(gy);
+    let ny = p.y + dy * spd;
+    if (blocksPlayer(s, gx, gy + dy, p.slot)) {
+      ny = dy > 0 ? Math.max(p.y, Math.min(ny, cy)) : Math.min(p.y, Math.max(ny, cy));
+      if (ny === p.y) onBlocked(s, p, gx, gy + dy, dir, ev);
+    }
+    p.y = ny;
+  }
+}
+
+/** Gancho para o chute (Task 6). */
+function onBlocked(_s: RoundState, _p: Player, _tx: number, _ty: number, _dir: number, _ev: GameEvent[]): void {}
+
+export function steerPlayer(s: RoundState, p: Player, buttons: number, ev: GameEvent[]): void {
+  const dirs: number[] = [];
+  if (buttons & BTN.UP) dirs.push(DIR.UP);
+  if (buttons & BTN.DOWN) dirs.push(DIR.DOWN);
+  if (buttons & BTN.LEFT) dirs.push(DIR.LEFT);
+  if (buttons & BTN.RIGHT) dirs.push(DIR.RIGHT);
+  for (const d of dirs) {
+    const x = p.x, y = p.y;
+    movePlayer(s, p, d, ev);
+    if (p.x !== x || p.y !== y) return;
+  }
+}
