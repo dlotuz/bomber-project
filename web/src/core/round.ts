@@ -1,11 +1,28 @@
 import { CELL, DIR, ITEM, type GameEvent, type Player, type RoundState, type Rules } from './types';
-import { DEATH_FRAMES, DISEASE_FRAMES, INTRO_FRAMES, SPAWNS, TIME_OPTIONS_FRAMES } from './constants';
+import { DEATH_FRAMES, DISEASE_FRAMES, INTRO_FRAMES, PRESSURE_INTERVAL, PRESSURE_RINGS, PRESSURE_START_FRAMES, SPAWNS, TIME_OPTIONS_FRAMES } from './constants';
 import { cellX, cellY, centerX, centerY, idx } from './grid';
 import { buildArena, tickArena } from './arena';
 import { makeRng, shuffle, type Rng } from './rng';
 import { playerActions, steerPlayer } from './player';
 import { updateBombs } from './bombs';
 import { applyItem } from './items';
+
+export function ringCells(k: number): number[] {
+  const x0 = 1 + k, x1 = 13 - k, y0 = 1 + k, y1 = 11 - k;
+  const out: number[] = [];
+  if (x0 > x1 || y0 > y1) return out;
+  for (let x = x0; x <= x1; x++) out.push(idx(x, y0));
+  for (let y = y0 + 1; y <= y1; y++) out.push(idx(x1, y));
+  if (y1 > y0) for (let x = x1 - 1; x >= x0; x--) out.push(idx(x, y1));
+  if (x1 > x0) for (let y = y1 - 1; y > y0; y--) out.push(idx(x0, y));
+  return out;
+}
+
+export function pressureOrder(fromRing: number, toRing: number): number[] {
+  const out: number[] = [];
+  for (let k = fromRing; k < toRing; k++) out.push(...ringCells(k));
+  return out;
+}
 
 export function makePlayers(stage: number, rules: Rules, rng: Rng): Player[] {
   const order = [0, 1, 2, 3, 4];
@@ -33,7 +50,7 @@ export function createRound(stage: number, rules: Rules, seed: number): RoundSta
     rng, frame: 0, phase: 'intro', introLeft: INTRO_FRAMES,
     timeLeft: TIME_OPTIONS_FRAMES[rules.timeIdx], stage, rules,
     players, bombs: [], nextBombId: 1, arena,
-    pressure: { order: [], next: 0, timer: 0, overtime: false }, winners: [],
+    pressure: { order: TIME_OPTIONS_FRAMES[rules.timeIdx] < 0 ? [] : pressureOrder(0, PRESSURE_RINGS), next: 0, timer: 0, overtime: false }, winners: [],
   };
 }
 
@@ -60,6 +77,47 @@ function tickDying(s: RoundState, ev: GameEvent[]): void {
   for (const p of s.players) {
     if (p.dying > 0 && --p.dying === 0) { p.alive = false; ev.push({ type: 'player_out', slot: p.slot }); }
   }
+}
+
+function dropBlock(s: RoundState, i: number, ev: GameEvent[]): void {
+  const a = s.arena;
+  a.cells[i] = CELL.HARD; a.items[i] = ITEM.NONE; a.hidden[i] = ITEM.NONE; a.burning[i] = 0; a.flame[i] = 0;
+  s.bombs = s.bombs.filter(b => b.carried || b.flight || idx(cellX(b.x), cellY(b.y)) !== i);
+  ev.push({ type: 'pressure_block', gx: i % 15, gy: Math.floor(i / 15) });
+}
+
+function tickClock(s: RoundState, ev: GameEvent[]): void {
+  if (s.timeLeft < 0) return;
+  if (s.timeLeft > 0) s.timeLeft--;
+  const pr = s.pressure;
+  if (s.timeLeft === 0 && s.rules.suddenDeath && !pr.overtime) {
+    pr.overtime = true;
+    pr.order = pr.order.concat(pressureOrder(PRESSURE_RINGS, 6));
+  }
+  if (s.timeLeft > PRESSURE_START_FRAMES) return;
+  if (!pr.overtime && ++pr.timer < PRESSURE_INTERVAL) return;
+  pr.timer = 0;
+  while (pr.next < pr.order.length && s.arena.cells[pr.order[pr.next]] === CELL.HARD) pr.next++;
+  if (pr.next < pr.order.length) dropBlock(s, pr.order[pr.next++], ev);
+}
+
+function checkEnd(s: RoundState, ev: GameEvent[]): void {
+  if (s.players.some(p => p.active && p.alive && p.dying > 0)) return;
+  const standing = s.players.filter(p => p.active && p.alive);
+  let done = false;
+  let winners: number[] = [];
+  if (s.rules.mode === 'team') {
+    const teams = [...new Set(standing.map(p => p.team))];
+    if (teams.length <= 1) {
+      done = true;
+      if (teams.length === 1) winners = s.players.filter(p => p.active && p.team === teams[0]).map(p => p.slot);
+    }
+  } else if (standing.length <= 1) {
+    done = true;
+    winners = standing.map(p => p.slot);
+  }
+  if (!done && s.timeLeft === 0 && !s.rules.suddenDeath) { done = true; winners = []; }
+  if (done) { s.phase = 'result'; s.winners = winners; ev.push({ type: 'round_end', winners }); }
 }
 
 function pickupsAndContagion(s: RoundState, ev: GameEvent[]): void {
@@ -105,5 +163,7 @@ export function step(s: RoundState, inputs: number[]): GameEvent[] {
   pickupsAndContagion(s, ev);
   applyHazards(s, ev);
   tickDying(s, ev);
+  tickClock(s, ev);
+  checkEnd(s, ev);
   return ev;
 }
