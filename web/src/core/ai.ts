@@ -1,5 +1,5 @@
 import { BTN, CELL, DISEASE, DX, DY, ITEM, type Player, type RoundState } from './types';
-import { FUSE_FRAMES, GRID_H, GRID_W, MOVE_BOMB_SUB, PRESSURE_INTERVAL, T } from './constants';
+import { CORNER_SUB, FUSE_FRAMES, GRID_H, GRID_W, MOVE_BOMB_SUB, PRESSURE_INTERVAL, T } from './constants';
 import { cellX, cellY, centerX, centerY, idx, inPlayfield } from './grid';
 import { flameRange, speedSub } from './player';
 
@@ -131,6 +131,14 @@ function walkable(s: RoundState, i: number, start: number, danger: Int32Array): 
   return !s.bombs.some(b => !b.carried && !b.flight && idx(cellX(b.x), cellY(b.y)) === i);
 }
 
+/** "Centrado" na própria casa: a menos de um passo do centro nos dois eixos. Com velocidades que não dividem 128
+ *  (11, 12, 15 sub/frame…) o jogador passa do centro exato; exigir igualdade faria a IA ir e voltar para sempre.
+ *  Uma bomba solta aqui cai na mesma casa: |desvio| < passo ≤ 15 < 64. */
+function centered(p: Player): boolean {
+  const spd = speedSub(p);
+  return Math.abs(p.x - centerX(cellX(p.x))) < spd && Math.abs(p.y - centerY(cellY(p.y))) < spd;
+}
+
 /** Frames para atravessar uma casa na velocidade atual do jogador. */
 function framesPerCell(p: Player): number {
   return Math.ceil(T / speedSub(p));
@@ -214,7 +222,7 @@ function think(s: RoundState, p: Player, level: AiLevel, brain: Brain): void {
 
   // Fora de perigo e entre duas casas: continua o caminho atual (ou centraliza, se não tiver um) em vez de
   // replanejar no meio do passo — replanejar aqui faz a IA oscilar entre duas casas sem nunca chegar.
-  if (p.x !== centerX(gx) || p.y !== centerY(gy)) {
+  if (!centered(p)) {
     if (brain.path.length === 0) brain.path = [here];
     return;
   }
@@ -258,25 +266,29 @@ function think(s: RoundState, p: Player, level: AiLevel, brain: Brain): void {
   brain.path = options.length ? [options[aiRoll(s.frame, p.slot, 2) % options.length]] : [];
 }
 
-/** Botões de direção para seguir o caminho: alinha no eixo perpendicular antes de virar. */
+/** Botões de direção para seguir o caminho. Para virar basta apertar a direção da próxima casa: a correção de
+ *  quina de `movePlayer` alinha o eixo perpendicular sozinha (em min(|desvio|, passo), sem passar do centro).
+ *  Só com desvio maior que a quina é que primeiro se volta para o centro. */
 function steer(p: Player, brain: Brain): number {
   const gx = cellX(p.x), gy = cellY(p.y);
-  while (brain.path.length && brain.path[0] === idx(gx, gy) && p.x === centerX(gx) && p.y === centerY(gy)) brain.path.shift();
-  const target = brain.path[0] ?? idx(gx, gy);
+  const here = idx(gx, gy);
+  const spd = speedSub(p);
+  const ox = p.x - centerX(gx), oy = p.y - centerY(gy);
+  const near = Math.abs(ox) < spd && Math.abs(oy) < spd;
+  while (brain.path.length && brain.path[0] === here && near) brain.path.shift();
+  const target = brain.path[0] ?? here;
   const tgx = target % GRID_W, tgy = Math.floor(target / GRID_W);
-  const cx = centerX(gx), cy = centerY(gy);
   if (tgx !== gx) {
-    if (p.y !== cy) return p.y < cy ? BTN.DOWN : BTN.UP;
+    if (Math.abs(oy) > CORNER_SUB) return oy < 0 ? BTN.DOWN : BTN.UP;
     return tgx > gx ? BTN.RIGHT : BTN.LEFT;
   }
   if (tgy !== gy) {
-    if (p.x !== cx) return p.x < cx ? BTN.RIGHT : BTN.LEFT;
+    if (Math.abs(ox) > CORNER_SUB) return ox < 0 ? BTN.RIGHT : BTN.LEFT;
     return tgy > gy ? BTN.DOWN : BTN.UP;
   }
-  // chegou na casa-alvo: centraliza e para
-  if (brain.path.length) brain.path.shift();
-  if (p.x !== cx) return p.x < cx ? BTN.RIGHT : BTN.LEFT;
-  if (p.y !== cy) return p.y < cy ? BTN.DOWN : BTN.UP;
+  // chegou na casa-alvo: aproxima do centro (até menos de um passo) e para
+  if (Math.abs(ox) >= spd) return ox < 0 ? BTN.RIGHT : BTN.LEFT;
+  if (Math.abs(oy) >= spd) return oy < 0 ? BTN.DOWN : BTN.UP;
   return 0;
 }
 

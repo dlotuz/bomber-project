@@ -126,6 +126,50 @@ describe('comportamento', () => {
   });
 });
 
+/** Roda a IA num slot e mede bombas colocadas e a maior sequência de frames com a posição alternando A,B,A,B. */
+function watch(s: RoundState, slot: number, level: number, frames: number): { bombs: number; osc: number } {
+  const ai = createAi();
+  const cpu = [0, 1, 2, 3, 4].map(i => i === slot);
+  let bombs = 0, osc = 0, run = 0;
+  const p = s.players[slot];
+  let a = -1, b = -1;
+  for (let f = 0; f < frames && s.phase !== 'result'; f++) {
+    for (const e of step(s, aiInputs(s, ai, cpu, level))) if (e.type === 'bomb_placed' && e.slot === slot) bombs++;
+    const cur = p.x * 4096 + p.y;
+    run = cur === a && cur !== b ? run + 1 : 0;
+    osc = Math.max(osc, run);
+    a = b; b = cur;
+  }
+  return { bombs, osc };
+}
+
+describe('velocidade alta', () => {
+  // speedSub 12 e 15 não dividem 128: o jogador passa do centro da casa e a IA não pode exigir centro exato
+  for (const [name, prep] of [
+    ['velocidade 5 (12 sub/frame)', (q: RoundState) => { q.players[0].speed = 5; }],
+    ['velocidade 4 (11 sub/frame)', (q: RoundState) => { q.players[0].speed = 4; }],
+    ['doença FAST (15 sub/frame)', (q: RoundState) => { q.players[0].disease = DISEASE.FAST; q.players[0].diseaseTimer = 5000; }],
+  ] as const) {
+    it(`${name}: coloca bombas e não fica indo e voltando`, () => {
+      const s = newRound({ active: [true, true, false, false, false], seed: 3 });
+      place(s, 1, 13, 11);
+      prep(s);
+      const r = watch(s, 0, 1, 1200);
+      expect(r.bombs).toBeGreaterThanOrEqual(3);
+      expect(r.osc).toBeLessThanOrEqual(60);
+      expect(s.players[0].alive).toBe(true);
+    });
+  }
+  it('arena limpa, oponente parado longe: vai até ele e bomba', () => {
+    const s = newRound({ clear: true, active: [true, true, false, false, false] });
+    s.players[0].speed = 5;
+    place(s, 1, 13, 11);
+    const r = watch(s, 0, 1, 1200);
+    expect(r.bombs).toBeGreaterThanOrEqual(1);
+    expect(r.osc).toBeLessThanOrEqual(60);
+  });
+});
+
 describe('níveis', () => {
   it('Fraco reage mais devagar e erra mais que Forte', () => {
     expect(AI_LEVELS[0].react).toBeGreaterThan(AI_LEVELS[2].react);
