@@ -5,17 +5,6 @@ import { roundOverText, type ViewState } from './view';
 import { displayName } from '../game/config';
 import { drawRound, drawTextCentered, SCREEN_W, SCREEN_H } from './draw-game';
 
-export function drawTitle(ctx: CanvasRenderingContext2D, bank: SpriteBank, frame: number): void {
-  for (let i = 0; i < 14; i++) {
-    ctx.fillStyle = i % 2 ? '#141a3a' : '#18204a';
-    ctx.fillRect(0, i * 16, SCREEN_W, 16);
-  }
-  ctx.drawImage(bank.crown(), (SCREEN_W - 36) / 2, 40, 36, 24);
-  drawTextCentered(ctx, bank, 'CROWN BLAST', '#ffd23f', 76, 3);
-  if (((frame >> 5) & 1) === 0) drawTextCentered(ctx, bank, 'PRESSIONE START', '#ffffff', 150, 1);
-  drawTextCentered(ctx, bank, 'ENTER / START NO CONTROLE', '#6ad0ff', 170, 1);
-}
-
 function drawScoreboard(ctx: CanvasRenderingContext2D, s: Session, bank: SpriteBank): void {
   ctx.fillStyle = '#12305a';
   ctx.fillRect(0, 0, SCREEN_W, SCREEN_H);
