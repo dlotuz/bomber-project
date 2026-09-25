@@ -1004,3 +1004,35 @@ Expected: 213 testes PASS; tsc limpo; build ok; 22 PNGs. Abra `22-cpu-match.png`
   - Bomber Vingador;
   - IA usando chute, soco e luva no nível Forte;
   - poses de morte e de vitória.
+
+## Resultado da execução (2026-09-25)
+
+Branch `feat/cpu-ai`: 238 testes passando (incluindo simulação de aceitação só de CPUs e golden de 20 000 ticks com 5 CPUs), `tsc` limpo. O golden de `match.test.ts` não mudou: nenhuma regra do núcleo foi alterada.
+
+### Decisões tomadas durante a execução
+- **Perigo como janela no tempo** (`[at, end)` por casa), com as chamas atuais vindas de `arena.flame`. A busca é um Dijkstra no tempo que parte da posição real e pode esperar parada até uma chama apagar. `dangerMap` continua exportado com a codificação antiga.
+- **"Centrado"** quer dizer a menos de um passo do centro. Nas curvas a CPU aperta a direção da próxima casa e deixa a correção de quina do `movePlayer` alinhar (antes travava com velocidade > 1).
+- **A fuga tem três tentativas:** folga do nível, folga 0 e, por último, a casa que explode mais tarde. Para soltar bomba, exige a fuga estrita.
+- **Bombas voando e deslizando** são previstas onde param. O pavio corre durante o deslize e congela durante o voo, como no núcleo.
+- **Modo times:** colega nunca é alvo, e a CPU não solta bomba que pegue o colega ou tire o único refúgio dele.
+- **Níveis** (`AI_LEVELS`, com os campos novos `open`, `alert`, `trap`, `wary`):
+  - Forte encurrala adversários, com margem 4 e reação a cada 2 frames.
+  - Normal só bomba se a fuga resistir a uma bomba dos vizinhos.
+  - Fraco erra e reage devagar, mas caça quando a pressão começa.
+- **Pressão:** as casas que ainda vão cair contam como condenadas desde 5 s antes de a pressão começar.
+- **Nada de bomba** na casa de quem tem Luva, nem ao lado de quem tem Chute virado para ela.
+- **Sorteio da IA:** usa `aiRoll(frame, slot, salt)`, um hash determinístico que não consome o RNG da partida (spec §9 atualizada).
+- **Limites da simulação:**
+  - pelo menos 8 de 10 rodadas decididas antes do relógio;
+  - no máximo 1 morte ligada à bomba de um colega nas rodadas de times, sempre em cadeia;
+  - Forte vence Fraco em pelo menos 13 de 20 rodadas, e vence pelo menos tanto quanto o Normal.
+
+  Medido em 60 rodadas: Forte × Fraco 52–2 e Forte × Normal 34–17. Nenhuma CPU fica travada e as mortes pela pressão caíram de 38 para 1.
+
+### Pendências
+- **Estado das CPUs:** o `AiState` (cérebros e `bombsSig`) fica fora do `RoundState`. Um rollback online precisa cloná-lo junto.
+- **IA do Forte:** ainda não usa chute, soco e luva de propósito (Plano 7; a spec §9 ainda descreve isso).
+- **Previsão de perigo ainda sem:**
+  - quiques das bombas voando;
+  - reação em cadeia ao longo do trajeto de uma bomba deslizando;
+  - teste unitário próprio do veto "vizinho com Chute".
