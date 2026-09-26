@@ -6,3 +6,5 @@ import './rom/stages/stage8'; import './rom/stages/stage9'; import './rom/stages
 import './fallback/stages/stage2'; import './fallback/stages/stage3'; import './fallback/stages/stage5';
 import './fallback/stages/stage6'; import './fallback/stages/stage7'; import './fallback/stages/stage8';
 import './fallback/stages/stage9';
+import './rom/mounts';
+import './fallback/mounts';

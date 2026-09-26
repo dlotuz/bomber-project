@@ -12,7 +12,8 @@ describe('pontos de extensão (§2.5)', () => {
   it('montaria padrão é no-op', () => {
     const s = emptyRound(1, defaultRules());
     const p = s.players[0];
-    expect(MOUNTS.current).toBe(NO_MOUNT);
+    // O plano 9 registra o módulo dele em MOUNTS.current (core/mounts/index.ts); aqui só o NO_MOUNT é conferido.
+    expect(MOUNTS.current).toBeDefined();
     expect(NO_MOUNT.onHit(s, p, [])).toBe(false);
     expect(NO_MOUNT.onY(s, p, [])).toBe(false);
     NO_MOUNT.tick(s, []);
