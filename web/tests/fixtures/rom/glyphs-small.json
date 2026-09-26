@@ -1,0 +1,17 @@
+{
+  "rom": "38f4394986bd39fcbe32a722a3fe103ee6177d9b",
+  "styles": {
+    "ascii8": {
+      "glyphs": 63,
+      "sha1": "559ed5b4dbbbe670ce0d180c9cdc07da84562c74"
+    },
+    "banner": {
+      "glyphs": 15,
+      "sha1": "423de179b44cb7bce029cd6cc50643f8845c09ac"
+    },
+    "spriteBlue": {
+      "glyphs": 53,
+      "sha1": "70e9a9d2fc827e464be74a15e110f35dcd80a620"
+    }
+  }
+}
