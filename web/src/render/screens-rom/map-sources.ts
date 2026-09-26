@@ -41,6 +41,30 @@ const fromDescriptor = (desc: number) => (a: RomAssets): SceneMaps => ({
   bg2: descriptorMap(a.rom, desc, 'bg2'),
 });
 
+// --- charsel (Task 10, revisão): oposto de `keepPalette` — zera só a paleta do texto em inglês, mantém o resto. ---
+const TEXT_PAL = 1;   // medido: `rawMap(a.rom, PATCH_BG1.charsel)` só tem palavras de paleta 0 (vazio), 1 (texto
+                       // em inglês, 10 casas: colunas 6–10 das linhas 2–3) e 5 (corda, 33 casas) — nada mais.
+/** Oposto de `keepPalette` (map-decode.ts): zera só as casas da paleta `pal`, mantém o resto como está. Para
+ *  `charsel` isso é mais correto que "só ficar com a paleta da corda" (`menu()`/`keepPalette`, usado pelas
+ *  outras 4 cenas de menu): tira exatamente o texto, sem presumir que "corda" é a única paleta válida. */
+const blankPalette = (m: Uint16Array, pal: number): Uint16Array => m.map(w => (((w >> 10) & 7) === pal ? 0 : w));
+/**
+ * `charsel` tem um ícone decorativo visível à esquerda da corda na captura (`charsel.vram`/`.png`, dump-capture:
+ * colunas 1–2, linhas 2–11, paletas 0/2/3/4/7) que `keepPalette(…, 5)` descartaria por engano se estivesse
+ * nesta tabela — só que, conferido diretamente (`rawMap(a.rom, PATCH_BG1.charsel)`, histograma de paletas),
+ * **não está**: a tabela crua de 1024 palavras só tem as 43 células citadas acima (texto + corda), o resto é
+ * zero, inclusive nas colunas do ícone. O BG1 original (pré-tradução, `descriptorMap(a.rom, CHARSEL, 'bg1')`)
+ * também não tem o ícone ali (preenchimento genérico `$0400` nas mesmas colunas). Ou esse ícone vem de uma
+ * rotina separada ainda não mapeada (fora do escopo desta tarefa), ou é sobra de VRAM de outra cena na captura
+ * (a sequência de paletas por linha — 2, 2, 3, 3, 4, 4, 0, 0, 7, 7 — não bate com nada documentado nem com um
+ * efeito óbvio, tipo arco-íris). Por isso ele continua fora do `sceneMaps`/`MAP_SOURCES.charsel`: com ele
+ * ignorado no teste (`CHARSEL_ICON_PX`), a comparação com a captura bate 100 %; sem ignorar, cai a 87,5 %
+ * (medido) — abaixo dos 97 % pedidos. `blankPalette` troca o filtro por um mais correto (tira só o texto), mas
+ * não muda o resultado numérico desta tabela específica (que só tem {0, 1, 5}); preservei mesmo assim, porque
+ * é a semântica certa e não discartaria o ícone se um dia aparecer aí de verdade.
+ */
+const charselBg1 = (a: RomAssets): Uint16Array => blankPalette(rawMap(a.rom, PATCH_BG1.charsel), TEXT_PAL);
+
 export const MAP_SOURCES: Partial<Record<SceneId, (a: RomAssets) => SceneMaps>> = {
   // Logo no BG1; `$C1:951A` e `$C1:952E` ligam a prioridade nas linhas 0–15 (duas metades de 16 colunas).
   title: a => ({ bg1: setPriority(descriptorMap(a.rom, TITLE, 'bg1'), 0, 0, 32, 16), bg2: descriptorMap(a.rom, TITLE, 'bg2') }),
@@ -48,7 +72,7 @@ export const MAP_SOURCES: Partial<Record<SceneId, (a: RomAssets) => SceneMaps>> 
   ffa: menu('ffa', MENU),
   players: menu('players', MENU),
   rules: menu('rules', MENU),
-  charsel: menu('charsel', CHARSEL),
+  charsel: a => ({ bg1: charselBg1(a), bg2: descriptorMap(a.rom, CHARSEL, 'bg2') }),
   stagesel: fromDescriptor(STAGESEL),
   scoreboard: fromDescriptor(SCOREBOARD),
   victory: fromDescriptor(SCOREBOARD),
