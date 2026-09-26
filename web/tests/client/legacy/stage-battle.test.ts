@@ -28,7 +28,8 @@ describe('fase e batalha', () => {
     expect(s.cfg.stage).toBe(3);
     expect(s.cfg.humans).toEqual([true, false, false, true, false]);
     expect(s.cfg.rules.active).toEqual([true, true, false, true, false]);
-    expect(s.cfg.names[0]).toBe('ANA');
+    // GameConfig.names não é mais alimentado por app.settings.names (R15 do plano 10); volta na T22.
+    expect(s.cfg.names[0]).toBe('');
   });
   it('sair pela pausa pede confirmação; volta para a seleção de fase só depois de A; a animação congela na pausa', () => {
     const { app } = mkApp();

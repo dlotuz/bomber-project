@@ -2,6 +2,7 @@ import { App } from './app/app';
 import { browserStorage, defaultSettings, loadSettings, saveSettings } from './app/settings';
 import { startLoop } from './app/loop';
 import { parseConfig } from './game/config';
+import { createMatchSession } from './game/match-session';
 import type { Session } from './game/session';
 import { InputManager, buildInput, emptyDevices, withEscapeAsBack } from './input/input';
 import { createDisplay } from './render/display';
@@ -29,7 +30,7 @@ const ctx = createDisplay(document.getElementById('screen') as HTMLCanvasElement
 const bank = new SpriteBank();
 
 // ?quick abre direto numa partida com as regras da URL (ver parseConfig); sem ele, começa no título.
-app.go(params.has('quick') ? battleScreen(app, parseConfig(search), [0, 0, 0, 0, 0]) : titleScreen(app));
+app.go(params.has('quick') ? battleScreen(app, createMatchSession(parseConfig(search))) : titleScreen(app));
 
 // Gancho para as screenshots automáticas (web/scripts/snapshots.mjs); só existe em dev com ?debug.
 if (import.meta.env.DEV && params.has('debug')) {
