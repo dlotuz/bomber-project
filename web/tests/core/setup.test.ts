@@ -4,6 +4,7 @@ import { rules } from './kit';
 import { CODE } from '../../src/core/types';
 import { cellOf, SPAWNS, spawnX, spawnY } from '../../src/core/units';
 import { STAGE_ITEMS } from '../../src/core/tables/items';
+import { STAGE_FACTS } from '../../src/core/tables/stages';
 import { STAGES } from '../../src/core/stages';
 import { MOUNTS, NO_MOUNT } from '../../src/core/mounts';
 
@@ -16,6 +17,13 @@ describe('montagem da rodada (§3.3)', () => {
   });
   it('fase 5: 15 tentativas sem soft e a lista também sem soft → termina (semente $9401)', () => {
     expect(createRound(5, rules(), makeRng()).rng.seed).toBe(0x9401);
+  });
+  it('fase 4: as 5 casas de spawn e a abertura 3×3 em volta ficam FLOOR (a grama não empareda ninguém)', () => {
+    const s = createRound(4, rules(), makeRng());
+    expect(SPAWNS.map(([col, lin]) => s.grid[cellOf(col, lin)])).toEqual([0, 0, 0, 0, 0].map(() => CODE.FLOOR));
+    for (const [col, lin] of SPAWNS) for (const c of around(col, lin)) {
+      if (STAGE_FACTS[3].base[c] !== CODE.HARD) expect(s.grid[c], `casa ${c}`).toBe(CODE.FLOOR);
+    }
   });
   it('3×3 em volta de cada spawn presente fica livre', () => {
     const s = createRound(1, rules(), makeRng());
