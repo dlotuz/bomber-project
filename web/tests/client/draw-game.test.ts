@@ -1,6 +1,7 @@
 import { drawRound, PLAYER_COLORS } from '../../src/render/draw-game';
 import { createView, updateView } from '../../src/render/view';
 import { createRound, makeRng, defaultRules, CODE, cellOf } from '../../src/core';
+import { registerFallbackLayer, fallbackLayers, fallbackOverLayers } from '../../src/render/battle-layers';
 import type { SpriteBank } from '../../src/render/sprite-bank';
 
 interface TagImg { width: number; height: number; tag: string }
@@ -124,6 +125,32 @@ describe('drawRound: sombra no chão', () => {
     drawRound(ctx, round, view, bank, [0, 1, 2, 3, 4], 0, [0, 0, 0, 0, 0]);
     const shadow = ctx.fillRectCalls.find(r => r.x === 72 && r.y === 88 && r.w === 16 && r.h === 3);
     expect(shadow).toBeUndefined();
+  });
+});
+
+describe('drawRound: camada "over" do fallback (M4)', () => {
+  it('desenha depois dos jogadores; a camada normal continua desenhando antes', () => {
+    const order: string[] = [];
+    registerFallbackLayer({ id: 'test-under', draw() { order.push('under'); } });
+    registerFallbackLayer({ id: 'test-over', over: true, draw() { order.push('over'); } });
+    try {
+      const round = createRound(1, defaultRules(), makeRng());
+      const view = createView(); updateView(view, round, []);
+      const bank = fakeBank();
+      const ctx = fakeCtx();
+      const rawDraw = ctx.drawImage.bind(ctx);
+      ctx.drawImage = ((img: unknown, x: number, y: number) => {
+        const im = img as { width: number; height: number };
+        if (im.width === 16 && im.height === 24) order.push('player');     // só bank.bomber() tem essas dimensões
+        rawDraw(img as CanvasImageSource, x, y);
+      }) as typeof ctx.drawImage;
+      drawRound(ctx, round, view, bank, [0, 1, 2, 3, 4], 0, [0, 0, 0, 0, 0]);
+      expect(order[0]).toBe('under');
+      expect(order).toContain('player');
+      expect(order.indexOf('over')).toBeGreaterThan(order.lastIndexOf('player'));
+    } finally {
+      fallbackLayers.length = 0; fallbackOverLayers.length = 0;
+    }
   });
 });
 
