@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import fx from '../fixtures/rom/mount-render.json';
 import { ASSETS, stable } from './rom-helpers';
-import { mkRound, placePx, ride, cx, cy } from './helpers';
+import { mkRound, placePx, ride, run, flameAt, BTN, cx, cy } from './helpers';
 import { riderHook } from '../../src/render/rom/mounts/rider';
 import { mountRomSprites } from '../../src/render/rom/mounts/sprites';
 import { fallbackMountFrame, objPx } from '../../src/render/rom/mounts/gfx';
@@ -160,5 +160,32 @@ describe.skipIf(!ASSETS)('camada ROM das montarias × emulador', () => {
       n++;
     }
     expect(n).toBeGreaterThan(40);
+  });
+
+  // Revisão final I2: a explosão ($D8:D327, 4 × 10 ticks a partir de t = 31) continua depois que o core volta a
+  // `riding` em t = 52 (REMOUNT_TICKS). Acerto real pelo core; o marcador `remountFx` guarda t0, origem e posição.
+  it('I2: a explosão do remonte continua em riding (t = 52..70) e some em t = 71', () => {
+    const s = mkRound();
+    const p = placePx(s, 0, 63, 47);
+    p.face = 2; p.moveDir = 8;
+    const r = ride(s, 0, 3, { reserves: [2], trail: [cellOf(4, 1), cellOf(3, 1)] });
+    flameAt(s, cellOf(4, 1));
+    run(s, 1);                                                 // tick H: perde a montaria, remonte com a reserva
+    expect(r.remountFx).not.toBeNull();
+    const H = r.remountFx!.t0;
+    run(s, 52);                                                // H+1..H+52
+    expect(r.phase).toBe('riding');
+    run(s, 5, { 0: BTN.RIGHT });                       // anda: a explosão fica onde estourou
+    expect(p.x).not.toBe(63 * 256);
+    const raw = (fx.remountGlow as unknown as (FxSample & { x: number; y: number })[]).map((smp, i) => ({ ...smp, i }));
+    let n = 0;
+    for (const smp of stable(raw).filter(q => q.i >= 52)) {
+      const got = riderHook(s, p, ASSETS!, H + smp.i, H + smp.i)!;
+      expect(facts(got.filter(e => e.pal === 7), smp.x, smp.y), `t=${smp.i}`).toEqual(norm(smp.pieces as FxPiece[]));
+      n++;
+    }
+    expect(n).toBeGreaterThan(4);
+    expect(riderHook(s, p, ASSETS!, H + 70, H + 70)!.filter(e => e.pal === 7).length).toBeGreaterThan(0);
+    expect(riderHook(s, p, ASSETS!, H + 71, H + 71)!.filter(e => e.pal === 7)).toHaveLength(0);
   });
 });

@@ -44,7 +44,7 @@ export function stepOnEgg(s: RoundState, p: Player, cell: number, ev: GameEvent[
   const r = rider(p);
   if (!r) {
     s.grid[cell] = 0;
-    const nr: MountRider = { type: t, slot: freeSlot(s) || 1, phase: 'mounting', t0: s.tick, reserves: [], trail: [], cooldown: 0, remount: false };
+    const nr: MountRider = { type: t, slot: freeSlot(s) || 1, phase: 'mounting', t0: s.tick, reserves: [], trail: [], cooldown: 0, remount: false, remountFx: null };
     p.mount = nr;
     lockAct(s, p, 'mounting', MOUNTING_TICKS);
     ev.push(mev({ id: 'mount_start', slot: p.slot, mount: t }));

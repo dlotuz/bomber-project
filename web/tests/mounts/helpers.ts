@@ -28,7 +28,7 @@ export function placePx(s: RoundState, slot: number, xPx: number, yPx: number): 
 /** Coloca o jogador já montado (fase riding) na menor vaga livre. */
 export function ride(s: RoundState, slot: number, type: number, extra: Partial<MountRider> = {}): MountRider {
   const used = new Set(s.players.map(q => (q.mount as MountRider | null)?.slot ?? 0));
-  const r: MountRider = { type, slot: used.has(1) ? 2 : 1, phase: 'riding', t0: s.tick, reserves: [], trail: [], cooldown: 0, remount: false, ...extra };
+  const r: MountRider = { type, slot: used.has(1) ? 2 : 1, phase: 'riding', t0: s.tick, reserves: [], trail: [], cooldown: 0, remount: false, remountFx: null, ...extra };
   s.players[slot].mount = r;
   return r;
 }

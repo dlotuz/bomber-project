@@ -10,6 +10,7 @@ export function loseMount(s: RoundState, p: Player, r: MountRider, ev: GameEvent
   if (r.reserves.length > 0) {
     r.type = r.reserves.shift()!;
     r.remount = true;
+    r.remountFx = { t0: s.tick, origin: r.trail[1] ?? r.trail[0] ?? cellAt(p.x, p.y), x: p.x, y: p.y };
     lockAct(s, p, 'dismount', REMOUNT_TICKS);
     ev.push(mev({ id: 'mount_lost', slot: p.slot, mount: old, reserve: true, cause }));
   } else {

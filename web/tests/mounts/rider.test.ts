@@ -35,6 +35,7 @@ describe('acerto de chama montado ($C2:4B89)', () => {
     flameAt(s, cellOf(2, 1));
     const ev = run(s, 1);                                    // H
     expect(ev).toContainEqual({ type: 'mount', id: 'mount_lost', slot: 0, mount: 0x3, reserve: true, cause: 'hit' });
+    expect(r.remountFx).toEqual({ t0: s.tick, origin: cellOf(2, 1), x: p.x, y: p.y });   // marcador para o render (I2)
     const x0 = p.x;
     run(s, 51, { 0: BTN.RIGHT });                            // H+1..H+51
     expect(p.x).toBe(x0);

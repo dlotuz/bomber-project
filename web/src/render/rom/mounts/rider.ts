@@ -80,14 +80,19 @@ function step1px(from: number, to: number, ticks: number): number {
   return from + Math.sign(d) * dist;
 }
 
-/** T14b: as 3 fases do "ovo brilhando" do remonte, ancoradas só em estado do core (`r.trail`, posição atual do
- *  jogador) — sem estado novo. Fases (medidas): brilha parado na casa de origem (`r.trail[1]`, 1 casa atrás —
- *  mesma referência da reserva em `sprites.ts`) por `REMOUNT_GLOW_STAGE_TICKS[0]` ticks (o gráfico) enquanto
- *  "pula" 1 px/tick até a posição do jogador (o movimento, medido à parte — continua no início da explosão até
- *  chegar) → estoura na posição do jogador (mesma tabela usada pelas notas da dança). REMOUNT_TICKS do core (45)
- *  já corta a fase antes do fim medido da explosão sozinho (~71 ticks na ROM) — ver relatório da T14b. */
-function remountGlowPieces(a: RomAssets, stage: number, trail: number[], t: number, X: number, Y: number): ObjEntry[] {
-  const origin = trail[1] ?? trail[0];
+/** Duração da explosão do ovo reserva: `$D8:D327` tem 4 quadros × 10 ticks (decodificado na ROM, revisão final I2). */
+export const REMOUNT_BURST_TICKS = 40;
+/** Fim do objeto do ovo reserva no remonte: brilha + anda (REMOUNT_GLOW_STAGE_TICKS = 16 + 15) + explosão (40) = 71. */
+export const REMOUNT_FX_END = REMOUNT_GLOW_STAGE_TICKS[0] + REMOUNT_GLOW_STAGE_TICKS[1] + REMOUNT_BURST_TICKS;
+
+/** T14b: as 3 fases do "ovo brilhando" do remonte. Fases (medidas): brilha parado na casa de origem (`origin`,
+ *  1 casa atrás — mesma referência da reserva em `sprites.ts`) por `REMOUNT_GLOW_STAGE_TICKS[0]` ticks (o gráfico)
+ *  enquanto "pula" 1 px/tick até (X, Y) (o movimento, medido à parte — continua no início da explosão até chegar) →
+ *  estoura em (X, Y) (mesma tabela usada pelas notas da dança). Revisão final I2: a ancoragem vem do marcador
+ *  `r.remountFx` do core (t0, origem, posição no acerto), então a explosão continua depois que o core volta a
+ *  `riding` (t = 52) e fica no lugar onde estourou mesmo que o jogador ande; some em t = REMOUNT_FX_END (71). */
+function remountGlowPieces(a: RomAssets, stage: number, origin: number | undefined, t: number, X: number, Y: number): ObjEntry[] {
+  if (t < 0 || t >= REMOUNT_FX_END) return [];
   const { X: oX, Y: oY } = origin === undefined ? { X, Y } : playerCellXY(origin);
   const [aTicks, bTicks] = REMOUNT_GLOW_STAGE_TICKS;
   const gx = step1px(oX, X, t - aTicks + 1), gy = step1px(oY, Y, t - aTicks + 1);
@@ -95,6 +100,15 @@ function remountGlowPieces(a: RomAssets, stage: number, trail: number[], t: numb
   const lt = t < aTicks ? t : t < aTicks + bTicks ? t - aTicks : t - aTicks - bTicks;
   const { frame: fr } = sampleSeq(a, [addr], lt);
   return commonPieces(a, stage, gx, gy, fr).map(m => m.e);
+}
+
+/** Brilho/explosão do remonte a partir do marcador do core; sem marcador (estado montado à mão), cai no t0 da fase e
+ *  na trilha atual, como na T14b. */
+function remountFxPieces(a: RomAssets, stage: number, r: NonNullable<ReturnType<typeof rider>>, frame: number, X: number, Y: number): ObjEntry[] {
+  const f = r.remountFx;
+  if (f) return remountGlowPieces(a, stage, f.origin, frame - f.t0, Math.floor(f.x / 256), Math.floor(f.y / 256));
+  if (r.phase !== 'dismount' || !r.remount) return [];
+  return remountGlowPieces(a, stage, r.trail[1] ?? r.trail[0], frame - r.t0, X, Y);
 }
 
 // `frame` = visualTick (5º argumento, tick do core congelado no TIME UP; sem ele, o quadro do host) — base de `actT0`/`t0` (T16).
@@ -129,7 +143,8 @@ export const riderHook: RomPlayerHook = (s, p, a, hostFrame, frame = hostFrame) 
     const mountList = walking ? MOUNT_ANIMS[r.type][dirIdx].walk : MOUNT_ANIMS[r.type][dirIdx].idle;
     const t = frame - p.actT0;
     const rf = sampleSeq(a, riderList, t).frame, mf = sampleSeq(a, mountList, t).frame;
-    return [...charPieces(a, s.stage, p, X, Y, pal, rf), ...mountPieces(a, s.stage, r.type, face, step, X, Y, mountPal, mf)];
+    return [...charPieces(a, s.stage, p, X, Y, pal, rf), ...mountPieces(a, s.stage, r.type, face, step, X, Y, mountPal, mf),
+      ...remountFxPieces(a, s.stage, r, frame, X, Y)];   // I2: explosão do remonte ainda no ar (t < 71)
   }
 
   const t = frame - r.t0;
@@ -145,9 +160,8 @@ export const riderHook: RomPlayerHook = (s, p, a, hostFrame, frame = hostFrame) 
     const mf = sampleSeq(a, REMOUNT_MOUNT_ANIMS, t).frame;
     const out = [...charPieces(a, s.stage, p, X, Y, pal, rf), ...mountPieces(a, s.stage, r.type, face, step, X, Y, mountPal, mf)];
     // T14b: o próprio ovo reserva "brilha" na casa de origem, "pula" até o jogador e estoura, revelando a
-    // montaria — não nasce outro objeto (facts.ts REMOUNT_GLOW_ANIMS/REMOUNT_GLOW_STAGE_TICKS). O core não guarda
-    // a posição da origem além de `r.trail` (§7.2, mesma referência usada para os reservas em sprites.ts).
-    if (t >= 0) out.push(...remountGlowPieces(a, s.stage, r.trail, t, X, Y));
+    // montaria — não nasce outro objeto (facts.ts REMOUNT_GLOW_ANIMS/REMOUNT_GLOW_STAGE_TICKS).
+    out.push(...remountFxPieces(a, s.stage, r, frame, X, Y));
     return out;
   }
   const rf = sampleSeq(a, DISMOUNT_ANIMS, t).frame;

@@ -12,7 +12,12 @@ export interface MountRider {
   trail: number[];       // [casa atual, anterior, ...] (máx. 4), para desenhar os reservas 1 casa atrás
   cooldown: number;      // recarga do Y (tipo E), ticks
   remount: boolean;      // desmonte com reserva (1 + 51, REMOUNT_TICKS)
+  /** Marcador do último remonte (só leitura para o render): o ovo reserva é objeto próprio da ROM que brilha na casa
+   *  `origin`, anda até (x, y) e estoura em t = 31 com $D8:D327 (40 ticks), passando do fim do remonte (t = 52). */
+  remountFx: RemountFx | null;
 }
+
+export interface RemountFx { t0: number; origin: number; x: number; y: number }   // x, y em 1/256 px
 
 export type ProjKind = 0xd | 0xe | 0xf;
 
