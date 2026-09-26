@@ -3633,8 +3633,8 @@ MSG
 Branch `feat/p8` @ `8b64d82` + a onda de correção da revisão final (10 tarefas em ondas paralelas, revisão final de
 toda a branch, 1 onda de correção sobre os achados). Depois da correção: `npx vitest run` **676 passed / 10 skipped**
 (73 arquivos) com `SB4_ROM`, **600 passed / 86 skipped** sem a ROM; `npx tsc --noEmit` limpo; `npm run build` ok;
-aceite §9 (`CB_SLOW=1`) verde em `accept.test.ts` (fases 8 e 10 com a tolerância de 40 %, ver I2) e em `cpu.test.ts`
-exceto a fase 10 (pendência pré-existente, ver abaixo).
+aceite §9 (`CB_SLOW=1`) verde em `accept.test.ts` e em `cpu.test.ts` (19/19), ambos com a tolerância de 40 % nas
+fases 8 e 10 (decisão do controlador, ver I2) e 30 % nas demais.
 
 ### Fidelidade conferida (revisão final)
 - Determinismo (2×20.000 ticks só de CPU, agora nas 9 fases dentro do próprio `cpu.test.ts`, M2): idêntico.
@@ -3694,7 +3694,5 @@ exceto a fase 10 (pendência pré-existente, ver abaixo).
   item de aceite "screenshots das 10 arenas nos dois modos"; registrado, não bloqueia o plano 8.
 - **Follow-up do plano 6** (I2, ver acima): IA em campo aberto (fase 8) e em duelo com traje (fase 10) — decidir
   com o dono do plano 6 um critério de saída para a tolerância de 40 %.
-- `cpu.test.ts` `CB_SLOW=1`, fase 10: 16/50 (32 %) — mede acima do limite fixo de 30 % **desta suíte** (a revisão
-  final proibiu afrouxar esse limite: "consertar a amostragem, não a régua"). Pré-existente (a revisão já viu essa
-  fase vermelha antes de qualquer correção do plano 8) e do mesmo follow-up do plano 6 acima. Só aparece com
-  `CB_SLOW=1`; o `npx vitest run` normal pula esse describe.
+- `cpu.test.ts` `CB_SLOW=1`, fase 10: 16/50 (32 %) — dentro da tolerância de 40 % das fases 8 e 10 (a mesma do
+  `accept.test.ts`, decisão do controlador), coberta pelo follow-up do plano 6 acima.
