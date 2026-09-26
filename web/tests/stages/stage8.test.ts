@@ -105,13 +105,42 @@ describe('arena 8: máquina', () => {
     run(s, 26);
     expect(codeAt(s, 8, 7)).toBe(CODE.PAD);
   });
-  it('IA: com a máquina girando, os pads dos rolos sem freio e não parados são alvos', () => {
+  it('IA: com a máquina girando, os pads dos rolos sem freio e não parados são alvo do CPU mais próximo (até 4 casas)', () => {
     const s = stageArena(8);
     lightPad(s, 0);
     run(s, 1);
     st8(s).reels[1].braking = true;
+    put(s, 0, 8, 7);                              // no pad do meio: 4 casas de PADS[0] e de PADS[2]
+    put(s, 1, 14, 11);                             // longe: não disputa nenhum pad
     expect([...stage8Ai.goals!(s, 0)]).toEqual([PADS[0], PADS[2]]);
     st8(s).phase = 'idle';
+    expect([...stage8Ai.goals!(s, 0)]).toEqual([]);
+  });
+  it('IA (I1): CPU mais distante (> 4 casas) não recebe o pad', () => {
+    const s = stageArena(8);
+    lightPad(s, 0);
+    run(s, 1);
+    put(s, 0, 2, 1);                               // spawn de P1: 8 casas de PADS[0] (col 4, lin 7)
+    put(s, 1, 14, 11);
+    expect([...stage8Ai.goals!(s, 0)]).toEqual([]);
+    expect([...stage8Ai.goals!(s, 1)]).toEqual([]);
+  });
+  it('IA (I1): dois CPUs à mesma distância do pad — só o de menor slot o recebe', () => {
+    const s = stageArena(8);
+    lightPad(s, 0);
+    run(s, 1);
+    st8(s).stopped |= 2 | 1;                       // só o rolo 0 ainda gira (PADS[0])
+    put(s, 0, 5, 7);                               // 1 casa de PADS[0] (col 4, lin 7)
+    put(s, 1, 5, 7);                               // mesma distância; slot 0 < slot 1
+    expect([...stage8Ai.goals!(s, 0)]).toEqual([PADS[0]]);
+    expect([...stage8Ai.goals!(s, 1)]).toEqual([]);
+  });
+  it('IA (I1): nada durante a pressão, mesmo com a máquina girando e o CPU no lugar', () => {
+    const s = stageArena(8);
+    lightPad(s, 0);
+    run(s, 1);
+    put(s, 0, 8, 7);
+    s.pressure.trigger = s.tick;
     expect([...stage8Ai.goals!(s, 0)]).toEqual([]);
   });
 });
