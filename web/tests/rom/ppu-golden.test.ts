@@ -1,19 +1,8 @@
-import { ROM, fixture, sha1Hex } from './helpers';
+import { ROM, fixture, sha1Hex, hudWithStart } from './helpers';
 import { RomView } from '../../src/rom/view';
 import { loadArena } from '../../src/rom/assets-arena';
 import { buildArena, staticObjects, applyStatic } from '../../src/rom/arena-build';
 import { renderPpu, createImage, type PpuFrame } from '../../src/render/ppu';
-
-function hudWithStart(hud: Uint16Array): Uint16Array {
-  const h = hud.slice();
-  const put = (r: number, c: number, t: number) => { h[r * 32 + c] = (h[r * 32 + c] & 0xfc00) | (0x200 + t); };
-  for (let r = 0; r < 3; r++) {
-    put(r, 4, 0x32 + 0x10 * r); put(r, 5, 0x3a + 0x10 * r); put(r, 6, 0x39 + 0x10 * r); put(r, 7, 0x39 + 0x10 * r);
-    for (let k = 0; k < 5; k++) { put(r, 10 + 4 * k, 0x01 + 2 * k + 0x10 * r); put(r, 11 + 4 * k, 0x02 + 2 * k + 0x10 * r); }
-  }
-  for (let k = 0; k < 5; k++) put(1, 12 + 4 * k, 0x4f);
-  return h;
-}
 
 function arenaFrame(view: RomView, stage: number, bg1Hofs: number): PpuFrame {
   const a = loadArena(view, stage);

@@ -10,7 +10,11 @@ export interface Piece { dx: number; dy: number; tile: number; hflip: boolean; v
 export interface AnimFrame { dur: number; mx: number; my: number; pieces: Piece[] }
 export type Anim = AnimFrame[];
 
-/** Comando do script de animação de tiles `rec+$12` [ARN §3.1]. `vram` = palavra de VRAM; `src` = endereço 24 bits no buffer `$7F:8000`. */
+/** Comando do script de animação de tiles `rec+$12` [ARN §3.1]. `vram` = palavra de VRAM; `src` = endereço 24 bits no
+ *  buffer `$7F:8000`. Convenção do DMA (mesma de `render_rom.py`/`arena_rom` em `analise/investigacao/arenas-cenario`,
+ *  e de `applyTileDma`/`applyTileAnimTiles` em `decode/tileanim.ts`): o comando copia um bloco 16×16 (tiles `n`,
+ *  `n+1`, `n+16`, `n+17` de uma folha de 16 tiles de largura) do buffer de origem para o destino na VRAM.
+ *  Tile de origem `n = (src − 0x7F8000) / 32` (32 B/tile em 4bpp); tile de destino `n = vram / 16` (16 palavras/tile). */
 export type TileAnimCmd =
   | { kind: 'wait'; frames: number }
   | { kind: 'dma'; vram: number; src: number }

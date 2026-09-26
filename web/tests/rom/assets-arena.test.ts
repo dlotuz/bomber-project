@@ -1,8 +1,9 @@
-import { ROM, fixture, sha1Hex, u16le } from './helpers';
+import { ROM, fixture, sha1Hex, u16le, hudWithStart } from './helpers';
 import { RomView } from '../../src/rom/view';
-import { loadArena, objCommonBytes, arenaTileBytes, arenaBgCgram } from '../../src/rom/assets-arena';
+import { loadArena, objCommonBytes, arenaTileBytes, arenaBgCgram, patchPressureTiles } from '../../src/rom/assets-arena';
 import { buildArena, staticObjects, applyStatic, fallbackList } from '../../src/rom/arena-build';
-import { tileAnimKey } from '../../src/rom/decode/tileanim';
+import { tileAnimKey, applyTileDma, applyTileAnimTiles } from '../../src/rom/decode/tileanim';
+import { decodeTiles } from '../../src/rom/decode/tiles';
 import { decodeMapCodes } from '../../src/rom/decode/tilemap';
 import type { Tiles } from '../../src/rom/types';
 
@@ -49,6 +50,7 @@ describe.skipIf(!ROM)('ArenaAssets das 10 arenas (gfx-arenas.json)', () => {
     expect(sha1Hex(u16le(a.logicBase))).toBe(e.logicBaseSha1);
     expect(a.hudMap).toHaveLength(96);
     expect(sha1Hex(u16le(a.hudMap))).toBe(fx.hud.baseSha1);
+    expect(sha1Hex(u16le(hudWithStart(a.hudMap)))).toBe(fx.hud.startSha1);
     if (e.tileAnim) expect(sha1Hex(tileAnimKey(a.tileAnim!))).toBe(e.tileAnim.key);
     else expect(a.tileAnim).toBeNull();
     expect(a.tileAnim?.length ?? null).toBe(e.tileAnim?.count ?? null);
@@ -64,6 +66,21 @@ describe.skipIf(!ROM)('ArenaAssets das 10 arenas (gfx-arenas.json)', () => {
       expect([decodeMapCodes(view, rec.bg1).used, decodeMapCodes(view, rec.bg2).used, decodeMapCodes(view, rec.floor).used])
         .toEqual([e.bg1.used, e.bg2Base.used, e.floor.used]);
     }
+  });
+  it('applyTileAnimTiles (item 5, plano 7): 1º comando dma dá os mesmos índices que applyTileDma + decodeTiles', () => {
+    const e = fx.arenas.find(x => x.tileAnim && x.tileAnim.count > 0);
+    if (!e) throw new Error('fixture sem nenhuma arena com tileAnim');
+    const a = loadArena(view, e.arena);
+    const cmd = a.tileAnim!.find((c): c is { kind: 'dma'; vram: number; src: number } => c.kind === 'dma');
+    if (!cmd) throw new Error('fixture sem nenhum comando dma no script de tiles');
+    const raw = arenaTileBytes(view, e.arena);
+    patchPressureTiles(view, raw);
+    const rawApplied = raw.slice();
+    applyTileDma(rawApplied, raw, cmd);
+    const expected = decodeTiles(rawApplied, 4);
+    const actual: Tiles = { bpp: a.bgTiles.bpp, count: a.bgTiles.count, px: a.bgTiles.px.slice() };
+    applyTileAnimTiles(actual, cmd);
+    expect(actual.px).toEqual(expected.px);
   });
   it('carga com semente $C689 e 5 jogadores = arena_rom.build_arena (80/80/80/70/0/80/62/0/78/80)', () => {
     expect(fx.arenas.map(e => e.build.soft)).toEqual([80, 80, 80, 70, 0, 80, 62, 0, 78, 80]);

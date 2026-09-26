@@ -72,14 +72,14 @@ function m7Line(m: Mode7Layer, y: number, out: Int16Array): void {
 }
 
 /** Escolhe o pixel da frente entre as camadas da máscara. Devolve o índice na CGRAM + 1 (0 = fundo) e grava a camada em `hit`. */
-const hit = { layer: BACK, x: 0 };
+const hit = { layer: BACK };
 function pick(x: number, mask: number, m7: boolean): number {
   let best = 99, idx = 0, layer = BACK;
   if (mask & BG1 && l1[x]) { const r = m7 ? RANK7_BG1 : RANK_BG1[p1[x]]; if (r < best) { best = r; idx = l1[x]; layer = BG1; } }
   if (!m7 && mask & BG2 && l2[x]) { const r = RANK_BG2[p2[x]]; if (r < best) { best = r; idx = l2[x]; layer = BG2; } }
   if (!m7 && mask & BG3 && l3[x]) { const r = RANK_BG3[p3[x]]; if (r < best) { best = r; idx = l3[x]; layer = BG3; } }
   if (mask & OBJ && lo[x]) { const r = m7 ? RANK7_OBJ[po[x]] : RANK_OBJ[po[x]]; if (r < best) { best = r; idx = lo[x]; layer = OBJ; } }
-  hit.layer = layer; hit.x = x;
+  hit.layer = layer;
   return idx;
 }
 
@@ -94,6 +94,9 @@ function blend(a: number, b: number, half: boolean): number {
   return r | (g << 5) | (bl << 10);
 }
 
+/** Desenha o quadro em `out` (largura fixa `W` = 256 px; a altura vem de `out.height`, normalmente 224). Um
+ *  `BgLayer` com `mapW: 64` é lido em `bgLine` como mapa linear (uma faixa contínua de 64 colunas por linha),
+ *  não o layout 2×2 telas de 32×32 do hardware SNES — é só como o CAT guarda esses mapas maiores. */
 export function renderPpu(f: PpuFrame, out: ImageData): void {
   const px32 = new Uint32Array(out.data.buffer, out.data.byteOffset, W * out.height);
   const back = f.backdrop ?? f.cgram[0];
