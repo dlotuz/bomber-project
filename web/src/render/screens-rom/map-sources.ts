@@ -1,6 +1,6 @@
 import type { SceneId, RomAssets } from '../../app/rom-api';
 import type { SceneMaps } from './scene';
-import { descriptorMap, rawMap, keepPalette, setPriority } from './map-decode';
+import { decodeSceneMap, descriptorMap, rawMap, keepPalette, setPriority } from './map-decode';
 
 /** Origem dos mapas de BG na ROM (A14), achada pela T19. Cena ausente = geometria do nosso código.
  *
@@ -18,6 +18,10 @@ const CHARSEL = 0xc1c0d4;     // script $C1:C1E2
 const STAGESEL = 0xc1c0ef;    // $C1:A29A → $70
 const SCOREBOARD = 0xc29c17;  // $C2:903F → $70 (placar e VICTORY!; $C2:9C26 quando $01A4 = $C0:0B40)
 const ROPE_PAL = 5;
+// DRAW GAME (T19 §"draw2 fica fora do MAP_SOURCES"): layout de VRAM diferente (BG12NBA=$44, BG2SC=$5C, TM=$12 → BG1
+// desligado). `$C2:D7F0` decodifica o BG2 de $D6:489D (fluxo) / $D6:4A16 (tabela) para $7E:2000 → VRAM $5C00
+// (conferido: 480/480 palavras iguais à captura). T14 (EMPATE) usa esta entrada; ela não tem `bg1`.
+const DRAW2_BG2 = [0xd6489d, 0xd64a16] as const;
 
 /** BG1 cru da tradução (copiado para `$7E:5000` pelas rotinas citadas). */
 const PATCH_BG1 = {
@@ -48,4 +52,7 @@ export const MAP_SOURCES: Partial<Record<SceneId, (a: RomAssets) => SceneMaps>> 
   stagesel: fromDescriptor(STAGESEL),
   scoreboard: fromDescriptor(SCOREBOARD),
   victory: fromDescriptor(SCOREBOARD),
+  // Sem bg1 (BG1 desligado nessa cena — spec T19); os tiles do BG2 também não estão no lugar padrão (T14 monta um
+  // `SceneGfx` próprio com `bgTiles` de $8000, onde o BG12NBA=$44 desta cena realmente os coloca).
+  draw2: a => ({ bg2: decodeSceneMap(a.rom, ...DRAW2_BG2) }),
 };

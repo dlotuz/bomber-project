@@ -14,6 +14,20 @@ export const TITLE_TEXT_RECTS: readonly MenuRect[] = [
   { x0: 16, y0: 126, x1: 224, y1: 152 },
 ];
 
+/** `descriptorMap` só decodifica o conteúdo de verdade na metade direita (colunas 16–31) das linhas 0–9 e 13
+ *  (logo e "PUSH START BUTTON!"/copyright); a metade esquerda (colunas 0–15, a visível) sai em branco (tile 0)
+ *  nessas linhas — conferido contra `title.vram`: nas linhas 0–9 e 13 as duas metades são *idênticas* na
+ *  captura real (nas linhas 10–12, dos itens do menu, elas diferem, mas ficam cobertas por `TITLE_TEXT_RECTS`
+ *  de qualquer forma). Copia a metade direita para a esquerda onde a esquerda está em branco. */
+function mirrorBlankLeftHalf(m: Uint16Array): Uint16Array {
+  const out = m.slice();
+  for (let lin = 0; lin < 32; lin++) for (let col = 0; col < 16; col++) {
+    const li = lin * 32 + col, ri = li + 16;
+    if ((out[li] & 0x3ff) === 0 && (out[ri] & 0x3ff) !== 0) out[li] = out[ri];
+  }
+  return out;
+}
+
 /** Zera (tile 0) as casas 16×16 de `m` (32×32) que tocam algum retângulo de `rects` — mesma regra de toque do
  *  `mapMatch` de `tests/screens/captures.ts`, mas para apagar, não só ignorar. Devolve uma cópia. */
 function blankRects(m: Uint16Array, rects: readonly MenuRect[]): Uint16Array {
@@ -122,12 +136,12 @@ const TITLE_LOGO: readonly [number, number, number, number, boolean, boolean, bo
 
 export interface TitleScene { maps: SceneMaps; scroll: { bg1: [number, number]; bg2: [number, number] }; logo: ObjEntry[] }
 
-/** Monta a cena do título: BG1 por `sceneMaps` (usa `MAP_SOURCES.title`, T19, quando mesclada — sem isso, fica
- *  sem BG, `noBg`) com as casas do nosso texto zeradas, e o logo (OBJ) medido acima. */
+/** Monta a cena do título: BG1 por `sceneMaps` (usa `MAP_SOURCES.title`, T19 — sem isso, fica sem BG, `noBg`),
+ *  espelhado (`mirrorBlankLeftHalf`) e com as casas do nosso texto zeradas, e o logo (OBJ) medido acima. */
 export function buildTitleScene(a: RomAssets): TitleScene {
   const maps = sceneMaps(a, 'title', noBg);
   return {
-    maps: maps.bg1 ? { ...maps, bg1: blankRects(maps.bg1, TITLE_TEXT_RECTS) } : maps,
+    maps: maps.bg1 ? { ...maps, bg1: blankRects(mirrorBlankLeftHalf(maps.bg1), TITLE_TEXT_RECTS) } : maps,
     scroll: { bg1: [0, 0], bg2: [0, 0] },
     logo: TITLE_LOGO.map(([x, y, tile, pal, big, h, v]) => obj(x, y, tile, pal, { big, h, v, prio: 2 })),
   };
