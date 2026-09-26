@@ -2789,6 +2789,16 @@ Critérios da spec §11 (plano 7) e onde cada um é provado:
 
 ## Resultado da execução
 
+**Concluído em 2026-09-26.** Branch `feat/p7`: 703 testes com `SB4_ROM` (2 pulados), 576 + 129 pulados sem a ROM, `tsc`
+limpo, `npm run build` ok. 10 tarefas em 4 ondas, cada uma revisada; revisão final da branch (sem achados críticos ou
+importantes) + uma rodada de correções (M1–M5, M7 e o aviso único), re-revisada e aprovada.
+
+- Fidelidade: 1ª imagem das 10 arenas (+ arena 2 com HOFS $18) igual byte a byte ao golden do plano 5; partida real com a
+  ROM de ponta a ponta (núcleo do plano 6) com relógio, rostos, bombas, chamas, morte e ordem de sprites conferidos contra a
+  ROM; períodos da animação de tiles 176/48/36/36/48/28 presos contra a ROM.
+- Desempenho medido: montagem do quadro 0,02–0,03 ms, PPU 0,5–0,63 ms por quadro.
+- Screenshots das 10 arenas (início, bomba, explosão) comparados com as capturas; só na pasta de rascunho, nada versionado.
+
 ### Sincronização (Tarefa 1)
 
 Preencher uma linha por nome ou formato que diferiu do esperado (ou "nenhuma diferença").
