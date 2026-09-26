@@ -4,7 +4,7 @@ import { EXTRA_GLYPHS } from '../../src/render/text/extra-glyphs';
 import { TEXT_STYLES, type StyleRomDef, type IndexedImage, type TextStyleId } from '../../src/render/text/types';
 import {
   parseExtra, fontFromParts, layoutText, glyphChars, missingGlyphs, fallbackMissing, indexedToRgba, timeUpLabel, drawText,
-  buildRomFont, textWidth,
+  buildRomFont, textWidth, styleColors,
 } from '../../src/render/text/text';
 import { ASSETS } from './rom';
 
@@ -125,26 +125,74 @@ describe('bodyOnly + outline (fonte cursiva com contorno compartilhado entre let
     const g = f.glyphs.get('A')!;
     expect(Array.from(g.px)).toEqual([0, 0, 0, 0, 0, 9, 9, 0, 0, 9, 9, 0, 0, 0, 0, 0]);
   });
-  it('outline sem bodyOnly não muda nada (a frase já não tem pixel 0 colado no corpo)', () => {
+  it('outline sem bodyOnly só contorna a coluna livre que a frase ganha à direita', () => {
     const f = fontFromParts('menuItem', def([{ ch: 'A', strip: 'a', x: 1, w: 2, y: 1, h: 2 }], { outline: { index: 3 }, height: 2 }), { a: strip }, []);
     const t = layoutText(f, 'A');
-    expect(Array.from(t.px)).toEqual([9, 9, 9, 9]);   // sem 0 adjacente ao corpo dentro do recorte: nada pra contornar
+    // recorte 2×2 + 1 coluna (outline.width) à direita, para a sombra da última letra não ser cortada
+    expect(t.w).toBe(3);
+    expect(Array.from(t.px)).toEqual([9, 9, 3, 9, 9, 3]);
   });
   it('bodyOnly + outline: recorta só o corpo de duas letras vizinhas e redesenha o contorno na frase montada', () => {
     const bodyDef = def([{ ch: 'A', strip: 'a', x: 0, w: 3 }, { ch: 'B', strip: 'a', x: 4, w: 3 }],
       { bodyOnly: [9], outline: { index: 2 }, spacing: 0, height: 3 });
     const f = fontFromParts('menuItem', bodyDef, { a: strip }, []);
     const t = layoutText(f, 'AB');
-    // A = colunas 0-2 (corpo em 1-2), B = colunas 4-6 (corpo em 5-6) de uma faixa 3 alta (linhas 1-3 do strip)
-    expect(t.w).toBe(6);
-    for (let y = 0; y < 3; y++) for (let x = 0; x < 6; x++) {
-      const v = t.px[y * 6 + x];
+    // A = colunas 0-2 (corpo em 1-2), B = colunas 4-6 (corpo em 5-6) de uma faixa 3 alta (linhas 1-3 do strip),
+    // + 1 coluna livre à direita (outline.width)
+    expect(t.w).toBe(7);
+    for (let y = 0; y < 3; y++) for (let x = 0; x < 7; x++) {
+      const v = t.px[y * 7 + x];
       expect(v === 0 || v === 9 || v === 2, `x=${x} y=${y} v=${v}`).toBe(true);
     }
     expect(Array.from(t.px).some(v => v === 9)).toBe(true);   // corpo preservado
     expect(Array.from(t.px).some(v => v === 2)).toBe(true);   // contorno regenerado
     // as duas letras não se fundem: a coluna do meio (gap entre A e B) não vira uma mancha sólida de corpo
-    expect(t.px[1 * 6 + 3]).not.toBe(9);
+    expect(t.px[1 * 7 + 3]).not.toBe(9);
+  });
+  it('outline sem index: só o caso below desenha', () => {
+    const one: IndexedImage = { w: 3, h: 3, px: new Uint8Array([0, 0, 0, 0, 9, 0, 0, 0, 0]) };
+    const f = fontFromParts('menuItem', def([{ ch: 'A', strip: 'a', x: 0, w: 3 }], { outline: { below: 2, conn: 4 }, height: 3, spacing: 0 }), { a: one }, []);
+    const t = layoutText(f, 'A');
+    expect(t.w).toBe(4);
+    expect(Array.from(t.px)).toEqual([0, 0, 0, 0, 0, 9, 0, 0, 0, 2, 0, 0]);
+  });
+});
+
+describe('mask 8-conexa, remap e under (aditivos: sem os campos, nada muda)', () => {
+  // traço diagonal de 1 px (índice 9) só ligado pelos cantos + um pixel 9 solto da "vizinha" na borda direita
+  const diag: IndexedImage = {
+    w: 4, h: 3, px: new Uint8Array([
+      9, 0, 0, 9,
+      0, 9, 0, 0,
+      0, 0, 9, 0,
+    ]),
+  };
+  const cut = { ch: 'A', strip: 'a', x: 0, w: 4, h: 3, seeds: [[0, 0]] as const };
+  it('mask 4-conexa (padrão) fica só com a semente; conn 8 segue o traço pelos cantos', () => {
+    const m4 = fontFromParts('menuItem', def([cut], { height: 3, mask: { fill: [9], edge: [], grow: 0 } }), { a: diag }, []).glyphs.get('A')!;
+    expect(Array.from(m4.px).filter(v => v).length).toBe(1);
+    const m8 = fontFromParts('menuItem', def([cut], { height: 3, mask: { fill: [9], edge: [], grow: 0, conn: 8 } }), { a: diag }, []).glyphs.get('A')!;
+    expect(Array.from(m8.px)).toEqual([9, 0, 0, 0, 0, 9, 0, 0, 0, 0, 9, 0]);   // o 9 solto da vizinha (3,0) sai
+  });
+  it('remap troca os índices do recorte antes da máscara', () => {
+    const g = fontFromParts('menuItem', def([{ ...cut, seeds: undefined, remap: { 9: 12 } }], { height: 3 }), { a: diag }, []).glyphs.get('A')!;
+    expect(Array.from(g.px)).toEqual(Array.from(diag.px).map(v => (v === 9 ? 12 : v)));
+  });
+  it('under: o contorno da letra seguinte não cobre o miolo já desenhado', () => {
+    const s: IndexedImage = { w: 3, h: 1, px: new Uint8Array([1, 9, 1]) };
+    const d = def([{ ch: 'A', strip: 'a', x: 0, w: 2 }, { ch: 'B', strip: 'a', x: 2, w: 1 }], { height: 1, spacing: -1 });
+    // B (só contorno, índice 1) cai em cima da coluna 1 de A (miolo 9)
+    expect(Array.from(layoutText(fontFromParts('menuItem', d, { a: s }, []), 'AB').px)).toEqual([1, 1]);
+    expect(Array.from(layoutText(fontFromParts('menuItem', { ...d, under: [1] }, { a: s }, []), 'AB').px)).toEqual([1, 9]);
+  });
+  it('grayscale: o tom listado sai em cinza (luma), os outros intactos', () => {
+    const cols = [0x0000, 0x001f, 0x03e0, 0x7c00];   // preto, vermelho, verde, azul (BGR555)
+    const a = { rom: { u16: (addr: number) => cols[addr / 2] ?? 0 } } as never;
+    const d = def([], { palette: { kind: 'rom', addr: 0, size: 4 }, tones: { gray: 0, red: 0 }, grayscale: ['gray'] });
+    expect(Array.from(styleColors(d, a, 'red'))).toEqual(cols);
+    const g = Array.from(styleColors(d, a, 'gray'));
+    for (const c of g) expect((c & 31) === ((c >> 5) & 31) && (c & 31) === ((c >> 10) & 31)).toBe(true);
+    expect(g.map(c => c & 31)).toEqual([0, 9, 18, 4]);
   });
 });
 

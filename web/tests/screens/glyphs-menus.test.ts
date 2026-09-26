@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { STRING_USES } from '../../src/render/text/strings';
 import { GLYPH_MAPS } from '../../src/render/text/glyph-maps';
 import { missingGlyphs, buildRomFont, layoutText, decodeStrip, type RomFont } from '../../src/render/text/text';
+import type { IndexedImage } from '../../src/render/text/types';
 import { ASSETS } from './rom';
 
 const STYLES = ['titleMenu', 'menuTitle', 'menuItem'] as const;
@@ -37,27 +38,35 @@ describe.skipIf(!ASSETS)('glifos com ROM', () => {
   });
 });
 
-/** Fidelidade da reconstrução (T16, Fix report 2): `menuItem` recompõe "Battle Royale" com `layoutText` (o
- *  mesmo caminho usado em jogo — um glifo por letra, reusado onde repete) e compara pixel a pixel com a faixa
- *  crua original (`bodyOnly` desligado por dentro do `decodeStrip`, então esta faixa ainda tem o contorno cru
- *  da ROM tal como `layoutText` reconstrói via `outline`). Não bate 100%: os dois "t"/"l"/"e" de "Battle" têm
- *  larguras um pouco diferentes no desenho original (kerning cursivo variável), e um glifo só reusado nas duas
- *  ocorrências não capta isso — ver comentário de `l` em maps/menuItem.ts. Limiar com folga sobre os ~90%/~83%
- *  medidos, pra não quebrar por uma correção fina de 1 px num recorte. */
-describe.skipIf(!ASSETS)('menuItem: fidelidade da reconstrução (Fix report 2)', () => {
-  it('"Battle Royale" recomposto por layoutText bate a faixa original', () => {
-    const f = buildRomFont('menuItem', ASSETS!)!;
-    const original = decodeStrip(GLYPH_MAPS.menuItem!.strips.items, ASSETS!);
-    const recon = layoutText(f, 'Battle Royale');
-    let total = 0, match = 0, inkUnion = 0, inkMatch = 0;
-    const w = Math.min(recon.w, original.w), h = 16;
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-      total++;
-      const a = recon.px[y * recon.w + x], b = original.px[y * original.w + x];
-      if (a === b) match++;
-      if (a || b) { inkUnion++; if (a === b) inkMatch++; }
-    }
-    expect(match / total, 'acerto total de pixels').toBeGreaterThanOrEqual(0.85);
-    expect(inkMatch / inkUnion, 'acerto só nos pixels com tinta').toBeGreaterThanOrEqual(0.75);
+/** Fidelidade (T16, fix round 3): cada frase da ROM é remontada com `layoutText` (o caminho do jogo: um glifo por
+ *  letra, reusado onde repete, com o kerning do estilo) e comparada pixel a pixel com a faixa crua (com a sombra da
+ *  ROM, que o estilo redesenha por `outline`). "tinta" = só a união dos pixels não nulos das duas imagens. Limiares
+ *  um pouco abaixo do medido (ver task-16-report.md, Fix report 3). BATTLE GAME fica em ~96,5 % de tinta: os dois T e
+ *  o L encostados têm bordas antisserrilhadas diferentes em cada par, e um glifo só por letra não reproduz as duas. */
+const FIDELITY: { style: 'titleMenu' | 'menuTitle' | 'menuItem'; strip: string; row: number; x: number; text: string; all: number; ink: number }[] = [
+  { style: 'menuItem', strip: 'vs', row: 2, x: 0, text: 'Championship', all: 0.99, ink: 0.99 },
+  { style: 'menuItem', strip: 'vs', row: 3, x: 0, text: 'Bombermania', all: 0.99, ink: 0.98 },
+  { style: 'menuItem', strip: 'vs', row: 1, x: 0, text: 'Battle Royale', all: 0.98, ink: 0.97 },
+  { style: 'menuTitle', strip: 'vs', row: 0, x: 0, text: 'Select a VS mode!', all: 0.99, ink: 0.97 },
+  { style: 'titleMenu', strip: 'normalgame', row: 0, x: 7, text: 'NORMAL GAME', all: 0.98, ink: 0.97 },
+  { style: 'titleMenu', strip: 'battlegame', row: 0, x: 7, text: 'BATTLE GAME', all: 0.97, ink: 0.96 },
+  { style: 'titleMenu', strip: 'password', row: 0, x: 7, text: 'PASSWORD', all: 0.98, ink: 0.97 },
+];
+function fidelity(f: RomFont, strip: IndexedImage, row: number, x0: number, text: string): { all: number; ink: number } {
+  const r = layoutText(f, text);
+  let total = 0, match = 0, ink = 0, inkMatch = 0;
+  for (let y = 0; y < 16; y++) for (let x = 0; x < r.w; x++) {
+    const a = r.px[y * r.w + x], X = x0 + x, b = X < strip.w ? strip.px[(row * 16 + y) * strip.w + X] : 0;
+    total++; if (a === b) match++;
+    if (a || b) { ink++; if (a === b) inkMatch++; }
+  }
+  return { all: match / total, ink: inkMatch / ink };
+}
+describe.skipIf(!ASSETS)('fidelidade: frases da ROM remontadas por layoutText', () => {
+  it.each(FIDELITY)('$style "$text"', ({ style, strip, row, x, text, all, ink }) => {
+    const f = buildRomFont(style, ASSETS!)!;
+    const got = fidelity(f, decodeStrip(GLYPH_MAPS[style]!.strips[strip], ASSETS!), row, x, text);
+    expect(got.all, 'todos os pixels').toBeGreaterThanOrEqual(all);
+    expect(got.ink, 'só tinta').toBeGreaterThanOrEqual(ink);
   });
 });

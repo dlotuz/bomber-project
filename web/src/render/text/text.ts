@@ -26,9 +26,12 @@ function crop(src: IndexedImage, x: number, y: number, w: number, h: number): In
   return { w, h, px };
 }
 
+const CONN4 = [[1, 0], [-1, 0], [0, 1], [0, -1]] as const;
+const CONN8 = [...CONN4, [1, 1], [1, -1], [-1, 1], [-1, -1]] as const;
+
 /** Deixa no recorte só a letra das sementes (ver `GlyphMask`). Sementes fora do recorte ou fora de `fill` são ignoradas. */
 export function maskCut(g: IndexedImage, seeds: readonly (readonly [number, number])[], m: GlyphMask): IndexedImage {
-  const { w, h, px } = g, fill = new Set(m.fill), edge = new Set(m.edge);
+  const { w, h, px } = g, fill = new Set(m.fill), edge = new Set(m.edge), dirs = m.conn === 8 ? CONN8 : CONN4;
   const keep = new Uint8Array(w * h), stack: number[] = [];
   for (const [x, y] of seeds) {
     const i = y * w + x;
@@ -36,8 +39,8 @@ export function maskCut(g: IndexedImage, seeds: readonly (readonly [number, numb
   }
   while (stack.length) {
     const i = stack.pop()!, x = i % w, y = (i - x) / w;
-    for (const [nx, ny] of [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]) {
-      const j = ny * w + nx;
+    for (const [dx, dy] of dirs) {
+      const nx = x + dx, ny = y + dy, j = ny * w + nx;
       if (nx >= 0 && ny >= 0 && nx < w && ny < h && !keep[j] && fill.has(px[j])) { keep[j] = 1; stack.push(j); }
     }
   }
@@ -67,18 +70,16 @@ function applyBodyOnly(g: IndexedImage, body: readonly number[]): IndexedImage {
 function cutGlyph(s: IndexedImage, c: GlyphCut, def: StyleRomDef): IndexedImage {
   const y = c.y ?? 0;
   let g = crop(s, c.x, y, c.w, c.h ?? def.height);
+  if (c.remap) { const m = c.remap; g = { ...g, px: g.px.map(v => m[v] ?? v) }; }
   if (c.seeds && def.mask) g = maskCut(g, c.seeds.map(([sx, sy]) => [sx - c.x, sy - y] as const), def.mask);
   if (def.bodyOnly) g = applyBodyOnly(g, def.bodyOnly);
   return g;
 }
 
-const CONN4 = [[1, 0], [-1, 0], [0, 1], [0, -1]] as const;
-const CONN8 = [...CONN4, [1, 1], [1, -1], [-1, 1], [-1, -1]] as const;
-
 /** Redesenha o contorno depois de montar a frase (ver `StyleRomDef.outline`): `width` camadas de vizinhos
  *  (`conn` 4 ou 8, padrão 8) a partir de qualquer pixel não nulo, sem sobrescrever pixel já preenchido. Com
  *  `below`, um pixel novo com corpo em cima (vizinho na linha −1) usa `below`; senão usa `index`. */
-function addOutline(img: IndexedImage, o: { index: number; width?: number; conn?: 4 | 8; below?: number }): IndexedImage {
+function addOutline(img: IndexedImage, o: { index?: number; width?: number; conn?: 4 | 8; below?: number }): IndexedImage {
   const { w, h } = img;
   let px = img.px;
   const dirs = o.conn === 4 ? CONN4 : CONN8;
@@ -92,7 +93,8 @@ function addOutline(img: IndexedImage, o: { index: number; width?: number; conn?
         const nx = x + dx, ny = y + dy;
         if (nx >= 0 && nx < w && ny >= 0 && ny < h && px[ny * w + nx]) { near = true; if (dy === -1) above = true; }
       }
-      if (near) next[i] = above && o.below !== undefined ? o.below : o.index;
+      const v = near ? (above && o.below !== undefined ? o.below : o.index) : undefined;
+      if (v !== undefined) next[i] = v;
     }
     px = next;
   }
@@ -131,16 +133,19 @@ export function layoutText(f: RomFont, text: string): IndexedImage {
   const ws = parts.map((g, i) => (g ? g.w : chars[i] === ' ' ? f.def.spaceWidth : 0));
   // kerning por par (aditivo ao `spacing`): kern['TÓ'] = −20 aproxima o Ó do T
   const kern = chars.map((ch, i) => (i > 0 ? f.def.kern?.[chars[i - 1] + ch] ?? 0 : 0));
-  const w = Math.max(0, ws.reduce((a, b) => a + b, 0) + f.def.spacing * (parts.length - 1) + kern.reduce((a, b) => a + b, 0));
+  // com `outline`, `width` colunas livres à direita para a sombra/contorno da última letra
+  const pad = f.def.outline ? f.def.outline.width ?? 1 : 0;
+  const w = Math.max(0, ws.reduce((a, b) => a + b, 0) + f.def.spacing * (parts.length - 1) + kern.reduce((a, b) => a + b, 0)) + pad;
   const h = f.def.height;
   const px = new Uint8Array(w * h);
   let x = 0;
+  const under = f.def.under ? new Set(f.def.under) : null;
   parts.forEach((g, i) => {
     x += kern[i];
     // só os pixels não nulos: com `spacing` negativo a letra seguinte se sobrepõe à anterior sem apagá-la
     if (g) for (let y = 0; y < Math.min(h, g.h); y++) for (let k = 0; k < g.w; k++) {
       const v = g.px[y * g.w + k], X = x + k;
-      if (v && X >= 0 && X < w) px[y * w + X] = v;
+      if (v && X >= 0 && X < w && !(under?.has(v) && px[y * w + X])) px[y * w + X] = v;
     }
     x += ws[i] + f.def.spacing;
   });
@@ -261,9 +266,16 @@ export function buildRomFont(style: TextStyleId, a: RomAssets, maps = GLYPH_MAPS
 export function styleColors(def: StyleRomDef, a: RomAssets, tone?: Tone): Uint16Array {
   const alt = tone ? def.tones?.[tone] : undefined;
   const p = def.palette;
-  if (p.kind === 'rom') return readColors(a, alt ?? p.addr, p.size);
-  const start = (alt ?? p.row) * p.size;
-  return sceneVramCgram(a, p.scene).cgram.slice(start, start + p.size);
+  let out: Uint16Array;
+  if (p.kind === 'rom') out = readColors(a, alt ?? p.addr, p.size);
+  else { const start = (alt ?? p.row) * p.size; out = sceneVramCgram(a, p.scene).cgram.slice(start, start + p.size); }
+  return tone && def.grayscale?.includes(tone) ? out.map(toGray) : out;
+}
+
+/** BGR555 → cinza BGR555 com a luma BT.601 da cor. */
+function toGray(c: number): number {
+  const y = Math.round(0.299 * (c & 31) + 0.587 * ((c >> 5) & 31) + 0.114 * ((c >> 10) & 31));
+  return y | (y << 5) | (y << 10);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
