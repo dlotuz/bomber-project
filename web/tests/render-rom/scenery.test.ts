@@ -2,6 +2,7 @@ import { itemBlinkColor, palFrameAt, tileStateAt, tileTimeline, type TileCmd } f
 import { normTileCmds, sceneryCgram, sceneryTiles } from '../../src/render/rom/scenery';
 import type { PalAnim, TileAnimCmd } from '../../src/rom/types';
 import { fakeArena } from './fakes';
+import { ASSETS } from './rom-fixture';
 
 const dma = (dst: number, src: number): TileCmd => ({ op: 'dma', dst, src });
 const wait = (n: number): TileCmd => ({ op: 'wait', n });
@@ -72,5 +73,26 @@ describe('tiles e CGRAM do quadro', () => {
     expect([cg[10], cg[80], cg[95], cg[96], cg[79], cg[128], cg[255]]).toEqual([10, 0x2222, 0x2222, 96, 0x7d80, 0x4000, 0x407f]);
     expect(Array.from(cg.slice(160, 176))).toEqual(Array.from(cg.slice(64, 80)));
     expect(sceneryCgram(ar, 0, 4, false)[79]).toBe(79);
+  });
+});
+
+/** M3: prende contra a ROM real os períodos medidos na revisão (sonda 3) para não passar em silêncio se o
+ *  formato de `TileAnimCmd` do plano 5 mudar (o golden usa `tileCopies` e contorna `normTileCmds`/`tileTimeline`). */
+describe.skipIf(!ASSETS)('animação de tiles na ROM (M3)', () => {
+  const PERIODS: Readonly<Record<number, number>> = { 2: 176, 3: 48, 5: 36, 6: 36, 7: 48, 10: 28 };
+  for (const [stageStr, period] of Object.entries(PERIODS)) {
+    const stage = Number(stageStr);
+    it(`arena ${stage}: ciclo de ${period} ticks`, () => {
+      const ar = ASSETS!.arena(stage);
+      const tl = tileTimeline(normTileCmds(ar.tileAnim ?? []));
+      expect(tl.period).toBe(period);
+    });
+  }
+  it('arena 7: 1º DMA no tile $E0, dst dentro de 0..1023', () => {
+    const ar = ASSETS!.arena(7);
+    const tl = tileTimeline(normTileCmds(ar.tileAnim ?? []));
+    expect(tl.events[0]).toMatchObject({ t: 0, src: 0xe0 });
+    expect(tl.events[0].dst).toBeGreaterThanOrEqual(0);
+    expect(tl.events[0].dst).toBeLessThan(1024);
   });
 });
