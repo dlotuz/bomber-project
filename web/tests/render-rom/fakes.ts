@@ -30,8 +30,8 @@ const DIRECT = new Set([0xc26e15, 0xc26f05]);
 export function fakeAnimAddr(tab: number, idx: number | null): number {
   return 0xd80000 | (ANIM_TABS.indexOf(tab) << 8) | (idx ?? 0xff);
 }
-export const fr = (dur: number, g: number, mx = 0, my = 0): AnimFrame =>
-  ({ dur, mx, my, pieces: [{ dx: -16, dy: -24, tile: g, hflip: false, vflip: false, big: true, palAdd: 0 }] });
+export const fr = (dur: number, g: number, mx = 0, my = 0, big = true): AnimFrame =>
+  ({ dur, mx, my, pieces: [{ dx: -16, dy: -24, tile: g, hflip: false, vflip: false, big, palAdd: 0 }] });
 export const FAKE_ANIMS = new Map<number, Anim>([
   [fakeAnimAddr(0xc26e15, null), [fr(5, 24), fr(5, 25), fr(6, 26), fr(6, 27)]],   // morte
   [fakeAnimAddr(0xc276c5, 1), [fr(12, 4), fr(8, 3), fr(12, 5), fr(8, 3)]],        // andar →

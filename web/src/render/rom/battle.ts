@@ -11,6 +11,7 @@ import { headOverrides, headTiles, hudWords } from './hud';
 import { sceneryCgram, sceneryTiles } from './scenery';
 import { drawSprites } from './sprites';
 import { MAP_W, newMemo, type RomClock, type RomMemo } from './scene';
+import { warnOnce } from './warn';
 
 /** D1: o que a tela da partida passa além da rodada. */
 export interface RomBattleVis { crowns: readonly number[] }
@@ -49,6 +50,15 @@ export function battleClock(s: RoundState, memo: RomMemo, frame: number): RomClo
   return { tick, bombTick: memo.freezeAll ?? memo.freezeBombs ?? s.tick, frame };
 }
 
+/**
+ * M5 (D6): tick visual já congelado (TIME UP e o `over` seguinte), o mesmo valor que as camadas base já usam.
+ * Leitura pura da memória por rodada; só é fiel depois que `battleClock` correu para o quadro atual
+ * (é o caso dentro de `buildBattleFrame`, que chama `battleClock` antes das camadas/ganchos dos planos 8/9).
+ */
+export function visualTick(s: RoundState): number {
+  return romMemo(s).freezeAll ?? s.tick;
+}
+
 export function buildBattleFrame(s: RoundState, vis: RomBattleVis, a: RomAssets, frame: number, opts: BuildOpts = {}): PpuFrame {
   const ar = a.arena(s.stage);
   const tb = romTables(a);
@@ -64,7 +74,12 @@ export function buildBattleFrame(s: RoundState, vis: RomBattleVis, a: RomAssets,
   bg1.set(hudWords(ar.hudMap, s.clock.sec, s.players.map(p => p.present), vis.crowns ?? NO_CROWNS, tb.crownWord), HUD_MAP_ROW * MAP_W);
   const b = new FrameBuilder(bg1, bg2, cgram);
   if (opts.sprites !== false) drawSprites(b, { s, a, tb, scene, clock, memo, tiles });
-  for (const l of opts.layers ?? romLayers) l.draw(s, b, a, frame);
+  // M1: cada camada dos planos 8/9 roda isolada — uma que lance não derruba o quadro nem alterna com o fallback;
+  // fica só sem aquela camada, com aviso uma vez por (assets, id da camada).
+  for (const l of opts.layers ?? romLayers) {
+    try { l.draw(s, b, a, frame, clock.tick); }
+    catch (e) { warnOnce(a, 'layer:' + l.id, `Crown Blast: camada "${l.id}" falhou nesta partida; ignorando o quadro dela.`, e); }
+  }
   const math = ar.colorMath;
   const bands: ScanBand[] = [
     { y0: 0, y1: 24, bg1Tile16: false, bg1: [HUD_HOFS, HUD_VOFS], bg2: [FIELD_HOFS, FIELD_VOFS], main: BG1 | OBJ, sub: 0, math: 'none' },
@@ -82,14 +97,14 @@ export function buildBattleFrame(s: RoundState, vis: RomBattleVis, a: RomAssets,
 }
 
 const images = new WeakMap<CanvasRenderingContext2D, ImageData>();
-let warned = false;
 
 export function drawRomBattle(ctx: CanvasRenderingContext2D, round: RoundState, vis: RomBattleVis, assets: RomAssets, frame: number): boolean {
   let f: PpuFrame;
   try {
     f = buildBattleFrame(round, vis, assets, frame);
   } catch (e) {
-    if (!warned) { console.warn('Crown Blast: gráficos da ROM indisponíveis nesta partida; usando a arte própria.', e); warned = true; }
+    // M1: a chave do aviso vive em `assets`, então uma ROM nova (outro objeto) volta a avisar se falhar de novo.
+    warnOnce(assets, 'frame', 'Crown Blast: gráficos da ROM indisponíveis nesta partida; usando a arte própria.', e);
     return false;
   }
   let img = images.get(ctx);

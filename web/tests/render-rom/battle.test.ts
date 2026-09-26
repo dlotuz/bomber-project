@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { battleClock, buildBattleFrame, drawRomBattle, romMemo } from '../../src/render/rom/battle';
+import { battleClock, buildBattleFrame, drawRomBattle, romMemo, visualTick } from '../../src/render/rom/battle';
 import { newMemo } from '../../src/render/rom/scene';
 import { renderPpu } from '../../src/render/ppu';
 import type { RomBattleBuilder, RomBattleLayer } from '../../src/render/battle-layers';
@@ -12,6 +12,13 @@ import { newRound } from './core-fixture';
 import { staticObjects } from '../../src/rom/arena-build';
 
 const VIS = { crowns: [0, 1, 2, 3, 4] };
+
+/** Canvas 2D falso: só o que `drawRomBattle` usa. */
+function ctx() {
+  const put = vi.fn();
+  const create = vi.fn((w: number, h: number) => ({ width: w, height: h, data: new Uint8ClampedArray(w * h * 4) }));
+  return { c: { putImageData: put, createImageData: create } as unknown as CanvasRenderingContext2D, put, create };
+}
 
 describe('buildBattleFrame (assets falsos)', () => {
   it('faixas: HUD 8×8 (0–23) e campo 16×16 (24–223) (D18)', () => {
@@ -107,11 +114,6 @@ describe('relógio visual (D6)', () => {
 });
 
 describe('drawRomBattle', () => {
-  const ctx = () => {
-    const put = vi.fn();
-    const create = vi.fn((w: number, h: number) => ({ width: w, height: h, data: new Uint8ClampedArray(w * h * 4) }));
-    return { c: { putImageData: put, createImageData: create } as unknown as CanvasRenderingContext2D, put, create };
-  };
   it('desenha 256×224 com putImageData e reaproveita o ImageData', () => {
     const { c, put, create } = ctx();
     expect(drawRomBattle(c, fakeRound(), VIS, fakeAssets(), 0)).toBe(true);
@@ -121,12 +123,72 @@ describe('drawRomBattle', () => {
     expect(put.mock.calls[0][0].width).toBe(256);
     expect(put.mock.calls[0][0].height).toBe(224);
   });
-  it('devolve false se os assets falham (a tela usa o fallback)', () => {
+  it('devolve false se os assets falham (a tela usa o fallback); avisa uma vez por ROM', () => {
+    const { c, put } = ctx();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const bad = fakeAssets({ arenaThrows: true });
+    expect(drawRomBattle(c, fakeRound(), VIS, bad, 0)).toBe(false);
+    expect(drawRomBattle(c, fakeRound(), VIS, bad, 1)).toBe(false);
+    expect(put).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledTimes(1);                                        // mesma ROM: 1 aviso só
+    expect(drawRomBattle(c, fakeRound(), VIS, fakeAssets({ arenaThrows: true }), 0)).toBe(false);
+    expect(warn).toHaveBeenCalledTimes(2);                                        // ROM trocada: avisa de novo (M1)
+    warn.mockRestore();
+  });
+});
+
+describe('isolamento de falhas por camada/gancho (M1)', () => {
+  it('uma camada que lança não derruba o quadro nem troca para o fallback', () => {
+    const s = fakeRound();
+    s.grid[1 * 17 + 5] = 0xee80;
+    const bad: RomBattleLayer = { id: 'ruim', draw: () => { throw new Error('camada com defeito'); } };
+    const ok: RomBattleLayer = { id: 'ok', draw: (_s, b) => b.setBg2(6, 1, 0xabcd) };
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const f = buildBattleFrame(s, VIS, fakeAssets(), 0, { layers: [bad, ok], sprites: false });
+    expect(f.bg2!.map[1 * 32 + 5]).toBe(0x082e);   // a casa da camada boa (col 5, sem a camada ruim) segue normal
+    expect(f.bg2!.map[1 * 32 + 6]).toBe(0xabcd);   // a camada boa, depois da ruim na lista, ainda roda
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
+  });
+  it('avisa uma vez por camada; outra camada com defeito avisa de novo; ROM trocada reabre o aviso', () => {
+    const a1 = fakeAssets();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const bad1: RomBattleLayer = { id: 'a', draw: () => { throw new Error('a'); } };
+    const bad2: RomBattleLayer = { id: 'b', draw: () => { throw new Error('b'); } };
+    buildBattleFrame(fakeRound(), VIS, a1, 0, { layers: [bad1], sprites: false });
+    buildBattleFrame(fakeRound(), VIS, a1, 1, { layers: [bad1], sprites: false });
+    expect(warn).toHaveBeenCalledTimes(1);                       // mesma camada, mesma ROM: 1 só
+    buildBattleFrame(fakeRound(), VIS, a1, 2, { layers: [bad2], sprites: false });
+    expect(warn).toHaveBeenCalledTimes(2);                       // camada diferente: avisa de novo
+    buildBattleFrame(fakeRound(), VIS, fakeAssets(), 3, { layers: [bad1], sprites: false });
+    expect(warn).toHaveBeenCalledTimes(3);                       // ROM trocada: volta a avisar
+    warn.mockRestore();
+  });
+  it('o quadro base (campo/HUD/jogadores) falhando ainda cai no fallback como hoje', () => {
     const { c, put } = ctx();
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     expect(drawRomBattle(c, fakeRound(), VIS, fakeAssets({ arenaThrows: true }), 0)).toBe(false);
     expect(put).not.toHaveBeenCalled();
     warn.mockRestore();
+  });
+});
+
+describe('tick visual para camadas e ganchos (M5, D6)', () => {
+  it('uma camada recebe o tick já congelado depois do TIME UP, igual ao das camadas base', () => {
+    const s = fakeRound({ tick: 560, phase: 'timeUp', phaseT0: 500 });
+    let seen: number | null = null;
+    const layer: RomBattleLayer = { id: 'tick', draw: (_s, _b, _a, _frame, tick) => { seen = tick; } };
+    buildBattleFrame(s, VIS, fakeAssets(), 9, { layers: [layer], sprites: false });
+    expect(seen).toBe(500);
+    expect(visualTick(s)).toBe(500);
+  });
+  it('em jogo, o tick visual segue s.tick', () => {
+    const s = fakeRound({ tick: 42 });
+    let seen: number | null = null;
+    const layer: RomBattleLayer = { id: 'tick', draw: (_s, _b, _a, _frame, tick) => { seen = tick; } };
+    buildBattleFrame(s, VIS, fakeAssets(), 0, { layers: [layer], sprites: false });
+    expect(seen).toBe(42);
+    expect(visualTick(s)).toBe(42);
   });
 });
 

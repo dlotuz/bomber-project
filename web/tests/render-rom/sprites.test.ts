@@ -1,15 +1,16 @@
 import { invincibleHidden, pressureSprite, skullBlack } from '../../src/render/anim/effects';
 import { FrameBuilder } from '../../src/render/rom/builder';
-import { PLAYER_OBJ_PAL, drawSprites, tile16Px } from '../../src/render/rom/sprites';
+import { PLAYER_OBJ_PAL, drawSprites, smallFramePx, tile16Px } from '../../src/render/rom/sprites';
 import { romTables } from '../../src/render/rom/tables';
 import { newMemo, type RomScene } from '../../src/render/rom/scene';
 import { romPlayerHooks } from '../../src/render/battle-layers';
 import { invisibleVisible, type RoundState } from '../../src/core';
 import type { ObjEntry } from '../../src/render/ppu';
-import { fakeAssets, fakeRound, fakeTiles } from './fakes';
+import type { RomAssets } from '../../src/rom/types';
+import { FAKE_ANIMS, fakeAnimAddr, fakeAssets, fakeRound, fakeTiles, fr } from './fakes';
 
-function run(s: RoundState, o: { tick?: number; frame?: number; scene?: Partial<RomScene> } = {}) {
-  const a = fakeAssets();
+function run(s: RoundState, o: { tick?: number; frame?: number; scene?: Partial<RomScene>; a?: RomAssets } = {}) {
+  const a = o.a ?? fakeAssets();
   const b = new FrameBuilder(new Uint16Array(1024), new Uint16Array(1024), new Uint16Array(256));
   const tick = o.tick ?? s.tick;
   const scene: RomScene = { gridBombs: new Map(), objs: [], drops: [], flame: () => 'center', burn: () => 'soft', team: false, ...o.scene };
@@ -108,6 +109,45 @@ describe('jogadores', () => {
     romPlayerHooks.push(() => [mark]);
     try { expect(run(s).oam).toEqual([mark]); } finally { romPlayerHooks.pop(); }
   });
+  it('gancho do plano 9 que lança: cai no desenho padrão, sem tirar o jogador da tela (M1)', () => {
+    const s = fakeRound();
+    only(s, 0);
+    const a1 = fakeAssets();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    romPlayerHooks.push(() => { throw new Error('gancho com defeito'); });
+    try {
+      const { oam } = run(s, { a: a1 });
+      expect(ofSlot(oam, 0)).toHaveLength(1);   // desenho padrão de 32×32 continua saindo
+      expect(warn).toHaveBeenCalledTimes(1);
+      run(s, { a: a1 });
+      expect(warn).toHaveBeenCalledTimes(1);    // mesma ROM: não repete o aviso
+      run(s, { a: fakeAssets() });              // ROM trocada (outro RomAssets) → volta a avisar
+      expect(warn).toHaveBeenCalledTimes(2);
+    } finally { romPlayerHooks.pop(); warn.mockRestore(); }
+  });
+  it('gancho recebe o tick visual (5º argumento), igual ao das camadas base (M5)', () => {
+    const s = fakeRound();
+    only(s, 0);
+    let seen: number | null = null;
+    romPlayerHooks.push((_s, _p, _a, _frame, tick) => { seen = tick; return null; });
+    try { run(s, { tick: 42 }); expect(seen).toBe(42); } finally { romPlayerHooks.pop(); }
+  });
+  it('Piece.big falso desenha 16×16 com o quadrante correto da folha (spec §7.2, M4)', () => {
+    const s = fakeRound();
+    only(s, 0);
+    Object.assign(s.players[0], { act: 'idle', face: 0, actT0: 0 });
+    const addr = fakeAnimAddr(0xc276c5, 8);   // idle parado ↓ (DIR8[0] = 0, +8)
+    FAKE_ANIMS.set(addr, [fr(255, 40, 0, 0, false)]);
+    try {
+      const { a, oam } = run(s, { tick: 0 });
+      const e = oam.find(o => o.pal === PLAYER_OBJ_PAL[0]);
+      expect(e).toBeDefined();
+      expect(e!.size).toBe(16);
+      const px = (e!.src as { px: Uint8Array }).px;
+      expect(px).toHaveLength(256);
+      expect(px).toEqual(smallFramePx(a.character(s.players[0].char).frame(40)));
+    } finally { FAKE_ANIMS.delete(addr); }
+  });
   it('Bad Bomber: desenhado de s.bad com a folha do slot, andando (D20)', () => {
     const s = fakeRound();
     only(s, 3);
@@ -144,6 +184,16 @@ describe('objetos e pressão', () => {
     expect([p[0], p[8], p[128], p[255]]).toEqual([0x80, 0x81, 0x90, 0x91]);
     expect(tile16Px(t, 0x5280)[0]).toBe(0x81);
     expect(tile16Px(t, 0x9280)[0]).toBe(0x90);
+  });
+  it('smallFramePx: quadrante superior-esquerdo 16×16 da folha 32×32, com o stride 32 certo (M4)', () => {
+    const full = Uint8Array.from({ length: 1024 }, (_, i) => i & 0xff);
+    const small = smallFramePx(full);
+    expect(small).toHaveLength(256);
+    expect(small[0]).toBe(full[0]);
+    expect(small[15]).toBe(full[15]);
+    expect(small[16]).toBe(full[32]);              // 2ª linha do recorte = 2ª linha da folha (não a 17ª)
+    expect(small[16 * 15 + 15]).toBe(full[32 * 15 + 15]);
+    expect(smallFramePx(full)).toBe(small);         // cacheado por buffer
   });
   it('pressão: sombra na casa; bloco cai na frente dela', () => {
     const s = fakeRound();

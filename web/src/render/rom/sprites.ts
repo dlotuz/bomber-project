@@ -8,6 +8,7 @@ import { invincibleHidden, pressureSprite, skullBlack } from '../anim/effects';
 import { ORDER_OBJ, ORDER_PLAYER, ORDER_PRESSURE, type FrameBuilder } from './builder';
 import type { RomTables } from './tables';
 import { OBJ_ITEM_PAL, type RomClock, type RomMemo, type RomScene } from './scene';
+import { warnOnce } from './warn';
 
 export interface SpriteCtx {
   s: RoundState; a: RomAssets; tb: RomTables; scene: RomScene; clock: RomClock; memo: RomMemo;
@@ -37,6 +38,19 @@ export function tile16Px(t: Tiles, word: number): Uint8Array {
   return out;
 }
 
+/** M4 (spec §7.2): peça pequena (`Piece.big` falso) usa só o quadrante superior-esquerdo 16×16 da folha 32×32
+ *  de `ch.frame`, que tem stride 32 — não pode ir direto como `size: 16` (a PPU leria com stride 16 errado). */
+const smallFrames = new WeakMap<Uint8Array, Uint8Array>();
+export function smallFramePx(full: Uint8Array): Uint8Array {
+  let p = smallFrames.get(full);
+  if (!p) {
+    p = new Uint8Array(256);
+    for (let y = 0; y < 16; y++) p.set(full.subarray(y * 32, y * 32 + 16), y * 16);
+    smallFrames.set(full, p);
+  }
+  return p;
+}
+
 const itemPx = new WeakMap<Tiles, Map<number, Uint8Array>>();
 function itemTilePx(t: Tiles, word: number): Uint8Array {
   let m = itemPx.get(t);
@@ -63,8 +77,9 @@ function drawFrame(b: FrameBuilder, c: SpriteCtx, p: Player, X: number, Y: numbe
   const ch = c.a.character(p.char);
   const pal = PLAYER_OBJ_PAL[p.slot];
   for (const pc of sm.frame.pieces) {
-    b.sprite({ x: X + pc.dx + sm.ox, y: Y + pc.dy + sm.oy, size: 32, pal: (pal + pc.palAdd) & 7, prio: 2,
-      hflip: pc.hflip, vflip: pc.vflip, src: { px: ch.frame(pc.tile) } }, Y, ORDER_PLAYER + p.slot);
+    const full = ch.frame(pc.tile);
+    b.sprite({ x: X + pc.dx + sm.ox, y: Y + pc.dy + sm.oy, size: pc.big ? 32 : 16, pal: (pal + pc.palAdd) & 7, prio: 2,
+      hflip: pc.hflip, vflip: pc.vflip, src: { px: pc.big ? full : smallFramePx(full) } }, Y, ORDER_PLAYER + p.slot);
   }
 }
 
@@ -78,8 +93,11 @@ export function drawPlayers(b: FrameBuilder, c: SpriteCtx): void {
     const X = px(p.x);
     const Y = px(p.y);
     let hooked = false;
-    for (const h of romPlayerHooks) {
-      const r = h(s, p, a, clock.frame);
+    for (let i = 0; i < romPlayerHooks.length; i++) {
+      let r: ObjEntry[] | null;
+      // M1: um gancho do plano 9 que lance não deve tirar o jogador da tela — cai para o desenho padrão.
+      try { r = romPlayerHooks[i](s, p, a, clock.frame, clock.tick); }
+      catch (e) { warnOnce(a, 'hook:' + i, `Crown Blast: gancho de jogador #${i} falhou; usando o desenho padrão.`, e); continue; }
       if (r) { for (const e of r) b.sprite(e, Y, ORDER_PLAYER + p.slot); hooked = true; break; }
     }
     if (!hooked) drawFrame(b, c, p, X, Y, p.act, p.face, p.moveDir !== 8, clock.tick - p.actT0);
