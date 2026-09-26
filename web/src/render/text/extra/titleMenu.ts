@@ -1,2 +1,62 @@
 import type { ExtraGlyph } from '../types';
-export const EXTRA: readonly ExtraGlyph[] = [];
+/** Glifos próprios da fonte "bolha" da tela-título (ver maps/titleMenu.ts): só J e Ç, que não existem em nenhuma
+ * frase da tela (NORMAL GAME / BATTLE GAME / PASSWORD / PUSH START BUTTON!), e o til do Õ sobre o O da ROM (`base`,
+ * sem pixel dele aqui). Desenhados na regra medida nas letras da ROM: itálico, miolo f com sombreado c/d/e na borda
+ * de dentro, borda 1 e cantos a/b, linhas 2–13 (o til usa as linhas 0–1, acima da borda do O). O Ç segue o G e o O
+ * da ROM (mesmo arco de cima e de baixo); o J segue a barra do T e a curva de baixo do U. */
+export const EXTRA: readonly ExtraGlyph[] = [
+  { ch: 'J', rows: [
+    '............',
+    '............',
+    '.....111111.',
+    '....1dfffec1',
+    '....1fffffe1',
+    '.....11ffd1.',
+    '......1fff1.',
+    '.....1dffd1.',
+    '.....1fff1..',
+    '.b1..1ffe1..',
+    '1dfc1dffd1..',
+    '1cffffffe1..',
+    '.1cefffd1...',
+    '..b11111....',
+    '............',
+    '............',
+  ] },
+  { ch: 'Ç', rows: [
+    '............',
+    '............',
+    '....b1111b..',
+    '...1ceffe11.',
+    '..1dffffffc1',
+    '.1dffdcefff1',
+    '1cffc111efd1',
+    '1eff1...111.',
+    '1fffc...111.',
+    '1efffc1cfe1.',
+    '1cffffffff1.',
+    '.1cefffed1..',
+    '..b1ef111...',
+    '....1fe1....',
+    '...1ef1.....',
+    '...111......',
+  ] },
+  { ch: 'Õ', base: 'O', rows: [
+    '....1ff1.f1.',
+    '...1f11ff1..',
+    '............',
+    '............',
+    '............',
+    '............',
+    '............',
+    '............',
+    '............',
+    '............',
+    '............',
+    '............',
+    '............',
+    '............',
+    '............',
+    '............',
+  ] },
+];
