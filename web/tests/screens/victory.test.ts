@@ -80,11 +80,15 @@ describe('campeões sobre o troféu em Em Equipes (fix round 1)', () => {
     expect(v.championOnTrophy()).toBe(true);
 
     const calls: string[] = [];
-    const bank = {
+    const known: Record<string, unknown> = {
       bomber: (ch: number) => { const tag = `b${ch}`; return { width: 32, height: 40, tag }; },
       text: () => ({ width: 0, height: 0, tag: 't' }),
       trophy: () => ({ width: 48, height: 48, tag: 'trophy' }),
-    } as unknown as SpriteBank;
+    };
+    // o placar (T13) usa outros métodos do banco (cabeças, coroas…): qualquer outro devolve uma imagem neutra
+    const bank = new Proxy(known, {
+      get: (t, k: string) => t[k] ?? (() => ({ width: 16, height: 16, tag: `other:${k}` })),
+    }) as unknown as SpriteBank;
     const ctx = {
       fillStyle: '', save() {}, restore() {}, translate() {}, fillRect() {},
       drawImage(img: { tag?: string }) { if (img?.tag) calls.push(img.tag); },
