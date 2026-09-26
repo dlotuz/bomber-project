@@ -25,6 +25,7 @@ export interface StyleRomDef {
   tones?: Partial<Record<Tone, number>>;    // linha de paleta (na mesma origem) para cada tom
   meta?: Record<string, number>;           // ex.: timeUpWidth (T17)
   mask?: GlyphMask;                        // usada pelos recortes com `seeds`
+  kern?: Readonly<Record<string, number>>; // ajuste por par de caracteres ('TÓ'), somado ao `spacing`
 }
 /** '.' = 0; padrão: hex. Com `base`, o glifo é o glifo `base` já recortado da ROM (montado em tempo de execução) com os
  *  pixels não-'.' deste desenho por cima (acentos sobre letras da ROM, sem guardar os pixels dela). */

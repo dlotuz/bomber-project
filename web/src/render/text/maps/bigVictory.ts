@@ -25,6 +25,7 @@ export const DEF: StyleRomDef = {
     { ch: '!', strip: 't', x: 179, w: 28, y: 1, seeds: [[193, 8], [183, 42]] },
   ],
   height: 65, spacing: -8, spaceWidth: 12,
+  kern: { 'TÓ': -20 },                                  // a barra do T entra no entalhe do O, como na ROM
   palette: { kind: 'rom', addr: 0xd67cdc, size: 16 },
   mask: { fill: [3, 4, 5, 6], edge: [1, 2], grow: 2 },
 };

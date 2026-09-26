@@ -13,7 +13,7 @@ export const DEF: StyleRomDef = {
     { ch: 'M', strip: 't', x: 128, w: 42, y: 96, seeds: [[135, 98]] },
     { ch: 'E', strip: 't', x: 176, w: 39, y: 96, seeds: [[190, 99]] },
   ],
-  height: 53, spacing: 0, spaceWidth: 16,          // no original há ~6 px entre letras; 0 para EMPATE (6 letras) caber em 256 px
+  height: 53, spacing: 3, spaceWidth: 16,          // vão de ~3 px como A→W do original; EMPATE = 255 px
   palette: { kind: 'scene', scene: 'draw2', row: 0, size: 256 },
   mask: {
     fill: [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47],

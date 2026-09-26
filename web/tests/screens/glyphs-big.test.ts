@@ -54,6 +54,17 @@ describe('motor: extensões da T18 (puro)', () => {
     expect(Array.from(f.glyphs.get('Ó')!.px)).toEqual([0, 3, 7, 7, 7, 7]);
     expect(Array.from(f.glyphs.get('O')!.px)).toEqual([0, 0, 7, 7, 7, 7]);
   });
+  it('kern por par soma ao spacing só entre aquele par (largura e posição)', () => {
+    const f = fontFromParts('bigVictory', def({ spacing: 1, kern: { AB: -2 } }), {}, [{ ch: 'A', rows: ['11', '11', '11'] }, { ch: 'B', rows: ['22', '22', '22'] }]);
+    expect(layoutText(f, 'AB').w).toBe(2 + 1 - 2 + 2);
+    expect(Array.from(layoutText(f, 'AB').px.slice(0, 3))).toEqual([1, 2, 2]);
+    expect(layoutText(f, 'BA').w).toBe(2 + 1 + 2);
+  });
+  it('glifo com base só conta como coberto se a letra-base tiver recorte', () => {
+    const maps = { ...GLYPH_MAPS, bigVictory: def({ strips: { s: { kind: 'mode7', x: 0, y: 0, w: 1, h: 1 } }, cuts: [{ ch: 'O', strip: 's', x: 0, w: 1 }] }) };
+    const extras = { ...EXTRA_GLYPHS, bigVictory: [{ ch: 'Ó', base: 'O', rows: ['.'] }, { ch: 'Ú', base: 'U', rows: ['.'] }] };
+    expect(missingGlyphs('bigVictory', 'ÓÚ', maps, extras)).toEqual(['Ú']);
+  });
   it('layoutText com espaçamento negativo sobrepõe sem apagar a letra anterior', () => {
     const f = fontFromParts('bigVictory', def({ spacing: -1 }), {}, [{ ch: 'A', rows: ['11', '11', '11'] }, { ch: 'B', rows: ['.2', '.2', '.2'] }]);
     const t = layoutText(f, 'AB');
@@ -89,6 +100,14 @@ describe.skipIf(!ASSETS)('glifos com ROM', () => {
       for (const c of GLYPH_MAPS[st]!.cuts) expect(f.glyphs.get(c.ch)!.px.filter(v => v !== 0).length, `${st} ${c.ch}`).toBeGreaterThan(20);
       for (const u of STRING_USES.filter(k => k.style === st)) expect(layoutText(f, u.text).w, u.text).toBeLessThanOrEqual(256);
     }
+  });
+  it('VITÓRIA!: o kern TÓ encaixa a barra do T no entalhe do O (sobreposição real de pixels)', () => {
+    const f = buildRomFont('bigVictory', ASSETS!)!;
+    expect(GLYPH_MAPS.bigVictory!.kern?.['TÓ']).toBe(-20);
+    const t = f.glyphs.get('T')!, o = f.glyphs.get('Ó')!, off = t.w + GLYPH_MAPS.bigVictory!.spacing - 20;
+    let over = 0;
+    for (let y = 0; y < t.h; y++) for (let x = off; x < t.w; x++) if (t.px[y * t.w + x] && o.px[y * o.w + x - off]) over++;
+    expect(over).toBeGreaterThan(0);
   });
   it('Ó = O da ROM com o acento por cima (mesmo tamanho, pixels do O preservados onde o acento é vazio)', () => {
     const f = buildRomFont('bigVictory', ASSETS!)!;
