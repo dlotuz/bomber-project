@@ -141,8 +141,15 @@ for f in range(30):
     for a in reserve_objs(e):
         fx['reserveEgg'].append(dict(sample(e, a, f, 40, 0x100), x=w[a + 0x12] | w[a + 0x13] << 8, y=w[a + 0x16] | w[a + 0x17] << 8))
 # Acerto: a própria bomba também queimaria o reserva (1 casa atrás), então entra direto na rotina de acerto montado $C2:105E.
+glow_addr = reserve_objs(e)[0]   # T14b: é o próprio objeto do ovo reserva que "brilha" e revela a montaria — não nasce outro.
 e.w16(0x300, 0x105E); e.w8(0x302, 0xC2)
-fx['remount'] = rec(e, 0x300, 60)
+fx['remount'] = []; fx['remountGlow'] = []
+for f in range(60):
+    e.run(1)
+    w = e.wram()
+    fx['remount'].append(dict(sample(e, 0x300, f), x=w[0x312] | w[0x313] << 8, y=w[0x316] | w[0x317] << 8))
+    fx['remountGlow'].append(dict(sample(e, glow_addr, f, 40, 0x100),
+                                   x=w[glow_addr + 0x12] | w[glow_addr + 0x13] << 8, y=w[glow_addr + 0x16] | w[glow_addr + 0x17] << 8))
 
 # ovos no chão (partidas reais de CPU)
 fx['eggs'] = []
@@ -172,8 +179,17 @@ for t, key, tx in ((0xD, 'd', 200), (0xE, 'e', 200), (0xF, 'f', 200)):
     fx['projectiles'][key] = dict(rt=rt, samples=smp)
 M.mount(e, 0xF); e.w16(0x512, 72); e.w16(0x516, 48)
 e.run(1, p0=['RIGHT']); e.run(2, p2=['LEFT']); e.run(2, p2=['RIGHT'])
-e.run(3, p0=['Y']); e.run(76)
-fx['dance'] = rec(e, 0x500, 200, rad=32)   # raio menor: o P1 montado fica a 40 px
+before = {(o['a'], o['rt']) for o in objlist.objs(e)}
+e.run(3, p0=['Y'])
+# Objeto das notas (T14b): nasce no próprio tick do Y, nova chave (endereço, rt) que não existia antes.
+note_addr = next(o['a'] for o in objlist.objs(e) if (o['a'], o['rt']) not in before)
+while (lambda w: w[0x500] | w[0x501] << 8 | w[0x502] << 16)(e.wram()) != 0xC20D83: e.run(1)   # até P2 entrar na rotina de dança
+fx['dance'] = [sample(e, 0x500, 0, rad=32)]
+fx['danceNote'] = [sample(e, note_addr, 0, 40, 0x100)]
+for f in range(1, 160):
+    e.run(1)
+    fx['dance'].append(sample(e, 0x500, f, rad=32))   # raio menor: o P1 montado fica a 40 px
+    fx['danceNote'].append(sample(e, note_addr, f, 40, 0x100))
 
 # trajes (fase 10)
 for c in range(8):
@@ -195,6 +211,14 @@ def anims(samples, key='anim'):
 def dir_anims(d, key='anim'):
     return ', '.join('{ walk: [%s], idle: [%s] }' % (', '.join(map(h, anims(d[n]['walk'], key))), ', '.join(map(h, anims(d[n]['idle'], key)))) for n, _ in DIRS)
 def h(v): return '0x%06x' % v
+def stage_ticks(samples, key='anim'):
+    """quantos ticks (amostras) cada endereço aparece antes do próximo trocar, na ordem de aparição; o último
+    trecho (aberto — sem endereço seguinte dentro da amostra) não entra, porque não há como medir sua duração total."""
+    out = []; cur = samples[0].get(key); n = 0
+    for s in samples:
+        if s.get(key) != cur: out.append(n); cur = s.get(key); n = 0
+        n += 1
+    return out
 L = ['// gerado por analise/investigacao/montarias-e-telas/mount_render_facts.py — não editar',
      '// ROM SHA-1 ' + fx['romSha1'],
      'export interface DirAnims { walk: number[]; idle: number[] }   // ↑ → ↓ ← (índices 0..3)',
@@ -217,6 +241,22 @@ L.append('export const RESERVE_EGG_ANIMS: number[] = [%s];' % ', '.join(map(h, a
 L.append('export const EGG_ANIMS: number[] = [%s];' % ', '.join(map(h, anims([s for g in fx['eggs'] for s in g['samples']]))))
 L.append('export const PROJ_ANIMS: Record<\'d\' | \'e\' | \'f\', number[]> = {' + ', '.join("%s: [%s]" % (k, ', '.join(map(h, anims(v['samples'])))) for k, v in fx['projectiles'].items()) + '};')
 L.append('export const DANCE_ANIMS: number[] = [%s];' % ', '.join(map(h, anims(fx['dance']))))
+L.append('// Notas da dança (T14b): objeto OAM independente da nota que acerta (tipo F, Y), não o jogador dançando.')
+L.append('// Nasce no tick do acerto e usa esta única animação, medida com 4 quadros de 10 ticks (40 no total); depois some.')
+L.append('export const DANCE_NOTE_ANIMS: number[] = [%s];' % ', '.join(map(h, anims(fx['danceNote']))))
+L.append('// Ticks medidos em que o objeto da nota tem peça visível perto do jogador (0 = no próprio tick do acerto).')
+DANCE_NOTE_TICKS = next(i for i, s in enumerate(fx['danceNote']) if not s['pieces'])
+L.append('export const DANCE_NOTE_TICKS: number = %d;' % DANCE_NOTE_TICKS)
+L.append('// Ticks medidos de cada quadro de DANCE_NOTE_ANIMS[0] (não a duração da tabela: o quadro 0 já nasce')
+L.append('// parcial, porque a captura começa no tick em que o jogador entra na rotina de dança, alguns ticks')
+L.append('// depois do próprio objeto da nota já ter entrado no quadro 0 da explosão).')
+L.append('export const DANCE_NOTE_FRAME_TICKS: number[] = [%s];' % ', '.join(map(str, stage_ticks(fx['danceNote'][:DANCE_NOTE_TICKS], 'frame'))))
+L.append('// Ovo reserva "brilhando" → explosão de brilho → revelação da montaria, no remonte (T14b). É o próprio objeto')
+L.append('// do ovo reserva (não nasce outro): brilha parado na casa de origem, "pula" até o jogador e estoura.')
+L.append('export const REMOUNT_GLOW_ANIMS: number[] = [%s];' % ', '.join(map(h, anims(fx['remountGlow']))))
+L.append('// Ticks medidos de cada um dos 2 primeiros endereços de REMOUNT_GLOW_ANIMS antes de trocar (o 3º, a explosão,')
+L.append('// não tem limite próprio medido aqui — REMOUNT_TICKS do core já corta a fase antes dele se esgotar sozinho).')
+L.append('export const REMOUNT_GLOW_STAGE_TICKS: number[] = [%s];' % ', '.join(map(str, stage_ticks(fx['remountGlow']))))
 L.append('export const COSTUME_ANIMS: Record<number, DirAnims[]> = {')
 for c in range(8):
     d = fx['costumes'][str(c)]

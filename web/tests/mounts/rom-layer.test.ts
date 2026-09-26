@@ -5,7 +5,8 @@ import { mkRound, placePx, ride, cx, cy } from './helpers';
 import { riderHook } from '../../src/render/rom/mounts/rider';
 import { mountRomSprites } from '../../src/render/rom/mounts/sprites';
 import { fallbackMountFrame, objPx } from '../../src/render/rom/mounts/gfx';
-import { MOUNT_GFX, MOUNTING_ANIMS } from '../../src/render/rom/mounts/facts';
+import { MOUNT_GFX, MOUNTING_ANIMS, DANCE_NOTE_TICKS } from '../../src/render/rom/mounts/facts';
+import { cellOf } from '../../src/core/units';
 import type { ObjEntry } from '../../src/render/ppu';
 import type { Anim, RomAssets } from '../../src/rom/types';
 
@@ -118,5 +119,46 @@ describe.skipIf(!ASSETS)('camada ROM das montarias × emulador', () => {
     } finally {
       MOUNTING_ANIMS[type] = original;
     }
+  });
+
+  // T14b: notas da dança (mont. F) — objeto OAM independente, medido em fx.danceNote (não peça de DANCE_ANIMS).
+  // Só nos ticks "estáveis" (mesma anim/quadro do tick anterior): na troca, a VRAM ainda mostra o gráfico
+  // anterior por 1 tick (atraso de DMA, T4/T14) — um RomPlayerHook puro não reproduz esse atraso (sem memória
+  // do tick anterior), então comparamos onde a fixture já mostra o gráfico "definitivo" do quadro.
+  it('T14b: notas da dança (mont. F) batem com o objeto medido, nos ticks estáveis', () => {
+    const s = mkRound();
+    const p = placePx(s, 1, 72, 47);   // mesma posição de P2 medida (fx.danceNote é relativo a ela)
+    p.face = 2; p.act = 'dance'; p.actT0 = s.tick; p.moveDir = 8;
+    const raw = (fx.danceNote as unknown as FxSample[]).map((smp, i) => ({ ...smp, i }));
+    let n = 0;
+    for (const smp of stable(raw.slice(0, DANCE_NOTE_TICKS))) {
+      const got = riderHook(s, p, ASSETS!, s.tick + smp.i)!;
+      const notes = got.filter(e => e.pal === 7);
+      expect(facts(notes, 72, 47), `t=${smp.i}`).toEqual(norm(smp.pieces as FxPiece[]));
+      n++;
+    }
+    expect(n).toBeGreaterThan(20);
+    const after = riderHook(s, p, ASSETS!, s.tick + DANCE_NOTE_TICKS)!;
+    expect(after.filter(e => e.pal === 7)).toHaveLength(0);   // depois do fim medido, sem notas
+  });
+
+  // T14b: "ovo brilhando → explosão → montaria" do remonte — o próprio objeto do ovo reserva (não nasce outro),
+  // medido em fx.remountGlow (cenário do brief: tipo 3 com reserva tipo 2, acerto direto na rotina $C2:105E).
+  // Mesma ressalva do atraso de DMA acima: só nos ticks estáveis.
+  it('T14b: ovo brilhando/explosão/montaria do remonte bate com o objeto medido, nos ticks estáveis', () => {
+    const s = mkRound();
+    const p = placePx(s, 0, 63, 47);   // mesma posição de P1 medida (col 4, lin 1: 16·4−1=63, 16·(1+2)−1=47)
+    p.face = 2; p.moveDir = 8;
+    const ownCell = cellOf(4, 1), originCell = cellOf(3, 1);   // origem: 1 casa atrás (col 3), mesma linha
+    ride(s, 0, 2, { phase: 'dismount', remount: true, t0: s.tick, reserves: [], trail: [ownCell, originCell] });
+    const raw = (fx.remountGlow as unknown as (FxSample & { x: number; y: number })[]).map((smp, i) => ({ ...smp, i }));
+    let n = 0;
+    for (const smp of stable(raw)) {
+      const got = riderHook(s, p, ASSETS!, s.tick + smp.i)!;
+      const glow = got.filter(e => e.pal === 7);
+      expect(facts(glow, smp.x, smp.y), `t=${smp.i}`).toEqual(norm(smp.pieces as FxPiece[]));
+      n++;
+    }
+    expect(n).toBeGreaterThan(40);
   });
 });
