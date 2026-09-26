@@ -3,6 +3,8 @@ import { MOUNT_LOOK, mountPix, eggPix, shotPix } from '../../src/render/fallback
 import { fallbackMountSprites } from '../../src/render/fallback/mounts/sprites';
 import { mstate } from '../../src/core/mounts/types';
 import { cellOf } from '../../src/core/mounts/core-api';
+import { DISEASE } from '../../src/core/types';
+import { invisibleVisible } from '../../src/core/disease';
 
 const opaque = (p: { data: Uint8ClampedArray }) => { let n = 0; for (let i = 3; i < p.data.length; i += 4) if (p.data[i]) n++; return n; };
 const hash = (p: { data: Uint8ClampedArray }) => Array.from(p.data).join(',');
@@ -67,6 +69,28 @@ describe('sprites da camada fallback', () => {
     expect(s.mountState).toBeNull();
     fallbackMountSprites(s, 0);
     expect(s.mountState).toBeNull();
+  });
+  // Revisão final I4: a montaria é a 2ª anim do objeto do jogador na ROM e some junto com ele (draw-game.ts: invisível
+  // pela doença $29 ou piscando com inv & 2). Reservas e projéteis são objetos próprios e continuam visíveis.
+  it('I4: montaria e ovo de montar/remontar somem com o jogador (invisível ou piscando); reservas ficam', () => {
+    const s = mkRound();
+    const p = placePx(s, 0, cx(4), cy(1)); p.face = 2;
+    const r = ride(s, 0, 0x3, { reserves: [0x2], trail: [cellOf(4, 1), cellOf(3, 1)] });
+    const keys = () => fallbackMountSprites(s, 0).map(x => x.key.split(':')[0]);
+    expect(keys().sort()).toEqual(['egg', 'mount']);
+    p.inv = 2;                                                  // piscando: jogador escondido neste tick
+    expect(keys()).toEqual(['egg']);                            // só a reserva
+    p.inv = 1;
+    expect(keys().sort()).toEqual(['egg', 'mount']);
+    p.inv = 0; p.disease = DISEASE.INVISIBLE;
+    p.diseaseT = [...Array(256).keys()].find(t => { p.diseaseT = t; return !invisibleVisible(p); })!;
+    expect(keys()).toEqual(['egg']);
+    r.phase = 'mounting';
+    expect(fallbackMountSprites(s, 0)).toHaveLength(0);
+    r.phase = 'dismount'; r.remount = true; r.reserves = [];
+    expect(fallbackMountSprites(s, 0)).toHaveLength(0);
+    p.disease = 0;
+    expect(fallbackMountSprites(s, 0).map(x => x.key.split(':')[0])).toEqual(['egg']);
   });
   it('projéteis: E em voo e nuvem, F e D', () => {
     const s = mkRound();

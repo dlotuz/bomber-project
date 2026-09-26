@@ -1,4 +1,5 @@
-import type { RoundState } from '../../../core/types';
+import type { Player, RoundState } from '../../../core/types';
+import { invisibleVisible } from '../../../core/disease';
 import type { Pix } from '../../art/pix';
 import { rider, type MountState } from '../../../core/mounts/types';
 import { cellAt, colOf, linOf } from '../../../core/mounts/core-api';
@@ -11,6 +12,10 @@ const projectilesOf = (s: RoundState) => (s.mountState as MountState | null)?.pr
 /** `front`: montaria de quem está montado — a camada `over` (`fallbackMountFrontLayer`) redesenha a parte de baixo
  *  dela por cima do cavaleiro (a montaria cobre a metade de baixo do jogador, como na ROM). */
 export interface FbSprite { key: string; make: () => Pix; x: number; y: number; front?: boolean }
+
+/** Mesmo predicado do desenhista de jogadores do fallback (`draw-game.ts`): vivo e invisível pela doença $29 ou
+ *  piscando (inv & 2). Na ROM a montaria/o traje são parte do objeto do jogador e somem junto (revisão final I4). */
+export const playerHidden = (p: Player): boolean => p.state === 'alive' && (!invisibleVisible(p) || (p.inv & 2) !== 0);
 
 const cellXY = (cell: number) => ({ x: 16 * colOf(cell) - 8, y: 16 * linOf(cell) + 24 });
 const faceOf = (d: number): 0 | 2 | 4 | 6 => ((d & 6) as 0 | 2 | 4 | 6);
@@ -26,11 +31,11 @@ export function fallbackMountSprites(s: RoundState, frame: number): FbSprite[] {
   for (const p of s.players) {
     const r = rider(p);
     if (!r) continue;
-    const here = cellAt(p.x, p.y);
-    if (r.phase === 'mounting') { egg(here, r.type, (frame >> 3) & 1); continue; }
-    if (r.phase === 'dismount') { if (r.remount) egg(here, r.type, (frame >> 3) & 1); continue; }
+    const here = cellAt(p.x, p.y), hidden = playerHidden(p);   // reservas e projéteis são objetos próprios: ficam
+    if (r.phase === 'mounting') { if (!hidden) egg(here, r.type, (frame >> 3) & 1); continue; }
+    if (r.phase === 'dismount') { if (r.remount && !hidden) egg(here, r.type, (frame >> 3) & 1); continue; }
     const st = p.moveDir !== 8 ? (frame >> 3) & 1 : 0, f = faceOf(p.face);
-    out.push({ key: `mount:${r.type}:${f}:${st}`, make: () => mountPix(r.type, f, st), x: Math.floor(p.x / 256) - 12, y: Math.floor(p.y / 256) - 12, front: true });
+    if (!hidden) out.push({ key: `mount:${r.type}:${f}:${st}`, make: () => mountPix(r.type, f, st), x: Math.floor(p.x / 256) - 12, y: Math.floor(p.y / 256) - 12, front: true });
     r.reserves.forEach((t, i) => egg(r.trail[i + 1] ?? here, t, 0));
   }
   for (const pr of projectilesOf(s)) {

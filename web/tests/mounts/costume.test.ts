@@ -5,6 +5,8 @@ import { mkRound, placePx, ride, cx, cy } from './helpers';
 import { costumeHook } from '../../src/render/rom/mounts/costume';
 import { costumePix } from '../../src/render/fallback/mounts/costume-art';
 import { fallbackCostumeSprites } from '../../src/render/fallback/mounts/costume';
+import { DISEASE } from '../../src/core/types';
+import { invisibleVisible } from '../../src/core/disease';
 
 const sha1 = (b: Uint8Array) => createHash('sha1').update(b).digest('hex');
 const hash = (p: { data: Uint8ClampedArray }) => Array.from(p.data).join(',');
@@ -22,6 +24,18 @@ describe('traje (fallback)', () => {
     p.costume = 5;
     expect(fallbackCostumeSprites(s)).toEqual([expect.objectContaining({ key: 'costume:5', x: cx(7) - 8, y: cy(5) - 26 })]);
     p.state = 'dying';
+    expect(fallbackCostumeSprites(s)).toHaveLength(0);
+  });
+  it('I4: o chapéu some junto com o jogador (piscando ou invisível pela doença $29)', () => {
+    const s = mkRound({ stage: 10 });
+    const p = placePx(s, 0, cx(7), cy(5));
+    p.costume = 5;
+    p.inv = 2;
+    expect(fallbackCostumeSprites(s)).toHaveLength(0);
+    p.inv = 1;
+    expect(fallbackCostumeSprites(s)).toHaveLength(1);
+    p.inv = 0; p.disease = DISEASE.INVISIBLE;
+    p.diseaseT = [...Array(256).keys()].find(t => { p.diseaseT = t; return !invisibleVisible(p); })!;
     expect(fallbackCostumeSprites(s)).toHaveLength(0);
   });
 });
