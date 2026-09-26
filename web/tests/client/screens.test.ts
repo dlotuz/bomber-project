@@ -1,7 +1,7 @@
 import { App } from '../../src/app/app';
 import { defaultSettings, type Settings } from '../../src/app/settings';
 import { idleInput, buildInput, InputManager, emptyDevices, type DeviceState } from '../../src/input/input';
-import { BTN, INTRO_FRAMES } from '../../src/core';
+import { BTN, INTRO_FRAMES } from '../../src/legacy-core';
 import type { Session } from '../../src/game/session';
 import { ROUND_OVER_FRAMES, SCOREBOARD_FRAMES, SKIP_AFTER } from '../../src/game/session';
 import { titleScreen } from '../../src/screens/title';

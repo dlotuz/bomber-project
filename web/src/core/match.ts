@@ -1,26 +1,19 @@
-import type { Rules, RoundState } from './types';
-import { createRound } from './round';
-
-export interface MatchState { rules: Rules; stage: number; seed: number; roundNo: number; crowns: number[]; over: boolean }
-
-export function createMatch(rules: Rules, stage: number, seed: number): MatchState {
-  const r: Rules = { ...rules, teams: [...rules.teams], active: [...rules.active] };
-  return { rules: r, stage, seed: seed >>> 0, roundNo: 0, crowns: [0, 0, 0, 0, 0], over: false };
+// match.ts (T14)
+import type { RoundState, Rules } from './types';
+import { makeRng, type Rng16 } from './rng';
+import { createRound } from './setup';
+export interface MatchState {
+  rules: Rules; stage: number; rng: Rng16; roundNo: number; crowns: number[]; over: boolean;
+  racerPrize: { slot: number; prize: number } | null; spawnSeed: number; chars: number[];
 }
-
-export function startRound(m: MatchState): RoundState {
-  m.roundNo++;
-  return createRound(m.stage, m.rules, (m.seed + Math.imul(m.roundNo, 0x9e3779b1)) >>> 0);
+export function createMatch(rules: Rules, stage: number, seed: number | Rng16 = 0x12, chars: readonly number[] = [0, 1, 2, 3, 4]): MatchState {
+  const rng = typeof seed === 'number' ? makeRng(seed) : { seed: seed.seed };
+  return { rules: { ...rules, teams: [...rules.teams], active: [...rules.active] }, stage, rng, roundNo: 0,
+    crowns: [0, 0, 0, 0, 0], over: false, racerPrize: null, spawnSeed: rng.seed, chars: [...chars] };
 }
-
-export function finishRound(m: MatchState, r: RoundState): { winners: number[]; matchOver: boolean; champions: number[] } {
-  if (r.phase !== 'result' || r.counted) {
-    const champions = [0, 1, 2, 3, 4].filter(i => m.crowns[i] >= m.rules.matches);
-    return { winners: [], matchOver: m.over, champions };
-  }
-  r.counted = true;
-  for (const w of r.winners) m.crowns[w]++;
-  const champions = [0, 1, 2, 3, 4].filter(i => m.crowns[i] >= m.rules.matches);
-  m.over = champions.length > 0;
-  return { winners: [...r.winners], matchOver: m.over, champions };
+export function startRound(m: MatchState): RoundState { m.roundNo++; return createRound(m.stage, m.rules, { seed: m.rng.seed }); }
+export function finishRound(_m: MatchState, _s: RoundState): { winners: number[]; matchOver: boolean; champions: number[] } {
+  return { winners: [], matchOver: false, champions: [] };
 }
+export function setRacerPrize(m: MatchState, slot: number, prize: number): void { m.racerPrize = { slot, prize }; }
+export function clearRacerPrize(m: MatchState): void { m.racerPrize = null; }

@@ -1,7 +1,7 @@
 import { newRound, run, input, place, addBomb } from './helpers';
-import { BTN, CELL, ITEM } from '../../src/core/types';
-import { idx } from '../../src/core/grid';
-import { FLAME_FRAMES } from '../../src/core/constants';
+import { BTN, CELL, ITEM } from '../../src/legacy-core/types';
+import { idx } from '../../src/legacy-core/grid';
+import { FLAME_FRAMES } from '../../src/legacy-core/constants';
 
 const flame = (s: any, x: number, y: number) => s.arena.flame[idx(x, y)];
 

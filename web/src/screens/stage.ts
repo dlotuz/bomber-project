@@ -1,4 +1,4 @@
-import { BTN, LAYOUTS, STAGE_NAMES } from '../core';
+import { BTN, LAYOUTS, STAGE_NAMES } from '../legacy-core';
 import type { App, Screen } from '../app/app';
 import { THEMES } from '../render/art/tiles';
 import { SCREEN_W, drawTextCentered } from '../render/draw-game';

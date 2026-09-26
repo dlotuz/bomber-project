@@ -1,5 +1,5 @@
 import { createView, updateView, walkFrame, flameShrink, flameCells, formatClock, dyingVisible, roundOverText } from '../../src/render/view';
-import { createRound, defaultRules, FLAME_FRAMES, type GameEvent } from '../../src/core';
+import { createRound, defaultRules, FLAME_FRAMES, type GameEvent } from '../../src/legacy-core';
 
 const round = () => createRound(1, { ...defaultRules(), randomSpawns: false }, 1);
 

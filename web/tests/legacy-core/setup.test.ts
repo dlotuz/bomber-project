@@ -1,10 +1,10 @@
-import { createRound } from '../../src/core/round';
-import { defaultRules, CELL } from '../../src/core/types';
-import { idx, centerX, centerY, cellX, cellY } from '../../src/core/grid';
-import { LAYOUTS } from '../../src/core/layouts';
-import { SPAWNS } from '../../src/core/constants';
-import { rollItem, ITEM_WEIGHTS } from '../../src/core/items';
-import { makeRng } from '../../src/core/rng';
+import { createRound } from '../../src/legacy-core/round';
+import { defaultRules, CELL } from '../../src/legacy-core/types';
+import { idx, centerX, centerY, cellX, cellY } from '../../src/legacy-core/grid';
+import { LAYOUTS } from '../../src/legacy-core/layouts';
+import { SPAWNS } from '../../src/legacy-core/constants';
+import { rollItem, ITEM_WEIGHTS } from '../../src/legacy-core/items';
+import { makeRng } from '../../src/legacy-core/rng';
 
 const rules = (o = {}) => ({ ...defaultRules(), randomSpawns: false, ...o });
 const count = (s: ReturnType<typeof createRound>, c: number) => s.arena.cells.filter(v => v === c).length;

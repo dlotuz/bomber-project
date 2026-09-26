@@ -1,6 +1,6 @@
 import { newRound, run, input, place, addBomb } from './helpers';
-import { BTN, DIR, CELL, ITEM } from '../../src/core/types';
-import { cellX, idx } from '../../src/core/grid';
+import { BTN, DIR, CELL, ITEM } from '../../src/legacy-core/types';
+import { cellX, idx } from '../../src/legacy-core/grid';
 
 describe('habilidades', () => {
   it('chute: bomba desliza até o obstáculo (P3 em 13,1)', () => {

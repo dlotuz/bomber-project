@@ -1,8 +1,8 @@
 import { newRound, run, place, input, addBomb } from './helpers';
-import { BTN, CELL, ITEM } from '../../src/core/types';
-import { idx, cellX, cellY, centerX } from '../../src/core/grid';
-import { ringCells } from '../../src/core/round';
-import { PRESSURE_START_FRAMES, T, DEATH_FRAMES } from '../../src/core/constants';
+import { BTN, CELL, ITEM } from '../../src/legacy-core/types';
+import { idx, cellX, cellY, centerX } from '../../src/legacy-core/grid';
+import { ringCells } from '../../src/legacy-core/round';
+import { PRESSURE_START_FRAMES, T, DEATH_FRAMES } from '../../src/legacy-core/constants';
 
 const two = { active: [true, true, false, false, false] };
 

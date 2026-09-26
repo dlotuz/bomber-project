@@ -1,4 +1,4 @@
-import { FLAME_FRAMES, type GameEvent, type RoundState } from '../core';
+import { FLAME_FRAMES, type GameEvent, type RoundState } from '../legacy-core';
 import type { FlamePart } from './art/flames';
 import { displayName } from '../game/config';
 

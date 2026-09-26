@@ -1,4 +1,4 @@
-import { BTN } from '../core';
+import { BTN } from '../legacy-core';
 import type { App, Screen } from '../app/app';
 import { CHARACTERS } from '../render/art/bomber';
 import { displayName } from '../game/config';

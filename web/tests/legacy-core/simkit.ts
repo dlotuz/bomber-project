@@ -1,7 +1,7 @@
-import { createRound, step } from '../../src/core/round';
-import { createAi, aiInputs, dangerMap, type AiState } from '../../src/core/ai';
-import { cellX, cellY, idx } from '../../src/core/grid';
-import { CELL, DX, DY, defaultRules, type Rules, type RoundState } from '../../src/core/types';
+import { createRound, step } from '../../src/legacy-core/round';
+import { createAi, aiInputs, dangerMap, type AiState } from '../../src/legacy-core/ai';
+import { cellX, cellY, idx } from '../../src/legacy-core/grid';
+import { CELL, DX, DY, defaultRules, type Rules, type RoundState } from '../../src/legacy-core/types';
 
 /** Causa de uma morte numa rodada simulada: dono da bomba que começou a cadeia de explosões que matou.
  *  `mate` = bomba de um colega de time. `trapped` = a própria bomba matou, mas o jogador estava cercado: alguma

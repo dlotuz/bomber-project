@@ -1,4 +1,4 @@
-import { defaultRules } from '../core';
+import { defaultRules } from '../legacy-core';
 import { DEFAULT_KEYMAPS, DEVICE_IDS, KEY_FIELDS, type DeviceId, type KeyMap } from '../input/input';
 import { CHARACTERS } from '../render/art/bomber';
 

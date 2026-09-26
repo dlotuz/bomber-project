@@ -1,7 +1,7 @@
 import { drawRound, PLAYER_COLORS } from '../../src/render/draw-game';
 import { createView, updateView } from '../../src/render/view';
-import { newRound } from '../core/helpers';
-import { CELL, idx, GRID_W } from '../../src/core';
+import { newRound } from '../legacy-core/helpers';
+import { CELL, idx, GRID_W } from '../../src/legacy-core';
 import type { SpriteBank } from '../../src/render/sprite-bank';
 
 interface TagImg { width: number; height: number; tag: string }
