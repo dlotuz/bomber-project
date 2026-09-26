@@ -37,4 +37,10 @@ describe.skipIf(!ROM)('RomAssets (createRomAssets)', () => {
     expect(A!.bombScript(0).slice(0, 4)).toEqual([{ word: 0x0b00, dur: 20 }, { word: 0x0b02, dur: 12 }, { word: 0x0b04, dur: 16 }, { word: 0x0b06, dur: 16 }]);
     expect(A!.bombScript(1).map(f => f.dur)).toEqual([16, 16, 16, 16]);
   });
+  it('bombScript: cache (item 4) e RangeError fora de 0..6', () => {
+    expect(A!.bombScript(0)).toBe(A!.bombScript(0));
+    expect(A!.bombScript(6)).toBeTruthy();
+    expect(() => A!.bombScript(-1)).toThrow(RangeError);
+    expect(() => A!.bombScript(7)).toThrow(RangeError);
+  });
 });

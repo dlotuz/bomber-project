@@ -37,12 +37,18 @@ export function hudHeadTiles(rom: RomView, buf: Uint8Array, e: number): Tiles {
 export function loadCharacter(rom: RomView, c: number, heads: () => Uint8Array): CharacterAssets {
   if (!(c >= 0 && c <= 5)) throw new RangeError(`personagem inválido: ${c}`);
   const sheet = rom.p24(CHAR_SHEETS + 3 * c), vsheet = rom.p24(VICTORY_SHEETS + 3 * c);
-  const frames = new Map<number, Uint8Array>();
+  const frames = new Map<number, Uint8Array>(), victoryFrames = new Map<number, Uint8Array>(), hudHeads = new Map<number, Tiles>();
   return {
     char: c,
     frame: g => { let f = frames.get(g); if (!f) { f = sheetFrame(rom, sheet, g); frames.set(g, f); } return f; },
     palettes: Array.from({ length: 5 }, (_, s) => readBgr555(rom.bytes(rom.p24(CHAR_PALETTES + 32 * c + 4 * s), 32), 0, 16)),
-    victoryFrame: g => sheetFrame(rom, vsheet, g),
-    hudHead: slot => hudHeadTiles(rom, heads(), (6 + c) * 5 + slot),
+    victoryFrame: g => {
+      if (!(g >= 0 && g <= 3)) throw new RangeError(`quadro de vitória inválido: ${g}`);
+      let f = victoryFrames.get(g); if (!f) { f = sheetFrame(rom, vsheet, g); victoryFrames.set(g, f); } return f;
+    },
+    hudHead: slot => {
+      if (!(slot >= 0 && slot <= 4)) throw new RangeError(`slot de rosto do HUD inválido: ${slot}`);
+      let t = hudHeads.get(slot); if (!t) { t = hudHeadTiles(rom, heads(), (6 + c) * 5 + slot); hudHeads.set(slot, t); } return t;
+    },
   };
 }

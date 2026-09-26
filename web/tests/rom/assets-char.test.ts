@@ -35,4 +35,13 @@ describe.skipIf(!ROM)('personagens (gfx-anims.json)', () => {
   it('personagem fora de 0..5 é erro', () => {
     expect(() => loadCharacter(view, 6, () => new Uint8Array(0))).toThrow(RangeError);
   });
+  it('victoryFrame e hudHead: cache (item 4) e RangeError fora do intervalo válido', () => {
+    const ch = loadCharacter(view, 0, () => hudHeadBuffer(view));
+    expect(ch.victoryFrame(0)).toBe(ch.victoryFrame(0));
+    expect(() => ch.victoryFrame(-1)).toThrow(RangeError);
+    expect(() => ch.victoryFrame(4)).toThrow(RangeError);
+    expect(ch.hudHead(0)).toBe(ch.hudHead(0));
+    expect(() => ch.hudHead(-1)).toThrow(RangeError);
+    expect(() => ch.hudHead(5)).toThrow(RangeError);
+  });
 });
