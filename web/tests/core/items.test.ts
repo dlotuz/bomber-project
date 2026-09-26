@@ -1,5 +1,6 @@
 import { arena, put, setCell, codeAt, C } from './kit';
-import { applyItem, pickup, dropCategory, placeDropped, loseItems, leakOne } from '../../src/core/items';
+import { applyItem, pickup, dropCategory, placeDropped, loseItems, leakOne, STUN_LOSS } from '../../src/core/items';
+import { addBomb, refundBomb } from '../../src/core/bombs';
 import { CODE, ITEM, type GameEvent } from '../../src/core/types';
 import { itemCode } from '../../src/core/state';
 import { makeRng, rnd } from '../../src/core/rng';
@@ -105,6 +106,17 @@ describe('perdas por atordoamento ($C2:51C4)', () => {
     loseItems(s, p, 2, []);
     expect(p.fire).toBe(1);
     expect(s.flyers.map(f => f.ref)).toEqual([ITEM.FIRE, ITEM.FIRE]);
+  });
+  it('perda de capacidade com todas as bombas no campo: sem "dívida" ($C2:5318 e devolução $C1:5588)', () => {
+    const s = arena(); const p = put(s, 0, 8, 5);
+    p.bombsCap = 3; p.bombsFree = 0;
+    const bombs = [C(4, 1), C(6, 1), C(8, 1)].map(c => addBomb(s, 0, c));
+    expect(STUN_LOSS[3](s, p, [])).toBe(ITEM.BOMB);
+    expect([p.bombsCap, p.bombsFree]).toEqual([2, 0]);
+    for (const b of bombs) refundBomb(s, b);
+    expect([p.bombsCap, p.bombsFree]).toEqual([2, 2]);        // volta à capacidade nova, nunca acima
+    expect(STUN_LOSS[3](s, p, [])).toBe(ITEM.BOMB);
+    expect([p.bombsCap, p.bombsFree]).toEqual([1, 1]);
   });
   it('nada a perder: termina sem voadores', () => {
     const s = arena(); const p = put(s, 0, 8, 5);

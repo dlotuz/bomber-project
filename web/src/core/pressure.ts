@@ -38,7 +38,11 @@ export function tickPressure(s: RoundState, ev: GameEvent[]): void {
   const pr = s.pressure;
   if (pr.trigger < 0) return;
   const e = s.tick - pr.trigger;
-  if (e === PRESSURE_BORDER_AT) for (let col = 2; col <= 14; col++) { s.grid[cellOf(col, 0)] = CODE.PRESSURE; s.grid[cellOf(col, 12)] = CODE.PRESSURE; }
+  if (e === PRESSURE_BORDER_AT) {
+    for (let col = 2; col <= 14; col++) for (const c of [cellOf(col, 0), cellOf(col, 12)]) {
+      s.grid[c] = CODE.PRESSURE; s.cellT0[c] = s.tick; s.cellAux[c] = 0;
+    }
+  }
   if (e >= PRESSURE_FIRST && (e - PRESSURE_FIRST) % PRESSURE_EVERY === 0 && pr.next < pr.total) {
     const c = pressureSpiral()[pr.next++];
     const v = s.grid[c];

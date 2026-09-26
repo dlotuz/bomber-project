@@ -39,7 +39,8 @@ export function addBomb(s: RoundState, owner: number, cell: number, init: Partia
   s.bombs.push(b);
   return b;
 }
-/** Devolve a bomba ao dono (ou inicia a cadência do Bad Bomber: +48 ticks). */
+/** Devolve a bomba ao dono (ou inicia a cadência do Bad Bomber: +48 ticks). Como $C1:5588: só soma enquanto
+ *  disponíveis < capacidade (a perda de capacidade com bombas no campo não deixa "dívida"). */
 export function refundBomb(s: RoundState, b: Bomb): void {
   if (b.bad) {
     const bb = s.bad.find(q => q.slot === b.owner);

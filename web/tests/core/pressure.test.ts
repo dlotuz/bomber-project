@@ -3,6 +3,8 @@ import { pressureSpiral, tickPressure } from '../../src/core/pressure';
 import { addBomb } from '../../src/core/bombs';
 import { CODE, type GameEvent } from '../../src/core/types';
 import { itemCode } from '../../src/core/state';
+import { step } from '../../src/core/step';
+import { put } from './kit';
 
 /** Só o controlador da pressão, tick a tick (isolado dos jogadores). */
 function pump(s: ReturnType<typeof arena>, n: number, ev: GameEvent[] = []): GameEvent[] {
@@ -67,5 +69,24 @@ describe('controlador da pressão (t72)', () => {
     expect([s.bombs.includes(b), p.bombsFree]).toEqual([false, 1]);
     expect([codeAt(s, 2, 1), codeAt(s, 3, 1), codeAt(s, 4, 1)]).toEqual([CODE.PRESSURE, CODE.PRESSURE, CODE.PRESSURE]);
     expect(s.hidden).toEqual([]);
+  });
+});
+
+describe('pressão: detalhes', () => {
+  it('bordas gravam o tick (cellT0) e zeram a peça (cellAux) das casas', () => {
+    const s = triggered();
+    s.cellAux[C(5, 0)] = 7; s.cellT0[C(5, 12)] = 3;
+    pump(s, 192);
+    expect([s.cellT0[C(5, 0)], s.cellAux[C(5, 0)], s.cellT0[C(5, 12)], s.cellAux[C(5, 12)]]).toEqual([292, 0, 292, 0]);
+  });
+  it('continua caindo em `won` (decisão 21); quem está de pé é imune', () => {
+    const s = triggered();
+    s.phase = 'won'; s.phaseT0 = 100; s.endAt = 100; s.celebT0 = 100_000;   // comemoração fora do alcance do teste
+    const p = put(s, 0, 2, 1);
+    let steps = 0;
+    for (let i = 0; i < 260; i++) { const ev = step(s, [0, 0, 0, 0, 0]); steps += ev.filter(e => e.type === 'pressure_step').length; }
+    expect(steps).toBeGreaterThan(0);
+    expect(codeAt(s, 2, 1)).toBe(CODE.PRESSURE);
+    expect([p.state, s.phase]).toEqual(['alive', 'won']);
   });
 });

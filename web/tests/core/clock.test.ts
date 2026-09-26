@@ -1,4 +1,5 @@
-import { initClock, clockText, pressureTriggerSec } from '../../src/core/clock';
+import { initClock, clockText, pressureTriggerSec, tickClock } from '../../src/core/clock';
+import type { GameEvent } from '../../src/core/types';
 import { emptyRound } from '../../src/core/state';
 import { step } from '../../src/core/step';
 import { rules, runUntil } from './kit';
@@ -18,6 +19,15 @@ describe('relógio (§3.11)', () => {
     for (let i = 10; i < 62; i++) step(s, [0, 0, 0, 0, 0]);
     expect([s.phase, s.clock.sec, s.clock.sub]).toEqual(['play', 180, 51]);
     expect(runUntil(s, st => st.clock.sec === 179)).toBe(113);
+  });
+  it('0:00 não fica negativo (o tempo acabou com menos de 2 grupos de pé e a rodada ainda está em play)', () => {
+    const s = emptyRound(1, rules());
+    s.phase = 'play'; s.clock = { sec: 1, sub: 1 };
+    s.players.forEach((p, i) => { if (i > 0) p.state = 'out'; });
+    const ev: GameEvent[] = [];
+    for (let i = 0; i < 300; i++) { s.tick++; tickClock(s, ev); }
+    expect([s.clock, s.phase, clockText(s.clock)]).toEqual([{ sec: 0, sub: 60 }, 'play', '0:00']);
+    expect(ev.some(e => e.type === 'time_up')).toBe(false);
   });
   it('∞ não decrementa', () => {
     const s = emptyRound(1, rules({ timeIdx: 4 }));

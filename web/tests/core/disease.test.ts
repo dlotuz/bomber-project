@@ -50,9 +50,9 @@ describe('caveira', () => {
     expect(new Set(got).size).toBeGreaterThanOrEqual(9);
   });
   it('cura ao pegar item: a doença sai voando como caveira nova', () => {
-    const s = arena(); const p = put(s, 0, 8, 5); p.disease = 0x22;
+    const s = arena(); const p = put(s, 0, 8, 5); p.disease = 0x22; p.diseaseT = 77;
     cureAndThrow(s, p, []);
-    expect(p.disease).toBe(0);
+    expect([p.disease, p.diseaseT]).toEqual([0, 0]);
     expect(s.flyers.length).toBe(1);
     expect(s.flyers[0].kind).toBe('item');
     expect(s.flyers[0].ref).toBeGreaterThanOrEqual(0x21);
@@ -82,6 +82,15 @@ describe('contágio (t65)', () => {
     b.x = centerX(8); contagion(s, ev);              // separou: trava sai
     b.x = a.x; contagion(s, ev);
     expect([a.disease, b.disease]).toEqual([0x21, 0]);
+  });
+  it('3 jogadores em contato: passa em ordem de slot no mesmo tick (0→1, depois 1→2)', () => {
+    const s = arena({ players: 3 }); const a = put(s, 0, 4, 1); const b = put(s, 1, 4, 1, 4, 0); const c = put(s, 2, 4, 1, 8, 0);
+    a.disease = 0x22; a.diseaseT = 40;
+    const ev: GameEvent[] = [];
+    contagion(s, ev);
+    expect([a.disease, b.disease, c.disease]).toEqual([0, 0, 0x22]);
+    expect([a.diseaseT, b.diseaseT, c.diseaseT]).toEqual([0, 0, 0]);
+    expect(ev).toEqual([{ type: 'disease_passed', from: 0, to: 1 }, { type: 'disease_passed', from: 1, to: 2 }]);
   });
   it('9 px não é contato; fora de `play` não passa', () => {
     const s = arena(); const a = put(s, 0, 4, 1); const b = put(s, 1, 4, 1, 9, 0);

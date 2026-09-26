@@ -55,6 +55,20 @@ describe('acerto', () => {
 });
 
 describe('linha do tempo da morte (t29)', () => {
+  it('doença e contador da doença zeram na morte', () => {
+    const s = arena(); const p = put(s, 0, 4, 1); p.disease = 0x29; p.diseaseT = 50;
+    hitPlayer(s, p, 'flame', []);
+    expect([p.disease, p.diseaseT]).toEqual([0, 0]);
+  });
+  it('Bad Bomber só nasce em `play`: em `won` o jogador fica fora de jogo', () => {
+    for (const phase of ['play', 'won'] as const) {
+      const s = arena({ rules: { badBomber: true } }); const p = put(s, 0, 4, 1);
+      hitPlayer(s, p, 'flame', []);
+      s.phase = phase;
+      for (let k = 1; k <= 65; k++) { s.tick++; tickDeath(s, p, []); }
+      expect([p.state, s.bad.length], phase).toEqual(phase === 'play' ? ['bad', 1] : ['out', 0]);
+    }
+  });
   it('1–21 animação, 22–64 pós-morte, 65 fora de jogo', () => {
     const s = arena(); const p = put(s, 0, 4, 1);
     hitPlayer(s, p, 'flame', []);                   // tick 100
@@ -82,6 +96,15 @@ describe('atordoamento (t44)', () => {
     expect([p.act, p.actLeft]).toEqual(['stunned', 63]);
     expect(s.rng.seed).toBe(r.seed);
     expect(ev).toEqual([{ type: 'stunned', slot: 0 }]);
+  });
+  it('já atordoado, ignora novo atordoamento ($C2:0E86 não checa o pedido e o apaga no fim)', () => {
+    const s = arena(); const p = put(s, 0, 4, 1); p.fire = 5;
+    stunPlayer(s, p, []);
+    p.actLeft = 30;
+    const seed = s.rng.seed, fire = p.fire, flyers = s.flyers.length;
+    const ev: GameEvent[] = [];
+    stunPlayer(s, p, ev);
+    expect([p.act, p.actLeft, s.rng.seed, p.fire, s.flyers.length, ev]).toEqual(['stunned', 30, seed, fire, flyers, []]);
   });
   it('em `won` não atordoa', () => {
     const s = arena(); const p = put(s, 0, 4, 1); s.phase = 'won';
