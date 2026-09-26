@@ -1,6 +1,9 @@
 import type { RoundState } from '../types';
 
-/** Dicas de IA por arena (plano 8). Tudo opcional; ausente = regra padrão. */
+/** Dicas de IA por arena (plano 8). Tudo opcional; ausente = regra padrão.
+ *  As dicas (de arena e de montaria) são só leitura: não podem escrever na rodada `s` nem em nada que ela alcança
+ *  (grade, jogadores, `stageState`, `mountState`, `rng`...). A IA precisa ser pura — o teste de pureza compara o hash
+ *  da rodada antes e depois de `aiInputs` — e as rodadas-cópia do "e se?" (`ai/whatif.ts`) também chamam as dicas. */
 export interface AiStageHints {
   /** Casas a evitar agora (ex.: arena 6, piso-caveira). */
   avoid?(s: RoundState, slot: number): readonly number[];

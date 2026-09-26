@@ -2,8 +2,7 @@ import { App } from './app/app';
 import { browserStorage, defaultSettings, loadSettings, saveSettings } from './app/settings';
 import { startLoop } from './app/loop';
 import { parseConfig } from './game/config';
-import { createMatchSession } from './game/match-session';
-import type { Session } from './game/session';
+import { createMatchSession, type MatchSession } from './game/match-session';
 import { InputManager, buildInput, emptyDevices, withEscapeAsBack } from './input/input';
 import { createDisplay } from './render/display';
 import { SpriteBank } from './render/sprite-bank';
@@ -36,7 +35,7 @@ app.go(params.has('quick') ? battleScreen(app, createMatchSession(parseConfig(se
 if (import.meta.env.DEV && params.has('debug')) {
   (window as unknown as { __crown: unknown }).__crown = {
     app,
-    get session(): Session | null { return (app.screen as Partial<{ session: Session }>).session ?? null; },
+    get session(): MatchSession | null { return (app.screen as Partial<{ ms: MatchSession }>).ms ?? null; },
   };
 }
 

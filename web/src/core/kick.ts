@@ -4,7 +4,7 @@ import { KICK_STEP } from './tables/flights';
 import { KICK_STEPS } from './constants';
 import { SUB, cellAt, cellCenter, faceStep, subX, subY } from './units';
 import { isEggCode, isItemCode, playerCell, standing } from './state';
-import { bombAt } from './bombs';
+import { bombAt, bombOccupies } from './bombs';
 import { STAGES } from './stages';
 import { MOUNTS } from './mounts';
 
@@ -23,10 +23,20 @@ export function tryKick(s: RoundState, p: Player, ev: GameEvent[]): boolean {
   return true;
 }
 
-function park(s: RoundState, b: Bomb, cell: number): void {
-  b.state = 'idle'; b.step = 0; b.cell = cell; b.turn = -1;
-  [b.x, b.y] = cellCenter(cell);
-  s.grid[cell] = CODE.BOMB;
+const parkable = (s: RoundState, b: Bomb, c: number): boolean =>
+  c >= 0 && (s.grid[c] === CODE.FLOOR || s.grid[c] === CODE.FLAME) && !bombOccupies(s, c, b);
+
+/** Estaciona a bomba chutada em `cell`; se a casa está ocupada por outra bomba ou não é piso/chama (ex.: a pressão
+ *  $EE80 caiu nela), na casa anterior do deslize. Se nenhuma serve, devolve false e a bomba continua chutada. */
+function park(s: RoundState, b: Bomb, cell: number): boolean {
+  const back = faceStep(cell, (b.dir + 4) & 7);
+  const c = parkable(s, b, cell) ? cell : parkable(s, b, back) ? back : -1;
+  if (c < 0) return false;
+  if (s.grid[c] === CODE.FLAME && !b.chainAt) b.chainAt = s.tick + 1;
+  b.state = 'idle'; b.step = 0; b.cell = c; b.turn = -1;
+  [b.x, b.y] = cellCenter(c);
+  s.grid[c] = CODE.BOMB;
+  return true;
 }
 
 /** Um tick do deslize ($C1:34D0/$C1:35E1). */
@@ -35,10 +45,10 @@ export function slideStep(s: RoundState, b: Bomb, _ev: GameEvent[]): void {
     const next = faceStep(b.cell, b.dir);
     const v = s.grid[next] ?? CODE.HARD;
     const blocked = (v & 0x8400) !== 0 || isEggCode(v)
-      || s.bombs.some(o => o !== b && o.cell === next && (o.state === 'idle' || o.state === 'kicked'))
+      || bombOccupies(s, next, b)
       || s.players.some(q => standing(q) && playerCell(q) === next);
     const verdict = blocked ? 'stop' : STAGES[s.stage]?.kickedBombEnter?.(s, b, next) ?? 'go';
-    if (verdict === 'stop') { park(s, b, b.cell); return; }
+    if (verdict === 'stop') { park(s, b, b.cell); return; }      // sem casa para parar: tenta de novo no próximo tick
     if (typeof verdict === 'object') b.turn = verdict.turn;
     if (isItemCode(v)) s.grid[next] = CODE.FLOOR;         // item esmagado
     if (v === CODE.FLAME) b.chainAt = s.tick + 1;
