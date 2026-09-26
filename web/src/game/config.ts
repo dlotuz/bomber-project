@@ -10,8 +10,6 @@ export interface SetupLike {
 }
 export interface GameConfig {
   rules: Rules; stage: number; chars: number[]; humans: boolean[]; devices: DeviceId[]; seed: number | null;
-  /** Sem uso (R15); sai na T22. */
-  names: string[];
 }
 const DEFAULT_DEVICES: DeviceId[] = ['kb0', 'kb1', 'gp0', 'gp1', 'gp2'];
 
@@ -26,7 +24,7 @@ export function configFromSetup(setup: SetupLike, randomSpawns: boolean, devices
     active: setup.slots.map(k => k !== 'off'),
   };
   return { rules, stage: setup.stage, chars: [...setup.chars], humans: setup.slots.map(k => k === 'human'),
-    devices: [...devices], seed, names: ['', '', '', '', ''] };
+    devices: [...devices], seed };
 }
 
 const int = (v: string | null, def: number, min: number, max: number): number => {
@@ -49,13 +47,4 @@ export function parseConfig(search: string): GameConfig {
     stage: int(q.get('stage'), 1, 1, 10),
   };
   return configFromSetup(setup, q.get('spawns') === '1', DEFAULT_DEVICES, q.has('seed') ? int(q.get('seed'), 0, 0, 0xffff) : null);
-}
-
-/** Compatibilidade com as telas antigas até a onda 3; sai na T22. */
-export function displayName(names: readonly string[], slot: number): string { return names[slot]?.trim() || `P${slot + 1}`; }
-export function validateSetup(mode: 'ffa' | 'team', slots: readonly SlotKind[], teams: readonly number[]): string | null {
-  const on = [0, 1, 2, 3, 4].filter(i => slots[i] !== 'off');
-  if (on.length < 2) return 'PRECISA DE 2 JOGADORES';
-  if (mode === 'team' && new Set(on.map(i => teams[i])).size < 2) return 'CADA TIME PRECISA DE 1 JOGADOR';
-  return null;
 }

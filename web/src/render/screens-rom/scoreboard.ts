@@ -181,20 +181,25 @@ export function scoreboardSceneMaps(a: RomAssets): SceneMaps {
 }
 
 const ppuCanvas = new PpuCanvas();
+/** Scroll do BG1 na captura `scoreboard` (byte alto de BG1HOFS/BG1VOFS = 1; o título "SCORE BOARD" nas casas
+ *  (19..29, 17..19) cai em x ≈ 48, y ≈ 16 da tela com ele). */
+export const SCOREBOARD_BG1_SCROLL: [number, number] = [256, 256];
 
 /** Desenha a cena inteira: fundo real (BG1/BG2/BG3 da cena `scoreboard`, T5 `sceneGfx`/`sceneFrame`/`PpuCanvas`)
  *  mais texto, cabeças e coroa genuínos da ROM, deslocada `yOffset` px (a descida da vitória usa; T20). */
 export function drawScoreboardRom(ctx: CanvasRenderingContext2D, a: RomAssets, bank: SpriteBank, ms: MatchSession, s: number, yOffset: number): void {
   const Y = (py: number): number => py + yOffset;
   const g = sceneGfx(a, 'scoreboard');
-  const frame = sceneFrame(g, scoreboardSceneMaps(a));
+  // T22: na captura (`scoreboard.ppu`, $210D/$210E) o BG1 está rolado para o quadrante (256, 256) do mapa — o
+  // canto (0, 0) guarda o "VICTORY!" da cena seguinte, que sem esse scroll aparecia em azul por cima do placar.
+  const frame = sceneFrame(g, scoreboardSceneMaps(a), { bg1: SCOREBOARD_BG1_SCROLL });
   ppuCanvas.draw(ctx, frame, yOffset);
   drawText(ctx, bank, 'bigScore', S.score.title, SB_GEO.title.cx, Y(SB_GEO.title.y), { align: 'center' });
   const rules = ms.match.rules;
   for (let slot = 0; slot < 5; slot++) {
     if (!rules.active[slot]) continue;
     const rowY = SCORE.rowY0 + SCORE.rowStep * slot;
-    drawText(ctx, bank, 'ascii8', S.score.tags[slot], SB_GEO.labelX, Y(rowY + 8));
+    // "1P".."5P" já vêm do BG2 da ROM (o itálico grande, sem idioma); o `S.score.tags` fica só no fallback.
     ctx.drawImage(headCanvas(a, ms.cfg.chars[slot], slot), SCORE.headX, Y(rowY));
     for (let k = 0; k < 5; k++) {
       // A casa (preta com borda verde) já vem do fundo (BG2 medido acima); só falta a coroa em cima.

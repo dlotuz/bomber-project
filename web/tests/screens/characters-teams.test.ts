@@ -74,10 +74,11 @@ describe('desenho (revisão da Task 10, rodada 2)', () => {
     const c = charactersScreen(app); app.go(c);
     const { images, ctx } = recCtx();
     c.draw(ctx, fakeBank, 0);
-    const cx = (CHARSEL_TITLE_PX.x0 + CHARSEL_TITLE_PX.x1 + 1) / 2, cy = (CHARSEL_TITLE_PX.y0 + CHARSEL_TITLE_PX.y1 + 1) / 2;
-    const w = fakeBank.text('', '').width * 2, h = fakeBank.text('', '').height * 2;
-    const x = Math.round(cx - w / 2), y = Math.round(cy - h / 2);
-    expect(images).toContainEqual({ x, y });
+    // T22: 2 linhas de 16 px na fonte `menuTitle`, como "Select a" / "character!" na ROM, centradas no vão.
+    const cx = Math.floor((CHARSEL_TITLE_PX.x0 + CHARSEL_TITLE_PX.x1 + 1) / 2);
+    const x = cx - Math.floor(fakeBank.text('', '').width / 2);
+    expect(images).toContainEqual({ x, y: CHARSEL_TITLE_PX.y0 });
+    expect(images).toContainEqual({ x, y: CHARSEL_TITLE_PX.y0 + 16 });
     expect(images.some(p => p.y === 12)).toBe(false);
   });
   it('título de equipes também vai dentro do mesmo vão', () => {
@@ -85,10 +86,11 @@ describe('desenho (revisão da Task 10, rodada 2)', () => {
     const t = teamsScreen(app); app.go(t);
     const { images, ctx } = recCtx();
     t.draw(ctx, fakeBank, 0);
-    const cx = (CHARSEL_TITLE_PX.x0 + CHARSEL_TITLE_PX.x1 + 1) / 2, cy = (CHARSEL_TITLE_PX.y0 + CHARSEL_TITLE_PX.y1 + 1) / 2;
-    const w = fakeBank.text('', '').width * 2, h = fakeBank.text('', '').height * 2;
-    const x = Math.round(cx - w / 2), y = Math.round(cy - h / 2);
-    expect(images).toContainEqual({ x, y });
+    // T22: 2 linhas de 16 px na fonte `menuTitle`, como "Select a" / "character!" na ROM, centradas no vão.
+    const cx = Math.floor((CHARSEL_TITLE_PX.x0 + CHARSEL_TITLE_PX.x1 + 1) / 2);
+    const x = cx - Math.floor(fakeBank.text('', '').width / 2);
+    expect(images).toContainEqual({ x, y: CHARSEL_TITLE_PX.y0 });
+    expect(images).toContainEqual({ x, y: CHARSEL_TITLE_PX.y0 + 16 });
     expect(images.some(p => p.y === 12)).toBe(false);
   });
 });

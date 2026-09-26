@@ -16,7 +16,9 @@ import { vsModeScreen } from './vs';
 import { optionsScreen } from './options';
 
 const TEXT_X = 72;
-const PRESS_START = { x: 128, y: 200 };
+/** Medido na captura (`g_title2vs`, `TITLE_TEXT_RECTS[1]` y 126–152): "PUSH START BUTTON!" fica logo acima do menu,
+ *  não embaixo (o y = 200 do plano cobria a linha "©1996 HUDSON SOFT"). */
+const PRESS_START = { x: 128, y: 131 };
 
 export type TitleScreen = Screen & { readonly cursor: number; pressStartVisible(): boolean };
 

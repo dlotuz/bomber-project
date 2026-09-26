@@ -6,8 +6,10 @@ import { romState, type RomAssets } from '../app/rom-api';
 import { PpuCanvas, sceneFrame, sceneGfx, sceneMaps } from '../render/screens-rom/scene';
 import { charselMaps, drawCharselTitle } from '../render/screens-rom/charsel';
 import { TEAMSEL_MARKER_X, TEAMSEL_PORTRAIT, TEAMSEL_VS } from '../render/screens-rom/teams';
-import { COLORS, PLAYER_COLORS, drawFallbackFrame, drawFooter, drawStaticBackground, drawText } from './ui';
-import { drawTextCentered } from '../render/draw-game';
+import { COLORS, PLAYER_COLORS, drawFallbackFrame, drawStaticBackground } from './ui';
+import { drawText } from '../render/text/text';
+import { S } from '../render/text/strings';
+import { SCREEN_H } from '../render/display';
 import { createPickScheme } from './pick-scheme';
 import { charactersScreen } from './characters';
 import { stageScreen } from './stage';
@@ -77,7 +79,7 @@ export function teamsScreen(app: App): Screen & {
         drawStaticBackground(ctx);
         drawFallbackFrame(ctx, FRAME);
       }
-      drawCharselTitle(ctx, bank, 'Escolha as equipes!', COLORS.title);
+      drawCharselTitle(ctx, bank, S.teams.title, COLORS.title);
       const ctrl = scheme.controllingSlot();
       for (const i of scheme.activeIdx) {
         const y = TEAMSEL_PORTRAIT.y0 + TEAMSEL_PORTRAIT.dy * i;
@@ -87,10 +89,10 @@ export function teamsScreen(app: App): Screen & {
         const driver = !scheme.confirmed[i] ? (scheme.selfPicking(i) ? i : i === ctrl ? scheme.controller : null) : null;
         ctx.fillStyle = driver !== null ? PLAYER_COLORS[driver] : TEAM_COLOR[side];
         ctx.fillRect(mx, y + 8, 16, 16);
-        drawText(ctx, bank, `${i + 1}P`, mx, y - 4, PLAYER_COLORS[i]);
+        drawText(ctx, bank, 'ascii8', S.chars.tags[i], mx, y - 4, { color: PLAYER_COLORS[i] });
       }
-      drawTextCentered(ctx, bank, 'VS', COLORS.title, TEAMSEL_VS.y, 2);
-      drawFooter(ctx, bank, 'ESQ/DIR: LADO   A: ESCOLHER   B: VOLTAR');
+      drawText(ctx, bank, 'menuItem', S.teams.vs, 128, TEAMSEL_VS.y, { align: 'center' });
+      drawText(ctx, bank, 'ascii8', S.teams.help, 128, SCREEN_H - 16, { align: 'center', tone: 'gray' });
     },
   };
 }

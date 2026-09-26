@@ -5,9 +5,11 @@ import { FADE_MENU } from '../app/fade';
 import { romState, type RomAssets } from '../app/rom-api';
 import { obj, PpuCanvas, sceneFrame, sceneGfx, sceneMaps } from '../render/screens-rom/scene';
 import { CHARACTERS } from '../render/art/bomber';
-import { displayName } from '../game/config';
 import { CHARSEL_GRID, CHARSEL_PORTRAIT, CHARSEL_STANDEE, CHARSEL_STANDEE_Y, charselMaps, drawCharselTitle } from '../render/screens-rom/charsel';
-import { COLORS, PLAYER_COLORS, drawFallbackFrame, drawFooter, drawStaticBackground, drawText } from './ui';
+import { drawText } from '../render/text/text';
+import { S } from '../render/text/strings';
+import { SCREEN_H } from '../render/display';
+import { COLORS, PLAYER_COLORS, drawFallbackFrame, drawStaticBackground } from './ui';
 import { createPickScheme } from './pick-scheme';
 import { rulesScreen } from './rules';
 import { stageScreen } from './stage';
@@ -105,16 +107,14 @@ export function charactersScreen(app: App): Screen & {
           ctx.drawImage(bank.bomber(k, 2, 0), x, y, 32, 40);
         });
       }
-      drawCharselTitle(ctx, bank, 'ESCOLHA O PERSONAGEM', COLORS.title);
+      drawCharselTitle(ctx, bank, S.chars.title, COLORS.title);
       const ctrl = scheme.controllingSlot();
-      // Coluna da esquerda: retrato + nome/estado de cada jogador ativo (conteúdo nosso, por cima da cena).
+      // Coluna da esquerda: o retrato de cada jogador ativo (conteúdo nosso, por cima da cena). Sem rótulo de
+      // nome/estado (T22): no original essa coluna só tem retratos, e o texto colidia com o título de 2 linhas e a
+      // grade; quem ainda escolhe já aparece pelo cursor "[ ]" com a etiqueta nP.
       for (const i of scheme.activeIdx) {
         const y = CHARSEL_PORTRAIT.y0 + CHARSEL_PORTRAIT.dy * i;
         ctx.drawImage(bank.head(setup.chars[i]), CHARSEL_PORTRAIT.x, y, CHARSEL_PORTRAIT.w, CHARSEL_PORTRAIT.w);
-        const label = scheme.human(i) ? displayName(app.settings.names, i) : 'CPU';
-        drawText(ctx, bank, label, CHARSEL_PORTRAIT.x + CHARSEL_PORTRAIT.w + 4, y + 2, PLAYER_COLORS[i]);
-        const st = scheme.confirmed[i] ? 'PRONTO' : (scheme.selfPicking(i) || i === ctrl) ? 'ESCOLHENDO' : 'AGUARDA';
-        drawText(ctx, bank, st, CHARSEL_PORTRAIT.x + CHARSEL_PORTRAIT.w + 4, y + 16, scheme.confirmed[i] ? COLORS.ok : COLORS.dim);
       }
       // Cursores "[ ]" (4 cantos, fillRect) com a etiqueta nP na cor de quem está escolhendo cada vaga ainda aberta.
       for (const i of scheme.activeIdx) {
@@ -125,9 +125,10 @@ export function charactersScreen(app: App): Screen & {
         const x = CHARSEL_GRID.x[k % COLS], y = CHARSEL_GRID.y[Math.floor(k / COLS)];
         const color = PLAYER_COLORS[driver];
         drawCornerCursor(ctx, x - 2, y - 2, CHARSEL_GRID.cellW - 12, CHARSEL_GRID.cellH - 4, color);
-        drawText(ctx, bank, `${driver + 1}P`, x - 3, y - 10, color);
+        drawText(ctx, bank, 'ascii8', S.chars.tags[driver], x - 3, y - 10, { color });
       }
-      drawFooter(ctx, bank, scheme.activeIdx.every(i => scheme.confirmed[i]) ? 'TUDO PRONTO' : 'A: ESCOLHER   B: VOLTAR');
+      drawText(ctx, bank, 'ascii8', scheme.activeIdx.every(i => scheme.confirmed[i]) ? S.chars.allReady : S.chars.help,
+        128, SCREEN_H - 16, { align: 'center', tone: 'gray' });
     },
   };
 }

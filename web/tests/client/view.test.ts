@@ -1,4 +1,4 @@
-import { createView, updateView, walkFrame, flameShrink, flamePart, formatClock, dyingVisible, roundOverText } from '../../src/render/view';
+import { createView, updateView, walkFrame, flameShrink, flamePart, formatClock, dyingVisible } from '../../src/render/view';
 import { createRound, makeRng, defaultRules, FLAME_PIECE } from '../../src/core';
 
 describe('visão', () => {
@@ -27,9 +27,5 @@ describe('visão', () => {
   });
   it('morrendo: pisca nos ticks 1..21 e some depois', () => {
     expect([dyingVisible(1), dyingVisible(4), dyingVisible(16), dyingVisible(22), dyingVisible(60)]).toEqual([true, false, true, false, false]);
-  });
-  it('texto de fim de rodada', () => {
-    expect(roundOverText([], 'ffa', [0, 1, 0, 1, 0])).toBe('EMPATE!');
-    expect(roundOverText([2], 'ffa', [0, 1, 0, 1, 0])).toBe('P3 VENCEU!');
   });
 });

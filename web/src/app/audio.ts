@@ -47,3 +47,13 @@ export class AudioDirector implements AudioSink {
     if (this.current.music !== music) this.music(music);
   }
 }
+
+type AudioFactory = () => Promise<AudioSink>;
+let factory: AudioFactory | null = null;
+/** O plano 11 registra aqui como criar o sink real (AudioWorklet). Chamado só depois do 1º gesto (§6.1). */
+export function registerAudioFactory(f: AudioFactory): void { factory = f; }
+export async function startRealAudio(d: AudioDirector): Promise<boolean> {
+  if (!factory) return false;
+  d.setSink(await factory());
+  return true;
+}

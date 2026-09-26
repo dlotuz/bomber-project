@@ -14,7 +14,10 @@ import { playersScreen } from './players';
 
 const VS_X = 80, VS_Y = [79, 111, 143] as const, VS_HAND_X = 56, VS_HAND_Y = [80, 112, 144] as const;
 const MODE_X = 85, MODE_Y = [95, 127] as const, MODE_HAND_X = 61, MODE_HAND_Y = [96, 128] as const;
-const TITLE_X = 127, TITLE_Y = 47;
+/** Âncoras (centro, topo) dos títulos, presas às faixas de texto das capturas em `tests/screens/menu-title.test.ts`.
+ *  A moldura do modo (`MODE_FRAME`) fica 16 px abaixo da do VS, e o título desce junto. */
+export const VS_TITLE = { x: 127, y: 47 } as const;
+export const MODE_TITLE = { x: 127, y: 63 } as const;
 
 /** "Escolha o modo VS!" [spec §6.3, R31]: só "Battle Royale" está ativo. A → `modeScreen`; B volta ao título. */
 export function vsModeScreen(app: App): Screen & { readonly cursor: number } {
@@ -46,7 +49,7 @@ export function vsModeScreen(app: App): Screen & { readonly cursor: number } {
         drawFallbackFrame(ctx, VS_FRAME);
         drawStaticCursor(ctx, VS_HAND_X, VS_HAND_Y[menu.cursor]);
       }
-      drawText(ctx, bank, 'menuTitle', S.vs.title, TITLE_X, TITLE_Y, { align: 'center' });
+      drawText(ctx, bank, 'menuTitle', S.vs.title, VS_TITLE.x, VS_TITLE.y, { align: 'center' });
       items.forEach((t, i) => drawText(ctx, bank, 'menuItem', t, VS_X, VS_Y[i], { tone: i === 0 ? 'default' : 'gray' }));
     },
   };
@@ -85,7 +88,7 @@ export function modeScreen(app: App): Screen & { readonly cursor: number } {
         drawFallbackFrame(ctx, MODE_FRAME);
         drawStaticCursor(ctx, MODE_HAND_X, MODE_HAND_Y[menu.cursor]);
       }
-      drawText(ctx, bank, 'menuTitle', S.vs.title, TITLE_X, TITLE_Y, { align: 'center' });
+      drawText(ctx, bank, 'menuTitle', S.vs.title, MODE_TITLE.x, MODE_TITLE.y, { align: 'center' });
       items.forEach((t, i) => drawText(ctx, bank, 'menuItem', t, MODE_X, MODE_Y[i]));
     },
   };
