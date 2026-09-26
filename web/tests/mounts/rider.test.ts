@@ -26,7 +26,9 @@ describe('acerto de chama montado ($C2:4B89)', () => {
     run(s, 2, { 0: BTN.RIGHT });
     expect(p.x).toBeGreaterThan(x0);
   });
-  it('com ovo reserva: 1 + 44, remonta com o tipo do reserva e 32 de invencibilidade', () => {
+  // $C2:105E escolhe a anim uma vez ($C2:6F71) e cai em $C2:1089 (com reserva) ou $C2:10D5 (sem): laços iguais até
+  // o fim da anim → remonte = desmonte = 1 + 51 (fixture T4: remount 0xd818ef f0..f49 com a captura já na rotina).
+  it('com ovo reserva: 1 + 51, remonta com o tipo do reserva e 32 de invencibilidade', () => {
     const s = mkRound();
     const p = placePx(s, 0, cx(2), cy(1));
     const r = ride(s, 0, 0x3, { reserves: [0x2] });
@@ -34,10 +36,10 @@ describe('acerto de chama montado ($C2:4B89)', () => {
     const ev = run(s, 1);                                    // H
     expect(ev).toContainEqual({ type: 'mount', id: 'mount_lost', slot: 0, mount: 0x3, reserve: true, cause: 'hit' });
     const x0 = p.x;
-    run(s, 44, { 0: BTN.RIGHT });                            // H+1..H+44
+    run(s, 51, { 0: BTN.RIGHT });                            // H+1..H+51
     expect(p.x).toBe(x0);
     expect(r.phase).toBe('dismount');
-    const ev2 = run(s, 1);                                   // H+45
+    const ev2 = run(s, 1);                                   // H+52
     expect(p.mount).toBe(r);
     expect(r).toMatchObject({ phase: 'riding', type: 0x2, reserves: [], remount: false, slot: 1 });
     expect(p.inv).toBe(32);

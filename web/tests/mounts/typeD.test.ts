@@ -57,11 +57,13 @@ describe('montaria tipo D (alcachofra): Y lança a montaria', () => {
     expect(mstate(s).projectiles).toHaveLength(0);
     expect(activeCount(s)).toBe(0);
   });
-  it('com ovo reserva: remonta em 1 + 44 na outra vaga; o míssil fica com a antiga', () => {
+  it('com ovo reserva: remonta em 1 + 51 na outra vaga; o míssil fica com a antiga', () => {
     const { s, p, r } = launch(null, { reserves: [0x3] });
     expect(mstate(s).projectiles[0].slot).toBe(1);
     expect(r.slot).toBe(2);
-    run(s, 45);
+    run(s, 51);                                              // H+1..H+51
+    expect(r.phase).toBe('dismount');
+    run(s, 1);                                               // H+52
     expect(p.mount).toBe(r);
     expect(r).toMatchObject({ phase: 'riding', type: 0x3 });
   });

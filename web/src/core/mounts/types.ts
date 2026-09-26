@@ -11,7 +11,7 @@ export interface MountRider {
   reserves: number[];    // tipos dos ovos reserva; [0] = o que vem logo atrás (máx. 3)
   trail: number[];       // [casa atual, anterior, ...] (máx. 4), para desenhar os reservas 1 casa atrás
   cooldown: number;      // recarga do Y (tipo E), ticks
-  remount: boolean;      // desmonte com reserva (1 + 44)
+  remount: boolean;      // desmonte com reserva (1 + 51, REMOUNT_TICKS)
 }
 
 export type ProjKind = 0xd | 0xe | 0xf;
@@ -41,7 +41,10 @@ export interface MountAbility {
 
 export const MOUNTING_TICKS = 43;   // $C2:261E
 export const DISMOUNT_TICKS = 52;   // 1 ($C2:105E) + 51 ($C2:10D5)
-export const REMOUNT_TICKS = 45;    // 1 + 44 ($C2:1089)
+/** Remonte = desmonte: $C2:105E escolhe a anim uma vez ($C2:6F71) e desvia para $C2:1089 (com reserva) ou $C2:10D5
+ *  (sem); os dois laços esperam o fim da mesma anim e saem em $C2:22F0. Fixture T4: 0xd818ef de f0 a f49 (captura
+ *  já dentro da rotina), montado em f50. O "1 + 44" da spec vinha de um teste artificial (errata §5.2/§11). */
+export const REMOUNT_TICKS = DISMOUNT_TICKS;
 export const POST_INV = 32;         // +$96
 export const MAX_ACTIVE = 2;        // $1ED4
 export const MAX_RESERVES = 3;      // +$52/+$54/+$56

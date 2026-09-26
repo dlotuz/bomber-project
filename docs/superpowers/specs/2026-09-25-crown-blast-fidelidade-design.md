@@ -938,7 +938,9 @@ Cada fase é um `StageModule` em `core/stages/stageN.ts`, com camadas de render 
 ### 5.2 Montado
 - **Acerto de chama** (`onHit`):
   - **não morre**. Fica 1 tick + **51 ticks** pulando para fora (act `dismount`); a montaria some; depois **32 ticks** de invencibilidade;
-  - com ovo reserva: 1 + **44 ticks**; o reserva choca debaixo dele e ele já monta de novo, com 32 de invencibilidade. O tipo do reserva ao remontar está na §12 (A8).
+  - com ovo reserva: 1 + **51 ticks** (errata abaixo); o reserva choca debaixo dele e ele já monta de novo, com 32 de invencibilidade. O tipo do reserva ao remontar está na §12 (A8).
+
+> **Errata (revisão final do plano 9, 26/09):** o remonte dura 1 + **51** (= desmonte), não 1 + 44. Disassembly: `$C2:105E` (1 tick) escolhe a anim do pulo uma vez só pela tabela `$C2:6F71` (`JSL $C2:56E4`), chama `$C2:60B9` e desvia para `$C2:1089` (com reserva) ou `$C2:10D5` (sem); os dois laços são iguais (`JSL $C1:775B`, `LDA $A8`/`BNE` até o fim da anim) e saem gravando `+$96 = $20` e `JML $C2:22F0`. Medição (fixture `mount-render.json` da T4): no remonte o jogador fica na anim `$D8:18EF` de f0 a f49, com a captura já dentro da rotina, e monta (`$D8:16D3`) em f50; o desmonte tem 51 amostras de `$D8:1851`. O "1 + 44" do MNT vinha de um teste artificial (tipo zerado à força). Core: `REMOUNT_TICKS = DISMOUNT_TICKS = 52`. O ovo reserva é objeto próprio: brilha 16, anda 15 e estoura em t = 31 com `$D8:D327` (4 × 10 ticks), então a explosão continua ~20 ticks com o jogador já montado.
 - **Velocidade** igual à dos patins. Bombas com A normalmente. **Não há desmontar voluntário.**
 - **Tipos** (Y pela tabela `$C2:465F`):
 
@@ -1452,7 +1454,7 @@ Os critérios de aceite de cada plano estão na §11. Regras gerais:
   - teto de 2;
   - tipo por `rnd(14)` na tabela;
   - 43 ticks para montar;
-  - acerto: 1 + 51 + 32; reserva: 1 + 44;
+  - acerto: 1 + 51 + 32; reserva: 1 + 51 + 32 (errata do plano 9, §5.2: era 1 + 44);
   - cada habilidade: linha com 3 bombas em x = 80/96/112; míssil D a 5 casas; E deixa o alvo a 128/256 por 255 ticks; F atordoa por 192;
   - tipo 2 atravessa soft; tipo 3 perfura; tipo A chuta;
   - montaria zerada na rodada seguinte.
