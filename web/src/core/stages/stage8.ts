@@ -105,10 +105,7 @@ export const stage8: StageModule = {
     setPads(s, PAD_IDLE);
     if (routine === 0x14f7) { a.phase = 'idle'; stageEvent(ev, 'a8_nothing'); return; }
     a.phase = 'prize';
-    const before = ev.length;
     startPrize(s, a, routine, ev);
-    // Com o esqueleto de stage8-prizes (T10 ainda não mesclada) o evento sai daqui; depois, de startPrize.
-    if (!ev.slice(before).some(e => e.type === 'stage' && e.id === 'a8_prize')) stageEvent(ev, 'a8_prize');
   },
   get ai() { return stage8Ai; },
 };
