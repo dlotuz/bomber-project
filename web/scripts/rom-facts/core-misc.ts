@@ -9,19 +9,14 @@ export function extractPressureSteps(rom: Rom): number[] {
 
 export function renderMisc(rom: Rom): string {
   const u24list = (a: number, n: number) => Array.from({ length: n }, (_, i) => rom.u16(a + 3 * i));
-  // $C2:4F68 só tem 16 bytes reais (padrão de 1 linha, indexado por & 15); os 16 bytes seguintes
-  // nesse offset pertencem a outra tabela (mesmo desenho espelhado por coincidência de layout) —
-  // por isso completamos com zero até 64 em vez de ler bytes contíguos da ROM ali.
-  const invisibleReal = rom.bytes(0xc24f68, 16);
-  const invisiblePattern = invisibleReal.concat(new Array(48).fill(0));
   return header('core-misc.ts', rom.sha1, [
-    'CAPSULE_TYPES $C1:5DA4 (14), FUSE_TABLE $C1:56E8 (3), MAX_CAPS $C0:0B4C/48/50, INVISIBLE_PATTERN $C2:4F68 (16 reais + 48 zeros),',
+    'CAPSULE_TYPES $C1:5DA4 (14), FUSE_TABLE $C1:56E8 (3), MAX_CAPS $C0:0B4C/48/50, INVISIBLE_PATTERN $C2:4F68 (64),',
     'RACER_HANDLERS $C2:08F4 (17 × u24, parte baixa), STUN_LOSS_HANDLERS $C2:519D (13 × u24, parte baixa)',
   ]) + [
     `export const CAPSULE_TYPES: readonly number[] = ${nums(rom.bytes(0xc15da4, 14), true)};`,
     `export const FUSE_TABLE: readonly number[] = ${nums(rom.bytes(0xc156e8, 3))};`,
     `export const MAX_CAPS = { bombs: ${rom.u16(0xc00b4c)}, fire: ${rom.u16(0xc00b48)}, speed: ${rom.u16(0xc00b50)} } as const;`,
-    `export const INVISIBLE_PATTERN: readonly number[] = ${nums(invisiblePattern, true)};`,
+    `export const INVISIBLE_PATTERN: readonly number[] = ${nums(rom.bytes(0xc24f68, 64), true)};`,
     `export const RACER_HANDLERS: readonly number[] = ${nums(u24list(0xc208f4, 17), true)};`,
     `export const STUN_LOSS_HANDLERS: readonly number[] = ${nums(u24list(0xc2519d, 13), true)};`,
     '',
