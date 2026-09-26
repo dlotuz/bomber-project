@@ -31,11 +31,14 @@ export interface StyleRomDef {
    *  contorno compartilhado. Usado com `outline` pra redesenhar o contorno depois de montar a frase inteira. */
   bodyOnly?: readonly number[];
   /** `layoutText` redesenha o contorno depois de montar a frase inteira: todo pixel 0 vizinho de um pixel do
-   *  corpo vira `index`, repetido `width` vezes (padrão 1). `conn` escolhe 4 ou 8 vizinhos — teste contra a
-   *  faixa original (`conn: 4` bateu mais pixel a pixo na fonte cursiva de `vsmode`; padrão 8). Sem `bodyOnly`,
-   *  não tem efeito visível (os recortes já trazem o próprio contorno da ROM, então não sobra pixel 0 junto do
-   *  corpo pra virar contorno). */
-  outline?: { index: number; width?: number; conn?: 4 | 8 };
+   *  corpo vira `index` (o resto do contorno) ou `below` (ver adiante), repetido `width` vezes (padrão 1).
+   *  `conn` escolhe 4 ou 8 vizinhos — teste contra a faixa original (`conn: 4` bateu mais pixel a pixel na
+   *  fonte cursiva de `vsmode`; padrão 8). `below`: índice usado só quando o pixel novo tem um pixel do corpo
+   *  em cima dele (achado medindo a faixa original de `vsmode`: o contorno PRETO fica quase só embaixo do
+   *  corpo — sombra —, e o aro colorido no resto — luz —, como um bisel simples). Sem `below`, todo contorno
+   *  novo usa `index`. Sem `bodyOnly`, `outline` não tem efeito visível (os recortes já trazem o próprio
+   *  contorno da ROM, então não sobra pixel 0 junto do corpo pra virar contorno). */
+  outline?: { index: number; width?: number; conn?: 4 | 8; below?: number };
 }
 /** '.' = 0; padrão: hex. Com `base`, o glifo é o glifo `base` já recortado da ROM (montado em tempo de execução) com os
  *  pixels não-'.' deste desenho por cima (acentos sobre letras da ROM, sem guardar os pixels dela). */

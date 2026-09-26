@@ -76,8 +76,9 @@ const CONN4 = [[1, 0], [-1, 0], [0, 1], [0, -1]] as const;
 const CONN8 = [...CONN4, [1, 1], [1, -1], [-1, 1], [-1, -1]] as const;
 
 /** Redesenha o contorno depois de montar a frase (ver `StyleRomDef.outline`): `width` camadas de vizinhos
- *  (`conn` 4 ou 8, padrão 8) a partir de qualquer pixel não nulo, sem sobrescrever pixel já preenchido. */
-function addOutline(img: IndexedImage, o: { index: number; width?: number; conn?: 4 | 8 }): IndexedImage {
+ *  (`conn` 4 ou 8, padrão 8) a partir de qualquer pixel não nulo, sem sobrescrever pixel já preenchido. Com
+ *  `below`, um pixel novo com corpo em cima (vizinho na linha −1) usa `below`; senão usa `index`. */
+function addOutline(img: IndexedImage, o: { index: number; width?: number; conn?: 4 | 8; below?: number }): IndexedImage {
   const { w, h } = img;
   let px = img.px;
   const dirs = o.conn === 4 ? CONN4 : CONN8;
@@ -86,12 +87,12 @@ function addOutline(img: IndexedImage, o: { index: number; width?: number; conn?
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
       const i = y * w + x;
       if (px[i]) continue;
-      let near = false;
+      let near = false, above = false;
       for (const [dx, dy] of dirs) {
         const nx = x + dx, ny = y + dy;
-        if (nx >= 0 && nx < w && ny >= 0 && ny < h && px[ny * w + nx]) { near = true; break; }
+        if (nx >= 0 && nx < w && ny >= 0 && ny < h && px[ny * w + nx]) { near = true; if (dy === -1) above = true; }
       }
-      if (near) next[i] = o.index;
+      if (near) next[i] = above && o.below !== undefined ? o.below : o.index;
     }
     px = next;
   }

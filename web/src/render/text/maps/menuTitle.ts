@@ -28,9 +28,9 @@ export const DEF: StyleRomDef = {
     { ch: 'a', strip: 'vstitle', x: 50, w: 9 },
     { ch: 'V', strip: 'vstitle', x: 63, w: 10 },
     { ch: 'm', strip: 'vstitle', x: 86, w: 9 },
-    { ch: 'o', strip: 'vstitle', x: 94, w: 10 },
-    { ch: 'd', strip: 'vstitle', x: 105, w: 9 },
-    { ch: '!', strip: 'vstitle', x: 120, w: 7 },
+    { ch: 'o', strip: 'vstitle', x: 95, w: 10 },
+    { ch: 'd', strip: 'vstitle', x: 106, w: 8 },
+    { ch: '!', strip: 'vstitle', x: 122, w: 5 },
     { ch: 'C', strip: 'items', x: 0, y: 0, w: 8 },
     { ch: 'h', strip: 'items', x: 8, y: 0, w: 8 },
     { ch: 'i', strip: 'items', x: 40, y: 0, w: 8 },
@@ -39,8 +39,11 @@ export const DEF: StyleRomDef = {
     { ch: 's', strip: 'items', x: 64, y: 0, w: 8 },
     { ch: 'r', strip: 'items', x: 42, y: 16, w: 8 },
   ],
-  height: 16, spacing: 0, spaceWidth: 6,
+  height: 16, spacing: 0, spaceWidth: 4,
   palette: { kind: 'scene', scene: 'vsmode', row: 0, size: 16 },
   bodyOnly: [1, 10, 11, 12, 13, 14, 15],
-  outline: { index: 2, conn: 4 },
+  // Achado medindo "Battle Royale" pixel a pixel contra a faixa original (task-16-report.md, Fix report 2):
+  // o contorno preto só existe embaixo do corpo (índice 2, 4 vizinhos) — o aro colorido (índice 1, mantido em
+  // `bodyOnly`) já é a borda visível em cima/do lado. `index: 0` = não desenha nada fora do caso `below`.
+  outline: { index: 0, conn: 4, below: 2 },
 };
