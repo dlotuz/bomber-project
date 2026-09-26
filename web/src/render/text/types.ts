@@ -28,8 +28,12 @@ export interface StyleRomDef {
   kern?: Readonly<Record<string, number>>; // ajuste por par de caracteres ('TÓ'), somado ao `spacing`
 }
 /** '.' = 0; padrão: hex. Com `base`, o glifo é o glifo `base` já recortado da ROM (montado em tempo de execução) com os
- *  pixels não-'.' deste desenho por cima (acentos sobre letras da ROM, sem guardar os pixels dela). */
-export interface ExtraGlyph { ch: string; rows: readonly string[]; legend?: Readonly<Record<string, number>>; base?: string }
+ *  pixels não-'.' deste desenho por cima (acentos sobre letras da ROM, sem guardar os pixels dela). `shrinkTop`
+ *  (regra do plano §1.2 item 3: "se a letra-base não couber com o acento na altura do estilo, encolha o miolo 1 px"):
+ *  a base é reamostrada (linhas do meio descartadas, vizinho mais próximo) de `def.height` para `def.height −
+ *  shrinkTop` linhas e desce esse tanto, abrindo `shrinkTop` linhas livres no topo para o acento (em vez de linhas
+ *  fixas do desenho da ROM, que não sobram no topo de uma fonte 8×8). */
+export interface ExtraGlyph { ch: string; rows: readonly string[]; legend?: Readonly<Record<string, number>>; base?: string; shrinkTop?: number }
 export interface IndexedImage { w: number; h: number; px: Uint8Array }
 
 export const TEXT_STYLES: readonly TextStyleId[] = ['titleMenu', 'menuTitle', 'menuItem', 'ascii8', 'banner', 'spriteBlue',

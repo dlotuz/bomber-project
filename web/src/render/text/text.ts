@@ -73,6 +73,19 @@ function overlay(base: IndexedImage, over: IndexedImage): IndexedImage {
   return { w: base.w, h: base.h, px };
 }
 
+/** `ExtraGlyph.shrinkTop`: reamostra a base (vizinho mais próximo, linhas do meio descartadas) de `h` para `h − n`
+ *  linhas e desce esse tanto, abrindo `n` linhas livres no topo (mesma largura/altura da imagem, só desloca o
+ *  conteúdo). Sem isso não haveria onde desenhar um acento numa fonte em que a letra já ocupa a altura inteira. */
+function shrinkTop(base: IndexedImage, n: number): IndexedImage {
+  if (n <= 0) return base;
+  const { w, h } = base, newH = h - n, px = new Uint8Array(w * h);
+  for (let y = 0; y < newH; y++) {
+    const srcY = Math.min(h - 1, Math.round((y * h) / newH));
+    for (let x = 0; x < w; x++) px[(y + n) * w + x] = base.px[srcY * w + x];
+  }
+  return { w, h, px };
+}
+
 export function fontFromParts(style: TextStyleId, def: StyleRomDef, strips: Record<string, IndexedImage>, extras: readonly ExtraGlyph[]): RomFont {
   const glyphs = new Map<string, IndexedImage>();
   for (const g of extras) if (!g.base) glyphs.set(g.ch, parseExtra(g));
@@ -82,7 +95,7 @@ export function fontFromParts(style: TextStyleId, def: StyleRomDef, strips: Reco
   }
   for (const g of extras) {                          // acentos sobre a letra-base (da ROM ou própria)
     const b = g.base ? glyphs.get(g.base) : undefined;
-    if (b) glyphs.set(g.ch, overlay(b, parseExtra(g)));
+    if (b) glyphs.set(g.ch, overlay(g.shrinkTop ? shrinkTop(b, g.shrinkTop) : b, parseExtra(g)));
   }
   return { style, def, glyphs };
 }

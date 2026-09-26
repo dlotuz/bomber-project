@@ -1,36 +1,35 @@
 import type { GlyphCut, StyleRomDef } from '../types';
 // Faixa "PAUSE!/HURRY!!/TIME UP!" [CAT §3 "Comum a todas as partidas"]: $D0:F57B, VRAM BG3 $A400 (word $5200), 1024
-// bytes, 2bpp, 64 tiles cruas (confere com a captura de arena — mesmo esquema do ascii8). Diferente do ascii8 (fonte
-// simples 8×8 monoespaçada), esta faixa é arte pronta (palavras cursivas em negrito, pintadas à mão com os 4 índices
-// de cor, sem grade por caractere): letras vizinhas se conectam/sobrepõem visualmente. Pesquisa (dump-capture +
-// captura direta do jogo `tt_pause.bin`, ver `pause_p1.png`/`g3_HURRY.png`/`g3_TIMEUP.png`): decodificando as 64
-// tiles em sequência (32 lado a lado, 8 px de altura) já dá "PAUSE!" legível nas tiles 1-8 (x 8-72). NÃO foi possível
-// achar de forma confiável, dentro do tempo da tarefa, o mapeamento das 32 tiles seguintes (índices 32-63) como
-// "metade de baixo" das mesmas letras — o perfil de tinta por coluna não bate com o das tiles 0-31 (os "buracos"
-// entre palavras ficam em x diferente), e a varredura da VRAM/tilemap de uma captura real de PAUSA (savestate
-// `tt_pause.bin`) não achou o tilemap do banner (só a camada de escurecimento, tile constante). Registrado aqui como
-// desvio: o estilo `banner` usa altura 8 (as 32 tiles de cima, que já são legíveis sozinhas: P,A,U,S,E,! de "PAUSE!"
-// x 8-72; T,I,M de "TIME UP!" x 87-117; R de "HURRY!!" x 168-184), não 16. As letras que a ROM não tem (Á O D G B)
-// ganham glifos próprios em extra/banner.ts nos mesmos 4 índices de cor.
-// Paleta: cores 0-3 em $D6:9172 — mesma tabela de 16 cores do grupo de paleta 0 do BG das arenas que o ascii8 usa
-// (`$D6:918A` = essa tabela + 24 bytes = cores 12-15, os cinzas do ascii8; aqui é a tabela sem esse deslocamento =
-// cores 0-3: cinza/verde-escuro/verde/branco). Batida contra a CGRAM de uma captura de PAUSA real (savestate
-// `tt_pause.bin`, 5 frames): PAUSA! e HURRY!! saem brancas com preenchimento verde e sombra verde-escura nas duas
-// capturas (`pause_p1.png`, `g3_HURRY.png`), por isso o tom `green` (exigido pelo teste) aponta para o mesmo
-// endereço — não achamos uma paleta "só verde" diferente sendo usada de fato no jogo.
-const cut = (ch: string, x: number, w: number): GlyphCut => ({ ch, strip: 'f', x, w });
+// bytes, 2bpp, 64 tiles. Fato confirmado por pixel (não medido a olho): cada letra tem uma METADE DE CIMA (tile T)
+// e uma METADE DE BAIXO (tile T+16) — comparei, pixel a pixel, os índices de cor de 3 palavras reconstruídas da ROM
+// contra capturas reais do jogo (savestate `tt_battle2.bin` do core `analise/ferramentas/emu.py`, poke em $1ED0/
+// $1ED2 para o relógio como `hurry3.py`, PAUSA via START; diff de frame antes/depois para isolar os pixels da
+// faixa da tela em meio ao resto da partida) e a combinação (tile T linhas 0-7) + (tile T+16 linhas 0-7) bate
+// 98-99% com a tela real (o resto é ruído de anti-serrilhado/color math nas bordas). Isso resolve a dúvida do
+// plano ("2 linhas de tile" = 16 px por letra) sem adivinhar o pareamento.
+// Três faixas de 8-9 tiles, cada uma com sua própria metade de cima e de baixo (+16 tiles):
+//   PAUSE!  → topo tiles 1-8   ($D0:F58B), base tiles 17-24 ($D0:F68B): P A U S E ! (tiles 7-8 = cauda decorativa)
+//   TIME UP!→ topo tiles 36-44 ($D0:F7BB), base tiles 52-60 ($D0:F8BB): T I M E U P ! (só T,I,M são novos; E,U,P,!
+//             já saem da faixa do PAUSE! acima, mesmo desenho)
+//   HURRY!! → topo tiles 9-16  ($D0:F60B), base tiles 25-32 ($D0:F70B): (tile em branco) H U R R Y (só R é novo)
+const cut = (ch: string, strip: string, tile: number, w = 8): GlyphCut => ({ ch, strip, x: tile * 8, w });
 
 export const DEF: StyleRomDef = {
-  strips: { f: { kind: 'raw', rows: [0xd0f57b], tiles: 64, bpp: 2 } },
+  strips: {
+    pause: { kind: 'raw', rows: [0xd0f58b, 0xd0f68b], tiles: 8, bpp: 2 },
+    timeup: { kind: 'raw', rows: [0xd0f7bb, 0xd0f8bb], tiles: 9, bpp: 2 },
+    hurry: { kind: 'raw', rows: [0xd0f60b, 0xd0f70b], tiles: 8, bpp: 2 },
+  },
   cuts: [
-    cut('P', 8, 11), cut('A', 19, 11), cut('U', 30, 11), cut('S', 41, 10), cut('E', 51, 11), cut('!', 62, 10),
-    cut('T', 87, 10), cut('I', 97, 7), cut('M', 104, 13),
-    cut('R', 168, 16),
+    cut('P', 'pause', 0), cut('A', 'pause', 1), cut('U', 'pause', 2), cut('S', 'pause', 3), cut('E', 'pause', 4),
+    cut('!', 'pause', 5, 16),   // inclui a tile 6 (cauda do !)
+    cut('T', 'timeup', 0), cut('I', 'timeup', 1), cut('M', 'timeup', 2),
+    cut('R', 'hurry', 3),
   ],
-  height: 8,
-  spacing: 1,
+  height: 16,
+  spacing: 0,
   spaceWidth: 6,
   palette: { kind: 'rom', addr: 0xd69172, size: 4 },
   tones: { green: 0xd69172 },
-  meta: { timeUpWidth: 86 },  // largura de "TIME UP!" com estes cortes (T+I+M+E+espaço+U+P+!); ver Step 5 do brief
+  meta: { timeUpWidth: 70 },  // largura de "TIME UP!" com estes cortes (T+I+M+E+espaço+U+P+!); ver Step 5 do brief
 };
