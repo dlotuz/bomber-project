@@ -1,0 +1,1562 @@
+{
+ "origem": "web/scripts/rom-facts/gfx-fixtures-anims.py (animacoes-sprites/anims.py, animacoes.json)",
+ "rom_sha1": "38f4394986bd39fcbe32a722a3fe103ee6177d9b",
+ "chave": "dur,mx,my:dx,dy,tile,h,v,big,pal;...|...",
+ "anims": {
+  "D816AC": {
+   "frames": 4,
+   "sha1": "78454372c5f0dd45987fefa345f0a06e121e55e2"
+  },
+  "D81693": {
+   "frames": 4,
+   "sha1": "524d616545243c80d6d66043ba133c12ad3f1878"
+  },
+  "D81661": {
+   "frames": 4,
+   "sha1": "7f8d11326558d7fe80913808d9cf3c86c374093f"
+  },
+  "D8167A": {
+   "frames": 4,
+   "sha1": "bb6ec8b30c7aba7fa2f745a3f8a62525d7ad5007"
+  },
+  "D8165A": {
+   "frames": 1,
+   "sha1": "7a54125ceda9da237abca247ac59b579285646bb"
+  },
+  "D81653": {
+   "frames": 1,
+   "sha1": "baa91d5ca150297e3fdf32eb71412375092fcf8c"
+  },
+  "D81645": {
+   "frames": 1,
+   "sha1": "d79793abecf834e8c8d681ab703db1f2b3b1f325"
+  },
+  "D8164C": {
+   "frames": 1,
+   "sha1": "bc67705d361d06cf085493df6f9e8550269dcc24"
+  },
+  "D81613": {
+   "frames": 4,
+   "sha1": "78454372c5f0dd45987fefa345f0a06e121e55e2"
+  },
+  "D815FA": {
+   "frames": 4,
+   "sha1": "524d616545243c80d6d66043ba133c12ad3f1878"
+  },
+  "D815C8": {
+   "frames": 4,
+   "sha1": "7f8d11326558d7fe80913808d9cf3c86c374093f"
+  },
+  "D815E1": {
+   "frames": 4,
+   "sha1": "bb6ec8b30c7aba7fa2f745a3f8a62525d7ad5007"
+  },
+  "D815C1": {
+   "frames": 1,
+   "sha1": "7a54125ceda9da237abca247ac59b579285646bb"
+  },
+  "D815BA": {
+   "frames": 1,
+   "sha1": "baa91d5ca150297e3fdf32eb71412375092fcf8c"
+  },
+  "D815AC": {
+   "frames": 1,
+   "sha1": "d79793abecf834e8c8d681ab703db1f2b3b1f325"
+  },
+  "D815B3": {
+   "frames": 1,
+   "sha1": "bc67705d361d06cf085493df6f9e8550269dcc24"
+  },
+  "D8157A": {
+   "frames": 4,
+   "sha1": "78454372c5f0dd45987fefa345f0a06e121e55e2"
+  },
+  "D81561": {
+   "frames": 4,
+   "sha1": "524d616545243c80d6d66043ba133c12ad3f1878"
+  },
+  "D8152F": {
+   "frames": 4,
+   "sha1": "7f8d11326558d7fe80913808d9cf3c86c374093f"
+  },
+  "D81548": {
+   "frames": 4,
+   "sha1": "bb6ec8b30c7aba7fa2f745a3f8a62525d7ad5007"
+  },
+  "D81528": {
+   "frames": 1,
+   "sha1": "7a54125ceda9da237abca247ac59b579285646bb"
+  },
+  "D81521": {
+   "frames": 1,
+   "sha1": "baa91d5ca150297e3fdf32eb71412375092fcf8c"
+  },
+  "D81513": {
+   "frames": 1,
+   "sha1": "d79793abecf834e8c8d681ab703db1f2b3b1f325"
+  },
+  "D8151A": {
+   "frames": 1,
+   "sha1": "bc67705d361d06cf085493df6f9e8550269dcc24"
+  },
+  "D820DE": {
+   "frames": 4,
+   "sha1": "0d1c7bcdbf6702a6d7573d8a20884b645a30671b"
+  },
+  "D820C5": {
+   "frames": 4,
+   "sha1": "422611436e201b9c3b5a16e309c6d6cc6fa280f3"
+  },
+  "D82093": {
+   "frames": 4,
+   "sha1": "3c83a8095a2f1b4e28da20c53506db29f8f8e7b1"
+  },
+  "D820AC": {
+   "frames": 4,
+   "sha1": "f4db120b38bc27440655268d7de7ffb65894f695"
+  },
+  "D8208C": {
+   "frames": 1,
+   "sha1": "b29299d0793eac1824c86aaf7333196f767f53c6"
+  },
+  "D82085": {
+   "frames": 1,
+   "sha1": "f75311f5dc60134369aea202ecf32589b01c16c2"
+  },
+  "D82077": {
+   "frames": 1,
+   "sha1": "b41bc67928a0594aaa53a3ba3212208d278c913d"
+  },
+  "D8207E": {
+   "frames": 1,
+   "sha1": "ed608bbc550e2436ef462e3902e71c95ff6f16aa"
+  },
+  "D81DD2": {
+   "frames": 4,
+   "sha1": "3f2e57d69c3063c2da0a06954780771767aec76e"
+  },
+  "D81DB9": {
+   "frames": 4,
+   "sha1": "7d457c4447fc3b6c75480a871e1bc37641cc13e3"
+  },
+  "D81D87": {
+   "frames": 4,
+   "sha1": "95199d2ecb611ef8ae2ae857b8aa6b0ed8994a8a"
+  },
+  "D81DA0": {
+   "frames": 4,
+   "sha1": "8acaaea8bb965237632dd290acd02bad6d94898e"
+  },
+  "D81F48": {
+   "frames": 1,
+   "sha1": "859b68190c020703fd8ff960e8b7e5a5496e0596"
+  },
+  "D81F41": {
+   "frames": 1,
+   "sha1": "b14d5c93622951e8aeef5bf04bb4360386a530de"
+  },
+  "D81F33": {
+   "frames": 1,
+   "sha1": "890f0a6517af924f53c9f8b348cbb7e31874f584"
+  },
+  "D81F3A": {
+   "frames": 1,
+   "sha1": "74ce937335a41c4f9eb20ef6e7f9f0daf6147b78"
+  },
+  "D8205E": {
+   "frames": 4,
+   "sha1": "65e7448147310736c08f631425fc328eaee61cec"
+  },
+  "D82045": {
+   "frames": 4,
+   "sha1": "94e3df292f2644858bfc444879fa7037d268dac1"
+  },
+  "D82013": {
+   "frames": 4,
+   "sha1": "adb46cd2923c04c9b76a76242b547ca5df3b5c3c"
+  },
+  "D8202C": {
+   "frames": 4,
+   "sha1": "b620428e6eabe1efa9e1fbd5710be865580ed96b"
+  },
+  "D82ADF": {
+   "frames": 1,
+   "sha1": "1bad1c223e6c554e61e9158b31d72932fc974f06"
+  },
+  "D82AD8": {
+   "frames": 1,
+   "sha1": "8c5aa4541879e221fa65dc5eb138c690aa6208d1"
+  },
+  "D82ACA": {
+   "frames": 1,
+   "sha1": "6c59cfcf64c7508ba14dde8594a66ffefd58b508"
+  },
+  "D82AD1": {
+   "frames": 1,
+   "sha1": "b64be26731aece270f48a671bb924be608ea1db2"
+  },
+  "D81944": {
+   "frames": 14,
+   "sha1": "ccc7d78a189e7285c9875cbcf231d3fdf0ade17e"
+  },
+  "D818EF": {
+   "frames": 14,
+   "sha1": "e256179993bea10ee43a0ea9f233d9aa33433213"
+  },
+  "D81851": {
+   "frames": 12,
+   "sha1": "6398509526e15c8945f4b0d7c9d6839587d95ced"
+  },
+  "D8189A": {
+   "frames": 14,
+   "sha1": "a2fc534b45b4d6698d921954b079e769b7c939c9"
+  },
+  "D82A0D": {
+   "frames": 17,
+   "sha1": "9cf0762f041f9ac5f75b6c7891647a42f9ed0ffa"
+  },
+  "D8023D": {
+   "frames": 27,
+   "sha1": "44020e808ad643b0dd7127b93930cbf677ce7978"
+  },
+  "D802E0": {
+   "frames": 14,
+   "sha1": "9a49dfa84f3159a42f8891cfcda07bd620c3ea98"
+  },
+  "D80335": {
+   "frames": 33,
+   "sha1": "c452664e0ba5ceef15d3a2fc0b28fa04ae8cdbed"
+  },
+  "D803FC": {
+   "frames": 19,
+   "sha1": "3c969b8354e97150d21dad6d0846a425125617e3"
+  },
+  "D8046F": {
+   "frames": 14,
+   "sha1": "41c2b0ca0efa38403bcbfad26ab05c392f1f30b9"
+  },
+  "D819B2": {
+   "frames": 4,
+   "sha1": "d2277e30a7366be6d8cf19c933af4e3cb93ad951"
+  },
+  "D80A1E": {
+   "frames": 12,
+   "sha1": "cabea10bf8407c3f17593ff040712702966354fd"
+  },
+  "D809C9": {
+   "frames": 14,
+   "sha1": "1a43c72144de9167325e86843e611ee40c3ad5c9"
+  },
+  "D8091F": {
+   "frames": 14,
+   "sha1": "510de054d21d0b9aa3a9ad2dbd6f5cc9c1fa7c19"
+  },
+  "D80974": {
+   "frames": 14,
+   "sha1": "520879ab3dd71468b6a76cf93faa59724147554b"
+  },
+  "D80ADE": {
+   "frames": 1,
+   "sha1": "c38632944fbdce8a4ed85e3b2a86f25103cef176"
+  },
+  "D80AFA": {
+   "frames": 1,
+   "sha1": "a3acce5d521c9d053c9d3400e806beb57a608369"
+  },
+  "D80AD7": {
+   "frames": 1,
+   "sha1": "b3417583db59bbb54f034732fc7e66e42c56dfec"
+  },
+  "D80AF3": {
+   "frames": 1,
+   "sha1": "9c66b9a451e73d656485db8e15795b2092c2990f"
+  },
+  "D80AC9": {
+   "frames": 1,
+   "sha1": "f5fe5a6107cf6b8ab63ee6153b3cb4d3325a8f06"
+  },
+  "D80B01": {
+   "frames": 1,
+   "sha1": "b1689c61ae07484cc13322e7eea92686c90ee42e"
+  },
+  "D80AD0": {
+   "frames": 1,
+   "sha1": "3a2663dc79a1d01219f48d5d7e4ff6f97b1f5ad6"
+  },
+  "D80B08": {
+   "frames": 1,
+   "sha1": "1456751caf136611aaad647e97874c69ac8bfe91"
+  },
+  "D8180E": {
+   "frames": 11,
+   "sha1": "16667b00b03142e2895c23c2be19c7d3cc1b2668"
+  },
+  "D817CB": {
+   "frames": 11,
+   "sha1": "436926668157bf993544a2c0f507e9aba2148c03"
+  },
+  "D81745": {
+   "frames": 11,
+   "sha1": "5216ca1a3c3f1b7d77d2ca56a5610222f9b9f9ef"
+  },
+  "D81788": {
+   "frames": 11,
+   "sha1": "d7af83548b469f99bd57c9eca874116a48ee3ac2"
+  },
+  "D81C4A": {
+   "frames": 8,
+   "sha1": "609cf71767c19eb7886761d3a997b75355d121dc"
+  },
+  "D81C19": {
+   "frames": 8,
+   "sha1": "8dfddfe7528d0b73bdc18396da354400495c14a4"
+  },
+  "D81BB7": {
+   "frames": 8,
+   "sha1": "ca973af855f1daa619c3947301c05991a384cc01"
+  },
+  "D81BE8": {
+   "frames": 8,
+   "sha1": "8af4e022c8ed79408e52d8b7a3163e460e15c084"
+  },
+  "D81B22": {
+   "frames": 8,
+   "sha1": "33a8f45ca19dc440d91fd69b37907680daf93d25"
+  },
+  "D81AF1": {
+   "frames": 8,
+   "sha1": "1ae25e5bb58d69f3e401633b3d1d6588a456ed0c"
+  },
+  "D81A8F": {
+   "frames": 8,
+   "sha1": "40b1a93bf992c205a6b83236b124abfab359c520"
+  },
+  "D81AC0": {
+   "frames": 8,
+   "sha1": "6e817671ab13cec44b02205b0bad8ca032727312"
+  },
+  "D81A5E": {
+   "frames": 8,
+   "sha1": "33a8f45ca19dc440d91fd69b37907680daf93d25"
+  },
+  "D81A2D": {
+   "frames": 8,
+   "sha1": "c255210595ba0d1fca67470c2926fca5d92e66ef"
+  },
+  "D819CB": {
+   "frames": 8,
+   "sha1": "40b1a93bf992c205a6b83236b124abfab359c520"
+  },
+  "D819FC": {
+   "frames": 8,
+   "sha1": "965f85106c997f4c09edcea6a22b7edfb0d54502"
+  },
+  "D81B9E": {
+   "frames": 4,
+   "sha1": "22f8b0df38018302e1f6671762afd7a2a22d27b1"
+  },
+  "D81B85": {
+   "frames": 4,
+   "sha1": "5276f9576222772bd3039c954c1d47b55f07fd10"
+  },
+  "D81B53": {
+   "frames": 4,
+   "sha1": "9f18f005c9780171c061e96321e736521dc5cd67"
+  },
+  "D81B6C": {
+   "frames": 4,
+   "sha1": "fbfcdc743b4b424ee0ef51b7a40d811f3e0ae425"
+  },
+  "D81EE4": {
+   "frames": 13,
+   "sha1": "1ea9546e976dd6d835e7e22d84c727df5475044a"
+  },
+  "D81E8F": {
+   "frames": 14,
+   "sha1": "b767d14466754075dac7dd59d4e42699f68e97b4"
+  },
+  "D81DEB": {
+   "frames": 13,
+   "sha1": "7b0537099808501890bf0bbb5d212c73c8a121ba"
+  },
+  "D81E3A": {
+   "frames": 14,
+   "sha1": "cf4ecb64e53b2b712bd4ad1cb3d6e17274f8d5d5"
+  },
+  "D82A00": {
+   "frames": 2,
+   "sha1": "8c96fdad3db472486e773c7c5a8986733a7e6b4c"
+  },
+  "D829F3": {
+   "frames": 2,
+   "sha1": "2f3ae53b64861a82c850960322b35f27523f5cac"
+  },
+  "D829D9": {
+   "frames": 2,
+   "sha1": "70c74e45db72e5bffb7bdf1515a36ac2e9b90450"
+  },
+  "D829E6": {
+   "frames": 2,
+   "sha1": "3c7504cd1ff94b59f8b7d40d82d54390911455b2"
+  },
+  "D82A9A": {
+   "frames": 2,
+   "sha1": "2cfb3b91d85a09ba1d7b1fff75aac6c729f3fdf6"
+  },
+  "D82AA7": {
+   "frames": 1,
+   "sha1": "ae95ca14fe164f47b1c9eec0a663269b57a4ce4f"
+  },
+  "D808B8": {
+   "frames": 3,
+   "sha1": "29f25ebd25cbb796b98b56dba46108be7dac8fd3"
+  },
+  "D808A5": {
+   "frames": 3,
+   "sha1": "e7a7d4ea9da2743cf242b95712bc947eb98543a6"
+  },
+  "D8087F": {
+   "frames": 3,
+   "sha1": "63744544766a3c63094a248c5feb80f6f6137964"
+  },
+  "D80892": {
+   "frames": 3,
+   "sha1": "221be484e98822b48df9788b5795fe0789c3be89"
+  },
+  "D80542": {
+   "frames": 2,
+   "sha1": "2aa6ff9bea7116028c84b8b7c7f38232792987da"
+  },
+  "D8054F": {
+   "frames": 2,
+   "sha1": "ae0e7679b64bcefe8334c4d2065346ef55f87126"
+  },
+  "D8055C": {
+   "frames": 2,
+   "sha1": "ae0e7679b64bcefe8334c4d2065346ef55f87126"
+  },
+  "D80569": {
+   "frames": 2,
+   "sha1": "e6e42f8330451df41d2094f212022acefe38da44"
+  },
+  "D805AE": {
+   "frames": 2,
+   "sha1": "b471697592b3a2d08d62f151090fc8507afab851"
+  },
+  "D805BB": {
+   "frames": 2,
+   "sha1": "1f95d7b540659bb98a44bbe2bc528dc818e636ae"
+  },
+  "D805C8": {
+   "frames": 2,
+   "sha1": "2a0d4be82439d86dff60190af5e039d1b80bb67b"
+  },
+  "D805D5": {
+   "frames": 2,
+   "sha1": "b5b8231759142525590b597fc1433c46ae42ef32"
+  },
+  "D82270": {
+   "frames": 11,
+   "sha1": "a708c2128c040b5c42b5d0bf057395d16d77a345"
+  },
+  "D82215": {
+   "frames": 15,
+   "sha1": "c4b18c08862eb099aa889299ecc6796616ce54f7"
+  },
+  "D8218F": {
+   "frames": 11,
+   "sha1": "eef2310a2fd75bc929ac065ac09a90700d18ce89"
+  },
+  "D821D2": {
+   "frames": 11,
+   "sha1": "976f36c550ee548fef55db9a6735b6fde701d102"
+  },
+  "D8086C": {
+   "frames": 3,
+   "sha1": "9586f0913d39be64a88cba40e6b534600476f23f"
+  },
+  "D80859": {
+   "frames": 3,
+   "sha1": "cf2c712c5075589fbec028f5115b069979ab4aa3"
+  },
+  "D80833": {
+   "frames": 3,
+   "sha1": "63744544766a3c63094a248c5feb80f6f6137964"
+  },
+  "D80846": {
+   "frames": 3,
+   "sha1": "7d980e162909da4db76f1abee5f132dbd95bb5b1"
+  },
+  "D80918": {
+   "frames": 1,
+   "sha1": "bed551f566bda3bb66ebe6aa6f7dbf09a82c3f38"
+  },
+  "D80911": {
+   "frames": 1,
+   "sha1": "7574bdf5342cf09c7e8d75990981175e7391fc60"
+  },
+  "D80903": {
+   "frames": 1,
+   "sha1": "168fd0287c1d73b34aba30b504918859392edcf0"
+  },
+  "D8090A": {
+   "frames": 1,
+   "sha1": "6668e9497d83165ca739a8f03c172c350073b3d8"
+  },
+  "D808FC": {
+   "frames": 1,
+   "sha1": "310819a6f780ee71d5ac70e29da1c57855f04991"
+  },
+  "D808F5": {
+   "frames": 1,
+   "sha1": "f5c5de12aa57fb12173e3360dc647e82b2e12027"
+  },
+  "D808E7": {
+   "frames": 1,
+   "sha1": "57f4ff1ac06be216b92ccb222acd783b71dece8f"
+  },
+  "D808EE": {
+   "frames": 1,
+   "sha1": "43be9ce819cf608ff5ec3faec3c0245e763b8495"
+  },
+  "D82A81": {
+   "frames": 4,
+   "sha1": "37b623f03be9714bfb7510ce4d18523f316867e0"
+  },
+  "D808E0": {
+   "frames": 1,
+   "sha1": "97638c284a9b54def755a60b908c511f0bf7e821"
+  },
+  "D808D9": {
+   "frames": 1,
+   "sha1": "70eb723e28c9a8762e6735a536ae4acbe01c5816"
+  },
+  "D808CB": {
+   "frames": 1,
+   "sha1": "ad7b4aca5fb3eaa3738e7311f9a0610934a493c6"
+  },
+  "D808D2": {
+   "frames": 1,
+   "sha1": "ca4a7ce6ec65fd54ed33532c80421a56fef7f056"
+  },
+  "D81999": {
+   "frames": 4,
+   "sha1": "ee2edbca16e27b9c28f7e8c4a02115efcda6b66f"
+  },
+  "D82A74": {
+   "frames": 2,
+   "sha1": "ef2de82135499ff9ad8060b0ebac5f6a13265e28"
+  },
+  "C3E7F7": {
+   "frames": 2,
+   "sha1": "19fded89a73dc31081569c7e5b5fd49e3d1f87e7"
+  },
+  "C3DA94": {
+   "frames": 32,
+   "sha1": "9774944e5bcedf5d66f20b6f8710a68b62f67d00"
+  },
+  "D8D3A8": {
+   "frames": 1,
+   "sha1": "ffd667cf566a0870d8be9d3f207eef3b2d840331"
+  },
+  "D8D3AF": {
+   "frames": 3,
+   "sha1": "a8a209c86f509099fa5399aa5e02348cf0df304b"
+  },
+  "D8D2CC": {
+   "frames": 15,
+   "sha1": "50eb697ebd0da799daf3edfb6e9f86cc39169fcc"
+  }
+ },
+ "firstLevel": {
+  "normal_andar_parado": {
+   "addr": 12744389,
+   "perChar": [
+    12744557,
+    12744557,
+    12744557,
+    12744557,
+    12744557,
+    12744557,
+    12744557,
+    12744557
+   ]
+  },
+  "montado_45": {
+   "addr": 12744437,
+   "perChar": [
+    12744461,
+    12744509,
+    12744461,
+    12744509,
+    12744461,
+    12744509,
+    12744461,
+    12744509
+   ]
+  },
+  "luva_carregando": {
+   "addr": 12744293,
+   "perChar": [
+    12744341,
+    12744341,
+    12744341,
+    12744341,
+    12744341,
+    12744341,
+    12744341,
+    12744341
+   ]
+  },
+  "luva_levantar": {
+   "addr": 12743957,
+   "perChar": [
+    12744005,
+    12744005,
+    12744005,
+    12744005,
+    12744005,
+    12744005,
+    12744005,
+    12744005
+   ]
+  },
+  "luva_arremessar": {
+   "addr": 12744029,
+   "perChar": [
+    12744077,
+    12744077,
+    12744077,
+    12744077,
+    12744077,
+    12744077,
+    12744077,
+    12744077
+   ]
+  },
+  "soco": {
+   "addr": 12743789,
+   "perChar": [
+    12743813,
+    12743813,
+    12743813,
+    12743813,
+    12743813,
+    12743813,
+    12743813,
+    12743813
+   ]
+  },
+  "item_P_Y": {
+   "addr": 12743837,
+   "perChar": [
+    12743861,
+    12743861,
+    12743861,
+    12743861,
+    12743861,
+    12743861,
+    12743861,
+    12743861
+   ]
+  },
+  "tedio_e_saltos": {
+   "addr": 12742513,
+   "perChar": [
+    12742561,
+    12742561,
+    12742561,
+    12742561,
+    12742561,
+    12742561,
+    12742561,
+    12742561
+   ]
+  },
+  "desconhecida_C26F35": {
+   "addr": 12742453,
+   "perChar": [
+    12742501,
+    12742501,
+    12742501,
+    12742501,
+    12742501,
+    12742501,
+    12742501,
+    12742501
+   ]
+  },
+  "desconhecida_C27001": {
+   "addr": 12742657,
+   "perChar": [
+    12742705,
+    12742705,
+    12742705,
+    12742705,
+    12742705,
+    12742705,
+    12742705,
+    12742705
+   ]
+  },
+  "desconhecida_C27049": {
+   "addr": 12742729,
+   "perChar": [
+    12742777,
+    12742777,
+    12742777,
+    12742777,
+    12742777,
+    12742777,
+    12742777,
+    12742777
+   ]
+  },
+  "desconhecida_C27085": {
+   "addr": 12742789,
+   "perChar": [
+    12742837,
+    12742837,
+    12742837,
+    12742837,
+    12742837,
+    12742837,
+    12742837,
+    12742837
+   ]
+  },
+  "desconhecida_C270C1": {
+   "addr": 12742849,
+   "perChar": [
+    12742897,
+    12742897,
+    12742897,
+    12742897,
+    12742897,
+    12742897,
+    12742897,
+    12742897
+   ]
+  },
+  "desconhecida_C270FD": {
+   "addr": 12742909,
+   "perChar": [
+    12742957,
+    12742957,
+    12742957,
+    12742957,
+    12742957,
+    12742957,
+    12742957,
+    12742957
+   ]
+  },
+  "desconhecida_C27139": {
+   "addr": 12742969,
+   "perChar": [
+    12743017,
+    12743017,
+    12743017,
+    12743017,
+    12743017,
+    12743017,
+    12743017,
+    12743017
+   ]
+  },
+  "desconhecida_C27431": {
+   "addr": 12743729,
+   "perChar": [
+    12743777,
+    12743777,
+    12743777,
+    12743777,
+    12743777,
+    12743777,
+    12743777,
+    12743777
+   ]
+  },
+  "estado_C26CE8": {
+   "addr": 12741864,
+   "perChar": [
+    12741912,
+    12741912,
+    12741912,
+    12741912,
+    12741912,
+    12741912,
+    12741912,
+    12741912
+   ]
+  },
+  "montaria_C26C1C": {
+   "addr": 12741660,
+   "perChar": [
+    12741768,
+    12741768,
+    12741768,
+    12741768,
+    12741768,
+    12741768,
+    12741768,
+    12741768
+   ]
+  },
+  "montaria_C26C4C": {
+   "addr": 12741708,
+   "perChar": [
+    12741756,
+    12741756,
+    12741756,
+    12741756,
+    12741756,
+    12741756,
+    12741756,
+    12741756
+   ]
+  },
+  "montaria_C26E45": {
+   "addr": 12742213,
+   "perChar": [
+    12742261,
+    12742261,
+    12742261,
+    12742261,
+    12742261,
+    12742261,
+    12742261,
+    12742261
+   ]
+  },
+  "montaria_C26E8D": {
+   "addr": 12742285,
+   "perChar": [
+    12742333,
+    12742333,
+    12742333,
+    12742333,
+    12742333,
+    12742333,
+    12742333,
+    12742333
+   ]
+  },
+  "montaria_C274CD": {
+   "addr": 12743885,
+   "perChar": [
+    12743933,
+    12743933,
+    12743933,
+    12743933,
+    12743933,
+    12743933,
+    12743933,
+    12743933
+   ]
+  },
+  "morte": {
+   "addr": 12742165,
+   "perChar": [
+    14162329,
+    14162329,
+    14162329,
+    14162329,
+    14162329,
+    14162329,
+    14162329,
+    14162329
+   ]
+  },
+  "vitoria_rodada": {
+   "addr": 12742405,
+   "perChar": [
+    14166644,
+    14166644,
+    14166644,
+    14166644,
+    14166644,
+    14166644,
+    14166644,
+    14166644
+   ]
+  }
+ },
+ "chars": [
+  {
+   "char": 0,
+   "sheet": 13762560,
+   "victorySheet": 14589952,
+   "framesSha1": "fb7cbdb6b776373ddd3602b07bbfc299be80e305",
+   "victorySha1": "03ad21c6f51cc9ad93fa4e2c694af58e9454b3fe",
+   "palettes": [
+    {
+     "slot": 0,
+     "addr": 14149596,
+     "attr": 0,
+     "sha1": "e746a45a194bbcfe8cd72ba23105c64607d9ec5b"
+    },
+    {
+     "slot": 1,
+     "addr": 14149628,
+     "attr": 2,
+     "sha1": "57cbb725d40e8e2e19c662844a4a1974a6821a28"
+    },
+    {
+     "slot": 2,
+     "addr": 14149660,
+     "attr": 8,
+     "sha1": "1502a0ed0de61cb6111d3f27d208477874d62830"
+    },
+    {
+     "slot": 3,
+     "addr": 14149692,
+     "attr": 10,
+     "sha1": "fd50c9e82a272e81450f438b6c56150385378423"
+    },
+    {
+     "slot": 4,
+     "addr": 14149724,
+     "attr": 12,
+     "sha1": "b55f416d2e4ef5a50b9e446065b5b1c56e201619"
+    }
+   ]
+  },
+  {
+   "char": 1,
+   "sheet": 13303808,
+   "victorySheet": 14592000,
+   "framesSha1": "308513a4bfab9ad5f73649e569931c14b0d7642c",
+   "victorySha1": "1a80f5f60028eafe713559de37d4f59601f3fd8d",
+   "palettes": [
+    {
+     "slot": 0,
+     "addr": 14052763,
+     "attr": 0,
+     "sha1": "d9a12061e5d40f10293f36c54391733eaf12a044"
+    },
+    {
+     "slot": 1,
+     "addr": 14052795,
+     "attr": 2,
+     "sha1": "b1b602db7e151e1a556e894e72a52b71bcff981d"
+    },
+    {
+     "slot": 2,
+     "addr": 14052827,
+     "attr": 8,
+     "sha1": "e44e31863691136660ee435247b667d52cd5dbf9"
+    },
+    {
+     "slot": 3,
+     "addr": 14052859,
+     "attr": 10,
+     "sha1": "8e1757539be89242c9079161cdd2656bf83a5323"
+    },
+    {
+     "slot": 4,
+     "addr": 14052891,
+     "attr": 12,
+     "sha1": "0132c24178f6454efe08ab8fb409af438c352305"
+    }
+   ]
+  },
+  {
+   "char": 2,
+   "sheet": 13336576,
+   "victorySheet": 14594048,
+   "framesSha1": "66c8c4db4a16e6333a5781c12fcb613b67ee952a",
+   "victorySha1": "c420c4534ee8270f7d38234cc1507d139b7420f0",
+   "palettes": [
+    {
+     "slot": 0,
+     "addr": 14052571,
+     "attr": 0,
+     "sha1": "f63f5efa732286025425eeb9ceef27be0b62104e"
+    },
+    {
+     "slot": 1,
+     "addr": 14052603,
+     "attr": 2,
+     "sha1": "3957647e3849b75db7227b9283fb4ae62d62edd2"
+    },
+    {
+     "slot": 2,
+     "addr": 14052635,
+     "attr": 8,
+     "sha1": "af623fd188540158297c532e34f385e561fad679"
+    },
+    {
+     "slot": 3,
+     "addr": 14052667,
+     "attr": 10,
+     "sha1": "d9493ebdcc4fe0bdc63d2c62ee400eb579e5bcd3"
+    },
+    {
+     "slot": 4,
+     "addr": 14052699,
+     "attr": 12,
+     "sha1": "b4844fdfbc0530a582e9fa49a0456844cd8c2434"
+    }
+   ]
+  },
+  {
+   "char": 3,
+   "sheet": 13369344,
+   "victorySheet": 14596096,
+   "framesSha1": "4cb1a09b95feeb020f22f5ee6fbb84684cabc1ab",
+   "victorySha1": "9ec3744dfb62276ffd29df6ea3d23d8f8de9e68a",
+   "palettes": [
+    {
+     "slot": 0,
+     "addr": 14049273,
+     "attr": 0,
+     "sha1": "78d836ac4be76c3aabb3bd2b49a1ab813dafbf5b"
+    },
+    {
+     "slot": 1,
+     "addr": 14049305,
+     "attr": 2,
+     "sha1": "4ce3eb9d32801b5c5009034d19e008f223db9afb"
+    },
+    {
+     "slot": 2,
+     "addr": 14049337,
+     "attr": 8,
+     "sha1": "1b4cee5b9863a3ab2ccbeccfcd0dbb5638fd8a86"
+    },
+    {
+     "slot": 3,
+     "addr": 14049369,
+     "attr": 10,
+     "sha1": "3c023ecd244aa80f942c570f2913186b632a5130"
+    },
+    {
+     "slot": 4,
+     "addr": 14049401,
+     "attr": 12,
+     "sha1": "9ee797af787c208ddd1322ce32de4d94a7e32495"
+    }
+   ]
+  },
+  {
+   "char": 4,
+   "sheet": 13402112,
+   "victorySheet": 14598144,
+   "framesSha1": "1226adc9baa1d69a54f0845b61832d25ae57c3db",
+   "victorySha1": "d9edffb474c2f4712cf03cbbcc6338bf10d03037",
+   "palettes": [
+    {
+     "slot": 0,
+     "addr": 14048825,
+     "attr": 0,
+     "sha1": "03dfa06da23ac0aeaf3c7df2d9fd5a410dc95fc3"
+    },
+    {
+     "slot": 1,
+     "addr": 14048857,
+     "attr": 2,
+     "sha1": "1442aea559b5359fe8c3849bdbf6fbc7543320aa"
+    },
+    {
+     "slot": 2,
+     "addr": 14048889,
+     "attr": 8,
+     "sha1": "4c583b56246966a7dde1ca3085834caaab5de949"
+    },
+    {
+     "slot": 3,
+     "addr": 14048921,
+     "attr": 10,
+     "sha1": "124a35713c3dc48ee2fdd5a6ed9cacddd2d8a67e"
+    },
+    {
+     "slot": 4,
+     "addr": 14048953,
+     "attr": 12,
+     "sha1": "ef3a37418f549d5d1438501c21be12acbe691751"
+    }
+   ]
+  },
+  {
+   "char": 5,
+   "sheet": 13441024,
+   "victorySheet": 14600192,
+   "framesSha1": "2814fffec99541a1ba6add371922c3d8695adb90",
+   "victorySha1": "787a2a2bc7c78da9b966c56e52dd3607c80c5501",
+   "palettes": [
+    {
+     "slot": 0,
+     "addr": 14049017,
+     "attr": 0,
+     "sha1": "4621c01a4260925f9533ddde94bfc27980480ce7"
+    },
+    {
+     "slot": 1,
+     "addr": 14049049,
+     "attr": 2,
+     "sha1": "2cbd161bbdf5e1e5620295ed4305a5424409fc37"
+    },
+    {
+     "slot": 2,
+     "addr": 14049081,
+     "attr": 8,
+     "sha1": "c4e04459b7f923195e68a15c79b42fa7e0b08263"
+    },
+    {
+     "slot": 3,
+     "addr": 14049113,
+     "attr": 10,
+     "sha1": "b224e6793d28b69f9852d150dc1190c7f80ed36d"
+    },
+    {
+     "slot": 4,
+     "addr": 14049145,
+     "attr": 12,
+     "sha1": "4933de26057411b7ac7fa164737f38fd42a7ca9a"
+    }
+   ]
+  }
+ ],
+ "hudHeads": [
+  {
+   "char": 0,
+   "slot": 0,
+   "entry": 30,
+   "sha1": "4d4575e37327f96df9921d5850d76af4d6bb67a1"
+  },
+  {
+   "char": 0,
+   "slot": 1,
+   "entry": 31,
+   "sha1": "649a524c66225a2925c3175b8c42446bac7aba9b"
+  },
+  {
+   "char": 0,
+   "slot": 2,
+   "entry": 32,
+   "sha1": "c562d5162f2c6337c0c43918aef18230dbf438cc"
+  },
+  {
+   "char": 0,
+   "slot": 3,
+   "entry": 33,
+   "sha1": "235bf2246572a371a78b8040df36c5fa00c56fd3"
+  },
+  {
+   "char": 0,
+   "slot": 4,
+   "entry": 34,
+   "sha1": "4dfc51fd1ab3b998d1eb8a6f37d47955d7a6fca8"
+  },
+  {
+   "char": 1,
+   "slot": 0,
+   "entry": 35,
+   "sha1": "663d5378da802ef77e64788e6698a0d45acd88df"
+  },
+  {
+   "char": 1,
+   "slot": 1,
+   "entry": 36,
+   "sha1": "8dc91c99fc2601f592dd6567c10be0526f35240e"
+  },
+  {
+   "char": 1,
+   "slot": 2,
+   "entry": 37,
+   "sha1": "c3a12005c033cb7e19607760ce0213248d2190a2"
+  },
+  {
+   "char": 1,
+   "slot": 3,
+   "entry": 38,
+   "sha1": "60a61a63e23eddc3392fcb59d66cd7659bb2629f"
+  },
+  {
+   "char": 1,
+   "slot": 4,
+   "entry": 39,
+   "sha1": "1afcad1feb784db3fcc2e2388b643d717bdb2033"
+  },
+  {
+   "char": 2,
+   "slot": 0,
+   "entry": 40,
+   "sha1": "aa49f5be27315e8e587a0d9f4de0168f6b55796d"
+  },
+  {
+   "char": 2,
+   "slot": 1,
+   "entry": 41,
+   "sha1": "fd1787f65925d3d6f63a9e5a2aa79f52e6b2e481"
+  },
+  {
+   "char": 2,
+   "slot": 2,
+   "entry": 42,
+   "sha1": "3b19efaf7e883c0b9d99da86226919024db4e731"
+  },
+  {
+   "char": 2,
+   "slot": 3,
+   "entry": 43,
+   "sha1": "957acdad2c89d7f12861fdbe2a3022a132eed9d8"
+  },
+  {
+   "char": 2,
+   "slot": 4,
+   "entry": 44,
+   "sha1": "c26719f2fdec915865819a9ac2ee13d7f709c3b1"
+  },
+  {
+   "char": 3,
+   "slot": 0,
+   "entry": 45,
+   "sha1": "23e0391897abc0adcc912c833408a521dfe582aa"
+  },
+  {
+   "char": 3,
+   "slot": 1,
+   "entry": 46,
+   "sha1": "ad3fa447514577dc1dad291b90fe23e05ab69d28"
+  },
+  {
+   "char": 3,
+   "slot": 2,
+   "entry": 47,
+   "sha1": "5af4e4ddaaa8de5af14bdb804791e12cde8df92e"
+  },
+  {
+   "char": 3,
+   "slot": 3,
+   "entry": 48,
+   "sha1": "fc86e5868573b6468600083a0bcdf1fb7cfee664"
+  },
+  {
+   "char": 3,
+   "slot": 4,
+   "entry": 49,
+   "sha1": "7cebf1adcab632e4ae6981fda6abce1bc6b755f5"
+  },
+  {
+   "char": 4,
+   "slot": 0,
+   "entry": 50,
+   "sha1": "e964e5005301370b54fb033236ddd0d753395afa"
+  },
+  {
+   "char": 4,
+   "slot": 1,
+   "entry": 51,
+   "sha1": "4981ff9ff9acfda78a8b0b3e633153ad337088c7"
+  },
+  {
+   "char": 4,
+   "slot": 2,
+   "entry": 52,
+   "sha1": "5c2733a1a4f59e4d6c89c45458852939aeeaa298"
+  },
+  {
+   "char": 4,
+   "slot": 3,
+   "entry": 53,
+   "sha1": "819110a90522f9b0c7d94fc94d6422e89e66ad1d"
+  },
+  {
+   "char": 4,
+   "slot": 4,
+   "entry": 54,
+   "sha1": "ee8d2b37395a2c07132cf1e93658158a51b8b8fb"
+  },
+  {
+   "char": 5,
+   "slot": 0,
+   "entry": 55,
+   "sha1": "29a0d4004cda9546728256bfb7704d8acb847a8f"
+  },
+  {
+   "char": 5,
+   "slot": 1,
+   "entry": 56,
+   "sha1": "0feadc3b5988edfb9c416a833336c8bdfe1af687"
+  },
+  {
+   "char": 5,
+   "slot": 2,
+   "entry": 57,
+   "sha1": "050baebd4bc8e775d3ac66d401229ee2b3a4f0e8"
+  },
+  {
+   "char": 5,
+   "slot": 3,
+   "entry": 58,
+   "sha1": "bc847b8f7b3ddd722625bb2203d1ffb0ad51c5f6"
+  },
+  {
+   "char": 5,
+   "slot": 4,
+   "entry": 59,
+   "sha1": "beff3ac8d11295fcfb0aa6524e3caa20abde181c"
+  }
+ ],
+ "bombScripts": [
+  {
+   "type": 0,
+   "addr": 12670777,
+   "loop": true,
+   "frames": [
+    [
+     2816,
+     20
+    ],
+    [
+     2818,
+     12
+    ],
+    [
+     2820,
+     16
+    ],
+    [
+     2822,
+     16
+    ],
+    [
+     2816,
+     20
+    ],
+    [
+     2818,
+     12
+    ],
+    [
+     2820,
+     16
+    ],
+    [
+     2822,
+     16
+    ]
+   ]
+  },
+  {
+   "type": 1,
+   "addr": 12670803,
+   "loop": true,
+   "frames": [
+    [
+     2824,
+     16
+    ],
+    [
+     2826,
+     16
+    ],
+    [
+     2828,
+     16
+    ],
+    [
+     2830,
+     16
+    ]
+   ]
+  },
+  {
+   "type": 2,
+   "addr": 12670817,
+   "loop": true,
+   "frames": [
+    [
+     3016,
+     28
+    ],
+    [
+     3018,
+     16
+    ],
+    [
+     3020,
+     24
+    ],
+    [
+     3022,
+     16
+    ],
+    [
+     3016,
+     28
+    ],
+    [
+     3018,
+     16
+    ],
+    [
+     3020,
+     24
+    ],
+    [
+     3022,
+     16
+    ]
+   ]
+  },
+  {
+   "type": 3,
+   "addr": 12670699,
+   "loop": true,
+   "frames": [
+    [
+     3008,
+     20
+    ],
+    [
+     3010,
+     12
+    ],
+    [
+     3012,
+     16
+    ],
+    [
+     3014,
+     16
+    ],
+    [
+     3008,
+     20
+    ],
+    [
+     3010,
+     12
+    ],
+    [
+     3012,
+     16
+    ],
+    [
+     3014,
+     16
+    ]
+   ]
+  },
+  {
+   "type": 4,
+   "addr": 12670725,
+   "loop": true,
+   "frames": [
+    [
+     3040,
+     20
+    ],
+    [
+     3042,
+     12
+    ],
+    [
+     3044,
+     16
+    ],
+    [
+     3046,
+     16
+    ],
+    [
+     3040,
+     20
+    ],
+    [
+     3042,
+     12
+    ],
+    [
+     3044,
+     16
+    ],
+    [
+     3046,
+     16
+    ]
+   ]
+  },
+  {
+   "type": 5,
+   "addr": 12670751,
+   "loop": true,
+   "frames": [
+    [
+     3048,
+     20
+    ],
+    [
+     3050,
+     12
+    ],
+    [
+     3052,
+     16
+    ],
+    [
+     3054,
+     16
+    ],
+    [
+     3048,
+     20
+    ],
+    [
+     3050,
+     12
+    ],
+    [
+     3052,
+     16
+    ],
+    [
+     3054,
+     16
+    ]
+   ]
+  },
+  {
+   "type": 6,
+   "addr": 12670777,
+   "loop": true,
+   "frames": [
+    [
+     2816,
+     20
+    ],
+    [
+     2818,
+     12
+    ],
+    [
+     2820,
+     16
+    ],
+    [
+     2822,
+     16
+    ],
+    [
+     2816,
+     20
+    ],
+    [
+     2818,
+     12
+    ],
+    [
+     2820,
+     16
+    ],
+    [
+     2822,
+     16
+    ]
+   ]
+  }
+ ]
+}
