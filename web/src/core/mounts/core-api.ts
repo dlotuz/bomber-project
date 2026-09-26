@@ -1,6 +1,6 @@
 import { CODE, type RoundState, type Player, type GameEvent, type PlayerAct } from '../types';
 import { setAct } from '../state';
-import { addBomb, canPlaceBomb, bombFireOf, fuseOf, explodeBomb } from '../bombs';
+import { addBomb, canPlaceBomb, bombFireOf, fuseOf, explodeBomb, bombOccupies } from '../bombs';
 import { MOUNTS } from './index';
 import { CAPSULE_TYPES } from '../tables/misc';                 // $C1:5DA4 (gerado pelo plano 6, §3.16)
 
@@ -13,11 +13,11 @@ export const EGG_TYPES: readonly number[] = CAPSULE_TYPES.map((v: number) => v &
 
 /** Bomba de `p` na casa `cell`, com as regras da colocação normal (decisão 13 do plano 6: $24 impede, $25 exige todas
  *  livres e dá fogo 10, fogo total dá 7, tipo = MOUNTS.current.bombType?.(p) ?? p.bombType). Gasta 1 disponível e emite
- *  bomb_placed. Devolve false (sem efeito) se não puder colocar, se a casa não for piso ou se uma bomba (parada ou
- *  deslizando) já estiver nela — mesmo teste de `placeBomb`; trocar por `bombOccupies` quando a correção do plano 6 sair. */
+ *  bomb_placed. Devolve false (sem efeito) se não puder colocar, se a casa não for piso ou se uma bomba já a ocupar
+ *  (`bombOccupies` de `core/bombs.ts`, mesmo teste de `placeBomb` — correção do plano 6 aplicada pelo plano 9/tarefa 10). */
 export function placeBombAt(s: RoundState, p: Player, cell: number, ev: GameEvent[]): boolean {
   if (!canPlaceBomb(p) || cell < 0 || s.grid[cell] !== CODE.FLOOR) return false;
-  if (s.bombs.some(b => b.cell === cell && (b.state === 'idle' || b.state === 'kicked'))) return false;
+  if (bombOccupies(s, cell)) return false;
   addBomb(s, p.slot, cell, { fire: bombFireOf(p), type: MOUNTS.current.bombType?.(p) ?? p.bombType, fuse: fuseOf(p) });
   p.bombsFree--;
   ev.push({ type: 'bomb_placed', slot: p.slot, cell });
