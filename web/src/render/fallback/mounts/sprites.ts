@@ -1,8 +1,12 @@
 import type { RoundState } from '../../../core/types';
 import type { Pix } from '../../art/pix';
-import { rider, mstate } from '../../../core/mounts/types';
+import { rider, type MountState } from '../../../core/mounts/types';
 import { cellAt, colOf, linOf } from '../../../core/mounts/core-api';
 import { mountPix, eggPix, shotPix } from './art';
+
+/** Leitura sem efeito colateral: a camada de desenho nunca deve criar `s.mountState` (isso é papel do
+ *  `step()`/`mstate()` da simulação). Uma rodada sem montarias ainda não tocadas fica com `mountState` null. */
+const projectilesOf = (s: RoundState) => (s.mountState as MountState | null)?.projectiles ?? [];
 
 export interface FbSprite { key: string; make: () => Pix; x: number; y: number }
 
@@ -27,7 +31,7 @@ export function fallbackMountSprites(s: RoundState, frame: number): FbSprite[] {
     out.push({ key: `mount:${r.type}:${f}:${st}`, make: () => mountPix(r.type, f, st), x: Math.floor(p.x / 256) - 12, y: Math.floor(p.y / 256) - 12 });
     r.reserves.forEach((t, i) => egg(r.trail[i + 1] ?? here, t, 0));
   }
-  for (const pr of mstate(s).projectiles) {
+  for (const pr of projectilesOf(s)) {
     if (pr.state === 'done') continue;
     const x = Math.floor(pr.x / 256), y = Math.floor(pr.y / 256), a = (frame >> 2) & 1;
     if (pr.state === 'cloud') { out.push({ key: `shot:${pr.kind.toString(16)}:cloud`, make: () => shotPix(pr.kind, 'cloud', 0), x: x - 8, y: y - 6 }); continue; }

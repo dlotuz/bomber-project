@@ -62,6 +62,12 @@ describe('sprites da camada fallback', () => {
     const eggs = fallbackMountSprites(s, 0).filter(x => x.key.startsWith('egg:'));
     expect(eggs.map(e => [e.x, e.y])).toEqual([[40, 40], [24, 40]]);
   });
+  it('não escreve em s.mountState (camada de desenho é só leitura)', () => {
+    const s = mkRound();
+    expect(s.mountState).toBeNull();
+    fallbackMountSprites(s, 0);
+    expect(s.mountState).toBeNull();
+  });
   it('projéteis: E em voo e nuvem, F e D', () => {
     const s = mkRound();
     const ms = mstate(s);
