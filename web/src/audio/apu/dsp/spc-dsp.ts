@@ -12,6 +12,7 @@
  * eco na RAM (SeparateEchoBuffer = false), stereo_switch = $FFFF, mute_mask = 0, sem MSU1, sem snapshot.
  * A saída de cada amostra (echo_27, SPC_DSP_OUT_HOOK) vai para `out.push(l, r)`.
  */
+import type { DspBus } from '../smp';
 import type { SampleSink } from '../../engine/ring';
 import { COUNTER_OFFSETS, COUNTER_RATES, GAUSS, INITIAL_REGS, SIMPLE_COUNTER_RANGE } from './tables';
 
@@ -63,7 +64,7 @@ class Voice {
   }
 }
 
-export class SpcDsp {
+export class SpcDsp implements DspBus {
   private readonly ram: Uint8Array;           // RAM de 64K compartilhada entre DSP e SMP
   private readonly out: SampleSink;
 
