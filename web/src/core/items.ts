@@ -101,19 +101,14 @@ function tryLoss(s: RoundState, p: Player, idx: number, ev: GameEvent[]): boolea
   return true;
 }
 
-/** Índices 2..12 da lista de perdas (fora doença/traje-montaria): só estes usam `rnd(13)`. */
-const hasRandomLoss = (s: RoundState, p: Player): boolean =>
-  p.speedLv > 1 || p.bombsCap > 1 || p.fire > 0 || !!p.bombType || p.punch || p.glove || p.kick ||
-  (p.passSoft && ((s.grid[playerCell(p)] ?? 0) & 0xc000) === 0) || p.passBomb || p.pItem || p.fullFire;
-
-/** Perde `n` itens: por perda, doença/traje-montaria são a tentativa forçada; senão, só sorteia `rnd(13)` (até 8
- *  tentativas) se sobrar algo nessa lista — sem nada para perder, não consome RNG (t44); depois varre 0..12. */
+/** Perde `n` itens: por perda, até 8 tentativas (doença → traje/montaria → rnd(13)); depois varre 0..12. */
 export function loseItems(s: RoundState, p: Player, n: number, ev: GameEvent[]): void {
   for (let k = 0; k < n; k++) {
     let ok = false;
-    const forced = p.disease ? 0 : p.costume >= 0 || p.mount !== null ? 1 : -1;
-    if (forced >= 0) ok = tryLoss(s, p, forced, ev);
-    else if (hasRandomLoss(s, p)) for (let a = 0; a < 8 && !ok; a++) ok = tryLoss(s, p, rnd(s.rng, 13), ev);
+    for (let a = 0; a < 8 && !ok; a++) {
+      const idx = p.disease ? 0 : p.costume >= 0 || p.mount !== null ? 1 : rnd(s.rng, 13);
+      ok = tryLoss(s, p, idx, ev);
+    }
     for (let idx = 0; idx < 13 && !ok; idx++) ok = tryLoss(s, p, idx, ev);
     if (!ok) return;
   }
