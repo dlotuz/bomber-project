@@ -1,12 +1,24 @@
 import { defaultRules } from '../core';
-import { DEFAULT_KEYMAPS, DEVICE_IDS, KEY_FIELDS, type DeviceId, type KeyMap } from '../input/input';
+import {
+  DEFAULT_KEYMAPS, DEFAULT_PADMAP, DEVICE_IDS, KEY_FIELDS, PAD_FIELDS,
+  type DeviceId, type KeyMap, type PadMap,
+} from '../input/input';
 import { CHARACTERS } from '../render/art/bomber';
 
 export type SlotKind = 'human' | 'cpu' | 'off';
 
 export interface RuleChoices {
   cpuLevel: 0 | 1 | 2; matches: number; timeIdx: number;
-  suddenDeath: boolean; badBomber: boolean; racer: boolean; randomSpawns: boolean;
+  suddenDeath: boolean; badBomber: boolean; racer: boolean;
+}
+
+/** Opções gerais (fora das regras da partida): spawn aleatório e volumes. */
+export interface Options {
+  randomSpawns: boolean; musicVol: number; sfxVol: number;
+}
+
+export function defaultOptions(): Options {
+  return { randomSpawns: false, musicVol: 8, sfxVol: 8 };
 }
 
 /** O que foi escolhido nos menus para a próxima partida (lembrado entre sessões). */
@@ -20,10 +32,12 @@ export interface Setup {
 }
 
 export interface Settings {
-  version: 1;
+  version: 2;
   names: string[];
   devices: DeviceId[];
   keymaps: KeyMap[];
+  padmaps: PadMap[];
+  options: Options;
   setup: Setup;
 }
 
@@ -37,7 +51,7 @@ export function defaultSetup(): Setup {
     mode: 'ffa', slots: ['human', 'human', 'cpu', 'cpu', 'cpu'], teams: [0, 1, 0, 1, 0],
     rules: {
       cpuLevel: r.cpuLevel, matches: r.matches, timeIdx: r.timeIdx, suddenDeath: r.suddenDeath,
-      badBomber: r.badBomber, racer: r.racer, randomSpawns: r.randomSpawns,
+      badBomber: r.badBomber, racer: r.racer,
     },
     chars: [0, 1, 2, 3, 4], stage: 1,
   };
@@ -45,8 +59,9 @@ export function defaultSetup(): Setup {
 
 export function defaultSettings(): Settings {
   return {
-    version: 1, names: ['', '', '', '', ''], devices: ['kb0', 'kb1', 'gp0', 'gp1', 'gp2'],
-    keymaps: DEFAULT_KEYMAPS.map(m => ({ ...m })), setup: defaultSetup(),
+    version: 2, names: ['', '', '', '', ''], devices: ['kb0', 'kb1', 'gp0', 'gp1', 'gp2'],
+    keymaps: DEFAULT_KEYMAPS.map(m => ({ ...m })), padmaps: [0, 1, 2, 3].map(() => ({ ...DEFAULT_PADMAP })),
+    options: defaultOptions(), setup: defaultSetup(),
   };
 }
 
@@ -76,18 +91,35 @@ function normalizeKeyMap(v: unknown, def: KeyMap): KeyMap {
   return m;
 }
 
+function normalizePadMap(v: unknown): PadMap {
+  const o = asObj(v);
+  const m = { ...DEFAULT_PADMAP };
+  for (const f of PAD_FIELDS) {
+    const k = o[f];
+    if (typeof k === 'number' && Number.isInteger(k) && k >= 0 && k <= 31) m[f] = k;
+  }
+  return m;
+}
+
 /** Aceita qualquer coisa (JSON antigo, corrompido, parcial) e devolve configurações válidas. */
 export function normalizeSettings(raw: unknown): Settings {
   const d = defaultSettings();
   const r = asObj(raw);
   const s = asObj(r.setup);
   const rr = asObj(s.rules);
+  const ro = asObj(r.options);
   const ds = d.setup;
   return {
-    version: 1,
+    version: 2,
     names: five(r.names, x => sanitizeName(x)),
     devices: five(r.devices, (x, i) => oneOf(x, DEVICE_IDS, d.devices[i])),
     keymaps: [0, 1].map(k => normalizeKeyMap(Array.isArray(r.keymaps) ? r.keymaps[k] : undefined, d.keymaps[k])),
+    padmaps: [0, 1, 2, 3].map(k => normalizePadMap(Array.isArray(r.padmaps) ? r.padmaps[k] : undefined)),
+    options: {
+      randomSpawns: bool(ro.randomSpawns, d.options.randomSpawns),
+      musicVol: intIn(ro.musicVol, 0, 10, d.options.musicVol),
+      sfxVol: intIn(ro.sfxVol, 0, 10, d.options.sfxVol),
+    },
     setup: {
       mode: oneOf(s.mode, ['ffa', 'team'] as const, ds.mode),
       slots: five(s.slots, (x, i) => oneOf(x, ['human', 'cpu', 'off'] as const, ds.slots[i])),
@@ -99,7 +131,6 @@ export function normalizeSettings(raw: unknown): Settings {
         suddenDeath: bool(rr.suddenDeath, ds.rules.suddenDeath),
         badBomber: bool(rr.badBomber, ds.rules.badBomber),
         racer: bool(rr.racer, ds.rules.racer),
-        randomSpawns: bool(rr.randomSpawns, ds.rules.randomSpawns),
       },
       chars: five(s.chars, (x, i) => intIn(x, 0, CHARACTERS.length - 1, ds.chars[i])),
       stage: intIn(s.stage, 1, 10, ds.stage),
@@ -108,13 +139,17 @@ export function normalizeSettings(raw: unknown): Settings {
 }
 
 /**
- * Gancho para migrações entre versões do formato salvo. Hoje só existe a versão 1, então
- * qualquer coisa com `version: 1` (ou sem `version`, formato mais antigo) passa direto;
- * futuras versões ganhariam um caso aqui antes de cair em `normalizeSettings`.
+ * Gancho para migrações entre versões do formato salvo. A v1 não tinha `padmaps`/`options` e trazia
+ * `randomSpawns` dentro de `setup.rules` (agora em Opções): apaga o campo de lá (o valor antigo é
+ * descartado — Opções nasce com o padrão Não) e deixa o resto para `normalizeSettings` completar
+ * (teclas novas do teclado, ex. L/R/SELECT, ganham o padrão daquele conjunto).
  */
 export function migrate(raw: unknown): unknown {
   const version = asObj(raw).version;
-  if (version === undefined || version === 1) return raw;
+  if (version === undefined || version === 1) {
+    const rules = asObj(asObj(raw).setup).rules;
+    if (rules && typeof rules === 'object') delete (rules as Obj).randomSpawns;
+  }
   return raw;
 }
 

@@ -1,68 +1,57 @@
 import {
-  defaultSettings, loadSettings, saveSettings, normalizeSettings, sanitizeName, migrate, STORAGE_KEY, type StorageLike,
+  defaultSettings, loadSettings, saveSettings, normalizeSettings, STORAGE_KEY, type StorageLike,
 } from '../../src/app/settings';
+import { DEFAULT_KEYMAPS, DEFAULT_PADMAP } from '../../src/input/input';
 
-const memory = (init: Record<string, string> = {}): StorageLike & { data: Record<string, string> } => {
-  const data = { ...init };
-  return { data, getItem: k => data[k] ?? null, setItem: (k, v) => { data[k] = v; } };
+const mem = (): StorageLike & { data: Map<string, string> } => {
+  const data = new Map<string, string>();
+  return { data, getItem: k => data.get(k) ?? null, setItem: (k, v) => { data.set(k, v); } };
 };
 
-describe('configurações salvas', () => {
-  it('padrão: P1 Teclado 1, P2 Teclado 2, P3–P5 Controles 1–3; 2 humanos e 3 CPUs', () => {
+describe('configurações v2', () => {
+  it('padrão: versão 2, P1 Teclado 1, P2 Teclado 2, P3–P5 Controles 1–3, 4 mapas de gamepad, opções', () => {
     const s = defaultSettings();
+    expect(s.version).toBe(2);
     expect(s.devices).toEqual(['kb0', 'kb1', 'gp0', 'gp1', 'gp2']);
-    expect(s.setup.slots).toEqual(['human', 'human', 'cpu', 'cpu', 'cpu']);
-    expect(s.setup.rules.matches).toBe(3);
-    expect(s.keymaps[0].a).toBe('KeyJ');
+    expect(s.padmaps).toHaveLength(4);
+    expect(s.padmaps[3]).toEqual(DEFAULT_PADMAP);
+    expect(s.options).toEqual({ randomSpawns: false, musicVol: 8, sfxVol: 8 });
+    expect(s.setup.rules).not.toHaveProperty('randomSpawns');
   });
   it('salva e carrega de volta', () => {
-    const st = memory();
+    const st = mem();
     const s = defaultSettings();
-    s.names[0] = 'ANA';
-    s.devices[4] = 'gp3';
-    s.setup.stage = 7;
+    s.options.musicVol = 3; s.padmaps[1].a = 7; s.keymaps[0].select = 'KeyZ';
     saveSettings(st, s);
-    expect(loadSettings(st)).toEqual(s);
+    const back = loadSettings(st);
+    expect(back.options.musicVol).toBe(3);
+    expect(back.padmaps[1].a).toBe(7);
+    expect(back.keymaps[0].select).toBe('KeyZ');
   });
-  it('JSON corrompido ou ausente → padrão', () => {
-    expect(loadSettings(memory({ [STORAGE_KEY]: '{oops' }))).toEqual(defaultSettings());
-    expect(loadSettings(memory())).toEqual(defaultSettings());
-    expect(loadSettings(null)).toEqual(defaultSettings());
-  });
-  it('campos inválidos caem no padrão, campos válidos são mantidos', () => {
-    const s = normalizeSettings({
-      names: ['bia', 42], devices: ['gp3', 'xbox'], keymaps: [{ up: 'KeyI', down: '' }],
-      setup: { mode: 'team', slots: ['cpu', 'robot'], rules: { matches: 9, timeIdx: 4, racer: 'yes' }, chars: [5, 99], stage: 0 },
-    });
-    expect(s.names).toEqual(['BIA', '', '', '', '']);
-    expect(s.devices.slice(0, 2)).toEqual(['gp3', 'kb1']);
-    expect([s.keymaps[0].up, s.keymaps[0].down]).toEqual(['KeyI', 'KeyS']);
+  it('migra a v1: teclas novas com o padrão, randomSpawns vai para Opções e vale Não (original)', () => {
+    const v1 = { version: 1, devices: ['gp0', 'kb0', 'kb1', 'none', 'gp1'], keymaps: [{ up: 'KeyT', down: 'KeyG', left: 'KeyF', right: 'KeyH', a: 'KeyZ', b: 'KeyX', y: 'KeyC', start: 'Space' }],
+      setup: { mode: 'team', rules: { matches: 5, randomSpawns: true } } };
+    const st = mem();
+    st.setItem(STORAGE_KEY, JSON.stringify(v1));
+    const s = loadSettings(st);
+    expect(s.version).toBe(2);
+    expect(s.devices).toEqual(['gp0', 'kb0', 'kb1', 'none', 'gp1']);
+    expect(s.keymaps[0]).toMatchObject({ up: 'KeyT', a: 'KeyZ', x: 'KeyI', l: 'KeyQ', r: 'KeyE', select: 'KeyF' });
+    expect(s.keymaps[1]).toEqual(DEFAULT_KEYMAPS[1]);
     expect(s.setup.mode).toBe('team');
-    expect(s.setup.slots.slice(0, 2)).toEqual(['cpu', 'human']);
-    expect([s.setup.rules.matches, s.setup.rules.timeIdx, s.setup.rules.racer]).toEqual([3, 4, false]);
-    expect(s.setup.chars.slice(0, 2)).toEqual([5, 1]);
-    expect(s.setup.stage).toBe(1);
+    expect(s.setup.rules.matches).toBe(5);
+    expect(s.options.randomSpawns).toBe(false);
   });
-  it('falha ao gravar não derruba o jogo', () => {
-    const st: StorageLike = { getItem: () => null, setItem: () => { throw new Error('quota'); } };
-    expect(() => saveSettings(st, defaultSettings())).not.toThrow();
+  it('valores inválidos caem no padrão', () => {
+    const s = normalizeSettings({ padmaps: [{ a: -1, b: 99, x: 'q' }], options: { musicVol: 11, sfxVol: 2.5, randomSpawns: 'sim' } });
+    expect(s.padmaps[0]).toEqual(DEFAULT_PADMAP);
+    expect(s.options).toEqual({ randomSpawns: false, musicVol: 8, sfxVol: 8 });
   });
-  it('migrate: version 1 e sem version carregam sem mudanças (gancho para futuras migrações)', () => {
-    const withVersion = defaultSettings();
-    withVersion.names[0] = 'ANA';
-    expect(migrate(withVersion)).toEqual(withVersion);
-    const { version: _version, ...noVersion } = withVersion as unknown as Record<string, unknown>;
-    expect(migrate(noVersion)).toEqual(noVersion);
-
-    const st1 = memory({ [STORAGE_KEY]: JSON.stringify(withVersion) });
-    expect(loadSettings(st1)).toEqual(withVersion);
-    const st2 = memory({ [STORAGE_KEY]: JSON.stringify(noVersion) });
-    expect(loadSettings(st2)).toEqual(withVersion);
-  });
-  it('nomes: maiúsculas, caracteres permitidos, até 8', () => {
-    expect(sanitizeName('joão da silva')).toBe('JOAO DA');
-    expect(sanitizeName('  zé-1  ')).toBe('ZE-1');
-    expect(sanitizeName('😀abc')).toBe('ABC');
-    expect(sanitizeName(undefined)).toBe('');
+  it('JSON corrompido → padrão; falha ao gravar não derruba', () => {
+    const st = mem();
+    st.setItem(STORAGE_KEY, '{nope');
+    expect(loadSettings(st)).toEqual(defaultSettings());
+    const bad: StorageLike = { getItem: () => null, setItem: () => { throw new Error('cota'); } };
+    expect(() => saveSettings(bad, defaultSettings())).not.toThrow();
   });
 });
