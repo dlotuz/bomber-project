@@ -69,10 +69,10 @@ describe('origens de mapa (A14)', () => {
     });
   });
   describe.skipIf(!ASSETS)('com ROM e capturas', () => {
-    it.each(Object.keys(TEXT))('%s: mapa da ROM = captura fora do texto (≥ 99 %)', scene => {
+    it.for(Object.keys(TEXT))('%s: mapa da ROM = captura fora do texto (≥ 99 %)', (scene, { skip }) => {
       const src = MAP_SOURCES[scene as keyof typeof MAP_SOURCES];
       const cap = loadCapture(scene);
-      if (!src || !cap) return;
+      if (!src || !cap) return skip();   // sem origem ou sem captura: pulado, não aprovado
       const maps = src(ASSETS!);
       const dyn = DYNAMIC[scene] ?? [];
       // draw2 tem outro layout de VRAM (T19/T14): BG12NBA=$44 põe os tiles em $4000–$5BFF (palavra), então o mapa do

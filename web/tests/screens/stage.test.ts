@@ -106,9 +106,9 @@ function iconMatch(built: Uint16Array, capturedCol: number, cap: Uint16Array): n
 }
 
 describe.skipIf(!ASSETS)('prévias reconstruídas × capturas reais (todas as 10 fases)', () => {
-  it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])('fase %s: ícone bate igual e o fundo (BG2) bate >= 97 fora dos textos', stage => {
+  it.for([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])('fase %s: ícone bate igual e o fundo (BG2) bate >= 97 fora dos textos', (stage, { skip }) => {
     const cap = loadCapture(captureNameOf(stage));
-    if (!cap) return;   // captura ausente (só a oficial da fase 1 é garantida no repo): pula
+    if (!cap) return skip();   // captura ausente (só a oficial da fase 1 é garantida): aparece como pulado, não como aprovado
     const maps = buildStageScene(ASSETS!, stage, 0);
     expect(mapMatch(maps.bg2!, capturedMap(cap, 0x4400), TEXT_IGNORE)).toBeGreaterThanOrEqual(0.97);
     expect(iconMatch(maps.bg1!, CAPTURE_COL[stage], capturedMap(cap, 0x4000))).toBe(1);
