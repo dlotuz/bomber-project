@@ -26,6 +26,16 @@ export interface StyleRomDef {
   meta?: Record<string, number>;           // ex.: timeUpWidth (T17)
   mask?: GlyphMask;                        // usada pelos recortes com `seeds`
   kern?: Readonly<Record<string, number>>; // ajuste por par de caracteres ('TÓ'), somado ao `spacing`
+  /** Cada recorte mantém só estes índices (o corpo/brilho da letra) e zera o resto — em fontes cursivas onde só
+   *  o contorno encosta letras vizinhas (não o corpo), isso evita que um recorte por retângulo simples pegue o
+   *  contorno compartilhado. Usado com `outline` pra redesenhar o contorno depois de montar a frase inteira. */
+  bodyOnly?: readonly number[];
+  /** `layoutText` redesenha o contorno depois de montar a frase inteira: todo pixel 0 vizinho de um pixel do
+   *  corpo vira `index`, repetido `width` vezes (padrão 1). `conn` escolhe 4 ou 8 vizinhos — teste contra a
+   *  faixa original (`conn: 4` bateu mais pixel a pixo na fonte cursiva de `vsmode`; padrão 8). Sem `bodyOnly`,
+   *  não tem efeito visível (os recortes já trazem o próprio contorno da ROM, então não sobra pixel 0 junto do
+   *  corpo pra virar contorno). */
+  outline?: { index: number; width?: number; conn?: 4 | 8 };
 }
 /** '.' = 0; padrão: hex. Com `base`, o glifo é o glifo `base` já recortado da ROM (montado em tempo de execução) com os
  *  pixels não-'.' deste desenho por cima (acentos sobre letras da ROM, sem guardar os pixels dela). */

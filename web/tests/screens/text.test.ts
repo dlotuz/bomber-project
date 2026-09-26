@@ -101,6 +101,53 @@ describe('motor (puro, sem ROM)', () => {
   it('TEMPO ESGOTADO! sem ROM', () => { expect(timeUpLabel()).toBe('TEMPO ESGOTADO!'); });
 });
 
+describe('bodyOnly + outline (fonte cursiva com contorno compartilhado entre letras)', () => {
+  // Faixa 8×8: linha de índice 2 (contorno) nas bordas e no meio (encostaria a letra vizinha), 9 (corpo) no resto.
+  const strip: IndexedImage = {
+    w: 8, h: 8, px: new Uint8Array([
+      2, 2, 2, 2, 2, 2, 2, 2,
+      2, 9, 9, 2, 2, 9, 9, 2,
+      2, 9, 9, 2, 2, 9, 9, 2,
+      2, 2, 2, 2, 2, 2, 2, 2,
+      2, 9, 9, 2, 2, 9, 9, 2,
+      2, 9, 9, 2, 2, 9, 9, 2,
+      2, 2, 2, 2, 2, 2, 2, 2,
+      2, 2, 2, 2, 2, 2, 2, 2,
+    ]),
+  };
+  it('sem bodyOnly/outline: recorte simples traz o contorno junto (comportamento de antes, sem mudança)', () => {
+    const f = fontFromParts('menuItem', def([{ ch: 'A', strip: 'a', x: 0, w: 4 }]), { a: strip }, []);
+    const g = f.glyphs.get('A')!;
+    expect(g.px[0]).toBe(2);                         // contorno preservado no recorte cru
+  });
+  it('bodyOnly: cutGlyph zera tudo que não é corpo (some o contorno do recorte)', () => {
+    const f = fontFromParts('menuItem', def([{ ch: 'A', strip: 'a', x: 0, w: 4, h: 4 }], { bodyOnly: [9] }), { a: strip }, []);
+    const g = f.glyphs.get('A')!;
+    expect(Array.from(g.px)).toEqual([0, 0, 0, 0, 0, 9, 9, 0, 0, 9, 9, 0, 0, 0, 0, 0]);
+  });
+  it('outline sem bodyOnly não muda nada (a frase já não tem pixel 0 colado no corpo)', () => {
+    const f = fontFromParts('menuItem', def([{ ch: 'A', strip: 'a', x: 1, w: 2, y: 1, h: 2 }], { outline: { index: 3 }, height: 2 }), { a: strip }, []);
+    const t = layoutText(f, 'A');
+    expect(Array.from(t.px)).toEqual([9, 9, 9, 9]);   // sem 0 adjacente ao corpo dentro do recorte: nada pra contornar
+  });
+  it('bodyOnly + outline: recorta só o corpo de duas letras vizinhas e redesenha o contorno na frase montada', () => {
+    const bodyDef = def([{ ch: 'A', strip: 'a', x: 0, w: 3 }, { ch: 'B', strip: 'a', x: 4, w: 3 }],
+      { bodyOnly: [9], outline: { index: 2 }, spacing: 0, height: 3 });
+    const f = fontFromParts('menuItem', bodyDef, { a: strip }, []);
+    const t = layoutText(f, 'AB');
+    // A = colunas 0-2 (corpo em 1-2), B = colunas 4-6 (corpo em 5-6) de uma faixa 3 alta (linhas 1-3 do strip)
+    expect(t.w).toBe(6);
+    for (let y = 0; y < 3; y++) for (let x = 0; x < 6; x++) {
+      const v = t.px[y * 6 + x];
+      expect(v === 0 || v === 9 || v === 2, `x=${x} y=${y} v=${v}`).toBe(true);
+    }
+    expect(Array.from(t.px).some(v => v === 9)).toBe(true);   // corpo preservado
+    expect(Array.from(t.px).some(v => v === 2)).toBe(true);   // contorno regenerado
+    // as duas letras não se fundem: a coluna do meio (gap entre A e B) não vira uma mancha sólida de corpo
+    expect(t.px[1 * 6 + 3]).not.toBe(9);
+  });
+});
+
 describe('drawText no fallback', () => {
   const bank = { text: (s: string, c: string) => ({ width: s.length * 6 - 1 + 2, height: 12, tag: `${s}|${c}` }) };
   const calls: { tag: string; x: number; y: number; w: number }[] = [];
