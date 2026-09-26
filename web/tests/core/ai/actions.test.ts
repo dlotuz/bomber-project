@@ -1,12 +1,11 @@
-import { arena, put, setCell, C } from '../kit';
+import { arena, put, setCell, C, withStage, withMount } from '../kit';
 import { play } from './simkit';
 import { createAi, aiInputs } from '../../../src/core/ai';
 import { crossCells } from '../../../src/core/ai/danger';
 import { addBomb } from '../../../src/core/bombs';
 import { BTN, CODE } from '../../../src/core/types';
 import { itemCode, playerCell } from '../../../src/core/state';
-import { STAGES } from '../../../src/core/stages';
-import { MOUNTS, NO_MOUNT } from '../../../src/core/mounts';
+import { NO_MOUNT } from '../../../src/core/mounts';
 import { step } from '../../../src/core/step';
 
 const CPU0 = [true, false, false, false, false];
@@ -61,23 +60,21 @@ describe('IA: doenças e dicas', () => {
     expect(s.players[0].state).toBe('alive');
   });
   it('dica da arena: casa em `avoid` nunca é pisada', () => {
-    STAGES[1] = { ai: { avoid: () => [C(5, 1)] } };
-    try {
+    withStage(1, { ai: { avoid: () => [C(5, 1)] } }, () => {
       const s = arena(); put(s, 0, 4, 1); put(s, 1, 12, 9);
       setCell(s, 6, 1, itemCode(0x03));
       const ai = createAi();
       for (let i = 0; i < 200; i++) { step(s, aiInputs(s, ai, CPU0, 2)); expect(playerCell(s.players[0])).not.toBe(C(5, 1)); }
-    } finally { STAGES[1] = {}; }
+    });
   });
   it('dica da montaria: useY → Y na borda', () => {
-    MOUNTS.current = { ...NO_MOUNT, ai: { useY: () => true } };
-    try {
+    withMount({ ...NO_MOUNT, ai: { useY: () => true } }, () => {
       const s = arena(); put(s, 0, 4, 1); put(s, 1, 12, 9);
       const ai = createAi();
       const outs = Array.from({ length: 6 }, () => { const o = aiInputs(s, ai, CPU0, 2); step(s, o); return o[0] & BTN.Y; });
       expect(outs.some(Boolean)).toBe(true);
       expect(outs.every((v, i) => !(v && outs[i - 1]))).toBe(true);   // nunca dois ticks seguidos
-    } finally { MOUNTS.current = NO_MOUNT; }
+    });
   });
 });
 

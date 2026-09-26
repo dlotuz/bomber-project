@@ -20,8 +20,10 @@ export function renderStages(rom: Rom): string {
     const bg2 = decodeMap(rom, rom.u24(rec + 0x09)), floor = decodeMap(rom, rom.u24(rec + 0x0c));
     const base: number[] = [], floorLogic: number[] = [];
     for (let lin = 0; lin < 13; lin++) for (let col = 0; col < 17; col++) {
-      base.push(logicOf(rom, bg2[lin * 32 + col]));
-      floorLogic.push(logicOf(rom, floor[lin * 32 + col]));
+      const b = logicOf(rom, bg2[lin * 32 + col]), f = floor[lin * 32 + col];
+      base.push(b);
+      // piso especial (código ≥ 16, ex.: a grama da fase 4) sobre casa que não é parede = piso normal (§3.5, §4.3, A10)
+      floorLogic.push(f >= 16 && b !== 0xec40 ? 0x0000 : logicOf(rom, f));
     }
     return { base, floorLogic, remove: rom.u8(rec + 0x1e) };
   });
@@ -29,7 +31,8 @@ export function renderStages(rom: Rom): string {
   if (remove !== '14,14,12,4,8,14,4,0,4,14') throw new Error(`ordem das arenas inesperada: ${remove}`);
   return header('core-stages.ts', rom.sha1, [
     'registro da arena: p24(p24($C4:0074) + 3·idx), idx = fase − 1; mapa BG2 rec+$09, piso rec+$0C, N rec+$1E;',
-    'lógico $C4:0892[código] (código ≥ 16 → EC40). Casa (col, lin) = entrada lin·32 + col do mapa.',
+    'lógico $C4:0892[código] (código ≥ 16 → EC40; no piso, código ≥ 16 sobre base ≠ EC40 → 0000, piso normal).',
+    'Casa (col, lin) = entrada lin·32 + col do mapa.',
   ]) + [
     'export interface StageFacts { base: readonly number[]; floorLogic: readonly number[]; remove: number }',
     '/** Índice 0..9 = fases 1..10; base/floorLogic com 221 códigos (cell = lin·17 + col). */',

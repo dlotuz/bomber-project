@@ -1,7 +1,9 @@
 import { arena, put, setCell, C } from '../kit';
-import { dangerMap, SAFE, kickPath, pressureCells } from '../../../src/core/ai/danger';
-import { addBomb } from '../../../src/core/bombs';
-import { CODE } from '../../../src/core/types';
+import { blockedUntil, dangerMap, SAFE, kickPath, pressureCells } from '../../../src/core/ai/danger';
+import { addBomb, burnCell } from '../../../src/core/bombs';
+import { step } from '../../../src/core/step';
+import { BURN_TICKS } from '../../../src/core/constants';
+import { BURN, CODE } from '../../../src/core/types';
 
 describe('mapa de perigo (offsets a partir do próximo tick)', () => {
   it('bomba recém-colocada: cruz letal a partir do offset 128; resto seguro', () => {
@@ -30,6 +32,24 @@ describe('mapa de perigo (offsets a partir do próximo tick)', () => {
     const s = arena(); addBomb(s, 1, C(6, 1), { type: 1 });
     expect(dangerMap(s, 0)[C(6, 1)]).toBe(1);
     expect(dangerMap(s, 1)[C(6, 1)]).toBe(SAFE);
+  });
+  it('remota de dono que não está de pé: não é perigo permanente (só bloqueia); explode por cadeia', () => {
+    const s = arena({ players: 3 }); addBomb(s, 1, C(6, 1), { type: 1 });
+    s.players[1].state = 'out';
+    const d = dangerMap(s, 0);
+    expect([d[C(6, 1)], d[C(7, 1)], d[C(6, 2)]]).toEqual([SAFE, SAFE, SAFE]);
+    expect(s.grid[C(6, 1)]).toBe(CODE.BOMB);                   // a casa continua bloqueada (bomba na grade)
+    addBomb(s, 2, C(4, 1), { fuse: 10 });                     // cadeia: a órfã explode 2 ticks depois da que a alcança
+    expect(dangerMap(s, 0)[C(8, 1)]).toBe(14);
+  });
+  it('blockedUntil: queima de T0 vira piso no tick T0+24; o 1º passo que pode entrar é o do tick T0+25 (offset +1)', () => {
+    const s = arena(); burnCell(s, C(6, 1), BURN.SOFT);         // T0 = 100
+    const bu = blockedUntil(s)[C(6, 1)];
+    expect(bu).toBe(BURN_TICKS + 1);
+    let k = 0;
+    while (s.grid[C(6, 1)] === CODE.BURNING) { step(s, [0, 0, 0, 0, 0]); k++; }
+    expect([k, s.tick]).toEqual([BURN_TICKS, 100 + BURN_TICKS]);   // limpa no passo de objetos, depois dos jogadores
+    expect(bu).toBe(k + 1);
   });
   it('bomba chutada que não para a tempo explode no meio do caminho, com a trilha marcada', () => {
     const s = arena(); put(s, 1, 8, 5);

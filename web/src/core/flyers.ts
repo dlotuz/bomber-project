@@ -6,7 +6,7 @@ import { BOUNCE, ITEM_FLIGHT, PUNCH, THROW, type Script } from './tables/flights
 import { CHAIN_DELAY, LIFT_TICKS, PUNCH_TICKS, THROW_TICKS } from './constants';
 import { SUB, WRAP_X, WRAP_Y, cellAt, cellCenter, colAt, colOf, faceStep, inField, inGrid, linAt, linOf } from './units';
 import { itemCode, newId, playerCell, setAct, standing } from './state';
-import { bombAt, bombById, removeBomb } from './bombs';
+import { bombAt, bombById, bombOccupies, removeBomb } from './bombs';
 import { stunPlayer } from './hit';
 
 /** Quiques seguidos antes de a bomba sumir e voltar ao dono (proteção contra laço; 🟡). */
@@ -72,7 +72,7 @@ function land(s: RoundState, f: Flyer, ev: GameEvent[]): void {
   if (!out && v === CODE.BURNING) { drop(); removeBomb(s, b, true); return; }
   const victims = out ? [] : s.players.filter(q => standing(q) && playerCell(q) === cell);
   if (victims.length) { for (const q of victims) stunPlayer(s, q, ev); bounce(f, cell, ev); }
-  else if (!out && (v === CODE.FLOOR || v === CODE.FLAME)) {
+  else if (!out && (v === CODE.FLOOR || v === CODE.FLAME) && !bombOccupies(s, cell)) {
     drop();
     b.state = 'idle'; b.cell = cell; [b.x, b.y] = cellCenter(cell);
     s.grid[cell] = CODE.BOMB;
@@ -151,7 +151,7 @@ export function dropHeld(s: RoundState, p: Player): void {
   p.carry = -1; p.throwQueued = false;
   if (!b) return;
   const c = playerCell(p);
-  if (c >= 0 && s.grid[c] === CODE.FLOOR && !bombAt(s, c)) {
+  if (c >= 0 && s.grid[c] === CODE.FLOOR && !bombOccupies(s, c)) {
     b.state = 'idle'; b.cell = c; [b.x, b.y] = cellCenter(c); s.grid[c] = CODE.BOMB;
   } else removeBomb(s, b, true);
 }

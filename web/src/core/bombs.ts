@@ -1,7 +1,7 @@
 // bombs.ts (T6) — pavio, explosões, chamas e queima (decisões 9–13 da spec)
 import { BURN, CODE, DISEASE, FLAME_PIECE, type Bomb, type GameEvent, type Player, type RoundState } from './types';
 import { BAD_COOLDOWN, BURN_TICKS, CHAIN_DELAY, FLAME_TICKS, FUSE, FUSE_LONG, FUSE_SHORT, rangeOf } from './constants';
-import { CELLS, cellCenter, colOf, faceStep, inGrid, linOf } from './units';
+import { CELLS, cellAt, cellCenter, colOf, faceStep, inGrid, linOf } from './units';
 import { isItemCode, itemCode, newId, playerCell } from './state';
 import { STAGES } from './stages';
 import { MOUNTS } from './mounts';
@@ -22,6 +22,13 @@ export function canPlaceBomb(p: Player): boolean {
 }
 
 export function bombAt(s: RoundState, cell: number): Bomb | undefined { return s.bombs.find(b => b.state === 'idle' && b.cell === cell); }
+/** Casa `c` ocupada por bomba: parada nela, ou chutada com a casa de origem, a do centro ou (em movimento) a próxima
+ *  igual a `c`. Toda bomba nova na grade (pouso, colocação, soltura da luva, parada do chute) passa por aqui, para que
+ *  a grade `BOMB` corresponda sempre a exatamente uma bomba parada. `except` = a própria bomba. */
+export function bombOccupies(s: RoundState, c: number, except?: Bomb): boolean {
+  return s.bombs.some(b => b !== except && (b.state === 'idle' ? b.cell === c
+    : b.state === 'kicked' && (b.cell === c || cellAt(b.x, b.y) === c || (b.step > 0 && faceStep(b.cell, b.dir) === c))));
+}
 export function bombById(s: RoundState, id: number): Bomb | undefined { return s.bombs.find(b => b.id === id); }
 /** Cria uma bomba; parada (padrão) ocupa a grade. */
 export function addBomb(s: RoundState, owner: number, cell: number, init: Partial<Bomb> = {}): Bomb {
@@ -32,7 +39,8 @@ export function addBomb(s: RoundState, owner: number, cell: number, init: Partia
   s.bombs.push(b);
   return b;
 }
-/** Devolve a bomba ao dono (ou inicia a cadência do Bad Bomber: +48 ticks). */
+/** Devolve a bomba ao dono (ou inicia a cadência do Bad Bomber: +48 ticks). Como $C1:5588: só soma enquanto
+ *  disponíveis < capacidade (a perda de capacidade com bombas no campo não deixa "dívida"). */
 export function refundBomb(s: RoundState, b: Bomb): void {
   if (b.bad) {
     const bb = s.bad.find(q => q.slot === b.owner);
@@ -55,7 +63,7 @@ export function placeBomb(s: RoundState, p: Player, ev: GameEvent[]): boolean {
   if (!canPlaceBomb(p)) return false;
   const cell = playerCell(p);
   if (cell < 0 || s.grid[cell] !== CODE.FLOOR) return false;
-  if (s.bombs.some(b => b.cell === cell && (b.state === 'idle' || b.state === 'kicked'))) return false;
+  if (bombOccupies(s, cell)) return false;
   addBomb(s, p.slot, cell, { fuse: fuseOf(p), fire: bombFireOf(p), type: MOUNTS.current.bombType?.(p) ?? p.bombType });
   p.bombsFree--;
   ev.push({ type: 'bomb_placed', slot: p.slot, cell });

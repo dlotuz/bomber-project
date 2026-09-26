@@ -119,7 +119,7 @@ Cada item diz o que a spec deixava aberto e o que este plano fixa. Os marcados �
 28. **Aceite da IA (§9, 50 rodadas × 10 fases)** é caro: fica em `tests/core/ai/accept.test.ts` sob `describe.skipIf(!process.env.CB_SLOW)`. Uma versão curta (5 rodadas por fase) roda sempre.
 29. **Testes de ROM do plano 6:** `tests/rom/facts.test.ts` (T2) e `tests/rom/pressure-facts.test.ts` (T13).
 30. **Evento de arena/montaria:** `GameEvent` ganha `{type:'stage'|'mount'; id; slot?; cell?}` para os planos 8 e 9 não precisarem editar `types.ts`. `MountModule` ganha `init?(s)` e `onStunLoss?(s, p, ev)` opcionais (aditivo).
-31. **Códigos especiais vêm do `init` da arena:** a tabela lógica `$C4:0892` só tem `0000`, `CC80`, `EC40` e `2E00` (conferido na ROM para este plano). As bolas (`0F41`), setas (`0040`) e pads (`0C00`) são gravados pelos objetos da fase, isto é, pelo `StageModule.init` do plano 8. A remoção/abertura de soft grava o lógico do **mapa de piso** (`arena_rom.clear`), que na fase 4 tem `EC40` sob o piso especial (A10).
+31. **Códigos especiais vêm do `init` da arena:** a tabela lógica `$C4:0892` só tem `0000`, `CC80`, `EC40` e `2E00` (conferido na ROM para este plano). As bolas (`0F41`), setas (`0040`) e pads (`0C00`) são gravados pelos objetos da fase, isto é, pelo `StageModule.init` do plano 8. A remoção/abertura de soft grava o lógico do **mapa de piso** (`arena_rom.clear`). Na fase 4 o mapa de piso tem códigos ≥ 16 (a grama) e `$C4:0892` só cobre 0..15, o que daria `EC40`; como a §3.5, a §4.3 e a A10 mandam tratar o piso especial como piso normal, o gerador (`scripts/rom-facts/core-stages.ts`) grava `0000` quando o código do piso é ≥ 16 e a base do BG2 na casa não é `EC40` (revisão final: com `EC40` a abertura 3×3 emparedava os jogadores dos cantos).
 
 ## Testes antigos substituídos (e por quê)
 
@@ -6529,4 +6529,29 @@ Critérios da §11 da spec para o plano 6, com os comandos (em `web/`):
 6. **Custo do aceite completo da IA:** 500 rodadas podem levar dezenas de minutos; por isso fica atrás de `CB_SLOW`. A versão rápida (50 rodadas) roda sempre.
 7. **Arenas e montarias ainda vazias:** até os planos 8 e 9, as fases 2–10 usam só a grade-base (sem bolas, setas, pads nem gangorras: esses objetos nascem no `init` do plano 8); os números das §4 e §5 não são testados aqui.
 8. **Transição por `legacy-core`:** até T21, há dois núcleos no repositório; qualquer arquivo novo deve importar `src/core`, nunca `src/legacy-core`.
-9. **Piso especial da fase 4:** o mapa de piso da fase 4 tem 76 casas a mais com lógico `EC40` (tiles de código ≥ 16). Abrir ou remover soft ali grava `EC40`, como o `arena_rom.build_arena` validado pela ARN (`s08_verify_build.py`). O golden de T5 só compara os soft; se a primeira partida na fase 4 mostrar um jogador preso no nascimento, conferir `$7E:2800` depois da montagem com `s08_verify_build.py` antes de mudar a regra.
+9. **Piso especial da fase 4 (resolvido na revisão final):** o mapa de piso da fase 4 tem 76 casas com código ≥ 16 (grama), que a tabela `$C4:0892` levaria a `EC40`. Isso emparedava os 4 cantos e a casa de cada jogador (100 % das rodadas por tempo). O gerador passou a gravar `0000` (piso normal, §3.5/§4.3/A10) quando a base do BG2 não é `EC40`; o golden de soft/itens não mudou. Se um traço da ROM mostrar `$7E:2800` diferente depois da montagem (`s08_verify_build.py`), rever a regra ali.
+
+## Resultado da execução (2026-09-26)
+
+Branch `feat/p6`: 404 testes com `SB4_ROM` (396 + 9 pulados sem a ROM), `tsc` limpo, `npm run build` ok, aceite §9 (`CB_SLOW=1`, 50 rodadas × 10 fases) verde. Executado em 5 ondas com até 12 tarefas em paralelo; cada tarefa revisada; revisão final (branch inteira, com fuzz) + uma rodada de correções, re-revisada.
+
+### Fidelidade conferida
+- Movimento: 21.440 ticks do traço do emulador, 0 divergências; atravessa-bomba confirmado no emulador.
+- Montagem da rodada: soft, itens escondidos e sementes das 10 fases; 207 chamadas do LCG.
+- Tempos: pavio 127, chama 25, cadeia +2, queima 24, morte 65, pressão 205/14/36+2·lin (espiral = `$C1:724E`).
+- Perda de itens no atordoamento: `rnd(13)` incondicional em até 8 tentativas, saída antecipada em `$C2:5268` (conferido no disassembly).
+- Padrão da invisibilidade: 64 bytes reais de `$C2:4F68` (48..63 = espelho de 0..15).
+- Perda de capacidade de bombas: sem "dívida" (`$C2:5318`, `$C1:5588`); atordoado não é atordoado de novo (`$C2:0E86`).
+
+### Decisões tomadas durante a execução
+- Uma bomba por casa: `bombOccupies` no pouso, colocação, soltura, deslize e parada do chute (o fuzz achou bombas-fantasma).
+- Fase 4: grama/terra dos cantos (códigos ≥16 sobre base não-parede) é piso normal — os jogadores não nascem emparedados.
+- IA: `fork` do "e se?" faz cópia profunda (hash da rodada idêntico antes/depois de `aiInputs`, testado); remota de dono fora de jogo é bloqueio, não perigo; Forte com 18% de rodadas por tempo.
+- Bad Bomber: não age no tick em que nasce, não arremessa fora de `play`, só nasce em `play`.
+- Relógio para em 0:00; bordas da pressão marcam `cellT0`.
+
+### Pendências
+- Fase 10 em 28% de rodadas por tempo (limite 30%) — margem pequena.
+- Fase 8 isenta do limite até haver itens pegos (plano 8 traz o caça-níquel).
+- Bomba chutada sem casa livre para parar fica "chutada" parada até explodir pelo pavio.
+- Registros `STAGES`/`MOUNTS` começam vazios; planos 8/9 os preenchem (testes usam `withStage`/`withMount`).
