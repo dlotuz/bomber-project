@@ -29,7 +29,7 @@ export function hitPlayer(s: RoundState, p: Player, cause: 'flame' | 'pressure',
   }
   if (p.carry >= 0) dropHeld(s, p);
   p.state = 'dying'; p.hitT0 = s.tick; s.lastHit = s.tick;
-  p.disease = 0; p.push.left = 0;
+  p.disease = 0; p.diseaseT = 0; p.push.left = 0;
   setAct(s, p, 'dying', 0);
   ev.push({ type: 'player_hit', slot: p.slot });
 }
@@ -39,13 +39,16 @@ export function tickDeath(s: RoundState, p: Player, ev: GameEvent[]): void {
   const d = k - DROP_START;
   if (d >= 0 && d % DROP_EVERY === 0 && d / DROP_EVERY < 10) dropCategory(s, p, d / DROP_EVERY, ev);
   if (k >= OUT_AT) {
-    if (s.rules.badBomber && s.pressure.trigger < 0) becomeBad(s, p);
+    // Bad Bomber só nasce com a rodada em jogo: em `won`/`timeUp` os Bad Bombers congelam e o resultado já saiu
+    if (s.rules.badBomber && s.pressure.trigger < 0 && s.phase === 'play') becomeBad(s, p);
     else p.state = 'out';
   }
 }
 
+/** Atordoamento ($C2:4C54 → $C2:0E29). Já atordoado, ignora: o estado de atordoamento ($C2:0E86) não chama a checagem
+ *  do pedido ($C2:4C54) e, ao fim dos 64 ticks, apaga o pedido pendente ($C2:59AB, bit $0002 de +$C0). */
 export function stunPlayer(s: RoundState, p: Player, ev: GameEvent[]): void {
-  if (p.state !== 'alive' || isImmune(s, p)) return;
+  if (p.state !== 'alive' || isImmune(s, p) || p.act === 'stunned') return;
   if (p.carry >= 0) dropHeld(s, p);
   p.push.left = 0;
   setAct(s, p, 'stunned', STUN_TICKS);

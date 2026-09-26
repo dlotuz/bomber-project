@@ -53,7 +53,7 @@ export function contagion(s: RoundState, ev: GameEvent[]): void {
     if (a.contactLock & bitB) continue;
     const [from, to] = a.disease && !b.disease ? [a, b] : b.disease && !a.disease ? [b, a] : [null, null];
     if (!from || !to) continue;
-    to.disease = from.disease; to.diseaseT = 0; from.disease = 0;
+    to.disease = from.disease; to.diseaseT = 0; from.disease = 0; from.diseaseT = 0;
     a.contactLock |= bitB; b.contactLock |= bitA;
     ev.push({ type: 'disease_passed', from: from.slot, to: to.slot });
   }
@@ -71,7 +71,7 @@ export function rollSkull(s: RoundState): number {
 
 export function cureAndThrow(s: RoundState, p: Player, _ev: GameEvent[]): void {
   if (!p.disease) return;
-  p.disease = 0;
+  p.disease = 0; p.diseaseT = 0;
   const id = rollSkull(s);
   spawnItemFlyer(s, id, playerCell(p), rnd(s.rng, 12));
 }

@@ -153,7 +153,9 @@ export function pressureCells(s: RoundState): Map<number, number> {
   return out;
 }
 
-/** Offset em que cada casa BURNING volta a ser passável (0 = já é). */
+/** Offset em que cada casa BURNING volta a ser passável (0 = já é). A queima começa no tick T0 (cellT0) e vira piso no
+ *  passo de objetos do tick T0+24 (BURN_TICKS), depois de os jogadores se moverem nesse tick: o 1º passo em que dá para
+ *  entrar é o do tick T0+25, isto é, offset T0 + BURN_TICKS + 1 − tick (daí o +1). */
 export function blockedUntil(s: RoundState): Int32Array {
   const out = new Int32Array(CELLS);
   for (let c = 0; c < CELLS; c++) if (s.grid[c] === CODE.BURNING) out[c] = s.cellT0[c] + BURN_TICKS + 1 - s.tick;
@@ -176,14 +178,18 @@ export function hazards(s: RoundState, forSlot = -1, extra?: Extra | readonly Ex
   const asBomb = new Set<number>();
   for (const b of s.bombs) {
     if (b.state === 'held') continue;                                     // na mão: pavio parado
-    const remote = b.type === 1 && !b.chainAt;
-    if (remote && b.owner === forSlot && !b.bad) continue;
+    const remote0 = b.type === 1 && !b.chainAt;
+    if (remote0 && b.owner === forSlot && !b.bad) continue;
+    // remota de dono que não está de pé (morreu, saiu, virou Bad Bomber): ninguém aperta o B dela; a casa só bloqueia
+    // (é bomba na grade) e ela só explode por cadeia — t = SAFE, que a cadeia pode baixar
+    const orphan = remote0 && !b.bad && !standing(s.players[b.owner]);
+    const remote = remote0 && !orphan;
     const pierce = b.type === 2;
     if (b.state === 'air') {                                              // no ar: pavio parado até pousar
       const f = s.flyers.find(x => x.kind === 'bomb' && x.ref === b.id);
       if (!f) continue;
       const e = flightEnd(s, f);
-      const t = remote ? 0 : s.grid[e.cell] === CODE.FLAME ? e.t + CHAIN_DELAY : e.t + b.fuse + 1;
+      const t = remote ? 0 : orphan ? SAFE : s.grid[e.cell] === CODE.FLAME ? e.t + CHAIN_DELAY : e.t + b.fuse + 1;
       blasts.push({ cell: e.cell, t, fire: b.fire, pierce, trail: [], perm: remote });
       continue;
     }
@@ -194,7 +200,7 @@ export function hazards(s: RoundState, forSlot = -1, extra?: Extra | readonly Ex
       continue;
     }
     if (remote) { blasts.push({ cell: b.cell, t: 0, fire: b.fire, pierce, trail: [], perm: true }); continue; }
-    blasts.push({ cell: b.cell, t: fuseTicks(s, b), fire: b.fire, pierce, trail: [] });
+    blasts.push({ cell: b.cell, t: fuseTicks(s, b), fire: b.fire, pierce, trail: [] });   // órfã: SAFE até a cadeia
   }
   const extras: readonly Extra[] = extra === undefined ? [] : 'cell' in extra ? [extra as Extra] : extra as readonly Extra[];
   for (const e of extras) {
@@ -215,6 +221,7 @@ export function hazards(s: RoundState, forSlot = -1, extra?: Extra | readonly Ex
     });
   }
   blasts.forEach((b, k) => {
+    if (b.t >= SAFE) return;                                              // remota sem dono de pé e fora de cadeia
     for (const c of crosses[k].cells.concat(b.trail)) mark(c, b.t + 1, b.perm ? SAFE : b.t + 1 + FLAME_TICKS);
   });
   for (let c = 0; c < CELLS; c++) if (s.grid[c] === CODE.FLAME) mark(c, 1, s.cellT0[c] + FLAME_TICKS + 1 - s.tick);
