@@ -4,7 +4,7 @@ import { rnd } from '../rng';
 import { cellAt, cellOf, centerX, centerY, colOf, linOf, px } from '../units';
 import { isEggCode, itemCode, newId, playerCell, setAct, standing } from '../state';
 import { PRESSURE_BORDER_AT, PRESSURE_STEPS_SD, STUN_TICKS, FUSE } from '../constants';
-import { stunPlayer } from '../hit';
+import { isImmune, stunPlayer } from '../hit';
 import { addBomb } from '../bombs';
 import { launchBomb } from '../flyers';
 
@@ -57,8 +57,10 @@ export const onGround = (p: Player): boolean => standing(p) && p.actLeft === 0 &
 /** Atordoamento do núcleo (perdas 1–4 + 63 ticks). */
 export function stun(s: RoundState, p: Player, ev: GameEvent[]): void { stunPlayer(s, p, ev); }
 
-/** Choque da cerca (arena 5): atordoamento com act `shocked` e SFX $18. */
+/** Choque da cerca (arena 5): atordoamento com act `shocked` e SFX $18. Nada se `stunPlayer` não faria nada
+ *  (jogador não vivo ou imune — mesma guarda de $C0:xxxx que a ROM usa antes de atordoar). */
 export function shock(s: RoundState, p: Player, ev: GameEvent[]): void {
+  if (p.state !== 'alive' || isImmune(s, p)) return;
   p.push = { vx: 0, vy: 0, left: 0 };
   stunPlayer(s, p, ev);
   setAct(s, p, 'shocked', p.actLeft > 0 ? p.actLeft : STUN_TICKS);
