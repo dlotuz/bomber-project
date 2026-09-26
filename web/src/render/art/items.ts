@@ -1,4 +1,5 @@
 import { fromRows, makePix, fillRect, blit, type Pix } from './pix';
+import { textPix } from './font';
 
 const BOMB_ROWS = [
   '...........yy...', '..........ywy...', '.........f.yy...', '........f.......',
@@ -15,7 +16,7 @@ export function bombPix(frame: number): Pix {
   });
 }
 
-/** Glifos 12×12 dos itens, na ordem do ITEM do core (1..8). */
+/** Glifos 12×12 dos 8 ícones desenhados (1 bomba, 2 fogo, 3 patins, 4 chute, 5 caveira, 6 soco, 7 luva, 8 perfurante). */
 const ICONS: Record<number, string[]> = {
   1: ['....kkk.y...', '...k...ky...', '..kkkkkk....', '.kaaaaaak...', 'kaawaaaaak..', 'kawaaaaaak..', 'kaaaaaaaak..', 'kaaaaaaaak..', '.kaaaaaak...', '..kkkkkk....', '............', '............'],
   2: ['.....k......', '....kak.....', '....kaak....', '...kacak....', '..kaccak.k..', '..kacccakak.', '.kacccccaak.', '.kaccwccak..', '.kacwwwcak..', '..kacwcak...', '...kaaak....', '....kkk.....'],
@@ -38,13 +39,35 @@ const STYLE: Record<number, [string, string, string, string]> = {
   8: ['#ffb000', '#ffe29a', '#e8403a', '#ffffff'],
 };
 
-/** Placa de item 16×16. */
-export function itemIcon(item: number): Pix {
+/** Placa de item 16×16 com um dos 8 glifos desenhados. */
+function legacyIcon(item: number): Pix {
   const [bg, border, a, c] = STYLE[item];
   const p = makePix(16, 16);
   fillRect(p, 0, 0, 16, 16, '#0b0b14');
   fillRect(p, 1, 1, 14, 14, border);
   fillRect(p, 2, 2, 12, 12, bg);
   blit(p, fromRows(ICONS[item], { '.': null, k: '#0b0b14', a, c, w: '#ffffff', y: '#ffd23f' }), 2, 2);
+  return p;
+}
+
+/** ID da ROM → ícone desenhado (1..8 = os de antes). */
+const LEGACY: Record<number, number> = { 0x01: 1, 0x03: 2, 0x05: 3, 0x0e: 4, 0x0d: 6, 0x07: 7, 0x02: 8 };
+/** Os demais: placa com uma letra. */
+const LETTER: Record<number, [string, string]> = {
+  0x04: ['F', '#ff3b1a'], 0x06: ['R', '#2d6bff'], 0x08: ['V', '#ffd23f'], 0x09: ['C', '#ff4f7a'], 0x0a: ['S', '#8f5cff'],
+  0x0b: ['B', '#28c2b0'], 0x0c: ['T', '#6ad0ff'], 0x0f: ['J', '#ffb000'], 0x11: ['E', '#ffffff'], 0x12: ['P', '#ff7a1a'],
+};
+
+/** Placa de item 16×16 pelo ID da ROM (tabela $C1:60A0); caveiras $21..$2C, ovos $30..$3F. */
+export function itemIcon(id: number): Pix {
+  if (id >= 0x21 && id <= 0x2c) return legacyIcon(5);
+  if (LEGACY[id]) return legacyIcon(LEGACY[id]);
+  const [ch, bg] = id >= 0x30 && id <= 0x3f ? ['O', '#f0e6c8'] : LETTER[id] ?? ['X', '#888888'];
+  const p = makePix(16, 16);
+  fillRect(p, 0, 0, 16, 16, '#0b0b14');
+  fillRect(p, 1, 1, 14, 14, '#ffffff');
+  fillRect(p, 2, 2, 12, 12, bg);
+  const g = textPix(ch, '#0b0b14', null);
+  blit(p, g, Math.floor((16 - g.w) / 2), Math.floor((16 - g.h) / 2));
   return p;
 }

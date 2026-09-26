@@ -1,13 +1,13 @@
 import { BTN } from '../core';
 
-export interface KeyMap { up: string; down: string; left: string; right: string; a: string; b: string; y: string; start: string }
+export interface KeyMap { up: string; down: string; left: string; right: string; a: string; b: string; y: string; x: string; start: string }
 
-export const KEY_FIELDS: readonly (keyof KeyMap)[] = ['up', 'down', 'left', 'right', 'a', 'b', 'y', 'start'];
+export const KEY_FIELDS: readonly (keyof KeyMap)[] = ['up', 'down', 'left', 'right', 'a', 'b', 'y', 'x', 'start'];
 
-/** Spec §11: Teclado 1 = WASD + J/K/L + Enter; Teclado 2 = setas + Numpad1/2/3 + NumpadEnter. */
+/** Spec §11: Teclado 1 = WASD + J/K/L/I + Enter; Teclado 2 = setas + Numpad1/2/3/5 + NumpadEnter. */
 export const DEFAULT_KEYMAPS: readonly KeyMap[] = [
-  { up: 'KeyW', down: 'KeyS', left: 'KeyA', right: 'KeyD', a: 'KeyJ', b: 'KeyK', y: 'KeyL', start: 'Enter' },
-  { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', a: 'Numpad1', b: 'Numpad2', y: 'Numpad3', start: 'NumpadEnter' },
+  { up: 'KeyW', down: 'KeyS', left: 'KeyA', right: 'KeyD', a: 'KeyJ', b: 'KeyK', y: 'KeyL', x: 'KeyI', start: 'Enter' },
+  { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', a: 'Numpad1', b: 'Numpad2', y: 'Numpad3', x: 'Numpad5', start: 'NumpadEnter' },
 ];
 
 /** Dispositivos de entrada que podem ser atribuídos a um jogador. */
@@ -28,6 +28,7 @@ export function readKeyMap(down: ReadonlySet<string>, m: KeyMap): number {
   if (down.has(m.a)) v |= BTN.A;
   if (down.has(m.b)) v |= BTN.B;
   if (down.has(m.y)) v |= BTN.Y;
+  if (down.has(m.x)) v |= BTN.X;
   if (down.has(m.start)) v |= BTN.START;
   return v;
 }
@@ -36,7 +37,7 @@ export interface GamepadLike { buttons: ReadonlyArray<{ pressed: boolean }>; axe
 
 const DEAD_ZONE = 0.5;
 
-/** Layout "standard" da Gamepad API: A = 1 (direita), B = 0 (baixo), Y = 2 (esquerda), START = 9, d-pad 12–15. */
+/** Layout "standard" da Gamepad API: A = 1, B = 0, Y = 2, X = 3, L = 4, R = 5, SELECT = 8, START = 9, d-pad 12–15. */
 export function readGamepad(gp: GamepadLike | null): number {
   if (!gp) return 0;
   const b = (i: number) => !!gp.buttons[i]?.pressed;
@@ -49,6 +50,10 @@ export function readGamepad(gp: GamepadLike | null): number {
   if (b(1)) v |= BTN.A;
   if (b(0)) v |= BTN.B;
   if (b(2)) v |= BTN.Y;
+  if (b(3)) v |= BTN.X;
+  if (b(4)) v |= BTN.L;
+  if (b(5)) v |= BTN.R;
+  if (b(8)) v |= BTN.SELECT;
   if (b(9)) v |= BTN.START;
   return v;
 }
