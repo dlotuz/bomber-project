@@ -3,7 +3,7 @@ import {
   withEscapeAsBack, idleInput, type GamepadLike,
 } from '../../src/input/input';
 import { stepsFor, STEP_MS, MAX_STEPS } from '../../src/app/loop';
-import { BTN } from '../../src/legacy-core';
+import { BTN } from '../../src/core';
 
 const pad = (pressed: number[], axes: number[] = [0, 0]): GamepadLike => ({
   buttons: Array.from({ length: 17 }, (_, i) => ({ pressed: pressed.includes(i) })), axes,

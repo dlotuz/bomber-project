@@ -1,4 +1,4 @@
-import { BTN } from '../legacy-core';
+import { BTN } from '../core';
 import type { App, Screen } from '../app/app';
 import { NAME_CHARS, NAME_MAX, defaultSettings, sanitizeName } from '../app/settings';
 import { DEVICE_IDS, KEY_FIELDS, keyLabel, type DeviceId, type KeyMap } from '../input/input';

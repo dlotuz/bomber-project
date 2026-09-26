@@ -1,4 +1,4 @@
-import { BTN } from '../legacy-core';
+import { BTN } from '../core';
 
 export interface MenuItem {
   label: string;

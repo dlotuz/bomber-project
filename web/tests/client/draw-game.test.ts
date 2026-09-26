@@ -1,7 +1,6 @@
 import { drawRound, PLAYER_COLORS } from '../../src/render/draw-game';
 import { createView, updateView } from '../../src/render/view';
-import { newRound } from '../legacy-core/helpers';
-import { CELL, idx, GRID_W } from '../../src/legacy-core';
+import { createRound, makeRng, defaultRules, CODE, cellOf } from '../../src/core';
 import type { SpriteBank } from '../../src/render/sprite-bank';
 
 interface TagImg { width: number; height: number; tag: string }
@@ -47,7 +46,7 @@ function findTag(calls: DrawCall[], text: string, color: string): DrawCall | und
 
 describe('drawRound: identificador de jogador acima do bomber', () => {
   it('modo livre: mostra "NP" na cor do jogador, centrado, acima da cabeça', () => {
-    const round = newRound({});
+    const round = createRound(1, defaultRules(), makeRng());
     const view = createView();
     updateView(view, round, []);
     const bank = fakeBank();
@@ -61,7 +60,7 @@ describe('drawRound: identificador de jogador acima do bomber', () => {
   });
 
   it('modo time: usa a cor do time (vermelho time 0, branco time 1), não a cor individual', () => {
-    const round = newRound({ mode: 'team', teams: [0, 1, 0, 1, 0] });
+    const round = createRound(1, { ...defaultRules(), mode: 'team', teams: [0, 1, 0, 1, 0] }, makeRng());
     const view = createView();
     updateView(view, round, []);
     const bank = fakeBank();
@@ -74,10 +73,10 @@ describe('drawRound: identificador de jogador acima do bomber', () => {
   });
 
   it('não desenha a etiqueta enquanto o jogador está morrendo', () => {
-    const round = newRound({});
+    const round = createRound(1, defaultRules(), makeRng());
     const view = createView();
     updateView(view, round, []);
-    round.players[0].dying = 40; // ainda "vivo" (alive=true) mas em animação de morte
+    round.players[0].state = 'dying'; round.players[0].hitT0 = round.tick; // em animação de morte
     const bank = fakeBank();
     const ctx = fakeCtx();
     drawRound(ctx, round, view, bank, [0, 1, 2, 3, 4], 0, [0, 0, 0, 0, 0]);
@@ -86,7 +85,7 @@ describe('drawRound: identificador de jogador acima do bomber', () => {
   });
 
   it('clampa a etiqueta para nunca ficar sobre o HUD (y >= 24)', () => {
-    const round = newRound({});
+    const round = createRound(1, defaultRules(), makeRng());
     const view = createView();
     updateView(view, round, []);
     round.players[0].y = 0; // bem no topo da arena
@@ -100,37 +99,41 @@ describe('drawRound: identificador de jogador acima do bomber', () => {
 });
 
 describe('drawRound: sombra no chão', () => {
-  it('desenha sombra 16×3 em célula EMPTY abaixo de pilar', () => {
-    const round = newRound({ clear: true, stage: 1 });
+  it('desenha sombra 16×3 em casa livre abaixo de pilar', () => {
+    const round = createRound(1, defaultRules(), makeRng());
     const view = createView();
     updateView(view, round, []);
     const bank = fakeBank();
     const ctx = fakeCtx();
-
-    // Coloca um pilar em (2, 2) — célula EMPTY abaixo é (2, 3)
-    round.arena.cells[idx(2, 2)] = CELL.HARD;
-
+    round.grid[cellOf(4, 3)] = CODE.HARD;
+    round.grid[cellOf(4, 4)] = CODE.FLOOR;
     drawRound(ctx, round, view, bank, [0, 1, 2, 3, 4], 0, [0, 0, 0, 0, 0]);
-
-    // Procura pela fillRect da sombra: x = 16*2+8 = 40, y = 16*3+24 = 72, w = 16, h = 3
-    const shadow = ctx.fillRectCalls.find(r => r.x === 40 && r.y === 72 && r.w === 16 && r.h === 3);
+    // x = 16·4 − 8 = 56, y = 16·4 + 24 = 88
+    const shadow = ctx.fillRectCalls.find(r => r.x === 56 && r.y === 88 && r.w === 16 && r.h === 3);
     expect(shadow).toBeDefined();
   });
 
-  it('não desenha sombra em célula EMPTY cujo vizinho superior é EMPTY', () => {
-    const round = newRound({ clear: true, stage: 1 });
+  it('não desenha sombra em casa livre cujo vizinho de cima é livre', () => {
+    const round = createRound(1, defaultRules(), makeRng());
     const view = createView();
     updateView(view, round, []);
     const bank = fakeBank();
     const ctx = fakeCtx();
-
-    // Ambas (3, 2) e (3, 3) começam vazias (EMPTY)
-    // Não deve haver sombra em (3, 3)
-
+    round.grid[cellOf(5, 3)] = CODE.FLOOR;
+    round.grid[cellOf(5, 4)] = CODE.FLOOR;
     drawRound(ctx, round, view, bank, [0, 1, 2, 3, 4], 0, [0, 0, 0, 0, 0]);
-
-    // Procura por fillRect em (3, 3): x = 16*3+8 = 56, y = 16*3+24 = 72
-    const shadow = ctx.fillRectCalls.find(r => r.x === 56 && r.y === 72 && r.w === 16 && r.h === 3);
+    const shadow = ctx.fillRectCalls.find(r => r.x === 72 && r.y === 88 && r.w === 16 && r.h === 3);
     expect(shadow).toBeUndefined();
+  });
+});
+
+describe('drawRound: grade de códigos', () => {
+  it('desenha chama, soft, item e bomba pelas casas da ROM (x = 16·col − 8, y = 16·lin + 24)', () => {
+    const round = createRound(1, defaultRules(), makeRng());
+    round.grid[cellOf(4, 1)] = CODE.FLAME; round.cellT0[cellOf(4, 1)] = round.tick;
+    const view = createView(); updateView(view, round, []);
+    const ctx = fakeCtx();
+    drawRound(ctx, round, view, fakeBank(), [0, 1, 2, 3, 4], 0, [0, 0, 0, 0, 0]);
+    expect(ctx.calls.some(c => c.x === 16 * 4 - 8 && c.y === 16 * 1 + 24)).toBe(true);
   });
 });

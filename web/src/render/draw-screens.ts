@@ -14,7 +14,7 @@ function drawScoreboard(ctx: CanvasRenderingContext2D, s: Session, bank: SpriteB
   const age = SCOREBOARD_FRAMES - s.timer;
   let row = 0;
   s.round.players.forEach((p, i) => {
-    if (!p.active) return;
+    if (!p.present) return;
     const y = 40 + row * 32;
     row++;
     ctx.drawImage(bank.head(s.cfg.chars[i]), 18, y + 4);
@@ -62,7 +62,6 @@ export function drawSession(ctx: CanvasRenderingContext2D, s: Session, view: Vie
     case 'battle':
     case 'roundOver':
       drawRound(ctx, s.round, view, bank, s.cfg.chars, frame, s.match.crowns);
-      if (s.round.phase === 'intro') drawTextCentered(ctx, bank, s.round.introLeft > 30 ? 'PRONTOS?' : 'JÁ!', '#ffd23f', 100, 2);
       if (s.paused) {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
         ctx.fillRect(0, 24, SCREEN_W, SCREEN_H - 24);
@@ -75,7 +74,8 @@ export function drawSession(ctx: CanvasRenderingContext2D, s: Session, view: Vie
         }
       }
       if (s.phase === 'roundOver') {
-        drawTextCentered(ctx, bank, roundOverText(s.round.winners, s.cfg.rules.mode, s.cfg.rules.teams, s.cfg.names), '#ffd23f', 100, 2);
+        const r = s.round.result;
+        drawTextCentered(ctx, bank, roundOverText(r?.winner != null ? [r.winner] : [], s.cfg.rules.mode, s.cfg.rules.teams, s.cfg.names), '#ffd23f', 100, 2);
       }
       break;
     case 'scoreboard':
