@@ -4,7 +4,9 @@ export const KNOWN_SHA1 = '38f4394986bd39fcbe32a722a3fe103ee6177d9b';
 export const ROM_TITLE = 'SUPER BOMBERMAN 4    ';           // 21 bytes em $FFC0
 const HDR = 0xffc0;
 
-export type RomMotivo = 'tamanho' | 'cabecalho' | 'hash';
+// 'falha' = erro inesperado ao validar/carregar (ex.: crypto.subtle indisponível fora de HTTPS/localhost),
+// não um motivo de a ROM estar errada; usado por rom/state.ts e rom/ui.ts para nunca travar o painel em "Verificando…".
+export type RomMotivo = 'tamanho' | 'cabecalho' | 'hash' | 'falha';
 export type ValidateResult = { ok: true; rom: Uint8Array; sha1: string } | { ok: false; motivo: RomMotivo; mensagem: string };
 
 export const MENSAGEM_BASE = 'Este arquivo não é a ROM suportada de Super Bomberman 4';
@@ -12,6 +14,7 @@ const DETALHE: Record<RomMotivo, string> = {
   tamanho: 'o tamanho não é de 4 MB',
   cabecalho: 'o cabeçalho interno não confere',
   hash: 'é outra versão; use a ROM USA com a tradução',
+  falha: 'não foi possível verificar ou carregar o arquivo',
 };
 export function mensagemDe(m: RomMotivo): string { return `${MENSAGEM_BASE} (${DETALHE[m]}).`; }
 
