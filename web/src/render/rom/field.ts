@@ -14,7 +14,8 @@ export function cellWord(s: RoundState, cell: number, i: number, ar: ArenaAssets
     case CODE.FLOOR:
     case CODE.FALLING:
       return floor;
-    case CODE.HARD:
+    case CODE.HARD:   // soft do mapa limpo na carga com lógico de piso duro (arena 4): o ROM grava o piso
+      return ar.logicBase[i] === CODE.SOFT ? floor : ar.bg2Base[i];
     case CODE.SOFT:
       return ar.bg2Base[i];
     case CODE.PRESSURE:

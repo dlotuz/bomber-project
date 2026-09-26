@@ -71,6 +71,15 @@ describe('palavra do BG2 por casa', () => {
     expect([w[at(3, 2)], w[at(4, 1)], w[at(5, 1)], w[at(6, 1)]])
       .toEqual([ar.bg2Base[at(3, 2)], ar.bg2Base[at(4, 1)], WORD_PRESSURE, ar.floor[at(6, 1)]]);
   });
+  it('soft do mapa limpo com lógico de piso duro (arena 4: EC40) = piso, não o soft do bg2Base', () => {
+    const a4 = fakeAssets({ arena: { logicBase: Uint16Array.from({ length: 1024 }, (_, i) => (i === at(2, 1) ? 0xcc80 : 0xec40)) } });
+    const ar4 = a4.arena(4);
+    const s = fakeRound();
+    s.grid[cell(2, 1)] = 0xec40;
+    s.grid[cell(3, 2)] = 0xec40;
+    const w = fieldWords(s, ar4, scene(), tb, clock(0), script);
+    expect([w[at(2, 1)], w[at(3, 2)]]).toEqual([ar4.floor[at(2, 1)], ar4.bg2Base[at(3, 2)]]);
+  });
   it('bomba parada: script do tipo desde born; bombTick congela (D6)', () => {
     const s = fakeRound();
     s.grid[cell(2, 1)] = 0xc900;
