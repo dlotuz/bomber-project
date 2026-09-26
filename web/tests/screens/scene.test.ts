@@ -37,7 +37,7 @@ describe('geometria de mapas (pura)', () => {
   });
   it('sem origem na ROM, sceneMaps usa a geometria', () => {
     const geo = () => ({ bg2: newMap() });
-    expect(sceneMaps({} as never, 'vsmode', geo)).toEqual(geo());
+    expect(sceneMaps({} as never, 'draw1', geo)).toEqual(geo());
     expect(typeof MAP_SOURCES).toBe('object');
   });
   it('menuMaps: quebra-cabeça no fundo, corda nas casas da moldura, pontas no título e faixas das regras', () => {
