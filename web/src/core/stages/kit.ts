@@ -96,12 +96,13 @@ export function startJackpotPressure(s: RoundState): void {
   s.pressure.total = PRESSURE_STEPS_SD;
 }
 
-/** Ovos no chão + ovos voando + montarias (substituto do $1ED4 da ROM, 🟡). */
+/** Ovos no chão + ovos voando + montarias + ovos de reserva (substituto do $1ED4 da ROM, 🟡). As reservas contam como
+ *  no `activeCount` do plano 9 (L2): sem elas, montado com 1 reserva + 1 ovo do caça-níquel passava do teto de 2 (T16). */
 export function eggsInPlay(s: RoundState, extra = 0): number {
   let n = extra;
   for (const v of s.grid) if (isEggCode(v)) n++;
   for (const f of s.flyers) if (f.kind === 'item' && f.ref >= 0x30 && f.ref <= 0x3f) n++;
-  for (const p of s.players) if (p.mount !== null) n++;
+  for (const p of s.players) if (p.mount !== null) n += 1 + ((p.mount as { reserves?: readonly unknown[] }).reserves?.length ?? 0);
   return n;
 }
 
