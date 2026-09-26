@@ -1,5 +1,5 @@
 // Painel de carga da ROM (spec §2.3): camada DOM fora do canvas. A lógica fica no controlador (testável sem DOM).
-import type { ValidateResult } from './validate';
+import { ROM_SIZE, mensagemDe, type ValidateResult } from './validate';
 import { bootRom, registerRomDialog, useRomBytes } from './state';
 
 export const PANEL_TEXT = {
@@ -7,6 +7,8 @@ export const PANEL_TEXT = {
   escolher: 'Escolher arquivo',
   semRom: 'Jogar sem a ROM',
   verificando: 'Verificando a ROM…',
+  semCripto: 'Não foi possível verificar a ROM neste navegador (precisa de HTTPS ou localhost).',
+  falhaGenerica: 'Não foi possível verificar a ROM.',
 } as const;
 
 export interface PanelView { visible: boolean; busy: boolean; message: string; error: string | null }
@@ -19,6 +21,20 @@ export function panelKeyAction(key: string): PanelKeyAction {
   return null;
 }
 
+/** Teclas que o painel nunca engole: atalhos com Ctrl/Meta/Alt e F1–F12 (ex.: F5, Cmd+R) sempre chegam ao
+ *  navegador; Enter/Espaço com um botão do painel já focado deixam o clique nativo do botão agir (em vez de
+ *  reinterpretar como "abrir seletor"). */
+export function isPassthroughKey(e: { key: string; ctrlKey: boolean; metaKey: boolean; altKey: boolean }, buttonFocused: boolean): boolean {
+  if (e.ctrlKey || e.metaKey || e.altKey) return true;
+  if (/^F([1-9]|1[0-2])$/.test(e.key)) return true;
+  return buttonFocused && (e.key === 'Enter' || e.key === ' ');
+}
+
+/** Tamanho aceito antes de ler o arquivo inteiro: 4 MiB, ou 4 MiB + 512 (cabeçalho de copiadora). */
+export function isRomFileSize(size: number): boolean {
+  return size === ROM_SIZE || size === ROM_SIZE + 512;
+}
+
 export interface PanelDeps { useBytes(b: Uint8Array): Promise<ValidateResult>; render(v: PanelView): void }
 
 export function createRomPanelController(deps: PanelDeps) {
@@ -28,11 +44,24 @@ export function createRomPanelController(deps: PanelDeps) {
     get view(): PanelView { return view; },
     show(): void { set({ visible: true, busy: false, error: null, message: PANEL_TEXT.intro }); },
     skip(): void { if (!view.busy) set({ visible: false, error: null }); },
+    /** Rejeita sem chamar `useBytes` (ex.: tamanho do arquivo já errado antes de lê-lo). */
+    reject(mensagem: string): void { if (!view.busy) set({ message: PANEL_TEXT.intro, error: mensagem }); },
     async file(bytes: Uint8Array): Promise<ValidateResult> {
       set({ busy: true, error: null, message: PANEL_TEXT.verificando });
-      const r = await deps.useBytes(bytes);
-      set(r.ok ? { busy: false, visible: false, message: PANEL_TEXT.intro } : { busy: false, message: PANEL_TEXT.intro, error: r.mensagem });
-      return r;
+      try {
+        const r = await deps.useBytes(bytes);
+        set(r.ok ? { busy: false, visible: false, message: PANEL_TEXT.intro } : { busy: false, message: PANEL_TEXT.intro, error: r.mensagem });
+        return r;
+      } catch {
+        // useBytes rejeitou (falha inesperada, ex.: crypto.subtle indefinido fora de HTTPS/localhost): sai de
+        // "Verificando…" pelo `finally` abaixo — o painel continua aceitando Esc/skip, nunca trava ocupado.
+        const semCripto = typeof crypto === 'undefined' || !crypto.subtle;
+        const mensagem = semCripto ? PANEL_TEXT.semCripto : PANEL_TEXT.falhaGenerica;
+        set({ message: PANEL_TEXT.intro, error: mensagem });
+        return { ok: false, motivo: 'falha', mensagem };
+      } finally {
+        if (view.busy) set({ busy: false });
+      }
     },
     /** Ação da tecla com o painel aberto (null = ignorar); fechado, nunca age. */
     key(k: string): PanelKeyAction { return view.visible && !view.busy ? panelKeyAction(k) : null; },
@@ -64,7 +93,12 @@ export function installRomPanel(doc: Document): { show(): void; hide(): void } {
       pick.disabled = skip.disabled = v.busy;
     },
   });
-  const readFile = async (f: File | undefined | null) => { if (f) await ctl.file(new Uint8Array(await f.arrayBuffer())); };
+  const readFile = async (f: File | undefined | null) => {
+    if (!f) return;
+    // Tamanho errado: rejeita antes de carregar o arquivo inteiro na memória.
+    if (!isRomFileSize(f.size)) { ctl.reject(mensagemDe('tamanho')); return; }
+    await ctl.file(new Uint8Array(await f.arrayBuffer()));
+  };
   pick.addEventListener('click', () => input.click());
   skip.addEventListener('click', () => ctl.skip());
   input.addEventListener('change', () => { void readFile(input.files?.[0]); input.value = ''; });
@@ -73,6 +107,8 @@ export function installRomPanel(doc: Document): { show(): void; hide(): void } {
   root.addEventListener('click', e => { if (e.target === root || e.target === box || e.target === msg) input.click(); });
   doc.defaultView?.addEventListener('keydown', e => {
     if (!ctl.view.visible) return;
+    const buttonFocused = doc.activeElement === pick || doc.activeElement === skip;
+    if (isPassthroughKey(e, buttonFocused)) return;
     const a = ctl.key(e.key);
     if (e.key !== 'Tab') { e.preventDefault(); e.stopImmediatePropagation(); }
     if (a === 'open') input.click();
@@ -81,10 +117,12 @@ export function installRomPanel(doc: Document): { show(): void; hide(): void } {
   return { show: () => ctl.show(), hide: () => ctl.skip() };
 }
 
-/** Gancho do main.ts: registra o painel, carrega a ROM guardada e, sem ela, abre o painel se `autoShow`. */
+/** Gancho do main.ts: registra o painel, carrega a ROM guardada e, sem ela, abre o painel se `autoShow`.
+ *  Nunca rejeita (mesmo que `bootRom` falhe de um jeito inesperado, o painel precisa poder abrir). */
 export async function startRomUi(doc: Document, opts: { autoShow: boolean }): Promise<void> {
   const panel = installRomPanel(doc);
   registerRomDialog(() => panel.show());
-  const had = await bootRom();
+  let had = false;
+  try { had = await bootRom(); } catch { /* bootRom já trata suas falhas; isto é só uma rede de segurança */ }
   if (!had && opts.autoShow) panel.show();
 }
