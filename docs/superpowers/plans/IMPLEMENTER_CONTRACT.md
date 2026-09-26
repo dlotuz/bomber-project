@@ -5,8 +5,9 @@ use os valores e o código dele literalmente. Quando o brief traz código "confe
 
 - **Onde trabalhar:** só na worktree indicada no despacho (ex.: `.worktrees/p5-t3`, branch `p5/t3`). Ignore menções do
   plano a trabalhar em `.worktrees/fidelity`/`feat/fidelity` — a sua worktree já é uma cópia equivalente. `web/node_modules`
-  é um link compartilhado: **não rode `npm install` que remova pacotes**; se a tarefa manda adicionar devDependencies,
-  use `npm install -D <pkg>` (os pacotes já estão presentes) e confira que `package.json`/`package-lock.json` mudaram.
+  é um link compartilhado: **nunca rode `npm install`/`npm i`** (o npm troca o link por uma pasta). Se a tarefa manda
+  adicionar dependências, edite o `package.json` à mão e rode `npm install --package-lock-only` para atualizar só o
+  lock; os pacotes já estão no `node_modules` compartilhado. Se faltar um pacote de verdade, reporte NEEDS_CONTEXT.
 - **Não mexa** em arquivos fora da posse da sua tarefa (o brief lista "Files"/"Possui"). Se precisar, pare e reporte.
 - ROM para testes: `SB4_ROM="/Users/dlotuz/Projetos Claude/Bomber Project/Super Bomberman 4 (USA).sfc"`.
   Nunca versione bytes da ROM, imagens extraídas ou áudio.
