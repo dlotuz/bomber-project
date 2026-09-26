@@ -3,7 +3,7 @@
 import type { SpriteBank } from '../sprite-bank';
 import { pixToCanvas } from '../sprite-bank';
 import { romState, tilesFrom, sceneVramCgram, zteBlock, readColors, bgr555ToRgba, type RomAssets } from '../../app/rom-api';
-import type { ExtraGlyph, IndexedImage, StripSource, StyleRomDef, TextStyleId, Tone } from './types';
+import type { ExtraGlyph, GlyphCut, GlyphMask, IndexedImage, StripSource, StyleRomDef, TextStyleId, Tone } from './types';
 import { GLYPH_MAPS } from './glyph-maps';
 import { EXTRA_GLYPHS } from './extra-glyphs';
 import { FALLBACK_EXTRA, fallbackPix } from './fallback-font';
@@ -26,32 +26,95 @@ function crop(src: IndexedImage, x: number, y: number, w: number, h: number): In
   return { w, h, px };
 }
 
+/** Deixa no recorte só a letra das sementes (ver `GlyphMask`). Sementes fora do recorte ou fora de `fill` são ignoradas. */
+export function maskCut(g: IndexedImage, seeds: readonly (readonly [number, number])[], m: GlyphMask): IndexedImage {
+  const { w, h, px } = g, fill = new Set(m.fill), edge = new Set(m.edge);
+  const keep = new Uint8Array(w * h), stack: number[] = [];
+  for (const [x, y] of seeds) {
+    const i = y * w + x;
+    if (x >= 0 && y >= 0 && x < w && y < h && fill.has(px[i]) && !keep[i]) { keep[i] = 1; stack.push(i); }
+  }
+  while (stack.length) {
+    const i = stack.pop()!, x = i % w, y = (i - x) / w;
+    for (const [nx, ny] of [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]) {
+      const j = ny * w + nx;
+      if (nx >= 0 && ny >= 0 && nx < w && ny < h && !keep[j] && fill.has(px[j])) { keep[j] = 1; stack.push(j); }
+    }
+  }
+  for (let k = 0; k < m.grow; k++) {
+    const add: number[] = [];
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      if (keep[i] || !edge.has(px[i])) continue;
+      let near = false;
+      for (let dy = -1; dy <= 1 && !near; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const nx = x + dx, ny = y + dy;
+        if (nx >= 0 && ny >= 0 && nx < w && ny < h && keep[ny * w + nx]) { near = true; break; }
+      }
+      if (near) add.push(i);
+    }
+    for (const i of add) keep[i] = 1;
+  }
+  return { w, h, px: px.map((v, i) => (keep[i] ? v : 0)) };
+}
+
+function cutGlyph(s: IndexedImage, c: GlyphCut, def: StyleRomDef): IndexedImage {
+  const y = c.y ?? 0, g = crop(s, c.x, y, c.w, c.h ?? def.height);
+  return c.seeds && def.mask ? maskCut(g, c.seeds.map(([sx, sy]) => [sx - c.x, sy - y] as const), def.mask) : g;
+}
+
+/** Glifo `base` com os pixels não nulos de `over` por cima (a partir do canto de cima à esquerda). */
+function overlay(base: IndexedImage, over: IndexedImage): IndexedImage {
+  const px = base.px.slice();
+  for (let y = 0; y < Math.min(base.h, over.h); y++) for (let x = 0; x < Math.min(base.w, over.w); x++) {
+    const v = over.px[y * over.w + x];
+    if (v) px[y * base.w + x] = v;
+  }
+  return { w: base.w, h: base.h, px };
+}
+
 export function fontFromParts(style: TextStyleId, def: StyleRomDef, strips: Record<string, IndexedImage>, extras: readonly ExtraGlyph[]): RomFont {
   const glyphs = new Map<string, IndexedImage>();
-  for (const g of extras) glyphs.set(g.ch, parseExtra(g));
+  for (const g of extras) if (!g.base) glyphs.set(g.ch, parseExtra(g));
   for (const c of def.cuts) {
     const s = strips[c.strip];
-    if (s) glyphs.set(c.ch, crop(s, c.x, c.y ?? 0, c.w, c.h ?? def.height));   // recorte da ROM vence
+    if (s) glyphs.set(c.ch, cutGlyph(s, c, def));   // recorte da ROM vence
+  }
+  for (const g of extras) {                          // acentos sobre a letra-base (da ROM ou própria)
+    const b = g.base ? glyphs.get(g.base) : undefined;
+    if (b) glyphs.set(g.ch, overlay(b, parseExtra(g)));
   }
   return { style, def, glyphs };
 }
 
 export function layoutText(f: RomFont, text: string): IndexedImage {
-  const parts = [...text].map(ch => (ch === ' ' ? null : f.glyphs.get(ch) ?? null));
-  const ws = parts.map((g, i) => (g ? g.w : [...text][i] === ' ' ? f.def.spaceWidth : 0));
-  const w = Math.max(0, ws.reduce((a, b) => a + b, 0) + f.def.spacing * (parts.length - 1));
+  const chars = [...text];
+  const parts = chars.map(ch => (ch === ' ' ? null : f.glyphs.get(ch) ?? null));
+  // O espaço avança spaceWidth e ainda recebe o `spacing` dos dois lados (spaceWidth + 2·spacing no total). Mantido assim
+  // porque mudar alteraria as larguras já medidas; com `spacing` negativo, ajuste o spaceWidth do estilo para compensar.
+  const ws = parts.map((g, i) => (g ? g.w : chars[i] === ' ' ? f.def.spaceWidth : 0));
+  // kerning por par (aditivo ao `spacing`): kern['TÓ'] = −20 aproxima o Ó do T
+  const kern = chars.map((ch, i) => (i > 0 ? f.def.kern?.[chars[i - 1] + ch] ?? 0 : 0));
+  const w = Math.max(0, ws.reduce((a, b) => a + b, 0) + f.def.spacing * (parts.length - 1) + kern.reduce((a, b) => a + b, 0));
   const h = f.def.height;
   const px = new Uint8Array(w * h);
   let x = 0;
   parts.forEach((g, i) => {
-    if (g) for (let y = 0; y < Math.min(h, g.h); y++) for (let k = 0; k < g.w; k++) px[y * w + x + k] = g.px[y * g.w + k];
+    x += kern[i];
+    // só os pixels não nulos: com `spacing` negativo a letra seguinte se sobrepõe à anterior sem apagá-la
+    if (g) for (let y = 0; y < Math.min(h, g.h); y++) for (let k = 0; k < g.w; k++) {
+      const v = g.px[y * g.w + k], X = x + k;
+      if (v && X >= 0 && X < w) px[y * w + X] = v;
+    }
     x += ws[i] + f.def.spacing;
   });
   return { w, h, px };
 }
 
 export function glyphChars(style: TextStyleId, maps = GLYPH_MAPS, extras = EXTRA_GLYPHS): Set<string> {
-  return new Set([...(maps[style]?.cuts ?? []).map(c => c.ch), ...extras[style].map(g => g.ch)]);
+  const cuts = maps[style]?.cuts ?? [];
+  // um glifo com `base` só existe se a letra-base tiver recorte da ROM
+  return new Set([...cuts.map(c => c.ch), ...extras[style].filter(g => !g.base || cuts.some(c => c.ch === g.base)).map(g => g.ch)]);
 }
 export function missingGlyphs(style: TextStyleId, text: string, maps = GLYPH_MAPS, extras = EXTRA_GLYPHS): string[] {
   const have = glyphChars(style, maps, extras);
@@ -105,6 +168,24 @@ export function decodeStrip(src: StripSource, a: RomAssets): IndexedImage {
         const t = tilesFrom(vram, base + (src.tile + r * src.rowStride + c) * 8 * bpp, 1, bpp);
         putTile(img, t.px, 0, c * 8, r * 8);
       }
+      return img;
+    }
+    case 'grid16': {
+      const { vram } = sceneVramCgram(a, src.scene);
+      const [base, bpp] = VRAM_BASE[src.region];
+      const rows = src.cells.length, cols = Math.max(0, ...src.cells.map(r => r.length));
+      const img: IndexedImage = { w: cols * 16, h: rows * 16, px: new Uint8Array(cols * 16 * rows * 16) };
+      // Vizinhos do bloco como o PPU: coluna com volta no nibble baixo ($xF + 1 → $x0) e linha com volta no nibble alto
+      // dentro da mesma página de 256 tiles (regra dos OBJ grandes; nos BG de 16×16 os blocos usados nunca terminam em $xF).
+      const next = (t: number, dx: number, dy: number): number =>
+        (t & ~0xff) | (((t & 0xf0) + dy * 16) & 0xf0) | (((t & 0x0f) + dx) & 0x0f);
+      src.cells.forEach((row, r) => row.forEach((t, c) => {
+        if (t < 0) return;
+        for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
+          const tp = tilesFrom(vram, base + next(t, dx, dy) * 8 * bpp, 1, bpp);
+          putTile(img, tp.px, 0, c * 16 + dx * 8, r * 16 + dy * 8);
+        }
+      }));
       return img;
     }
     case 'mode7': {
