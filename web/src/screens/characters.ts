@@ -3,9 +3,11 @@ import type { App, Screen } from '../app/app';
 import { Repeater, DIRS } from '../input/repeat';
 import { SFX } from '../app/audio';
 import { FADE_MENU } from '../app/fade';
+import { romState, type RomAssets } from '../app/rom-api';
+import { obj, PpuCanvas, sceneFrame, sceneGfx, sceneMaps } from '../render/screens-rom/scene';
 import { CHARACTERS } from '../render/art/bomber';
 import { displayName } from '../game/config';
-import { CHARSEL_GRID, CHARSEL_PORTRAIT } from '../render/screens-rom/charsel';
+import { CHARSEL_GRID, CHARSEL_PORTRAIT, CHARSEL_STANDEE, CHARSEL_STANDEE_Y, charselMaps } from '../render/screens-rom/charsel';
 import { COLORS, PLAYER_COLORS, drawFallbackFrame, drawFooter, drawStaticBackground, drawText, drawTitleBar } from './ui';
 import { rulesScreen } from './rules';
 import { stageScreen } from './stage';
@@ -40,6 +42,7 @@ export function charactersScreen(app: App): Screen & {
   const reps = new Map<number, Repeater>();
   for (const i of activeIdx) if (selfPicking(i)) reps.set(i, new Repeater(20, 5));
   const anyRep = new Repeater(20, 5);
+  const ppu = new PpuCanvas();
 
   /** ←/→ dão a volta nas 3 colunas; ↑/↓ trocam a linha (spec §6.6). */
   const moveCursor = (i: number, p: number): void => {
@@ -113,11 +116,28 @@ export function charactersScreen(app: App): Screen & {
       }
     },
     draw(ctx, bank, frame) {
-      drawStaticBackground(ctx);
-      drawFallbackFrame(ctx, FRAME);
+      const a: RomAssets | null = romState.assets;
+      if (a) {
+        // Cena real (§6.6): corda + quebra-cabeça vêm do BG (`charselMaps`, T5/T19) e os 6 bonecos parados na
+        // grade são OBJ com o tile/paleta medidos em `charsel.oam` (`CHARSEL_STANDEE`) — só o título, os
+        // retratos e os cursores (conteúdo dinâmico, não existem assim na ROM) vão por cima, depois do PPU.
+        const g = sceneGfx(a, 'charsel');
+        const maps = sceneMaps(a, 'charsel', charselMaps);
+        const oam = CHARSEL_STANDEE.map((s, k) =>
+          obj(CHARSEL_GRID.x[k % COLS], CHARSEL_STANDEE_Y[Math.floor(k / COLS)], s.tile, s.pal, { big: true, prio: 3 }));
+        ppu.draw(ctx, sceneFrame(g, maps, { oam }));
+      } else {
+        drawStaticBackground(ctx);
+        drawFallbackFrame(ctx, FRAME);
+        // Grade 3×2 dos personagens (sem ROM: nossa própria arte).
+        CHARACTERS.forEach((ch, k) => {
+          const x = CHARSEL_GRID.x[k % COLS], y = CHARSEL_GRID.y[Math.floor(k / COLS)];
+          ctx.drawImage(bank.bomber(k, 2, 0), x, y, 32, 40);
+        });
+      }
       drawTitleBar(ctx, bank, 'ESCOLHA O PERSONAGEM');
       const ctrl = controllingSlot();
-      // Coluna da esquerda: retrato + nome/estado de cada jogador ativo.
+      // Coluna da esquerda: retrato + nome/estado de cada jogador ativo (conteúdo nosso, por cima da cena).
       for (const i of activeIdx) {
         const y = CHARSEL_PORTRAIT.y0 + CHARSEL_PORTRAIT.dy * i;
         ctx.drawImage(bank.head(setup.chars[i]), CHARSEL_PORTRAIT.x, y, CHARSEL_PORTRAIT.w, CHARSEL_PORTRAIT.w);
@@ -126,11 +146,6 @@ export function charactersScreen(app: App): Screen & {
         const st = confirmed[i] ? 'PRONTO' : (selfPicking(i) || i === ctrl) ? 'ESCOLHENDO' : 'AGUARDA';
         drawText(ctx, bank, st, CHARSEL_PORTRAIT.x + CHARSEL_PORTRAIT.w + 4, y + 16, confirmed[i] ? COLORS.ok : COLORS.dim);
       }
-      // Grade 3×2 dos personagens.
-      CHARACTERS.forEach((ch, k) => {
-        const x = CHARSEL_GRID.x[k % COLS], y = CHARSEL_GRID.y[Math.floor(k / COLS)];
-        ctx.drawImage(bank.bomber(k, 2, 0), x, y, 32, 40);
-      });
       // Cursores "[ ]" com a etiqueta nP na cor de quem está escolhendo cada vaga ainda aberta.
       for (const i of activeIdx) {
         if (confirmed[i]) continue;

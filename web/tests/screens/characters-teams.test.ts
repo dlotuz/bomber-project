@@ -1,7 +1,26 @@
 import { charactersScreen } from '../../src/screens/characters';
 import { teamsScreen } from '../../src/screens/teams';
 import { BTN } from '../../src/game/core-api';
+import type { RomAssets } from '../../src/app/rom-api';
+import { sceneMaps } from '../../src/render/screens-rom/scene';
+import { CHARSEL_GRID_PX, CHARSEL_TITLE_PX, charselMaps } from '../../src/render/screens-rom/charsel';
 import { mkApp, press, hold, settle } from './helpers';
+import { loadCapture, capturedMap, mapMatch, type Rect } from './captures';
+
+describe('cena "charsel" (ROM, brief T10): personagens e equipes reaproveitam a mesma moldura', () => {
+  const cap = loadCapture('charsel');
+  it.skipIf(!cap)('BG1 (corda + ícone) e BG2 (quebra-cabeça) batem ≥ 97% fora do título e da grade', () => {
+    // `sceneMaps` (T5) é o mesmo ponto de entrada usado por `screens/characters.ts`/`teams.ts`: sem
+    // `MAP_SOURCES.charsel` (T19) ainda, cai no nosso `charselMaps`, que é o que este teste confere.
+    const built = sceneMaps({} as RomAssets, 'charsel', charselMaps);
+    const ignore: Rect[] = [CHARSEL_TITLE_PX, CHARSEL_GRID_PX];
+    for (const [layer, addr] of [['bg1', 0x4000], ['bg2', 0x4400]] as const) {
+      const ours = built[layer];
+      expect(ours, layer).toBeDefined();
+      expect(mapMatch(ours!, capturedMap(cap!, addr), ignore), layer).toBeGreaterThanOrEqual(0.97);
+    }
+  });
+});
 
 describe('personagens (§6.6, R13, R32)', () => {
   it('cada humano move o próprio cursor: ←/→ com volta nas 3 colunas, ↑/↓ trocam a linha', () => {

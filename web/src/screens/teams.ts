@@ -3,6 +3,9 @@ import type { App, Screen } from '../app/app';
 import { Repeater, DIRS } from '../input/repeat';
 import { SFX } from '../app/audio';
 import { FADE_MENU } from '../app/fade';
+import { romState, type RomAssets } from '../app/rom-api';
+import { PpuCanvas, sceneFrame, sceneGfx, sceneMaps } from '../render/screens-rom/scene';
+import { charselMaps } from '../render/screens-rom/charsel';
 import { TEAMSEL_MARKER_X, TEAMSEL_PORTRAIT, TEAMSEL_VS } from '../render/screens-rom/teams';
 import { COLORS, PLAYER_COLORS, drawFallbackFrame, drawFooter, drawStaticBackground, drawText, drawTitleBar } from './ui';
 import { drawTextCentered } from '../render/draw-game';
@@ -37,6 +40,7 @@ export function teamsScreen(app: App): Screen & {
   const reps = new Map<number, Repeater>();
   for (const i of activeIdx) if (selfPicking(i)) reps.set(i, new Repeater(20, 5));
   const anyRep = new Repeater(20, 5);
+  const ppu = new PpuCanvas();
 
   const moveSide = (i: number, p: number): void => {
     if (p & BTN.LEFT) { setup.teams[i] = 0; app.audio.sfx(SFX.move); }
@@ -101,8 +105,17 @@ export function teamsScreen(app: App): Screen & {
       }
     },
     draw(ctx, bank, frame) {
-      drawStaticBackground(ctx);
-      drawFallbackFrame(ctx, FRAME);
+      // A1 (brief T10): equipes não tem captura própria — reaproveita a mesma cena `charsel` (corda + quebra-
+      // cabeça); sem grade nem bonecos parados (aqui só o marcador de lado e "VS", conteúdo nosso por cima).
+      const a: RomAssets | null = romState.assets;
+      if (a) {
+        const g = sceneGfx(a, 'charsel');
+        const maps = sceneMaps(a, 'charsel', charselMaps);
+        ppu.draw(ctx, sceneFrame(g, maps));
+      } else {
+        drawStaticBackground(ctx);
+        drawFallbackFrame(ctx, FRAME);
+      }
       drawTitleBar(ctx, bank, 'Escolha as equipes!');
       const ctrl = controllingSlot();
       for (const i of activeIdx) {
