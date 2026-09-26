@@ -97,7 +97,9 @@ function remountGlowPieces(a: RomAssets, stage: number, trail: number[], t: numb
   return commonPieces(a, stage, gx, gy, fr).map(m => m.e);
 }
 
-export const riderHook: RomPlayerHook = (s, p, a, frame) => {
+// `frame` = visualTick (5º argumento, tick do core congelado no TIME UP; sem ele, o quadro do host) — base de `actT0`/`t0` (T16).
+// T14b: notas/brilho também usam esse `frame` (visualTick), não `hostFrame` — congelam junto com o resto no TIME UP.
+export const riderHook: RomPlayerHook = (s, p, a, hostFrame, frame = hostFrame) => {
   const r = rider(p);
   const X = Math.floor(p.x / 256), Y = Math.floor(p.y / 256);
   const pal = PLAYER_OBJ_PAL[p.slot] ?? 0;

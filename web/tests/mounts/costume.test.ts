@@ -31,7 +31,7 @@ describe.skipIf(!ASSETS)('traje (ROM) × emulador', () => {
     const s = mkRound({ stage: 10 });
     const p = placePx(s, 0, cx(7), cy(5));
     p.costume = c; p.face = 2; p.act = 'idle'; p.actT0 = s.tick; p.moveDir = 8;
-    const got = costumeHook(s, p, ASSETS!, s.tick)!;
+    const got = costumeHook(s, p, ASSETS!, s.tick, s.tick)!;
     const exp = (fx.costumes as Record<string, { right: { idle: { pieces: { dx: number; dy: number; pxSha1: string }[] }[] } }>)[String(c)].right.idle.at(-1)!.pieces;
     expect(got.map(e => `${e.x - cx(7)},${e.y - cy(5)},${sha1((e.src as { px: Uint8Array }).px)}`).sort())
       .toEqual(exp.map(q => `${q.dx},${q.dy},${q.pxSha1}`).sort());
@@ -40,6 +40,6 @@ describe.skipIf(!ASSETS)('traje (ROM) × emulador', () => {
     const s = mkRound({ stage: 10 });
     const p = placePx(s, 0, cx(7), cy(5));
     p.costume = 2; ride(s, 0, 0x3);
-    expect(costumeHook(s, p, ASSETS!, s.tick)).toBeNull();
+    expect(costumeHook(s, p, ASSETS!, s.tick, s.tick)).toBeNull();
   });
 });

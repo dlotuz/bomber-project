@@ -8,7 +8,9 @@ import { mountPix, eggPix, shotPix } from './art';
  *  `step()`/`mstate()` da simulação). Uma rodada sem montarias ainda não tocadas fica com `mountState` null. */
 const projectilesOf = (s: RoundState) => (s.mountState as MountState | null)?.projectiles ?? [];
 
-export interface FbSprite { key: string; make: () => Pix; x: number; y: number }
+/** `front`: montaria de quem está montado — a camada `over` (`fallbackMountFrontLayer`) redesenha a parte de baixo
+ *  dela por cima do cavaleiro (a montaria cobre a metade de baixo do jogador, como na ROM). */
+export interface FbSprite { key: string; make: () => Pix; x: number; y: number; front?: boolean }
 
 const cellXY = (cell: number) => ({ x: 16 * colOf(cell) - 8, y: 16 * linOf(cell) + 24 });
 const faceOf = (d: number): 0 | 2 | 4 | 6 => ((d & 6) as 0 | 2 | 4 | 6);
@@ -28,7 +30,7 @@ export function fallbackMountSprites(s: RoundState, frame: number): FbSprite[] {
     if (r.phase === 'mounting') { egg(here, r.type, (frame >> 3) & 1); continue; }
     if (r.phase === 'dismount') { if (r.remount) egg(here, r.type, (frame >> 3) & 1); continue; }
     const st = p.moveDir !== 8 ? (frame >> 3) & 1 : 0, f = faceOf(p.face);
-    out.push({ key: `mount:${r.type}:${f}:${st}`, make: () => mountPix(r.type, f, st), x: Math.floor(p.x / 256) - 12, y: Math.floor(p.y / 256) - 12 });
+    out.push({ key: `mount:${r.type}:${f}:${st}`, make: () => mountPix(r.type, f, st), x: Math.floor(p.x / 256) - 12, y: Math.floor(p.y / 256) - 12, front: true });
     r.reserves.forEach((t, i) => egg(r.trail[i + 1] ?? here, t, 0));
   }
   for (const pr of projectilesOf(s)) {

@@ -2,7 +2,7 @@ import { BURN, CODE, GRID_H, GRID_W, cellOf, isItemCode, itemOfCode, px, invisib
 import type { SpriteBank } from './sprite-bank';
 import { SCREEN_W, SCREEN_H } from './display';
 import { flameShrink, flamePart, walkFrame, dyingVisible, type ViewState } from './view';
-import { fallbackLayers } from './battle-layers';
+import { fallbackLayers, fallbackOverLayers } from './battle-layers';
 import './layers-index';
 
 export { SCREEN_W, SCREEN_H };
@@ -98,5 +98,6 @@ export function drawRound(ctx: CanvasRenderingContext2D, round: RoundState, view
   ctx.globalAlpha = 0.7;
   for (const b of round.bad) ctx.drawImage(bank.bomber(chars[b.slot], FACE_TO_DIR[b.face], 0), b.x - 8, b.y - 12);
   ctx.globalAlpha = 1;
+  for (const l of fallbackOverLayers) l.draw(round, ctx, bank, frame);   // M4: depois de bombas e jogadores
   drawHud(ctx, round, bank, chars, crowns);
 }
