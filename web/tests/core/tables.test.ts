@@ -62,6 +62,12 @@ describe('fases', () => {
     expect(b[cell(3, 2)]).toBe(0xec40);
     expect(STAGE_FACTS[0].floorLogic[cell(2, 1)]).toBe(0x0000);
   });
+  it('piso especial sobre casa que não é parede = piso normal: base ≠ EC40 ⇒ floorLogic ≠ EC40 em toda fase (§3.5, A10)', () => {
+    for (const [k, f] of STAGE_FACTS.entries()) {
+      const bad = f.base.flatMap((v, c) => (v !== 0xec40 && f.floorLogic[c] === 0xec40 ? [c] : []));
+      expect(bad, `fase ${k + 1}`).toEqual([]);
+    }
+  });
   it('fases 5 e 8 sem blocos; casas das bolas (3), setas (7) e pads (8) livres na base (os objetos vêm do init da arena)', () => {
     expect(STAGE_FACTS[4].base.filter(v => v === 0xcc80).length).toBe(0);
     expect(STAGE_FACTS[7].base.filter(v => v === 0xcc80).length).toBe(0);

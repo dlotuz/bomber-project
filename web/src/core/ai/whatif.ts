@@ -1,15 +1,28 @@
-// "E se?": cópias rasas da rodada para a IA testar uma ação (soco, P, luva, chute, X, B) antes de fazê-la.
+// "E se?": cópias da rodada para a IA testar uma ação (soco, P, luva, chute, X, B) antes de fazê-la.
 import type { RoundState } from '../types';
 import { playerCell } from '../state';
 import { SAFE, hazards } from './danger';
 import { escape, hits, walkBlocked } from './nav';
 import type { AiLevel } from './level';
 
-/** Cópia da rodada em que grade, bombas, voadores e jogadores podem ser alterados sem mexer na original. */
+/** Cópia da rodada em que tudo o que o passo do núcleo escreve (grade, tempos e peças das casas, bombas, voadores,
+ *  jogadores com empurrão/efeito/montaria, pressão com as quedas, Bad Bombers, relógio, RNG e o estado das arenas e
+ *  das montarias) pode ser alterado sem mexer na original. `rules` fica compartilhado (só leitura). */
 export function fork(s: RoundState): RoundState {
   return {
-    ...s, grid: s.grid.slice(), cellT0: s.cellT0, bombs: s.bombs.map(b => ({ ...b })),
-    flyers: s.flyers.map(f => ({ ...f })), players: s.players.map(p => ({ ...p })),
+    ...s,
+    rng: { ...s.rng }, clock: { ...s.clock },
+    grid: s.grid.slice(), cellT0: s.cellT0.slice(), cellAux: s.cellAux.slice(), floor: s.floor.slice(),
+    hidden: s.hidden.map(h => [h[0], h[1]]),
+    bombs: s.bombs.map(b => ({ ...b })),
+    flyers: s.flyers.map(f => ({ ...f })),
+    players: s.players.map(p => ({
+      ...p, push: { ...p.push }, effect: { ...p.effect }, mount: p.mount === null ? null : structuredClone(p.mount),
+    })),
+    pressure: { ...s.pressure, falling: s.pressure.falling.map(f => ({ ...f })) },
+    bad: s.bad.map(b => ({ ...b })),
+    stageState: structuredClone(s.stageState), mountState: structuredClone(s.mountState),
+    result: s.result && { ...s.result },
   };
 }
 

@@ -1,8 +1,7 @@
-import { arena, put, setCell, C } from './kit';
+import { arena, put, setCell, C, withStage } from './kit';
 import { moveStep, movePlayer, blockedFor, nibble } from '../../src/core/movement';
 import { BTN, CODE, type GameEvent } from '../../src/core/types';
 import { px, centerX, centerY, cellAt } from '../../src/core/units';
-import { STAGES } from '../../src/core/stages';
 
 function walk(col: number, lin: number, dx: number, btn: number, n: number, level = 1): [number, number][] {
   const s = arena();
@@ -121,11 +120,10 @@ describe('movePlayer', () => {
   it('usa o nível da doença/efeito (speedLevel) e chama onEnterCell/onStand', () => {
     const s = arena(); const p = put(s, 0, 2, 1); const ev: GameEvent[] = [];
     const entered: number[] = []; let stood = 0;
-    STAGES[1] = { onEnterCell: (_s, _p, c) => { entered.push(c); }, onStand: () => { stood++; } };
-    try {
+    withStage(1, { onEnterCell: (_s, _p, c) => { entered.push(c); }, onStand: () => { stood++; } }, () => {
       for (let i = 0; i < 16; i++) movePlayer(s, p, BTN.RIGHT, ev);
       expect(entered).toEqual([C(3, 1)]);
       expect(stood).toBe(16);
-    } finally { STAGES[1] = {}; }
+    });
   });
 });
