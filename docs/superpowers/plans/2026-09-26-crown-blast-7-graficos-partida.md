@@ -2809,4 +2809,75 @@ Preencher uma linha por nome ou formato que diferiu do esperado (ou "nenhuma dif
 
 ### Decisões tomadas durante a execução
 
+- **`BuildOpts.palAnim`** (`battle.ts`): opção `false` = CGRAM sem o ciclo de paleta da arena (mantém `ar.bgCgram` cru). Motivo:
+  o golden do plano 5 é um dump estático da ROM e, na arena 9, a cor 92 do dump não bate com o quadro 0 do ciclo decodificado
+  (a ROM não estava exatamente no quadro 0 do ciclo no instante do dump). Sem a opção, o teste "1ª imagem = golden" da arena 9
+  não teria como bater; com `palAnim: false` (só usado pelo golden), a 1ª imagem usa a CGRAM da ROM tal qual, e o jogo normal
+  (`palAnim` padrão `true`) continua animando a paleta a cada quadro.
+- **`field.ts`: casa dura vinda de soft limpo na carga (arena 4)** — commit `067225e`. Na arena 4 o lógico do piso nas casas
+  limpas em volta dos spawns é `HARD` ($EC40), mas o ROM grava ali a palavra do **piso** no BG2 (não o soft do mapa-base).
+  `cellWord` (`case CODE.HARD`) trata isso: `ar.logicBase[i] === CODE.SOFT ? floor : ar.bg2Base[i]`. Sem essa correção a 1ª
+  imagem da arena 4 não batia com o golden do plano 5.
+- **`RomBattleVis { crowns }`** (`battle.ts`): tipo mínimo que a tela da partida passa a `buildBattleFrame`/`drawRomBattle`
+  além da `RoundState` — hoje só as coroas (`vis.crowns`, usadas pelo HUD). É o ponto de extensão para o plano 10 (a tela real
+  monta esse objeto a partir do placar da partida; não existe outro campo porque nada mais no plano 7 precisou de fora da
+  `RoundState`).
+- **Asserção do aviso único** (fallback): o teste de `drawRomBattle` com assets que falham agora afirma
+  `expect(warn).toHaveBeenCalledTimes(1)` (chamando duas vezes com a mesma ROM) e mais uma chamada com uma `RomAssets` nova
+  para confirmar que o aviso volta a soar (ver M1 abaixo). Era a correção exigida pela revisão antes do commit de fechamento.
+
+**Achados menores da revisão (M1–M8), o que foi feito nesta onda de correção:**
+
+- **M1 (aplicado):** cada camada dos planos 8/9 (`RomBattleLayer.draw`) e cada gancho de jogador (`RomPlayerHook`, plano 9)
+  agora roda dentro de um `try/catch` isolado (`battle.ts`, `sprites.ts`). Uma camada ou gancho que lança:
+  - não derruba o quadro nem faz a tela alternar entre ROM e arte própria a cada quadro (só aquela camada some daquele
+    quadro; a camada seguinte da lista ainda roda);
+  - um jogador cujo gancho falhou cai no desenho padrão do plano 7 em vez de desaparecer da tela;
+  - avisa uma vez por `(RomAssets, chave)` via `warnOnce` (`render/rom/warn.ts`, `WeakMap<RomAssets, Set<string>>`) — como a
+    chave mora no próprio objeto de assets, trocar de ROM (nova instância de `RomAssets`) volta a avisar se a falha persistir,
+    o que resolve o "fica silencioso depois de trocar a ROM" apontado na revisão. O quadro base (campo/HUD/jogadores, fora do
+    laço de camadas/ganchos) continua propagando a exceção para `drawRomBattle`, que cai no fallback como antes.
+  - Testes: `battle.test.ts` ("isolamento de falhas por camada/gancho (M1)"), `sprites.test.ts` (gancho que lança).
+- **M2 (aplicado):** o teste de HUD do e2e (`e2e.test.ts`) agora chama `toPlay(s)` e roda 65 ticks em jogo, conferindo que o
+  relógio realmente muda de 3:00 para 2:59 (antes os 20 passos ficavam todos na intro, com `sec` fixo em 180). A checagem dos
+  rostos deixou de comparar `headTiles(...)` com ele mesmo (tautológica) e passou a usar a verdade da ROM da sonda 4 da
+  revisão: `headTiles(character(0), slot)` bate, tile a tile, com `arena(1).bgTiles` nos endereços de `faceTileIds(slot)`.
+- **M3 (aplicado):** `scenery.test.ts` ganhou um bloco `describe.skipIf(!ASSETS)` que prende contra a ROM real os períodos de
+  176/48/36/36/48/28 (arenas 2/3/5/6/7/10) e o 1º DMA da arena 7 (`src = $E0`, `dst` em 0..1023), usando
+  `normTileCmds`/`tileTimeline` pelo caminho de execução normal (não mais só com comandos sintéticos).
+- **M4 (aplicado):** `drawFrame` (`sprites.ts`) agora usa `size: pc.big ? 32 : 16` (spec §7.2). Como `ch.frame(g)` sempre
+  devolve a folha 32×32 (stride 32) do personagem, uma peça pequena não pode ir direto como `size: 16` (a PPU leria com
+  stride 16 errado) — por isso foi preciso um recorte puro e cacheado (`smallFramePx`, `WeakMap<Uint8Array, Uint8Array>`) do
+  quadrante superior-esquerdo 16×16. Testado isoladamente (stride) e por uma peça `big: false` de ponta a ponta em
+  `sprites.test.ts`. Continua 🟡 se a ordem real dos quadrantes SNES para uma peça pequena não for exatamente o
+  superior-esquerdo — nenhuma peça das tabelas do plano 7 é pequena hoje (sonda 1 da revisão), então não há como confirmar
+  contra a ROM; registrado como pendência.
+- **M5 (aplicado):** `visualTick(s)` exportado em `battle.ts` (lê `romMemo(s).freezeAll ?? s.tick`, o mesmo valor que
+  `battleClock` já calcula). `RomBattleLayer.draw` e `RomPlayerHook` ganharam um 5º parâmetro `visualTick: number` (assinatura
+  compatível: quem já implementava com menos parâmetros continua compilando). `buildBattleFrame` e o laço de ganchos em
+  `drawPlayers` passam `clock.tick` (== `visualTick(s)` no momento da chamada). Testado em `battle.test.ts` e
+  `sprites.test.ts`: uma camada/gancho vê o tick já congelado depois do TIME UP.
+- **M6 (não aplicado, registrado como pendência):** a cópia BG pal 4 → OBJ pal 2 (`sceneryCgram`) acontece antes das camadas;
+  se uma camada mudar cores da paleta BG 4 via `b.cgram`, os itens voando não acompanham. Só apontado pela revisão como
+  registro, sem correção pedida nesta onda — mantido assim.
+- **M7 (aplicado):** o teste "drawRomBattle (stub) devolve false" (`tests/rom/assets-contracts.test.ts`, do plano 5) passou a
+  silenciar o `console.warn` (`vi.spyOn` + `mockImplementation`) e a documentar no próprio teste que o comportamento real é
+  `{}` sem `arena()` fazendo `buildBattleFrame` lançar, caindo no fallback — sem imprimir o aviso na saída da suíte.
+- **M8 (não aplicado, sem impacto medido):** alocação por quadro (`Uint16Array.from`/`Uint8Array.from` duplicados) — a sonda
+  de desempenho da revisão não viu problema; deixado como está, por ser opcional e de risco baixo.
+
 ### Pendências
+
+- **M6** — cópia BG pal 4 → OBJ pal 2 antes das camadas: se um plano futuro (8/9) mudar a paleta BG 4 por camada, os itens
+  voando não acompanham na mesma passada. Sem correção nesta onda (a revisão só pediu registro).
+- **M8** — alocações por quadro (`fieldWords`/`Uint16Array.from`, `scenery.ts`/`Uint8Array.from` a cada 1–2 ticks nas arenas
+  2/3/5): sem impacto medido (sonda de desempenho da revisão), fica como otimização opcional.
+- **M4, risco residual** — a extração do quadrante 16×16 (`smallFramePx`) assume que uma peça pequena usa o
+  superior-esquerdo da folha 32×32 do personagem; não há como confirmar contra a ROM porque nenhuma peça das tabelas do
+  plano 7 é pequena hoje. Se um plano futuro (8/9/10) reaproveitar `drawFrame` com uma peça `big: false` de verdade, conferir
+  o recorte contra a ANI/um savestate antes de confiar no visual.
+- **M1/M5 para os planos 8, 9 e 10** — os planos que registram camadas (`RomBattleLayer`) e o gancho de jogador
+  (`RomPlayerHook`) devem: (a) esperar receber `visualTick` como 5º parâmetro e usá-lo em vez de amostrar `s.tick` na marra
+  quando quiserem congelar no TIME UP; (b) contar que uma camada/gancho que lança não derruba o quadro nem troca para o
+  fallback — só aquela camada fica ausente, com um aviso (`console.warn`) uma vez por `(RomAssets, chave)`; isso é
+  transparente para quem não lança nunca, mas deve ser levado em conta ao depurar uma camada nova que "não aparece".
