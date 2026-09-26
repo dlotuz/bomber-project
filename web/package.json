@@ -11,6 +11,7 @@
     "snap": "node scripts/snapshots.mjs"
   },
   "devDependencies": {
+    "@types/node": "^24.0.0",
     "playwright-core": "^1.63.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.1",
