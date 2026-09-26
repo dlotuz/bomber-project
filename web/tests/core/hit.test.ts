@@ -65,9 +65,18 @@ describe('linha do tempo da morte (t29)', () => {
 });
 
 describe('atordoamento (t44)', () => {
-  it('63 ticks de stunned, 1 chamada rnd(255) para o número de perdas, evento', () => {
+  it('63 ticks de stunned, evento, e o RNG bate com 1 rnd(255) + rnd(13) por tentativa de perda (jogador zerado)', () => {
     const s = arena(); const p = put(s, 0, 4, 1);
-    const r = makeRng(s.rng.seed); rnd(r, 0xff);
+    // Espelha $C2:51C4: 1 sorteio para o número de perdas (n), depois, por perda, até 8 tentativas com
+    // rnd(13) incondicional (jogador zerado nunca tem o que perder, então nenhuma tentativa acerta e a
+    // 1ª perda falhando totalmente encerra loseItems — como no Step 3 do brief, sem checar antes se há algo a perder).
+    const r = makeRng(s.rng.seed);
+    const n = ((rnd(r, 0xff) & 6) >> 1) + 1;
+    for (let k = 0; k < n; k++) {
+      let ok = false;
+      for (let a = 0; a < 8 && !ok; a++) rnd(r, 13);
+      if (!ok) break;
+    }
     const ev: GameEvent[] = [];
     stunPlayer(s, p, ev);
     expect([p.act, p.actLeft]).toEqual(['stunned', 63]);
