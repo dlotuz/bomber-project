@@ -1,8 +1,5 @@
-// `./kit` primeiro (T1 review: puxa o barrel `core/stages` antes do módulo direto abaixo — evitando um ciclo
-// index.ts → stage5.ts → kit.ts → state → clock → pressure → bombs → index.ts que, se `stage5.ts` for
-// importado primeiro, faz o bundler de testes fechar o ciclo com `STAGES[5]` ainda indefinido).
-import { stageArena, fullRound, put, run, stageEvents, fakeCtx } from './kit';
 import { stage5, fenceHit } from '../../src/core/stages/stage5';
+import { stageArena, fullRound, put, run, stageEvents, fakeCtx } from './kit';
 import { shock } from '../../src/core/stages/kit';
 import { BTN, CODE, type GameEvent } from '../../src/core/types';
 import { fallbackLayers } from '../../src/render/battle-layers';

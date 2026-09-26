@@ -1,8 +1,5 @@
-// A importação de './kit' vem primeiro: ela toca core/stages (índice STAGES) antes da importação direta do módulo
-// da arena abaixo. Evita um ciclo de módulos (stage7 → kit → bombs → core/stages) que, na ordem inversa, faz
-// STAGES[7] capturar undefined (o require de stage7 reentra em core/stages antes do módulo terminar de avaliar).
-import { stageArena, fullRound, put, run, setCell, codeAt, fakeBuilder, fakeAssets, fakeCtx } from './kit';
 import { stage7, ARROWS } from '../../src/core/stages/stage7';
+import { stageArena, fullRound, put, run, setCell, codeAt, fakeBuilder, fakeAssets, fakeCtx } from './kit';
 import { stage7Ai } from '../../src/core/ai/stages/stage7';
 import { addBomb } from '../../src/core/bombs';
 import { BTN, CODE } from '../../src/core/types';
