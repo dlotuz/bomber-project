@@ -58,9 +58,45 @@ export function maskCut(g: IndexedImage, seeds: readonly (readonly [number, numb
   return { w, h, px: px.map((v, i) => (keep[i] ? v : 0)) };
 }
 
+/** Zera todo pixel cujo índice não esteja em `body` (mantém só o corpo/brilho da letra, sem o contorno). */
+function applyBodyOnly(g: IndexedImage, body: readonly number[]): IndexedImage {
+  const set = new Set(body);
+  return { w: g.w, h: g.h, px: g.px.map(v => (set.has(v) ? v : 0)) };
+}
+
 function cutGlyph(s: IndexedImage, c: GlyphCut, def: StyleRomDef): IndexedImage {
-  const y = c.y ?? 0, g = crop(s, c.x, y, c.w, c.h ?? def.height);
-  return c.seeds && def.mask ? maskCut(g, c.seeds.map(([sx, sy]) => [sx - c.x, sy - y] as const), def.mask) : g;
+  const y = c.y ?? 0;
+  let g = crop(s, c.x, y, c.w, c.h ?? def.height);
+  if (c.seeds && def.mask) g = maskCut(g, c.seeds.map(([sx, sy]) => [sx - c.x, sy - y] as const), def.mask);
+  if (def.bodyOnly) g = applyBodyOnly(g, def.bodyOnly);
+  return g;
+}
+
+const CONN4 = [[1, 0], [-1, 0], [0, 1], [0, -1]] as const;
+const CONN8 = [...CONN4, [1, 1], [1, -1], [-1, 1], [-1, -1]] as const;
+
+/** Redesenha o contorno depois de montar a frase (ver `StyleRomDef.outline`): `width` camadas de vizinhos
+ *  (`conn` 4 ou 8, padrão 8) a partir de qualquer pixel não nulo, sem sobrescrever pixel já preenchido. Com
+ *  `below`, um pixel novo com corpo em cima (vizinho na linha −1) usa `below`; senão usa `index`. */
+function addOutline(img: IndexedImage, o: { index: number; width?: number; conn?: 4 | 8; below?: number }): IndexedImage {
+  const { w, h } = img;
+  let px = img.px;
+  const dirs = o.conn === 4 ? CONN4 : CONN8;
+  for (let k = 0, layers = o.width ?? 1; k < layers; k++) {
+    const next = px.slice();
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      if (px[i]) continue;
+      let near = false, above = false;
+      for (const [dx, dy] of dirs) {
+        const nx = x + dx, ny = y + dy;
+        if (nx >= 0 && nx < w && ny >= 0 && ny < h && px[ny * w + nx]) { near = true; if (dy === -1) above = true; }
+      }
+      if (near) next[i] = above && o.below !== undefined ? o.below : o.index;
+    }
+    px = next;
+  }
+  return { w, h, px };
 }
 
 /** Glifo `base` com os pixels não nulos de `over` por cima (a partir do canto de cima à esquerda). */
@@ -121,7 +157,8 @@ export function layoutText(f: RomFont, text: string): IndexedImage {
     }
     x += ws[i] + f.def.spacing;
   });
-  return { w, h, px };
+  const img = { w, h, px };
+  return f.def.outline ? addOutline(img, f.def.outline) : img;
 }
 
 export function glyphChars(style: TextStyleId, maps = GLYPH_MAPS, extras = EXTRA_GLYPHS): Set<string> {
