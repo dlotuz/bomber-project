@@ -27,7 +27,7 @@ describe.skipIf(!ASSETS)('camada ROM das montarias × emulador', () => {
       p.face = FACE[d]; p.act = 'idle'; p.actT0 = s.tick; p.moveDir = 8;
       ride(s, 0, parseInt(t, 16));
       const exp = (fx.riders as Record<string, Record<string, { idle: { pieces: FxPiece[] }[] }>>)[t][d].idle.at(-1)!.pieces;
-      const got = riderHook(s, p, ASSETS!, s.tick)!;
+      const got = riderHook(s, p, ASSETS!, s.tick, s.tick)!;
       expect(got).not.toBeNull();
       expect(facts(got, cx(7), cy(5))).toEqual(norm(exp));
     });
@@ -38,7 +38,7 @@ describe.skipIf(!ASSETS)('camada ROM das montarias × emulador', () => {
     p.face = 2; p.act = 'walk'; p.actT0 = s.tick; p.moveDir = 2;
     ride(s, 0, 0x3);
     const seq: string[] = [];
-    for (let i = 0; i < 24; i++) { const k = facts(riderHook(s, p, ASSETS!, s.tick)!, cx(7), cy(5)).join('|'); if (seq.at(-1) !== k) seq.push(k); s.tick++; }
+    for (let i = 0; i < 24; i++) { const k = facts(riderHook(s, p, ASSETS!, s.tick, s.tick)!, cx(7), cy(5)).join('|'); if (seq.at(-1) !== k) seq.push(k); s.tick++; }
     const exp: string[] = [];
     for (const smp of stable(fx.riders['3'].right.walk as FxSample[])) { const k = norm(smp.pieces as FxPiece[]).join('|'); if (exp.at(-1) !== k) exp.push(k); }
     expect(seq).toEqual(exp);
@@ -53,7 +53,7 @@ describe.skipIf(!ASSETS)('camada ROM das montarias × emulador', () => {
   it('sem montaria, sem traje: o gancho não troca o jogador', () => {
     const s = mkRound();
     const p = placePx(s, 0, cx(7), cy(5));
-    expect(riderHook(s, p, ASSETS!, s.tick)).toBeNull();
+    expect(riderHook(s, p, ASSETS!, s.tick, s.tick)).toBeNull();
   });
 
   // Fix round 2: Plano B (facts.ts marca MOUNT_GFX[type].format === 'unknown') — nenhum dos 7 tipos medidos está
@@ -66,7 +66,7 @@ describe.skipIf(!ASSETS)('camada ROM das montarias × emulador', () => {
       const p = placePx(s, 0, cx(7), cy(5));
       p.face = 4; p.act = 'idle'; p.actT0 = s.tick; p.moveDir = 8;
       const r = ride(s, 0, type);
-      const got = riderHook(s, p, ASSETS!, s.tick)!;
+      const got = riderHook(s, p, ASSETS!, s.tick, s.tick)!;
       expect(got).not.toBeNull();
       expect(got).toHaveLength(2);
       const X = cx(7), Y = cy(5);
@@ -103,7 +103,7 @@ describe.skipIf(!ASSETS)('camada ROM das montarias × emulador', () => {
       const s = mkRound();
       const p = placePx(s, 0, cx(7), cy(5));
       const r = ride(s, 0, type, { phase: 'mounting', t0: s.tick });
-      const got = riderHook(s, p, fakeAssets, s.tick)!;
+      const got = riderHook(s, p, fakeAssets, s.tick, s.tick)!;
       expect(got).not.toBeNull();
       const X = cx(7), Y = cy(5);
       const charPiece = got.find(e => e.pal !== 7)!;
