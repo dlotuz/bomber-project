@@ -34,6 +34,14 @@ describe('colocação', () => {
     setCell(s, 4, 1, itemCode(3));
     expect(placeBomb(s, p, [])).toBe(false);
   });
+  it('M6: nem em seta (arena 7, lógico $0040) nem em pad (arena 8, lógico $0C00) — confirmado em $C1:1D65/1D79 '
+    + 'da ROM (ARROW/PAD sobrevivem à máscara $EFC0, mesmo desvio de rejeição de item/bomba)', () => {
+    const s = arena(); const p = put(s, 0, 4, 1);
+    setCell(s, 4, 1, CODE.ARROW);
+    expect(placeBomb(s, p, [])).toBe(false);
+    setCell(s, 4, 1, CODE.PAD);
+    expect(placeBomb(s, p, [])).toBe(false);
+  });
   it('doenças: $27/$28 mudam o contador; $25 fogo 10 e só com todas livres; $24 impede; fogo total = 7', () => {
     const p = arena().players[0];
     p.disease = 0x27; expect(fuseOf(p)).toBe(62);

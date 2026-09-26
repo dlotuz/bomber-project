@@ -62,6 +62,11 @@ export function removeBomb(s: RoundState, b: Bomb, refund: boolean): void {
 export function placeBomb(s: RoundState, p: Player, ev: GameEvent[]): boolean {
   if (!canPlaceBomb(p)) return false;
   const cell = playerCell(p);
+  // M6 (revisão final do plano 8): a ROM confere a grade lógica, não só a chama, antes de colocar. Em $C1:1D65
+  // testa `BIT #$1000` (= CODE.FLAME) e, se limpo, em $C1:1D79 mascara com `AND #$EFC0` e compara com zero antes
+  // de escrever a bomba ($C900). ARROW ($0040) e PAD ($0C00) sobrevivem a essa máscara (bits fora dos limpos por
+  // `$EFC0`) e caem no mesmo desvio de rejeição que item/bomba — a ROM também não deixa colocar bomba em cima de
+  // seta (arena 7) nem de pad (arena 8). `!== CODE.FLOOR` já é o comportamento certo; ver teste de fixação abaixo.
   if (cell < 0 || s.grid[cell] !== CODE.FLOOR) return false;
   if (bombOccupies(s, cell)) return false;
   addBomb(s, p.slot, cell, { fuse: fuseOf(p), fire: bombFireOf(p), type: MOUNTS.current.bombType?.(p) ?? p.bombType });
