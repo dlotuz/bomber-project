@@ -2,6 +2,7 @@ import { mkRound, placePx, ride, cx, cy } from './helpers';
 import { eggValue, wantMountY, lineCells, escapeAfterLine, mountAiHints, MOUNT_Y_RANGE } from '../../src/core/ai/mounts';
 import { cellOf } from '../../src/core/mounts/core-api';
 import { mstate } from '../../src/core/mounts/types';
+import { hashState } from '../../src/core/hash';
 
 const yes = () => true, no = () => false;
 
@@ -100,5 +101,16 @@ describe('wantMountY', () => {
     b.s.hidden = [[cellOf(7, 1), 0x30], [cellOf(9, 3), 0x21]];
     expect(wantMountY(b.s, b.p, yes)).toEqual(wantMountY(a.s, a.p, yes));
     expect(eggValue(b.s, b.p, cellOf(7, 1))).toEqual(eggValue(a.s, a.p, cellOf(7, 1)));
+  });
+});
+
+describe('pureza da IA (revisão final, minor)', () => {
+  it('wantMountY com F não cria s.mountState quando ele é null (leitura sem efeito)', () => {
+    const { s, p } = duel(0xf, 2);
+    expect(s.mountState).toBeNull();
+    const h = hashState(s);
+    expect(wantMountY(s, p, yes)).toEqual({ dir: 2 });
+    expect(s.mountState).toBeNull();
+    expect(hashState(s)).toBe(h);
   });
 });
