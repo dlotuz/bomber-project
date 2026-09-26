@@ -1,10 +1,10 @@
 // Textura Modo 7 e desenho da tela EMPATE (spec §6.11, §7.5; T14 do plano 10).
-import { bgr555ToRgba, type Mode7Layer, type ObjEntry, type RomAssets } from '../../app/rom-api';
+import { bgr555ToRgba, sceneVramCgram, tilesFrom, type Mode7Layer, type ObjEntry, type RomAssets } from '../../app/rom-api';
 import { buildRomFont, drawText, layoutText } from '../text/text';
 import type { IndexedImage } from '../text/types';
 import { S } from '../text/strings';
 import { pixToCanvas, type Img, type SpriteBank } from '../sprite-bank';
-import { PpuCanvas, sceneFrame, sceneGfx, sceneMaps, type SceneMaps } from './scene';
+import { PpuCanvas, sceneFrame, sceneGfx, sceneMaps, type SceneGfx, type SceneMaps } from './scene';
 
 export interface DrawTexture { chr: Uint8Array; map: Uint8Array }
 
@@ -74,16 +74,24 @@ export interface DrawSceneInput { chars: readonly number[]; active: readonly boo
 
 const rgbCss = ([r, g, b]: readonly [number, number, number]): string => `rgb(${r},${g},${b})`;
 
-/** Índice (1..255) mais frequente em `tex.chr` (o "recheio" das letras: o resto é bem menos comum que o preenchimento). */
-function dominantIndex(tex: DrawTexture): number {
+/** Cada letra do Modo 7 original usa uma rampa de índices (a T18 documenta 3: `5–15`, `21–31`, `37–47`, uma por
+ *  letra/grupo — E, M, A da ROM e P, T próprios reaproveitam essas mesmas 3). Em vez de fixar essas faixas (o que
+ *  dependeria de como a T18 desenhou P e T), agrupamos aqui os índices não nulos realmente usados na textura
+ *  construída por proximidade, e devolvemos o mais frequente ("recheio") de cada grupo, em ordem crescente de
+ *  índice — assim a troca de cor funciona em qualquer conjunto de letras que `buildDrawTexture` receber. */
+function colorGroups(tex: DrawTexture): number[] {
   const freq = new Map<number, number>();
   for (const v of tex.chr) if (v) freq.set(v, (freq.get(v) ?? 0) + 1);
-  let best = 0, bestN = -1;
-  for (const [k, n] of freq) if (n > bestN) { best = k; bestN = n; }
-  return best;
+  const used = [...freq.keys()].sort((a, b) => a - b);
+  const groups: number[][] = [];
+  for (const v of used) {
+    const last = groups[groups.length - 1];
+    if (last && v - last[last.length - 1] <= 3) last.push(v); else groups.push([v]);
+  }
+  return groups.map(g => g.reduce((best, v) => (freq.get(v)! > freq.get(best)! ? v : best)));
 }
 
-interface TexInfo { tex: DrawTexture; mainIdx: number }
+interface TexInfo { tex: DrawTexture; groups: number[] }
 const texCache = new WeakMap<RomAssets, TexInfo | null>();
 const REQUIRED_GLYPHS = ['E', 'M', 'A', 'P', 'T'] as const;
 
@@ -98,8 +106,8 @@ function empateTexture(a: RomAssets): TexInfo | null {
   if (texCache.has(a)) return texCache.get(a) ?? null;
   const f = buildRomFont('bigDraw', a);
   const ready = !!f && REQUIRED_GLYPHS.every(ch => f.glyphs.has(ch));
-  const info = ready && f ? { tex: buildDrawTexture(layoutText(f, S.draw.title)), mainIdx: 0 } : null;
-  if (info) info.mainIdx = dominantIndex(info.tex);
+  let info: TexInfo | null = null;
+  if (ready && f) { const tex = buildDrawTexture(layoutText(f, S.draw.title)); info = { tex, groups: colorGroups(tex) }; }
   texCache.set(a, info);
   return info;
 }
@@ -196,19 +204,28 @@ function buildCharOam(a: RomAssets, input: DrawSceneInput, g: 52 | 54, cgram: Ui
 }
 
 const ppuCanvas = new PpuCanvas();
-/** Sem origem publicada em `MAP_SOURCES.draw2` (T19, `map-sources.ts`, fora da posse desta tarefa) nesta árvore:
- *  `sceneMaps` cai aqui, que devolve "sem BG2" — o desenho então usa o fallback de canvas. Quando a T19 publicar o
- *  mapa real (BG2 em VRAM $5C00, origem ROM $D6:489D/$D6:4A16), isso passa a vir de lá sem mudar mais nada aqui. */
-const noGeometry = (): SceneMaps => ({});
+const emptyGeometry = (): SceneMaps => ({});
 
-/** Desenho da cena com ROM: fundo/disco/personagens pelo `sceneFrame`/`renderPpu` da T5 quando há mapa de BG2 real
- *  para `draw2` (`MAP_SOURCES`/T19); senão, um fallback de canvas com as cores e as posições reais dos 5 ativos.
- *  Por cima, o Modo 7 de "EMPATE" (ou o texto achatado, enquanto a T18 não publica a fonte `bigDraw`). */
+/** `draw2` não segue o layout padrão de VRAM das outras cenas (T19): `BG12NBA = $44` põe os tiles do BG2 em
+ *  $8000–$B7FF (448 tiles), não em $0000 como `sceneGfx`/`gfxFromVram` assumem — conferido: nada é escrito em
+ *  $0000–$7FFF nesta cena. `bg3Tiles`/`objTiles` não importam aqui (o BG3 não é usado e os OBJ são montados à parte
+ *  por `buildCharOam`), então só troca `bgTiles`. */
+const DRAW2_BG2_TILE_ADDR = 0x8000, DRAW2_BG2_TILE_COUNT = 448;
+function draw2Gfx(a: RomAssets): SceneGfx {
+  const base = sceneGfx(a, 'draw2');
+  const { vram } = sceneVramCgram(a, 'draw2');
+  return { ...base, bgTiles: tilesFrom(vram, DRAW2_BG2_TILE_ADDR, DRAW2_BG2_TILE_COUNT, 4) };
+}
+
+/** Desenho da cena com ROM: fundo/disco/personagens pelo `sceneFrame`/`renderPpu` da T5 (mapa de `MAP_SOURCES.draw2`,
+ *  T19, com os tiles corrigidos de `draw2Gfx`); sem `MAP_SOURCES.draw2` (por exemplo, testes com uma geometria
+ *  própria), cai num fallback de canvas com as cores e as posições reais dos 5 ativos. Por cima, o Modo 7 de
+ *  "EMPATE" (ou o texto achatado, enquanto a fonte `bigDraw` não estiver pronta). */
 export function drawEmpateRom(ctx: CanvasRenderingContext2D, bank: SpriteBank, a: RomAssets, input: DrawSceneInput, letters: Letters, g: 52 | 54): void {
-  const gfx = sceneGfx(a, 'draw2');
+  const gfx = draw2Gfx(a);
   const cgram = Uint16Array.from(gfx.cgram);   // cópia: não mexe no cache memoizado de sceneGfx
   const oam = buildCharOam(a, input, g, cgram);
-  const maps = sceneMaps(a, 'draw2', noGeometry);
+  const maps = sceneMaps(a, 'draw2', emptyGeometry);
   if (maps.bg2) ppuCanvas.draw(ctx, sceneFrame({ ...gfx, cgram }, maps, { oam, backdrop: cgram[0] }));
   else {
     drawSkyAndDiscFallback(ctx, cgram);
@@ -218,7 +235,13 @@ export function drawEmpateRom(ctx: CanvasRenderingContext2D, bank: SpriteBank, a
   if (!info) { drawTitleFlat(ctx, bank, letters); return; }
   const m7 = mode7Layer(info.tex, letters.scale);
   if (!m7) return;
-  const colorAt = (i: number): readonly [number, number, number] => i === info.mainIdx ? CYCLE_RGB[letters.color] : bgr555ToRgba(cgram[i] ?? 0);
+  // Cada grupo (letra/rampa) troca de cor com uma fase própria (grupo k mostra CYCLE_RGB[(color + k) % 3]), como no
+  // original (§6.11: "os índices da cor principal das letras", no plural — cada letra tem o seu).
+  const phase = new Map(info.groups.map((idx, k) => [idx, k]));
+  const colorAt = (i: number): readonly [number, number, number] => {
+    const k = phase.get(i);
+    return k === undefined ? bgr555ToRgba(cgram[i] ?? 0) : CYCLE_RGB[(letters.color + k) % 3];
+  };
   m7Canvas ??= document.createElement('canvas');
   m7Canvas.width = 256; m7Canvas.height = 224;
   m7Canvas.getContext('2d')!.putImageData(rasterMode7(m7, colorAt), 0, 0);

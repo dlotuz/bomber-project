@@ -1,5 +1,6 @@
 import { drawScreen } from '../../src/screens/draw';
 import { buildDrawTexture, m7Pixel, CHAR_X, CHAR_Y, CYCLE_RGB, bigDrawReady } from '../../src/render/screens-rom/draw';
+import { sceneMaps } from '../../src/render/screens-rom/scene';
 import { buildRomFont, layoutText } from '../../src/render/text/text';
 import { S } from '../../src/render/text/strings';
 import { createMatchSession, resetCarry } from '../../src/game/match-session';
@@ -8,7 +9,7 @@ import { BTN, crownsOf } from '../../src/game/core-api';
 import { idleInput } from '../../src/input/input';
 import { mkApp, tap, idle } from './helpers';
 import { ASSETS } from './rom';
-import { loadCapture, parseOam } from './captures';
+import { loadCapture, parseOam, capturedMap, mapMatch } from './captures';
 
 beforeEach(() => resetCarry());
 function drawEnv() {
@@ -102,5 +103,10 @@ describe.skipIf(!cap1 || !cap2)('posições e cores reais (draw1.oam/draw2.oam, 
     const cg = cap2!.cgram;
     const rgb = (c: number): [number, number, number] => { const f = (v: number) => (v << 3) | (v >> 2); return [f(c & 31), f((c >> 5) & 31), f((c >> 10) & 31)]; };
     expect([rgb(cg[27]), rgb(cg[44]), rgb(cg[12])]).toEqual(CYCLE_RGB);
+  });
+  it.skipIf(!ASSETS)('MAP_SOURCES.draw2 (T19) bate ≥ 97 % com o BG2 capturado em $5C00 (palavra)', () => {
+    const maps = sceneMaps(ASSETS!, 'draw2', () => ({}));
+    expect(maps.bg2).toBeDefined();
+    expect(mapMatch(maps.bg2!, capturedMap(cap2!, 0x5c00))).toBeGreaterThanOrEqual(0.97);
   });
 });
