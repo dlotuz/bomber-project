@@ -1,14 +1,14 @@
 import { parseConfig } from '../../src/game/config';
 import { createSession, updateSession, ROUND_OVER_FRAMES, SCOREBOARD_FRAMES, SKIP_AFTER, type Session } from '../../src/game/session';
-import { BTN, INTRO_FRAMES } from '../../src/legacy-core';
+import { BTN, INTRO_TICKS } from '../../src/core';
 
 const idle = [0, 0, 0, 0, 0];
 const run = (s: Session, n: number, pads = idle) => { for (let i = 0; i < n; i++) updateSession(s, pads); };
 const tap = (s: Session, slot: number, btn: number) => { const p = [0, 0, 0, 0, 0]; p[slot] = btn; updateSession(s, p); updateSession(s, idle); };
 const winRound = (s: Session, winner: number) => {
-  if (s.round.phase === 'intro') run(s, INTRO_FRAMES + 1);
-  s.round.players.forEach((p, i) => { if (i !== winner) p.alive = false; });
-  run(s, 1);
+  if (s.round.phase === 'intro') run(s, INTRO_TICKS);
+  s.round.players.forEach((p, i) => { if (i !== winner && p.present) p.state = 'out'; });
+  for (let i = 0; i < 400 && s.phase === 'battle'; i++) updateSession(s, idle);
 };
 
 describe('parseConfig', () => {
@@ -24,7 +24,7 @@ describe('parseConfig', () => {
     const c = parseConfig('');
     expect(c.stage).toBe(1);
     expect(c.rules.active).toEqual([true, true, true, true, true]);
-    expect([c.rules.matches, c.rules.timeIdx, c.rules.randomSpawns, c.rules.mode]).toEqual([3, 2, true, 'ffa']);
+    expect([c.rules.matches, c.rules.timeIdx, c.rules.randomSpawns, c.rules.mode]).toEqual([3, 2, false, 'ffa']);
     expect(c.chars).toEqual([0, 1, 2, 3, 4]);
     expect(c.seed).toBeNull();
   });
@@ -44,8 +44,8 @@ describe('sessão', () => {
     const s = createSession(parseConfig(''), 1);
     expect(s.phase).toBe('battle');
     expect(s.round.phase).toBe('intro');
-    run(s, INTRO_FRAMES + 1);
-    expect(s.round.phase).toBe('playing');
+    run(s, INTRO_TICKS);
+    expect(s.round.phase).toBe('play');
   });
   it('fim de rodada → placar com coroa → próxima rodada', () => {
     const s = createSession(parseConfig('?players=2&matches=3'), 1);
@@ -62,7 +62,7 @@ describe('sessão', () => {
   it('placar só pode ser pulado depois de SKIP_AFTER frames', () => {
     const s = createSession(parseConfig('?players=2&matches=3'), 1);
     winRound(s, 0); run(s, ROUND_OVER_FRAMES);
-    run(s, 30); tap(s, 0, BTN.START);
+    run(s, 5); tap(s, 0, BTN.START);
     expect(s.phase).toBe('scoreboard');
     run(s, SKIP_AFTER); tap(s, 0, BTN.START);
     expect(s.phase).toBe('battle');
@@ -159,7 +159,7 @@ describe('sessão', () => {
       return createSession(cfg, 4);
     };
     const a = mk(), b = mk();
-    run(a, INTRO_FRAMES + 1); run(b, INTRO_FRAMES + 1);
+    run(a, INTRO_TICKS); run(b, INTRO_TICKS);
     tap(a, 2, BTN.START);
     run(b, 2);
     expect(a.paused).toBe(false);
@@ -175,9 +175,9 @@ describe('sessão', () => {
     expect(s.paused).toBe(false);
     tap(s, 0, BTN.START);
     expect(s.paused).toBe(true);
-    const f = s.round.frame;
+    const f = s.round.tick;
     run(s, 20);
-    expect(s.round.frame).toBe(f);
+    expect(s.round.tick).toBe(f);
     tap(s, 0, BTN.START);
     expect(s.paused).toBe(false);
   });
@@ -190,9 +190,8 @@ describe('sessão', () => {
   });
   it('modo time: time 0 vence → campeões são todos os slots do time 0', () => {
     const s = createSession(parseConfig('?players=5&mode=team&matches=1'), 1);
-    run(s, INTRO_FRAMES + 1);
-    s.round.players.forEach(p => { if (p.team !== 0) p.alive = false; });
-    run(s, 1);
+    run(s, INTRO_TICKS);
+    s.round.players.forEach(p => { if (p.team !== 0) p.state = 'out'; }); for (let i = 0; i < 400 && s.phase === 'battle'; i++) updateSession(s, idle);
     expect(s.phase).toBe('roundOver');
     run(s, ROUND_OVER_FRAMES);
     expect(s.phase).toBe('scoreboard');
@@ -202,9 +201,8 @@ describe('sessão', () => {
   });
   it('empate por tempo esgotado: sem vencedor, sem coroa, ainda vai a placar', () => {
     const s = createSession(parseConfig('?players=2&matches=3'), 1);
-    run(s, INTRO_FRAMES + 1);
-    s.round.timeLeft = 1;
-    run(s, 1);
+    run(s, INTRO_TICKS);
+    s.round.clock = { sec: 1, sub: 1 }; for (let i = 0; i < 400 && s.phase === 'battle'; i++) updateSession(s, idle);
     expect(s.phase).toBe('roundOver');
     run(s, ROUND_OVER_FRAMES);
     expect(s.phase).toBe('scoreboard');

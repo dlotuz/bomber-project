@@ -1,4 +1,4 @@
-import type { GameEvent } from '../legacy-core';
+import type { GameEvent } from '../core';
 import { updateSession, type Session } from '../game/session';
 import { updateView, type ViewState } from '../render/view';
 

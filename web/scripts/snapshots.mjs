@@ -52,11 +52,11 @@ try {
   await sleep(1700);
   await hold('KeyD', 250); await tap('KeyJ'); await hold('KeyA', 250); await hold('KeyS', 300);
   await sleep(300); await shot('11-battle');
-  await page.waitForFunction(() => window.__crown.session.round.arena.flame.some(f => f > 20), null, { timeout: 5000 });
+  await page.waitForFunction(() => window.__crown.session.round.grid.some(v => v === 0x1000), null, { timeout: 5000 });
   await shot('12-explosion');
   await tap('Enter'); await sleep(150); await shot('13-pause');
   await tap('Enter');
-  await page.evaluate(() => { window.__crown.session.round.players.forEach((p, i) => { if (i !== 2) p.alive = false; }); });
+  await page.evaluate(() => { window.__crown.session.round.players.forEach((p, i) => { if (i !== 2) p.state = 'out'; }); });
   await sleep(400); await shot('14-round-over');
   await page.waitForFunction(() => window.__crown.session?.phase === 'scoreboard', null, { timeout: 15000 });
   await sleep(300); await shot('15-scoreboard');

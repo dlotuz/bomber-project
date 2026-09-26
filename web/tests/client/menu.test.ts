@@ -2,7 +2,7 @@ import { MenuList, cycle, clamp } from '../../src/screens/menu';
 import { App, type Screen } from '../../src/app/app';
 import { defaultSettings } from '../../src/app/settings';
 import { idleInput } from '../../src/input/input';
-import { BTN } from '../../src/legacy-core';
+import { BTN } from '../../src/core';
 
 describe('MenuList', () => {
   const make = () => {
