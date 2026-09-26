@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { buildBattleFrame } from '../../src/render/rom/battle';
-import { headTiles } from '../../src/render/rom/hud';
+import { faceTileIds, headTiles } from '../../src/render/rom/hud';
 import { PLAYER_OBJ_PAL } from '../../src/render/rom/sprites';
 import { renderPpu, type ObjEntry } from '../../src/render/ppu';
 import { px, type RoundState } from '../../src/core';
@@ -85,20 +85,29 @@ describe.skipIf(!ASSETS)('partida real com a ROM (§11, aceite 7)', () => {
     expect(slots).toEqual([1, 3, 4, 0, 2]);
   });
 
-  it('HUD: dígitos seguem o relógio; rostos vêm do personagem de cada slot', () => {
+  it('HUD: dígitos seguem o relógio (M2: até o jogo mudar de 3:00 para 2:59); rostos = ordem/endereço da própria ROM', () => {
     const s = newRound(1);
+    toPlay(s);   // sem isso a intro trava o relógio em 3:00 e o teste não prova a mudança (M2)
     const digit = (w: number) => { const t = (w & 0x3ff) - 0x200; return t === 0x39 ? 0 : t - 0x2f; };
-    for (let i = 0; i < 20; i++) {
+    const secsSeen = new Set<number>();
+    for (let i = 0; i < 65; i++) {
       const m = frameOf(s).bg1!.map;
       const row = 28 * 32;
       const shown = `${digit(m[row + 4])}:${digit(m[row + 6])}${digit(m[row + 7])}`;
       expect(shown).toBe(`${Math.floor(s.clock.sec / 60)}:${String(s.clock.sec % 60).padStart(2, '0')}`);
+      secsSeen.add(s.clock.sec);
       stepN(s, 1);
     }
-    const tiles = frameOf(s).bg1!.tiles.px;
+    expect(secsSeen.has(180)).toBe(true);
+    expect(secsSeen.has(179)).toBe(true);   // o relógio realmente mudou de 3:00 para 2:59 (M2)
+    // M2: verdade da ROM (sondas da revisão) em vez de comparar headTiles com ele mesmo — a folha-base da arena,
+    // nos endereços do rosto de cada slot, já é o rosto do personagem 0, byte a byte, nas 6 posições (TL,TR,ML,MR,BL,BR).
+    const ar = ASSETS!.arena(1);
     for (let slot = 0; slot < 5; slot++) {
-      const head = headTiles(ASSETS!.character(s.players[slot].char), slot)[0];
-      expect(Array.from(tiles.subarray((0x201 + 2 * slot) * 64, (0x202 + 2 * slot) * 64))).toEqual(Array.from(head));
+      const head = headTiles(ASSETS!.character(0), slot);
+      faceTileIds(slot).forEach((tile, i) => {
+        expect(Array.from(ar.bgTiles.px.subarray(tile * 64, tile * 64 + 64))).toEqual(Array.from(head[i]));
+      });
     }
   });
 
