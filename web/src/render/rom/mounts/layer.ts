@@ -16,7 +16,7 @@ const MOUNT_PAL_ADDR: Record<number, number> = {
 
 export const romMountLayer: RomBattleLayer = {
   id: 'mounts',
-  draw(s, b, aObj, frame) {
+  draw(s, b, aObj, hostFrame, frame = hostFrame) {   // `frame` = visualTick (base de `t0`/`born`/`phaseT0`, congela no TIME UP; T16)
     const a = aObj as RomAssets;
     for (const p of s.players) {
       const r = rider(p);

@@ -55,7 +55,8 @@ function mountPieces(a: RomAssets, stage: number, type: number, face: 0 | 2 | 4 
   return entriesFor(a, stage, X, Y, fr, 'mount', type, pal);
 }
 
-export const riderHook: RomPlayerHook = (s, p, a, frame) => {
+// `frame` = visualTick (5º argumento, tick do core congelado no TIME UP; sem ele, o quadro do host) — base de `actT0`/`t0` (T16).
+export const riderHook: RomPlayerHook = (s, p, a, hostFrame, frame = hostFrame) => {
   const r = rider(p);
   const X = Math.floor(p.x / 256), Y = Math.floor(p.y / 256);
   const pal = PLAYER_OBJ_PAL[p.slot] ?? 0;
