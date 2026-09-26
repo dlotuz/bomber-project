@@ -66,12 +66,12 @@ Posse de arquivos (todos sob `web/`, salvo indicação). Nenhum arquivo é tocad
 | # | Lacuna | Decisão (provisória 🟡 salvo ✅) | Base |
 |---|---|---|---|
 | L1 | Acerto durante `mounting` / `dismount` | Imune: `onHit` devolve `true` sem efeito | a rotina `$C2:261E`/`$C2:10D5` não passa pelo teste de chama; T6_hit mostra o jogador vivo com a chama ainda na casa |
-| L2 | Semântica de `$1ED4` | Derivado: ovos na grade (`0x097x`) + montadores em `mounting`/`riding` (+ `dismount` com reserva) + reservas + mísseis D em voo | MNT A.3 "ovos no chão + montarias ativas" |
+| L2 | Semântica de `$1ED4` | Derivado: ovos na grade (`0x097x`) e voando (caça-níquel) + montadores em `riding` (+ `dismount` com reserva) + **2** por montador em `mounting` (ovo pisado + montaria: +1 do choco) + reservas + explosões de reserva queimada (L22). **Não** contam: o míssil D em voo e quem desmonta sem reserva (a ROM desconta no início da perda, `$C2:60B9`). Fonte única: `eggsInPlay` do plano 8 = `activeCount` (revisão final I5) | MNT A.3; todas as referências a `$1ED4` na revisão final; choco medido no emulador (41–45 ticks, `mount_hatch_1ed4.py`) |
 | L3 | Vagas `$1ED5/$1ED6` | Menor vaga livre (1, depois 2). A vaga é liberada no início do desmonte sem reserva. O míssil D fica com a vaga da montaria lançada; se houver reserva, o jogador remonta na outra | MNT A.4 |
 | L4 | 2º ovo quando montado | Decide o **tipo do ovo** (0–7 → reserva, até 3, fila; 8–F → fica na grade). Reserva remonta com o próprio tipo (A8) | `mount_follow.py` (`$32`), `mount_misc.py` (`$3A`) |
-| L5 | Posição no desmonte | O pulo é só visual: X/Y lógicos não mudam. `inv = 32` é gravado ao fim do tick H+52 (sem reserva) / H+45 (com reserva) | `mount_battery` T6_hit: (31,47) antes e depois; `+$96 = 32` no quadro 178 = H+52 |
-| L6 | Modelo dos projéteis D/E/F | Nasce na posição do montador no tick do Y (k = 0); a partir de k = 1 anda `v` por tick; no k = 1 acerta quem estiver a ≤ 16 px antes de andar; depois acerta com \|eixo\| ≤ alcance e \|transversal\| < 8 px. D: v = 2 px, alcance 12 px. E: v = 2 px, alcance 11 px. F: v = 0,5 px, alcance 0,5 px. Para ao passar do centro da casa se a próxima tem bit 15 | calibrado nos medidos: E acerta a 1/2/3/4 casas em k = 1/11/19/27; D explode em k = 34 a 5 casas; F acerta a 40 px em k = 79 |
-| L7 | Vida dos projéteis | D: até bater. E: 28 ticks de voo (56 px ≈ 3,5 casas), depois nuvem por 16 ticks. F: 160 ticks de voo (80 px) | MNT "alcance ≈3 casas" e acerto a 4 casas |
+| L5 | Posição no desmonte | O pulo é só visual: X/Y lógicos não mudam. `inv = 32` é gravado ao fim do tick H+52, com ou sem reserva (errata da revisão final: o remonte também é 1 + 51, não H+45) | `mount_battery` T6_hit: (31,47) antes e depois; `+$96 = 32` no quadro 178 = H+52 |
+| L6 | Modelo dos projéteis D/E/F | **Por casas (medido, T3).** Nasce à frente do montador no tick do Y (k = 0): E/D + 2 px, F + 1 px. Anda 2 px (E, D) ou 0,5 px (F) por tick. E: depois de andar, acerta o adversário que está na casa do projétil; bloqueia quando a borda da frente (± 8 px) entra numa casa com bit 15 ou fora da grade (sem ajuste ao centro). F: mesmos testes, mas com a posição do começo do tick (antes de andar). D: depois de andar, se a casa da frente tem bit 15 ou um adversário, para no centro da casa atual; explode no tick seguinte | E acerta a 1/2/3/4 casas em k = 3/11/19/27 (o "1" antigo era erro de transcrição: `mount_e.py` dá 3); alvos fora do centro contam pela casa (E 56–68 → 11; F 72/76/80 → 79); D explode em 16/24/32/40/48 com o alvo nas cols 5–9; transversal por casa (y = 55 acerta, 56 não) |
+| L7 | Vida dos projéteis | D: até bater (explosão = tick seguinte à parada). E: **sem limite de alcance**, voa até bater (da x = 32 na linha livre: nuvem em k = 95, x = 224). A nuvem `$C1:2EB6` dura 39 ticks, o `$C3:50E8` 1 tick, e ela some 40 ticks depois de virar nuvem (vale para acerto e bloco). F: o voo acaba em k = 159 (80 px), qualquer que seja o ponto de partida. O objeto final `$C1:30FC` + `$C3:50E8` dura 40 ticks | medido no emulador (T3): E livre 95/134/135; E acerto 11/50/51; F livre 159/198/199 (de x = 32 e x = 65) |
 | L8 | Explosão do D | Cruz na casa do míssil, alcance 2 (fogo 0), dono = montador (A8) | spec A8 |
 | L9 | Recargas | E: 64 ticks (A8). F: uma nota por montador por vez. C: sem recarga (limitado pelas bombas) | spec A8 |
 | L10 | Duração do lento (E) | `effect = {2, 64}`; a contagem é do core (1 a cada 4 ticks, §4.5) → 253–256 ticks; o teste aceita essa faixa (medido 255) | spec §5.2, §4.5 |
@@ -86,6 +86,7 @@ Posse de arquivos (todos sob `web/`, salvo indicação). Nenhum arquivo é tocad
 | L19 | Paleta das montarias na OAM | Medida em T4 (provisório: vaga 1 → OBJ pal 2, vaga 2 → OBJ pal 3) | 2 vagas = 2 conjuntos de gráficos |
 | L20 | Tipo A + atravessa-bomba ("`$0A` anula") | Não implementado: o `passBomb` do item continua valendo | combinação rara; `passes` só concede |
 | L21 | F em alvo já travado | Reinicia a dança (192); jogadores `dying`/`out` não são atingidos | – |
+| L22 | Ovo reserva na chama (revisão final I6) | ✅ Com o dono sem invencibilidade (`inv <= 0`, `+$96 == 0`), a reserva cuja casa (`trail[i+1]`) tem o bit `$1000` sai da fila **levando as de trás**, estoura (`$D8:D327`, 40 ticks, `mountState.bursts`) e só no fim sai do `$1ED4`; evento `reserve_burnt`. Vale também durante o remonte | `$C2:62D7` → `$C2:6645`/`$C2:6687`/`$C2:6680`; emulador (`mount_burn.py`) |
 
 ---
 
@@ -1028,7 +1029,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Interfaces:**
 - Consumes: T1 (`types.ts`, `core-api.ts`).
-- Produces: `ProjSpec`, `ProjResult`, `SPAWN_REACH`, `LANE`, `D_SPEC`, `E_SPEC`, `F_SPEC`, `spawnProjectile(s, owner, kind, slot?)`, `advanceProjectile(s, pr, spec)`, `hasFlying(s, owner, kind)`.
+- Produces: `ProjSpec`, `ProjResult`, `FRONT`, `D_SPEC`, `E_SPEC`, `F_SPEC`, `SPEC_OF`, `spawnProjectile(s, owner, kind, slot?)`, `advanceProjectile(s, pr, spec)`, `hasFlying(s, owner, kind)`.
+
+> **Atualização (T3, decisão do controlador):** o modelo por distância em pixels abaixo foi **substituído** pelo modelo por casas medido no emulador (L6/L7). O código e o teste finais estão em `web/src/core/mounts/projectile.ts` e `web/tests/mounts/projectile.test.ts`. As regras, a calibração e o código desta seção ficam só como histórico. Os números que valem são: E 3/11/19/27; F 79 a 40 px; D explode em 32 a 5 casas.
 
 Regras (L6): k = `s.tick − pr.born`, chamado com k ≥ 1.
 1. Se k = 1: acerta o 1º jogador (P1..P5; `present`, `state === 'alive'`, ≠ dono) com \|eixo\| ≤ 16 px e \|transversal\| < 8 px, **antes** de andar.
@@ -2326,7 +2329,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Files:** Replace `web/src/core/mounts/abilities/typeD.ts`; Test `web/tests/mounts/typeD.test.ts`.
 **Interfaces:** Consumes `spawnProjectile`, `advanceProjectile`, `D_SPEC` (T3), `loseMount` (T2), `explodeAt`, `cellAt`. Produces `ABILITY_D` com `onY` e `tickProjectile`.
 
-Regras (MNT A.5, L3, L6, L8): Y cria o míssil (vaga = vaga da montaria) e o montador perde a montaria como num acerto (`loseMount(..., 'launch')`: 1 + 51 + 32, ou 1 + 44 com reserva, que remonta na **outra** vaga). O míssil anda 2 px/tick e, ao acertar jogador ou bloco, explode em cruz de alcance 2 na casa onde está, dono = montador, e some.
+Regras (MNT A.5, L3, L6, L8): Y cria o míssil (vaga = vaga da montaria) e o montador perde a montaria como num acerto (`loseMount(..., 'launch')`: 1 + 51 + 32, ou 1 + 44 com reserva, que remonta na **outra** vaga). O míssil anda 2 px/tick. Quando a casa da frente tem bloco ou adversário, para no centro da casa atual e, **no tick seguinte**, `advanceProjectile` devolve `player`/`block`. Nesse tick explode em cruz de alcance 2 na casa onde está, dono = montador, e some (L6). Na ROM o alvo morre 1 tick depois da explosão (2 ticks quando a explosão cai no k = 32; é fase global de quadro, não da coluna, e não é reproduzido).
 
 - [ ] **Step 1: Teste** `web/tests/mounts/typeD.test.ts`:
 
@@ -2346,7 +2349,7 @@ function launch(targetPx: number | null, extra = {}) {
 }
 
 describe('montaria tipo D (alcachofra): Y lança a montaria', () => {
-  it('alvo a 5 casas: explode 34 ticks depois do Y na (6,1) e mata o alvo', () => {
+  it('alvo a 5 casas: explode 32 ticks depois do Y na (6,1) e mata o alvo (ROM: parada 31, explosão 32, morte 34)', () => {
     const { s, ev0 } = launch(112);
     expect(ev0).toContainEqual({ type: 'mount', id: 'mount_lost', slot: 0, mount: 0xd, reserve: false, cause: 'launch' });
     let kExp = -1;
@@ -2355,7 +2358,7 @@ describe('montaria tipo D (alcachofra): Y lança a montaria', () => {
       const ex = ev.find(e => e.type === 'explosion');
       if (ex) { kExp = k; expect(ex).toMatchObject({ cell: cellOf(6, 1), owner: 0 }); }
     }
-    expect(kExp).toBe(34);
+    expect(kExp).toBe(32);
     run(s, 3);
     expect(s.players[2].state).not.toBe('alive');
   });
@@ -2450,9 +2453,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 12: Tipo E — tiro lento
 
 **Files:** Replace `web/src/core/mounts/abilities/typeE.ts`; Test `web/tests/mounts/typeE.test.ts`.
-**Interfaces:** Consumes `spawnProjectile`, `advanceProjectile`, `E_SPEC`. Produces `ABILITY_E`, `E_COOLDOWN`, `E_FLIGHT`, `E_CLOUD`.
+**Interfaces:** Consumes `spawnProjectile`, `advanceProjectile`, `E_SPEC`. Produces `ABILITY_E`, `E_COOLDOWN`, `E_CLOUD`.
 
-Regras (MNT A.5, L6, L7, L9, L10): Y → se `cooldown > 0`, consome sem efeito; senão tiro na posição do montador, `cooldown = 64`, evento `mount_ability`. Em voo: acerto → alvo recebe `effect = {kind: 2, left: 64}`, evento `mount_struck`, vira nuvem; bloco ou k > 28 → nuvem. Nuvem dura 16 ticks e some. O efeito vale mesmo com o alvo montado ou invencível.
+Regras (MNT A.5, L6, L7, L9, L10): Y → se `cooldown > 0`, consome sem efeito; senão tiro na posição do montador, `cooldown = 64`, evento `mount_ability`. Em voo: acerto → alvo recebe `effect = {kind: 2, left: 64}`, evento `mount_struck`, vira nuvem; bloco → nuvem (sem limite de alcance, L7). A nuvem some 40 ticks depois de se formar. O efeito vale mesmo com o alvo montado ou invencível.
 
 - [ ] **Step 1: Teste** `web/tests/mounts/typeE.test.ts`:
 
@@ -2470,9 +2473,9 @@ function shoot(targetPx: number) {
 }
 
 describe('montaria tipo E (tanque): Y = tiro lento', () => {
-  it('acerta alvos a 1, 2, 3, 4 casas em 1, 11, 19, 27 ticks (mount_e.py)', () => {
+  it('acerta alvos a 1, 2, 3, 4 casas em 3, 11, 19, 27 ticks (mount_e.py)', () => {
     const got = [1, 2, 3, 4].map(d => { const { s, q } = shoot(32 + 16 * d); return firstTick(s, 60, () => q.effect.kind === 2); });
-    expect(got).toEqual([1, 11, 19, 27]);
+    expect(got).toEqual([3, 11, 19, 27]);
   });
   it('alvo fica a 128/256 px por tick durante 253–256 ticks (effect {2, 64}; medido 255)', () => {
     const { s, q } = shoot(64);
@@ -2503,18 +2506,20 @@ describe('montaria tipo E (tanque): Y = tiro lento', () => {
     run(s, 1, { 0: BTN.Y });
     expect(mstate(s).projectiles.filter(pr => pr.born === s.tick)).toHaveLength(1);
   });
-  it('sem alvo: voa 28 ticks, vira nuvem por 16 e some', () => {
+  it('sem alvo: voa até a parede (nuvem em k = 95, x = 224), a nuvem dura 40 ticks e some (medido)', () => {
     const s = mkRound();
     const p = placePx(s, 0, 32, 47); p.face = 2;
     ride(s, 0, 0xe);
     run(s, 1, { 0: BTN.Y });
     const pr = mstate(s).projectiles[0];
-    run(s, 28);
+    run(s, 94);
     expect(pr.state).toBe('fly');
-    expect(pr.x).toBe((32 + 56) * 256);
     run(s, 1);
     expect(pr.state).toBe('cloud');
-    run(s, 16);
+    expect(pr.x).toBe(224 * 256);
+    run(s, 39);
+    expect(mstate(s).projectiles).toHaveLength(1);
+    run(s, 1);
     expect(mstate(s).projectiles).toHaveLength(0);
   });
 });
@@ -2528,8 +2533,7 @@ import { spawnProjectile, advanceProjectile, E_SPEC } from '../projectile';
 import { mev } from '../events';
 
 export const E_COOLDOWN = 64;   // +$C6 (spec §12 A8)
-export const E_FLIGHT = 28;     // ticks de voo (56 px)
-export const E_CLOUD = 16;      // ticks de nuvem
+export const E_CLOUD = 40;      // $C1:2EB6 por 39 ticks + $C3:50E8 por 1 (medido; sem limite de voo, L7)
 
 /** Tipo E: tiro lento ($C1:2CFF/$C1:2D73 → nuvem $C1:2EB6). */
 export const ABILITY_E: MountAbility = {
@@ -2548,7 +2552,7 @@ export const ABILITY_E: MountAbility = {
       s.players[res.slot].effect = { kind: 2, left: 64 };
       ev.push(mev({ id: 'mount_struck', slot: pr.owner, target: res.slot, mount: 0xe }));
     }
-    if (res.kind !== 'none' || s.tick - pr.born >= E_FLIGHT + 1) { pr.state = 'cloud'; pr.t = s.tick; }
+    if (res.kind !== 'none') { pr.state = 'cloud'; pr.t = s.tick; }
   },
 };
 ```
@@ -2556,7 +2560,7 @@ export const ABILITY_E: MountAbility = {
 Armadilha: `onY` roda na fase dos jogadores e `tickRiders` (T2) roda depois, no mesmo tick, descontando 1. Por isso o código grava `E_COOLDOWN + 1`: o valor observável depois do tick do Y é 64, e o Y volta a funcionar 64 ticks depois.
 
 → PASS. Se a faixa 253–256 falhar, conferir a contagem do `effect` no core (T1) antes de mexer aqui.
-- [ ] **Step 5: Verificação opcional:** `mount_e3.py` (duração e média de velocidade) e `mount_e.py` com alvos a 5 e 6 casas (define o fim do voo, L7).
+- [ ] **Step 5: Verificação opcional:** `mount_e3.py` (duração e média de velocidade) e (o fim do voo e a duração da nuvem já foram medidos na T3, L7).
 - [ ] **Step 6: Commit** (`git add` dos arquivos que a tarefa possui):
 
 ```bash
@@ -2572,7 +2576,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Files:** Replace `web/src/core/mounts/abilities/typeF.ts`; Test `web/tests/mounts/typeF.test.ts`.
 **Interfaces:** Consumes `spawnProjectile`, `advanceProjectile`, `hasFlying`, `F_SPEC`, `lockAct`. Produces `ABILITY_F`, `F_FLIGHT`, `DANCE_TICKS`.
 
-Regras (MNT A.5, L6, L7, L9, L21): Y → se já há nota do montador em voo, consome sem efeito; senão nota (0,5 px/tick), evento `mount_ability`. Acerto → `lockAct(alvo, 'dance', 192)` (rotina `$C2:0D83` → `$C2:0DDC`), evento `mount_struck`, a nota some. Bloco ou k > 160 → some.
+Regras (MNT A.5, L6, L7, L9, L21): Y → se já há nota do montador em voo, consome sem efeito; senão nota (0,5 px/tick), evento `mount_ability`. Acerto → `lockAct(alvo, 'dance', 192)` (rotina `$C2:0D83` → `$C2:0DDC`), evento `mount_struck`, a nota some. Bloco → some. O voo acaba em k = 159 (80 px, L7).
 
 - [ ] **Step 1: Teste** `web/tests/mounts/typeF.test.ts`:
 
@@ -2609,15 +2613,15 @@ describe('montaria tipo F (palhaço): Y = notas', () => {
     s.grid[cellOf(4, 1)] = 0xcc80;
     ride(s, 0, 0xf);
     run(s, 1, { 0: BTN.Y });
-    run(s, 40);                                              // chega ao centro da (3,1) em k = 30
+    run(s, 40);                                              // bloqueia em k = 31 com x = 48 (medido)
     expect(mstate(s).projectiles).toHaveLength(0);
   });
-  it('sem alvo nem bloco some depois de 160 ticks', () => {
+  it('sem alvo nem bloco: o voo acaba em k = 159 (medido de x = 32 e x = 65)', () => {
     const s = mkRound();
     const p = placePx(s, 0, 32, 47 + 16 * 4); p.face = 2;   // linha 5: (3,5)..(14,5) livres
     ride(s, 0, 0xf);
     run(s, 1, { 0: BTN.Y });
-    run(s, 160);
+    run(s, 158);
     expect(mstate(s).projectiles).toHaveLength(1);
     run(s, 1);
     expect(mstate(s).projectiles).toHaveLength(0);
@@ -2633,7 +2637,7 @@ import { spawnProjectile, advanceProjectile, hasFlying, F_SPEC } from '../projec
 import { lockAct } from '../core-api';
 import { mev } from '../events';
 
-export const F_FLIGHT = 160;    // ticks (80 px) — provisório (L7)
+export const F_FLIGHT = 159;    // o voo acaba em k = 159 (80 px), medido (L7)
 export const DANCE_TICKS = 192; // $C0
 
 /** Tipo F: notas musicais ($C1:2F21); atingido dança ($C2:0D83 → $C2:0DDC). */
@@ -2651,15 +2655,15 @@ export const ABILITY_F: MountAbility = {
       lockAct(s, s.players[res.slot], 'dance', DANCE_TICKS);
       ev.push(mev({ id: 'mount_struck', slot: pr.owner, target: res.slot, mount: 0xf }));
     }
-    if (res.kind !== 'none' || s.tick - pr.born >= F_FLIGHT + 1) { pr.state = 'done'; pr.t = s.tick; }
+    if (res.kind !== 'none' || s.tick - pr.born >= F_FLIGHT) { pr.state = 'done'; pr.t = s.tick; }
   },
 };
 ```
 
-Nota do teste do bloco: da x=32, a nota chega ao centro da (3,1) (x=47) em k = 30 (15 px a 0,5 px/tick) e a (4,1) tem soft → `block` em k = 30.
+Nota do teste do bloco: da x=32, a nota nasce em x = 33 e anda 0,5 px/tick. F testa com a posição do começo do tick; em k = 31 essa posição é x = 48, a borda da frente (56) entra na (4,1), que tem soft → `block` em k = 31 (medido no emulador). Na ROM o objeto final (`$C1:30FC` e depois `$C3:50E8`) fica 40 ticks na tela, o que interessa só à camada de desenho. No acerto em jogador esse objeto aparece 1 tick antes da dança (k = 78).
 
 → PASS.
-- [ ] **Step 5: Verificação opcional:** `mount_vs.py F Y 88 300` e `F Y 120 400` para o fim do voo (L7).
+- [ ] **Step 5: Verificação opcional:** já feita na T3 (F 88 → 111; fim do voo em k = 159, L7).
 - [ ] **Step 6: Commit** (`git add` dos arquivos que a tarefa possui):
 
 ```bash
@@ -2978,9 +2982,9 @@ Linha 9 da §11 da spec, com onde cada item é verificado:
 | Teto de 2 | `eggs.test.ts` (teto, montaria/reserva/míssil contam), `acceptance.test.ts` (`maxActive ≤ 2` em 20 rodadas de CPU) | `cd web && npx vitest run tests/mounts` |
 | Tipo por `rnd(14)` na tabela `$C1:5DA4` | `eggs.test.ts` (C/D da semente `$0012`, contagens exatas em 7000 sorteios), `core-api.test.ts` | idem |
 | 43 ticks para montar | `eggs.test.ts` "monta: 43 ticks" | idem |
-| Acerto 1 + 51 + 32; reserva 1 + 44 | `rider.test.ts` | idem |
+| Acerto 1 + 51 + 32; reserva 1 + 51 + 32 (errata; a spec dizia 1 + 44) | `rider.test.ts` | idem |
 | Linha com 3 bombas em x = 80/96/112 | `typeC.test.ts` | idem |
-| Míssil D a 5 casas | `typeD.test.ts` (explode em k = 34 e mata) | idem |
+| Míssil D a 5 casas | `typeD.test.ts` (explode em k = 32 e mata) | idem |
 | E deixa o alvo a 128/256 por 255 ticks | `typeE.test.ts` (128 por tick; 253–256 ticks) | idem |
 | F atordoa por 192 | `typeF.test.ts` (dança 79 → 271) | idem |
 | Tipo 2 atravessa soft; 3 perfura; A chuta | `type2/type3/typeA.test.ts` | idem |
@@ -3001,3 +3005,93 @@ Linha 9 da §11 da spec, com onde cada item é verificado:
 - **Contagens de sorteio "exatas"** (7000 reveals) dependem de `rnd` ser o LCG da §3.2; se o plano 6 mudar o `rnd`, o teste acusa.
 - **Tipos fora do Battle** (0, 1, 4–9, B) e a senha `$7F:70BD` ficam fora; `ABILITIES` não os registra e o `mountModule` ignora tipos sem entrada.
 - **Aceite de CPU** (ovos revelados, montarias e uso de Y em 40 rodadas) é determinístico, mas sensível a mudanças na IA do plano 6; se falhar sem bug, aumentar o número de sementes e registrar.
+
+---
+
+## Resultado da execução (2026-09-26)
+
+Branch `feat/p9` (contém os planos 5–8): 16 tarefas + T14b em 4 ondas, revisão final da branch inteira
+(`e924e45..e23dd1d`, veredito "precisa de correções": 0 Critical, 6 Important) e 1 onda de correção. Depois da
+correção: `npx vitest run` **1007 passed / 11 skipped** com `SB4_ROM`, **824 passed / 194 skipped** sem a ROM;
+`npx tsc --noEmit` limpo; `npm run build` ok. Aceite §9 com `CB_SLOW=1` verde (`accept.test.ts`, 2/2), TIME UP por
+fase em 50 rodadas: 1 = 4 %, 2 = 0 %, 3 = 10 %, 4 = 8 %, 5 = 0 %, 6 = 8 %, 7 = 2 %, 8 = 30 %, 9 = 4 %, 10 = 28 %
+(limite 30 %; 40 % nas fases 8 e 10). CPU das montarias (`cpu.test.ts`, `acceptance.test.ts`) e determinismo
+(`tests/core/determinism.test.ts`, `acceptance.test.ts`) verdes. Em 40 rodadas de CPU (fases 1, 2, 3, 6, 7 × 8
+sementes): 111 ovos revelados, 93 montagens, 81 perdas, 148 usos de Y, 65 acertos de projétil, 7 reservas pegas,
+5 reservas queimadas, teto (sem o transitório do choco) máximo 2, 3 TIME UP.
+
+### Fidelidade conferida
+- **Revisão final** (scratch): estresse com montarias nas fases 1, 2, 3, 6, 7, 8 × sementes 3 e 9, 20.000 ticks
+  cada, 2 vezes → hashes idênticos, 7 tipos montados, sem exceção; `whatif.fork` (cópia profunda de `mount`/
+  `mountState`) e pureza do render (fallback, ROM, `riderHook`, `costumeHook`) com 0 falhas; `core/**` sem import de
+  render/rom/audio; IA sem ler `hidden` nem o RNG; fixture só com números/endereços/SHA-1; fallback com arte própria.
+- **Disassembly** (`dis65816.py`): remonte = desmonte (`$C2:105E` → `$C2:6F71`, laços `$C2:1089`/`$C2:10D5` iguais até
+  `$C2:22F0`); todas as referências a `$1ED4` (`$C1:5E3D`, `$C1:64BF`, `$C1:5FD9`, `$C1:6417`, `$C2:60B9`, `$C2:6680`,
+  `$C1:2885`, `$C3:19C5`); reserva queimada (`$C2:62D7` → `$C2:6645` → `$C2:6687` → `$D8:D327` → `$C2:6680`).
+- **Emulador** (correção final): `mount_hatch_1ed4.py` — `$1ED4` sobe 1 no tick em que o jogador pisa no ovo e desce
+  41, 44, 45, 43, 42, 42 e 44 ticks depois (7 casos em `st_ride_pre`/`st_cpu5`; a ROM chega a `$1ED4 = 3`).
+  `mount_burn.py` — chama na casa da 2ª reserva: só ela sai, `$1ED4` −1 40 ticks depois; na casa da 1ª: a fila
+  esvazia, a 2ª é apagada e a casa dela fica `0x0940`, `$1ED4` −1 só pela 1ª.
+- Pixel: explosão do remonte em `riding` (t = 52..70) e explosão da reserva queimada iguais à `fx.remountGlow`
+  (`$D8:D327`) nos ticks estáveis; some em t = 71 / 40.
+
+### Decisões e arbitragens durante a execução (ledger)
+- **T1**: `hooks.test.ts` do plano 6 trocou `MOUNTS.current === NO_MOUNT` por `toBeDefined()`; `lockAct(t)` usa
+  `setAct(t − 1)` (livre em T + t, mesma convenção do stun do plano 6); registros de camada nos `index.ts` de cada
+  módulo; `RomPlayerHook` com os tipos do plano 7.
+- **T3**: modelo de acerto **por casas** (a ROM vence): E/F acertam ao entrar na casa do alvo (E em k = 3/11/19/27),
+  D para diante de adversário/bloco na casa seguinte e explode 16/24/32/40/48 (cols 5–9). Números de T11–T13
+  ajustados junto (L6/L7 atualizados).
+- **T4**: a montaria é a 2ª anim do objeto do jogador (`+$38/+$3C`), folha `+$A4 = p24($C4:70DC + 3·tipo)`; novos
+  fatos `MOUNT_ANIMS`/`MOUNTING_MOUNT_ANIMS`/`REMOUNT_MOUNT_ANIMS`; traje troca a 1ª folha (`COSTUME_SHEETS[c]`);
+  1 quadro de atraso de DMA na VRAM; remonte medido entrando direto em `$C2:105E` (a bomba do P1 queimava a
+  reserva — origem da L22).
+- **T5**: o render nunca cria `s.mountState` (leitura sem efeito). Follow-up levado à T16: camada fallback `over`
+  para a montaria cobrir a metade de baixo do cavaleiro.
+- **T13**: `DANCE_TICKS = 193` aceito na hora (medida "livre no 271"); **revertido para 192 na correção final (I3)**.
+- **T14**: transiente da caminhada = atraso de DMA da T4 → teste compara só amostras estáveis (gancho sem estado);
+  correção 1: Plano B para `format: 'unknown'`; correção 2: desenhar todas as peças do quadro (`objCommon` → paleta 7).
+- **T14b**: notas da dança e brilho do remonte são objetos OAM próprios (`DANCE_NOTE_ANIMS`, `REMOUNT_GLOW_ANIMS`).
+- **T16**: `eggsInPlay` do plano 8 passou a contar reservas; folga de 1 rodada no teste rápido de TIME UP (só com
+  n < `MIN_SAMPLE_EDGE`; CB_SLOW inalterado); ganchos de render usam o `visualTick` (congela no TIME UP); camada
+  fallback `mounts-front` (over).
+
+### O que a onda de correção final mudou
+- **I1** `REMOUNT_TICKS = DISMOUNT_TICKS = 52` (era 45) + errata da spec §5.2/§11 (`0620c0a`).
+- **I3** `DANCE_TICKS = 192`; teste "anda no tick 271"; `tickAct` do plano 6 intocado (`01dd872`).
+- **I2** marcador `MountRider.remountFx = { t0, origin, x, y }` gravado em `loseMount`; o `riderHook` desenha brilho →
+  explosão pelo marcador também em `riding`, parado onde estourou, até t = 71 (`REMOUNT_FX_END`) (`c8ac6b5`).
+- **I4** fallback: montaria, ovo de montar/remontar e chapéu do traje somem com o jogador (`playerHidden`, mesmo
+  predicado do `draw-game.ts`); reservas e projéteis continuam visíveis (`666c881`).
+- **I5** `$1ED4` com fonte única: `eggsInPlay(s, extra) = activeCount(s) + extra`; `activeCount` sem o míssil D, com
+  ovos voando do caça-níquel e com o +1 do choco (montador em `mounting` conta 2 — confirmado no emulador; a fase
+  inteira, 42 ticks, contra 41–45 medidos). O aceite mede o teto sem o transitório (`settledActive`) (`7c0cb52`).
+- **I6 / L22** reservas queimam na chama (dono com `inv <= 0`), levando as de trás; explosão em `mountState.bursts`
+  (40 ticks, conta no `$1ED4` até o fim), evento `reserve_burnt`, desenho ROM (`$D8:D327`) e fallback (`57bb835`).
+- **Minor (pureza da IA)**: `wantMountY` lê `s.mountState` sem criá-lo; teste com hash (`d8afe49`).
+- Scripts de medição versionados: `analise/investigacao/montarias-e-telas/mount_hatch_1ed4.py`, `mount_burn.py`.
+
+### Pendências
+- **L22, resto**: as reservas de trás da queimada viram `0x0940` na grade (item `$00`, `$C2:65E8` cria um objeto
+  `$C1:5A53` com `+$20 = $30/$38`) e a ROM **não** faz `DEC $1ED4` por elas — possível vazamento do contador na ROM.
+  O core só as tira da fila (o `$1ED4` derivado cai). Medir o que o `0x0940` faz (quem pega, se some) e o efeito no
+  teto antes de modelar.
+- `$C2:63B7` (bit 3 do `+$C0` do dono estoura as reservas): gatilho não identificado.
+- A chama destrói ovo **na grade** na ROM? O objeto do ovo só confere pressão (`$C1:5F75`, `EE80`) e o choco; o core o
+  queima como item. Conferir no emulador.
+- Choco: o +1 transitório dura 41–45 ticks na ROM (fase da anim do ovo); o core usa 42 (fase `mounting`).
+- Explosões (remonte e reserva queimada) ancoradas na casa/posição do core, não no objeto da ROM (que anda suave):
+  diferença de até alguns px.
+- Nota F em adversário **montado**: fica travado 192 ticks com `act = 'dance'`, mas o `riderHook` só desenha a
+  dança sem montaria (aparece parado montado, sem notas). Comportamento da ROM não medido.
+- `pickup` chama `stepOnEgg` com o jogador travado (atordoado/dançando); `lockAct('mounting')` sobrescreve o stun.
+  Não medido.
+- `eggs.ts` `freeSlot(s) || 1`: colisão silenciosa se as 2 vagas estiverem ocupadas (inalcançável com o teto de 2);
+  vale um comentário/assert.
+- **Plano 11**: no lançamento do D a ROM **pula** o SFX `$04` do desmonte (`+$C2 bit0`, `$C2:10B4`); o evento já traz
+  `cause: 'launch'`. `reserve_burnt` entra no mapa de SFX (hoje `null`).
+- Título de `acceptance.test.ts` "fases 4, 5, 8, 9, 10: nenhum ovo" → "nenhum ovo revelado por bloco" (a fase 8
+  tem ovos do caça-níquel).
+- Folga de 1 rodada no `accept.test` rápido: reavaliar quando a IA do plano 6 fechar duelos.
+- Convenção do `tickAct`: `act` vira `idle` 1 tick antes do fim da trava em todas as ações (dança visível 191
+  ticks; desmonte com 1 tick de defasagem entre `act` e montaria). Só visual; tratar no render (plano 7), não no core.
