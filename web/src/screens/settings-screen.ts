@@ -98,7 +98,7 @@ export function namesScreen(app: App): Screen & { readonly editing: number } {
 }
 
 const ACTION_LABEL: Record<keyof KeyMap, string> = {
-  up: 'CIMA', down: 'BAIXO', left: 'ESQUERDA', right: 'DIREITA', a: 'A (BOMBA)', b: 'B', y: 'Y (SOCO)', start: 'START',
+  up: 'CIMA', down: 'BAIXO', left: 'ESQUERDA', right: 'DIREITA', a: 'A (BOMBA)', b: 'B', y: 'Y (SOCO)', x: 'X', start: 'START',
 };
 
 /** Remapeia as teclas de um dos dois conjuntos de teclado: A na ação e depois a nova tecla (ESC cancela). */
