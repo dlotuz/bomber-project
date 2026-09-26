@@ -13,7 +13,9 @@ describe('título e modos', () => {
     const { app } = mkApp();
     app.go(titleScreen(app));
     press(app, BTN.DOWN); press(app, BTN.START);
-    expect(app.screen.id).toBe('settings');
+    // T15: options.ts substitui settings-screen.ts (apagado); title.ts (T8, ainda não mesclada aqui) já aponta
+    // para optionsScreen (id 'options'). Este arquivo é apagado pela própria T8.
+    expect(app.screen.id).toBe('options');
   });
   it('VS → Battle Royale → Batalha em Times grava o modo e vai para jogadores; B volta', () => {
     const { app, saves } = mkApp();

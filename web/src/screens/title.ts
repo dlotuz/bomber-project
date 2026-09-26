@@ -3,15 +3,21 @@ import { drawTextCentered, SCREEN_W } from '../render/draw-game';
 import { MenuList } from './menu';
 import { COLORS, drawBackground, drawFooter, drawMenu, drawPanel } from './ui';
 import { vsModeScreen } from './vs';
-import { settingsScreen } from './settings-screen';
+import { optionsScreen } from './options';
 
-export function titleScreen(app: App): Screen {
+// Nota (T15): assinatura provisória. A T8 (não mesclada nesta worktree) troca este arquivo por inteiro
+// (3 itens — Jogo Normal/Jogo de Batalha/Opções —, cena da ROM, mão parada e "APERTE START!", conforme o
+// brief dela). Aqui só o mínimo para não travar a T15, que já depende do 2º parâmetro (`cursor`) e de abrir
+// `optionsScreen` (a T8 já assume essa troca no próprio brief): confira de novo depois do merge da T8.
+export function titleScreen(app: App, o: { cursor?: number } = {}): Screen & { readonly cursor: number } {
   const list = new MenuList([
     { label: 'BATALHA', select: () => app.go(vsModeScreen(app)) },
-    { label: 'CONFIGURAÇÕES', select: () => app.go(settingsScreen(app)) },
+    { label: 'CONFIGURAÇÕES', select: () => app.go(optionsScreen(app)) },
   ]);
+  if (o.cursor !== undefined) list.cursor = o.cursor;
   return {
     id: 'title',
+    get cursor() { return list.cursor; },
     update(inp) { list.handle(inp.pressedAny); },
     draw(ctx, bank, frame) {
       drawBackground(ctx, frame);
