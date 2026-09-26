@@ -1,8 +1,7 @@
-import { arena, put } from './kit';
+import { arena, put, withStage } from './kit';
 import { applyDiseaseInput, speedLevel, tickDisease, contagion, rollSkull, cureAndThrow, invisibleVisible, inContact } from '../../src/core/disease';
 import { BTN, type GameEvent } from '../../src/core/types';
 import { centerX } from '../../src/core/units';
-import { STAGES } from '../../src/core/stages';
 
 describe('entrada', () => {
   it('$2A e efeito $0A invertem ↑↓ e ←→', () => {
@@ -29,8 +28,7 @@ describe('velocidade', () => {
     p.disease = 0x22; expect(speedLevel(s, p)).toBe(7);
     p.disease = 0; p.effect = { kind: 2, left: 64 }; expect(speedLevel(s, p)).toBe(7);
     p.effect = { kind: 0, left: 0 };
-    STAGES[1] = { speedLevel: () => 6 };
-    try { expect(speedLevel(s, p)).toBe(6); } finally { STAGES[1] = {}; }
+    withStage(1, { speedLevel: () => 6 }, () => expect(speedLevel(s, p)).toBe(6));
   });
   it('efeito $0A com left 64 dura 256 ticks', () => {
     const s = arena(); const p = s.players[0]; p.effect = { kind: 0x0a, left: 64 };

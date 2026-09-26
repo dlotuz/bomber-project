@@ -1,11 +1,10 @@
-import { arena, put, setCell, codeAt, C } from './kit';
+import { arena, put, setCell, codeAt, C, withStage } from './kit';
 import { tryKick, slideStep, stopKick } from '../../src/core/kick';
 import { addBomb, tickBombs } from '../../src/core/bombs';
 import { launchBomb, tickFlyers } from '../../src/core/flyers';
 import { CODE, type Bomb, type GameEvent, type RoundState } from '../../src/core/types';
 import { CELLS, cellCenter, centerX, centerY } from '../../src/core/units';
 import { itemCode } from '../../src/core/state';
-import { STAGES } from '../../src/core/stages';
 
 function slide(s: RoundState, b: Bomb, n: number, ev: GameEvent[] = []): void {
   for (let i = 0; i < n; i++) { s.tick++; if (b.state === 'kicked') slideStep(s, b, ev); }
@@ -75,19 +74,17 @@ describe('chute (t36, t41, t91)', () => {
     expect(b.chainAt).toBe(110);
   });
   it('kickedBombEnter: stop para antes; {turn} entra e vira', () => {
-    STAGES[1] = { kickedBombEnter: (_s, _b, cell) => (cell === C(8, 3) ? { turn: 4 } : 'go') };
-    try {
+    withStage(1, { kickedBombEnter: (_s, _b, cell) => (cell === C(8, 3) ? { turn: 4 } : 'go') }, () => {
       const { s, p, b } = setup(5, 3);
       tryKick(s, p, []);
       slide(s, b, 200);
       expect([b.state, b.cell]).toEqual(['idle', C(8, 11)]);
-    } finally { STAGES[1] = {}; }
-    STAGES[1] = { kickedBombEnter: (_s, _b, cell) => (cell === C(9, 1) ? 'stop' : 'go') };
-    try {
+    });
+    withStage(1, { kickedBombEnter: (_s, _b, cell) => (cell === C(9, 1) ? 'stop' : 'go') }, () => {
       const { s, p, b } = setup();
       tryKick(s, p, []); slide(s, b, 100);
       expect(b.cell).toBe(C(8, 1));
-    } finally { STAGES[1] = {}; }
+    });
   });
 
   it('parar em casa ocupada por outra bomba: estaciona na casa anterior', () => {

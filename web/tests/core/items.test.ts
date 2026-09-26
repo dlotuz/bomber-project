@@ -1,11 +1,11 @@
-import { arena, put, setCell, codeAt, C } from './kit';
+import { arena, put, setCell, codeAt, C, withMount } from './kit';
 import { applyItem, pickup, dropCategory, placeDropped, loseItems, leakOne, STUN_LOSS } from '../../src/core/items';
 import { addBomb, refundBomb } from '../../src/core/bombs';
 import { CODE, ITEM, type GameEvent } from '../../src/core/types';
 import { itemCode } from '../../src/core/state';
 import { makeRng, rnd } from '../../src/core/rng';
 import { FREE_CELLS } from '../../src/core/tables/cells';
-import { MOUNTS, NO_MOUNT } from '../../src/core/mounts';
+import { NO_MOUNT } from '../../src/core/mounts';
 
 const onGrid = (s: ReturnType<typeof arena>, id: number) => s.grid.filter(v => v === itemCode(id)).length;
 
@@ -48,8 +48,7 @@ describe('coleta', () => {
   it('ovo vai para a montaria (grade fica como a montaria deixar)', () => {
     const s = arena(); const p = put(s, 0, 4, 1); setCell(s, 4, 1, 0x097c);
     const got: number[] = [];
-    MOUNTS.current = { ...NO_MOUNT, stepOnEgg: (_s, _p, cell) => { got.push(cell); } };
-    try { pickup(s, p, []); } finally { MOUNTS.current = NO_MOUNT; }
+    withMount({ ...NO_MOUNT, stepOnEgg: (_s, _p, cell) => { got.push(cell); } }, () => pickup(s, p, []));
     expect(got).toEqual([C(4, 1)]);
     expect(codeAt(s, 4, 1)).toBe(0x097c);
   });

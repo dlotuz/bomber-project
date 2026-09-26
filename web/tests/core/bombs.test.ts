@@ -1,8 +1,7 @@
-import { arena, put, setCell, codeAt, run, runUntil, C } from './kit';
+import { arena, put, setCell, codeAt, run, runUntil, C, withStage } from './kit';
 import { addBomb, placeBomb, detonateRemote, tickBombs, bombAt, bombOccupies, fuseOf, bombFireOf, canPlaceBomb } from '../../src/core/bombs';
 import { BURN, CODE, FLAME_PIECE, type GameEvent } from '../../src/core/types';
 import { itemCode } from '../../src/core/state';
-import { STAGES } from '../../src/core/stages';
 import { centerX } from '../../src/core/units';
 
 const explodedAt = (s: ReturnType<typeof arena>, max = 400) => runUntil(s, (_s, ev) => ev.some(e => e.type === 'explosion'), max);
@@ -62,11 +61,10 @@ describe('pavio', () => {
     }
   });
   it('fuseStep da arena: 2 por tick → 64 ticks', () => {
-    STAGES[1] = { fuseStep: () => 2 };
-    try {
+    withStage(1, { fuseStep: () => 2 }, () => {
       const s = arena(); placeBomb(s, put(s, 0, 4, 1), []);
       expect(explodedAt(s)).toBe(164);
-    } finally { STAGES[1] = {}; }
+    });
   });
   it('remota não explode pelo pavio; B detona a mais antiga no mesmo tick', () => {
     const s = arena(); const p = put(s, 0, 2, 1);
@@ -172,11 +170,10 @@ describe('explosão', () => {
   it('código especial passável: chama onFlameCell e o braço segue', () => {
     const s = arena(); setCell(s, 5, 1, CODE.ARROW);
     const calls: [number, number][] = [];
-    STAGES[1] = { onFlameCell: (_s, cell, dir) => { calls.push([cell, dir]); } };
-    try {
+    withStage(1, { onFlameCell: (_s, cell, dir) => { calls.push([cell, dir]); } }, () => {
       const b = addBomb(s, 0, C(4, 1), { fuse: 0 }); b.born = 0;
       run(s, 1);
-    } finally { STAGES[1] = {}; }
+    });
     expect(calls).toEqual([[C(5, 1), 2]]);
     expect([codeAt(s, 5, 1), codeAt(s, 6, 1)]).toEqual([CODE.ARROW, CODE.FLAME]);
   });

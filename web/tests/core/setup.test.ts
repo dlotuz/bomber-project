@@ -1,12 +1,11 @@
 import { createRound } from '../../src/core/setup';
 import { makeRng } from '../../src/core/rng';
-import { rules } from './kit';
+import { rules, withStage, withMount } from './kit';
 import { CODE } from '../../src/core/types';
 import { cellOf, SPAWNS, spawnX, spawnY } from '../../src/core/units';
 import { STAGE_ITEMS } from '../../src/core/tables/items';
 import { STAGE_FACTS } from '../../src/core/tables/stages';
-import { STAGES } from '../../src/core/stages';
-import { MOUNTS, NO_MOUNT } from '../../src/core/mounts';
+import { NO_MOUNT } from '../../src/core/mounts';
 
 const around = (col: number, lin: number) => [-1, 0, 1].flatMap(dl => [-1, 0, 1].map(dc => cellOf(col + dc, lin + dl)));
 
@@ -43,9 +42,8 @@ describe('montagem da rodada (§3.3)', () => {
   });
   it('init da arena roda depois da remoção e antes dos itens; init da montaria também', () => {
     const order: string[] = [];
-    STAGES[4] = { init: s => { order.push(`stage:${s.hidden.length}`); } };
-    MOUNTS.current = { ...NO_MOUNT, init: s => { order.push(`mount:${s.hidden.length}`); } };
-    try { createRound(4, rules(), makeRng()); } finally { STAGES[4] = {}; MOUNTS.current = NO_MOUNT; }
+    withStage(4, { init: s => { order.push(`stage:${s.hidden.length}`); } }, () =>
+      withMount({ ...NO_MOUNT, init: s => { order.push(`mount:${s.hidden.length}`); } }, () => createRound(4, rules(), makeRng())));
     expect(order).toEqual(['stage:0', 'mount:0']);
   });
   it('status inicial: nível 1, 1 bomba, fogo 0, sem invencibilidade; nos spawns, olhando para baixo', () => {

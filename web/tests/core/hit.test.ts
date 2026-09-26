@@ -1,8 +1,8 @@
-import { arena, put, setCell } from './kit';
+import { arena, put, setCell, withMount } from './kit';
 import { checkHit, hitPlayer, tickDeath, stunPlayer, tickInv, isImmune } from '../../src/core/hit';
 import { CODE, type GameEvent } from '../../src/core/types';
 import { makeRng, rnd } from '../../src/core/rng';
-import { MOUNTS, NO_MOUNT } from '../../src/core/mounts';
+import { NO_MOUNT } from '../../src/core/mounts';
 
 describe('acerto', () => {
   it('hitbox da chama (t25): X 167 na col 10 morre; X 168 não', () => {
@@ -31,13 +31,12 @@ describe('acerto', () => {
   it('ordem de absorção: montaria → traje → coração → morte', () => {
     const s = arena(); const p = put(s, 0, 4, 1); p.costume = 2; p.heart = true;
     let mountHits = 0;
-    MOUNTS.current = { ...NO_MOUNT, onHit: () => { mountHits++; return mountHits === 1; } };
-    try {
+    withMount({ ...NO_MOUNT, onHit: () => { mountHits++; return mountHits === 1; } }, () => {
       hitPlayer(s, p, 'flame', []); expect([mountHits, p.costume, p.heart, p.inv]).toEqual([1, 2, true, 0]);
       hitPlayer(s, p, 'flame', []); expect([p.costume, p.heart, p.inv, p.state]).toEqual([-1, true, 96, 'alive']);
       hitPlayer(s, p, 'flame', []); expect([p.heart, p.inv, p.state]).toEqual([false, 96, 'alive']);
       hitPlayer(s, p, 'flame', []); expect(p.state).toBe('dying');
-    } finally { MOUNTS.current = NO_MOUNT; }
+    });
   });
   it('bloco de pressão mata mesmo com coração e invencibilidade', () => {
     const s = arena(); const p = put(s, 0, 4, 1); p.heart = true; p.inv = 300;
