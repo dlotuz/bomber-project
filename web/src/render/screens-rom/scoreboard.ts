@@ -1,11 +1,12 @@
 // Desenho do placar com a ROM (§6.10, §6.12, §7.5, R7–R10, A15) [MNT §B.10, animacoes-sprites RELATORIO §9].
-// Sem `MAP_SOURCES['scoreboard']` (T19, ainda vazio): o fundo (BG1/BG2/BG3) usa a geometria medida na captura
-// `scoreboard` (como `menuMaps` fez na T5), montada e desenhada pela API de cenas da T5 (`sceneGfx`/`sceneFrame`/
-// `PpuCanvas`). O texto ("PLACAR"/"nP") sai pela fonte da ROM via `drawText` (T4); as cabeças e a coroa usam
-// pixels e paleta genuínos da ROM (R10: `assets.anim(0xC3DA94)`).
+// O fundo (BG1/BG2/BG3) vem de `sceneMaps` (T5) com `MAP_SOURCES['scoreboard']` da T19 (descritor `$C2:9C17`,
+// achado depois desta tarefa) tendo prioridade; a geometria medida na captura `scoreboard` neste arquivo (como
+// `menuMaps` fez na T5) é a reserva para quando `MAP_SOURCES` não tiver a cena. O texto ("PLACAR"/"nP") sai pela
+// fonte da ROM via `drawText` (T4); as cabeças e a coroa usam pixels e paleta genuínos da ROM (R10:
+// `assets.anim(0xC3DA94)`); as casas do título original em inglês (T18, BG1 paleta 7) são apagadas.
 import type { RomAssets, Tiles } from '../../app/rom-api';
 import { bgr555ToRgba } from '../../app/rom-api';
-import { sceneGfx, sceneFrame, newMap, put, fill, PpuCanvas, type SceneMaps } from './scene';
+import { sceneGfx, sceneFrame, sceneMaps, newMap, put, fill, PpuCanvas, type SceneMaps } from './scene';
 import { pixToCanvas } from '../sprite-bank';
 import type { Img, SpriteBank } from '../sprite-bank';
 import { drawText } from '../text/text';
@@ -60,8 +61,10 @@ const BG2_TOP: readonly (readonly number[])[] = [
 
 const BG3_SKY_TILE = 0x006e;   // ladrilho único visto na captura (céu liso atrás da grade/nuvens do BG2)
 
-/** Mapas de BG do placar pela geometria medida (reserva: `MAP_SOURCES['scoreboard']` da T19 tem prioridade
- *  quando existir). Só o que é visível: BG1 é o arco do título; BG2 é o céu/nuvens/grade; BG3 é um fundo liso. */
+/** Mapas de BG do placar pela geometria medida — **reserva**: a T19 já achou a origem real na ROM
+ *  (`MAP_SOURCES['scoreboard']`, descritor `$C2:9C17`) e `drawScoreboardRom` usa `sceneMaps` para dar
+ *  prioridade a ela; esta função só entra se `MAP_SOURCES` ficar sem a cena de novo. Só o que é visível:
+ *  BG1 é o arco do título; BG2 é o céu/nuvens/grade; BG3 é um fundo liso (a T19 não decodifica BG3). */
 export function scoreboardMaps(): SceneMaps {
   const bg1 = newMap(), bg2 = newMap(), bg3 = newMap();
   BG1_TITLE.rows.forEach((row, r) => row.forEach((w, c) => { if (w) put(bg1, BG1_TITLE.col0 + c, BG1_TITLE.row0 + r, w); }));
@@ -96,24 +99,31 @@ function tilePixel(tiles: Tiles, n: number, sx: number, sy: number): number {
   return t < tiles.count ? tiles.px[t * 64 + (sy & 7) * 8 + (sx & 7)] : 0;
 }
 
-const headCache = new WeakMap<RomAssets, Map<number, Img>>();
-/** Cabeça 32×32 do personagem. §7.5: sem a tabela de ponteiros das cabeças por personagem (`$D3:E82B`,
- *  `$CB:B000`, `$CC:5900`, cuja busca ficou fora do orçamento desta tarefa), usa o quadro g6 do personagem. */
-export function headCanvas(a: RomAssets, char: number): Img {
+const headCache = new WeakMap<RomAssets, Map<string, Img>>();
+/** Cabeça 32×32 na linha `slot` (0..4). A forma ainda vem do quadro g6 do personagem: §7.5, sem a tabela de
+ *  ponteiros das cabeças por personagem (`$D3:E82B`, `$CB:B000`, `$CC:5900`), cuja busca ficou fora do
+ *  orçamento desta tarefa. A **cor**, porém, é a paleta OBJ fixa da linha: o OAM da captura `scoreboard`
+ *  mostra `attr $30/$32/$34/$36/$38` → paletas OBJ 0..4 exatamente nas linhas 1P..5P (mesmo com os 5
+ *  personagens padrão nos slots 0..4 dessa captura, a paleta é por posição, não por personagem escolhido —
+ *  os 5 tiles de cabeça diferentes por linha [`$080/$084/$088/$0C4/$0C8`] são a peça que a ROM troca por
+ *  personagem, não a cor), então usa `cgram[128 + slot·16 + v]` da própria cena em vez de `character(c)`. */
+export function headCanvas(a: RomAssets, char: number, slot: number): Img {
   let m = headCache.get(a);
   if (!m) { m = new Map(); headCache.set(a, m); }
-  let img = m.get(char);
+  const key = `${char}:${slot}`;
+  let img = m.get(key);
   if (!img) {
-    const c = a.character(char), src = c.frame(6), pal = c.palettes[0];
+    const src = a.character(char).frame(6);
+    const cgram = sceneGfx(a, 'scoreboard').cgram;
     const data = new Uint8ClampedArray(32 * 32 * 4);
     for (let i = 0; i < 32 * 32; i++) {
       const v = src[i];
       if (!v) continue;
-      const [r, g, b] = bgr555ToRgba(pal[v] ?? 0);
+      const [r, g, b] = bgr555ToRgba(cgram[128 + slot * 16 + v] ?? 0);
       data.set([r, g, b, 255], i * 4);
     }
     img = pixToCanvas({ w: 32, h: 32, data });
-    m.set(char, img);
+    m.set(key, img);
   }
   return img;
 }
@@ -154,6 +164,22 @@ export function crownFrameCanvas(a: RomAssets, frameIdx: number): { img: Img; w:
   return out;
 }
 
+/** T18: a faixa "SCORE BOARD" original é BG1 na paleta 7 (visto na captura em (19..29, 17..19), tiles
+ *  `$1d00..$1d4e`) — fora da janela de 14 linhas que a T5/T19 comparam com a captura (por isso não pesou no
+ *  teste de fundo × captura), mas ainda assim entraria no `PpuFrame` se alguém desenhar com outro `vofs`.
+ *  Como o nosso "PLACAR" (`drawText`) já fica por cima, tira essas casas do BG1 antes de montar o quadro. */
+const TITLE_TEXT_PAL = 7;
+export function dropTitleTextPalette(m: Uint16Array): Uint16Array {
+  return m.map(w => (((w >> 10) & 7) === TITLE_TEXT_PAL ? 0 : w));
+}
+
+/** Mapas finais do placar: BG1/BG2 de `sceneMaps` (a T19 tem prioridade; nossa geometria medida é a reserva),
+ *  sem as casas do título original em inglês (T18), e BG3 sempre da nossa geometria (a T19 não decodifica BG3). */
+export function scoreboardSceneMaps(a: RomAssets): SceneMaps {
+  const maps = sceneMaps(a, 'scoreboard', scoreboardMaps);
+  return { ...maps, bg1: maps.bg1 && dropTitleTextPalette(maps.bg1), bg3: maps.bg3 ?? scoreboardMaps().bg3 };
+}
+
 const ppuCanvas = new PpuCanvas();
 
 /** Desenha a cena inteira: fundo real (BG1/BG2/BG3 da cena `scoreboard`, T5 `sceneGfx`/`sceneFrame`/`PpuCanvas`)
@@ -161,7 +187,7 @@ const ppuCanvas = new PpuCanvas();
 export function drawScoreboardRom(ctx: CanvasRenderingContext2D, a: RomAssets, bank: SpriteBank, ms: MatchSession, s: number, yOffset: number): void {
   const Y = (py: number): number => py + yOffset;
   const g = sceneGfx(a, 'scoreboard');
-  const frame = sceneFrame(g, scoreboardMaps());
+  const frame = sceneFrame(g, scoreboardSceneMaps(a));
   ppuCanvas.draw(ctx, frame, yOffset);
   drawText(ctx, bank, 'bigScore', S.score.title, SB_GEO.title.cx, Y(SB_GEO.title.y), { align: 'center' });
   const rules = ms.match.rules;
@@ -169,7 +195,7 @@ export function drawScoreboardRom(ctx: CanvasRenderingContext2D, a: RomAssets, b
     if (!rules.active[slot]) continue;
     const rowY = SCORE.rowY0 + SCORE.rowStep * slot;
     drawText(ctx, bank, 'ascii8', S.score.tags[slot], SB_GEO.labelX, Y(rowY + 8));
-    ctx.drawImage(headCanvas(a, ms.cfg.chars[slot]), SCORE.headX, Y(rowY));
+    ctx.drawImage(headCanvas(a, ms.cfg.chars[slot], slot), SCORE.headX, Y(rowY));
     for (let k = 0; k < 5; k++) {
       // A casa (preta com borda verde) já vem do fundo (BG2 medido acima); só falta a coroa em cima.
       const cell = crownCellOf(ms, s, slot, k);
