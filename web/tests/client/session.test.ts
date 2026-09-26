@@ -1,6 +1,6 @@
 import { parseConfig } from '../../src/game/config';
 import { createSession, updateSession, ROUND_OVER_FRAMES, SCOREBOARD_FRAMES, SKIP_AFTER, type Session } from '../../src/game/session';
-import { BTN, INTRO_FRAMES } from '../../src/core';
+import { BTN, INTRO_FRAMES } from '../../src/legacy-core';
 
 const idle = [0, 0, 0, 0, 0];
 const run = (s: Session, n: number, pads = idle) => { for (let i = 0; i < n; i++) updateSession(s, pads); };

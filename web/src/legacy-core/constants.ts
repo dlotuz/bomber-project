@@ -1,0 +1,23 @@
+export const SUB = 8;                 // subpixels por pixel
+export const TILE = 16;               // px
+export const T = TILE * SUB;          // 128 subpx por casa
+export const GRID_W = 15;
+export const GRID_H = 13;
+export const FUSE_FRAMES = 128;
+export const FLAME_FRAMES = 33;
+export const DEATH_FRAMES = 78;
+export const INTRO_FRAMES = 90;
+export const BASE_SPEED_SUB = 8;      // nível 1 = 1 px/frame
+export const MAX_BOMBS = 8;
+export const MAX_FIRE = 8;
+export const MAX_SPEED = 5;
+export const CORNER_SUB = 6 * SUB;
+export const MOVE_BOMB_SUB = 2 * SUB; // chute e voo: 2 px/frame
+export const FLY_CELLS = 3;
+export const ITEM_CHANCE_PCT = 40;
+export const DISEASE_FRAMES = 600;
+export const PRESSURE_START_FRAMES = 60 * 60;
+export const PRESSURE_INTERVAL = 6;
+export const PRESSURE_RINGS = 2;
+export const TIME_OPTIONS_FRAMES = [60 * 60, 120 * 60, 180 * 60, 300 * 60, -1];
+export const SPAWNS: ReadonlyArray<readonly [number, number]> = [[1, 1], [13, 11], [13, 1], [1, 11], [7, 6]];

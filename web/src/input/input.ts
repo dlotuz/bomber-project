@@ -1,4 +1,4 @@
-import { BTN } from '../core';
+import { BTN } from '../legacy-core';
 
 export interface KeyMap { up: string; down: string; left: string; right: string; a: string; b: string; y: string; start: string }
 

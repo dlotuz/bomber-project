@@ -1,4 +1,4 @@
-import { createMatch, startRound, finishRound, hashState, step, defaultRules, makeRng, randInt, BTN, type RoundState } from '../../src/core';
+import { createMatch, startRound, finishRound, hashState, step, defaultRules, makeRng, randInt, BTN, type RoundState } from '../../src/legacy-core';
 
 const rules = (o = {}) => ({ ...defaultRules(), ...o });
 

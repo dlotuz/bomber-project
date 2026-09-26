@@ -1,4 +1,4 @@
-import { defaultRules, type Rules } from '../core';
+import { defaultRules, type Rules } from '../legacy-core';
 import { CHARACTERS } from '../render/art/bomber';
 import type { Setup, SlotKind } from '../app/settings';
 

@@ -1,4 +1,4 @@
-import { BTN, createMatch, startRound, finishRound, step, createAi, aiInputs, type AiState, type GameEvent, type MatchState, type RoundState } from '../core';
+import { BTN, createMatch, startRound, finishRound, step, createAi, aiInputs, type AiState, type GameEvent, type MatchState, type RoundState } from '../legacy-core';
 import type { GameConfig } from './config';
 
 export const ROUND_OVER_FRAMES = 150;

@@ -1,6 +1,6 @@
-import { createRound, step } from '../../src/core/round';
-import { defaultRules, CELL, type Rules, type RoundState, type Bomb, type GameEvent } from '../../src/core/types';
-import { centerX, centerY } from '../../src/core/grid';
+import { createRound, step } from '../../src/legacy-core/round';
+import { defaultRules, CELL, type Rules, type RoundState, type Bomb, type GameEvent } from '../../src/legacy-core/types';
+import { centerX, centerY } from '../../src/legacy-core/grid';
 
 export function newRound(opts: Partial<Rules> & { stage?: number; seed?: number; clear?: boolean } = {}): RoundState {
   const { stage = 1, seed = 1, clear = false, ...r } = opts;

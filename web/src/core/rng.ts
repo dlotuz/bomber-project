@@ -1,26 +1,30 @@
-export interface Rng { s: number }
+export interface Rng16 { seed: number }
 
-export function makeRng(seed: number): Rng {
-  return { s: seed >>> 0 };
+export const BOOT_SEED = 0x0012;
+
+export function makeRng(seed: number = BOOT_SEED): Rng16 {
+  return { seed: seed & 0xffff };
 }
 
-/** mulberry32: rápido, 32 bits, estado em um número. */
-export function nextU32(r: Rng): number {
-  r.s = (r.s + 0x6d2b79f5) >>> 0;
-  let t = r.s;
-  t = Math.imul(t ^ (t >>> 15), t | 1);
-  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-  return (t ^ (t >>> 14)) >>> 0;
+/** RNG da ROM ($C3:54B3): 0..n-1; só (n & $FF) importa. */
+export function rnd(r: Rng16, n: number): number {
+  r.seed = ((r.seed | 1) * 0x383) & 0xffff;
+  return (r.seed * (n & 0xff)) >>> 16;
 }
 
-export function randInt(r: Rng, n: number): number {
-  return nextU32(r) % n;
-}
-
-export function shuffle<T>(r: Rng, a: T[]): T[] {
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = randInt(r, i + 1);
-    const t = a[i]; a[i] = a[j]; a[j] = t;
+/** Ordem aleatória dos spawns (opção extra, §6.13). mulberry32 separado: não toca no RNG do jogo. */
+export function permuteSpawns(seed: number): number[] {
+  let t = seed >>> 0;
+  const next = (): number => {
+    t = (t + 0x6d2b79f5) >>> 0;
+    let x = Math.imul(t ^ (t >>> 15), t | 1);
+    x ^= x + Math.imul(x ^ (x >>> 7), x | 61);
+    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+  };
+  const a = [0, 1, 2, 3, 4];
+  for (let i = 4; i > 0; i--) {
+    const j = Math.floor(next() * (i + 1));
+    const k = a[i]; a[i] = a[j]; a[j] = k;
   }
   return a;
 }

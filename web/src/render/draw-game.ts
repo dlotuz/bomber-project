@@ -1,4 +1,4 @@
-import { CELL, ITEM, T, GRID_W, GRID_H, idx, type RoundState } from '../core';
+import { CELL, ITEM, T, GRID_W, GRID_H, idx, type RoundState } from '../legacy-core';
 import type { SpriteBank } from './sprite-bank';
 import { SCREEN_W, SCREEN_H } from './display';
 import { flameCells, flameShrink, walkFrame, dyingVisible, formatClock, type ViewState } from './view';

@@ -1,7 +1,7 @@
 import { newRound, run, input, place } from './helpers';
-import { BTN, DISEASE, ITEM } from '../../src/core/types';
-import { idx } from '../../src/core/grid';
-import { speedSub, flameRange } from '../../src/core/player';
+import { BTN, DISEASE, ITEM } from '../../src/legacy-core/types';
+import { idx } from '../../src/legacy-core/grid';
+import { speedSub, flameRange } from '../../src/legacy-core/player';
 
 describe('itens', () => {
   const walkInto = (item: number) => {

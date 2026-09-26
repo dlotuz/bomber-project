@@ -1,9 +1,9 @@
 import { newRound, run, input, place } from './helpers';
-import { BTN } from '../../src/core/types';
-import { centerX, centerY } from '../../src/core/grid';
-import { step } from '../../src/core/round';
-import { createRound } from '../../src/core/round';
-import { defaultRules } from '../../src/core/types';
+import { BTN } from '../../src/legacy-core/types';
+import { centerX, centerY } from '../../src/legacy-core/grid';
+import { step } from '../../src/legacy-core/round';
+import { createRound } from '../../src/legacy-core/round';
+import { defaultRules } from '../../src/legacy-core/types';
 
 describe('intro', () => {
   it('90 frames de intro ignoram inputs', () => {

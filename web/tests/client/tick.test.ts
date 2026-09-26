@@ -2,7 +2,7 @@ import { tickGame } from '../../src/app/tick';
 import { createSession } from '../../src/game/session';
 import { createView } from '../../src/render/view';
 import { parseConfig } from '../../src/game/config';
-import { BTN, INTRO_FRAMES, FUSE_FRAMES } from '../../src/core';
+import { BTN, INTRO_FRAMES, FUSE_FRAMES } from '../../src/legacy-core';
 
 const idle = [0, 0, 0, 0, 0];
 

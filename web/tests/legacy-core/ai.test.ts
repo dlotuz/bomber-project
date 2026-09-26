@@ -1,11 +1,11 @@
 import { newRound, addBomb, place } from './helpers';
-import { createAi, aiInputs, dangerMap, aiRoll, SAFE, AI_LEVELS } from '../../src/core/ai';
-import { step, createRound } from '../../src/core/round';
-import { createMatch, startRound, finishRound } from '../../src/core/match';
-import { cellX, cellY, idx } from '../../src/core/grid';
-import { ITEM, CELL, DIR, DISEASE, defaultRules, type RoundState, type GameEvent } from '../../src/core/types';
-import { hashState } from '../../src/core/hash';
-import { INTRO_FRAMES } from '../../src/core/constants';
+import { createAi, aiInputs, dangerMap, aiRoll, SAFE, AI_LEVELS } from '../../src/legacy-core/ai';
+import { step, createRound } from '../../src/legacy-core/round';
+import { createMatch, startRound, finishRound } from '../../src/legacy-core/match';
+import { cellX, cellY, idx } from '../../src/legacy-core/grid';
+import { ITEM, CELL, DIR, DISEASE, defaultRules, type RoundState, type GameEvent } from '../../src/legacy-core/types';
+import { hashState } from '../../src/legacy-core/hash';
+import { INTRO_FRAMES } from '../../src/legacy-core/constants';
 
 /** Roda `frames` ticks com a IA controlando os slots marcados em `cpu`; os demais ficam parados. */
 function play(s: RoundState, cpu: boolean[], level: number, frames: number): GameEvent[] {

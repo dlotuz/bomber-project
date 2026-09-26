@@ -5,7 +5,7 @@ import { flamePiece, type FlamePart } from '../../src/render/art/flames';
 import { THEMES, stageTiles } from '../../src/render/art/tiles';
 import { textPix, textWidth, hasGlyph } from '../../src/render/art/font';
 import { crownPix, trophyPix, clockPix } from '../../src/render/art/trophy';
-import { STAGE_NAMES } from '../../src/core';
+import { STAGE_NAMES } from '../../src/legacy-core';
 
 const opaque = (p: { w: number; h: number; data: Uint8ClampedArray }) => {
   let n = 0; for (let i = 3; i < p.data.length; i += 4) if (p.data[i]) n++; return n;
