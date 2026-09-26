@@ -1,10 +1,9 @@
-import { arena, put, setCell, C } from './kit';
+import { arena, put, setCell, C, withStage, withMount } from './kit';
 import { playerActions, tickAct, startPPunch } from '../../src/core/actions';
 import { BTN, CODE, type GameEvent, type Player, type RoundState } from '../../src/core/types';
 import { centerX } from '../../src/core/units';
 import { setAct } from '../../src/core/state';
-import { MOUNTS, NO_MOUNT } from '../../src/core/mounts';
-import { STAGES } from '../../src/core/stages';
+import { NO_MOUNT } from '../../src/core/mounts';
 
 function ticks(s: RoundState, ps: Player[], n: number, ev: GameEvent[] = []): GameEvent[] {
   for (let i = 0; i < n; i++) { s.tick++; for (const p of ps) playerActions(s, p, 0, 0, 0, ev); }
@@ -42,12 +41,11 @@ describe('golpe P (t45, t46)', () => {
   });
   it('cada tick de movimento forçado (4 do avanço + 12 da vítima) consulta outOfBounds da arena', () => {
     let calls = 0;
-    STAGES[1] = { outOfBounds: () => { calls++; } };
-    try {
+    withStage(1, { outOfBounds: () => { calls++; } }, () => {
       const s = arena(); const p = put(s, 0, 4, 3); const q = put(s, 1, 5, 3); p.face = 2;
       startPPunch(s, p, []);
       ticks(s, [p, q], 12);
-    } finally { STAGES[1] = {}; }
+    });
     expect(calls).toBe(16);
   });
 });
@@ -81,8 +79,7 @@ describe('máquina de ação', () => {
   });
   it('Y: a montaria tem precedência sobre o P', () => {
     const s = arena(); const p = put(s, 0, 4, 1); p.pItem = true;
-    MOUNTS.current = { ...NO_MOUNT, onY: () => true };
-    try { playerActions(s, p, BTN.Y, BTN.Y, 0, []); } finally { MOUNTS.current = NO_MOUNT; }
+    withMount({ ...NO_MOUNT, onY: () => true }, () => playerActions(s, p, BTN.Y, BTN.Y, 0, []));
     expect(p.act).toBe('idle');
   });
 });

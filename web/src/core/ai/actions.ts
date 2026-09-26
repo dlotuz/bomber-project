@@ -5,6 +5,7 @@ import { DETONATE_TICKS, FUSE, LIFT_TICKS, P_TICKS, PUNCH_TICKS, THROW_TICKS } f
 import { cellAt, cellCenter, colOf, faceStep, inField, linOf } from '../units';
 import { playerCell, standing } from '../state';
 import { bombAt } from '../bombs';
+import { stopKick } from '../kick';
 import { aimThrow, handFrom } from '../flyers';
 import { MOUNTS } from '../mounts';
 import { SAFE, crossCells, firstLanding, hazards, kickPath, type Hazard } from './danger';
@@ -98,11 +99,7 @@ function wantX(s: RoundState, p: Player, level: AiLevel): boolean {
     return w.foe && !w.ours;
   })) return false;
   const sim = fork(s);                                     // o X para todas as bombas chutadas pela CPU
-  for (const b of sim.bombs) {
-    if (b.state !== 'kicked' || b.kickedBy !== p.slot) continue;
-    const c = cellAt(b.x, b.y);
-    b.state = 'idle'; b.step = 0; b.cell = c; [b.x, b.y] = cellCenter(c); sim.grid[c] = CODE.BOMB;
-  }
+  stopKick(sim, sim.players[p.slot]);
   return survives(sim, p.slot, level, 0);
 }
 

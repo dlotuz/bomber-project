@@ -76,12 +76,14 @@ const flag = (key: 'punch' | 'glove' | 'kick' | 'passBomb' | 'pItem' | 'fullFire
 
 /** As 13 perdas de $C2:519D, na ordem da ROM. */
 export const STUN_LOSS: readonly Loss[] = [
-  (s, p) => { if (!p.disease) return null; p.disease = 0; return rollSkull(s); },
+  (s, p) => { if (!p.disease) return null; p.disease = 0; p.diseaseT = 0; return rollSkull(s); },
   (s, p, ev) => {
     if (MOUNTS.current.onStunLoss?.(s, p, ev)) return 0;
     if (p.costume < 0) return null; p.costume = -1; return ITEM.COSTUME;
   },
   (_s, p) => { if (p.speedLv <= 1) return null; p.speedLv--; return ITEM.SPEED; },
+  // $C2:5318: capacidade − 1 e disponíveis − 1 só se houver alguma; sem "dívida": com todas no campo, a devolução
+  // ($C1:5588) só soma enquanto disponíveis < capacidade, então o jogador volta a ter a capacidade nova
   (_s, p) => { if (p.bombsCap <= 1) return null; p.bombsCap--; if (p.bombsFree > 0) p.bombsFree--; return ITEM.BOMB; },
   (_s, p) => { if (p.fire <= 0) return null; p.fire--; return ITEM.FIRE; },
   (_s, p) => { if (!p.bombType) return null; const id = p.bombType === 1 ? ITEM.REMOTE : ITEM.PIERCE; p.bombType = 0; return id; },

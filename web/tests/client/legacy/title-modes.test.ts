@@ -1,6 +1,6 @@
 import { BTN } from '../../../src/core';
 import { titleScreen } from '../../../src/screens/title';
-import { mkApp, press } from './helpers';
+import { mkApp, press, idle } from './helpers';
 
 describe('título e modos', () => {
   it('título: BATALHA é a primeira opção', () => {
@@ -25,6 +25,8 @@ describe('título e modos', () => {
     expect(app.settings.setup.mode).toBe('team');
     expect(saves()).toBeGreaterThan(0);
     press(app, BTN.B);
+    // T9: o B dos jogadores agora sai por FADE_MENU (~73 f até `inTransition` acabar), não mais na hora (app.go).
+    while (app.inTransition) idle(app, 1);
     expect(app.screen.id).toBe('mode');
     press(app, BTN.B); press(app, BTN.B);
     expect(app.screen.id).toBe('title');
