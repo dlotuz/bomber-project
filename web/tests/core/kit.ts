@@ -3,6 +3,9 @@ import { emptyRound } from '../../src/core/state';
 import { makeRng } from '../../src/core/rng';
 import { step } from '../../src/core/step';
 import { cellOf, centerX, centerY } from '../../src/core/units';
+import { STAGES } from '../../src/core/stages';
+import { MOUNTS } from '../../src/core/mounts';
+import type { MountModule, StageModule } from '../../src/core/hooks';
 
 export const C = cellOf;
 
@@ -47,4 +50,18 @@ export function runUntil(s: RoundState, pred: (s: RoundState, ev: GameEvent[]) =
     if (pred(s, ev)) return s.tick;
   }
   return -1;
+}
+
+/** Roda `fn` com o módulo `mod` na arena `k` e restaura o módulo anterior no fim (mesmo com erro). */
+export function withStage<T>(k: number, mod: StageModule, fn: () => T): T {
+  const old = STAGES[k];
+  STAGES[k] = mod;
+  try { return fn(); } finally { STAGES[k] = old; }
+}
+
+/** Roda `fn` com o módulo de montarias `mod` e restaura o anterior no fim (mesmo com erro). */
+export function withMount<T>(mod: MountModule, fn: () => T): T {
+  const old = MOUNTS.current;
+  MOUNTS.current = mod;
+  try { return fn(); } finally { MOUNTS.current = old; }
 }
