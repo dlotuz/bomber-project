@@ -3,15 +3,15 @@
   "styles": {
     "ascii8": {
       "glyphs": 63,
-      "sha1": "c9f3899f1ee1232747b7bac7d87f7c157636c99e"
+      "sha1": "57647f54b84d59a3b3259dccbf1eb355d5188975"
     },
     "banner": {
       "glyphs": 15,
-      "sha1": "d15945fb2592f6b8b74307b7318a87621d3c3cb7"
+      "sha1": "3fc301410104109e82a0c3f3bf249e3de2fd7161"
     },
     "spriteBlue": {
-      "glyphs": 53,
-      "sha1": "a24c698b834839af05b0085a4012a849cda1a426"
+      "glyphs": 52,
+      "sha1": "1fe66d3e9597f73ef93cfead1971fc9942e93846"
     }
   }
 }

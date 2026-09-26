@@ -2,10 +2,10 @@ import type { ExtraGlyph } from '../types';
 // Glifos próprios do estilo ascii8 (8×8). Acentos: `base` reaproveita a letra recortada da ROM em tempo de execução
 // (maps/ascii8.ts) — nenhum pixel dela é guardado aqui. Regra do plano (§1.2 item 3): acento sempre EM CIMA da letra
 // em PT-BR; como as letras da ROM já ocupam as 8 linhas inteiras (só a linha 7 vem em branco, sem sobra no topo),
-// os 5 acentos de cima (Ã Ê Ó Õ Ú) usam `shrinkTop: 1` (mecanismo do T18 acrescentado nesta correção): a letra-base
-// é reamostrada de 8 para 7 linhas (vizinho mais próximo — descarta 1 das linhas do meio repetidas, sem distorcer o
-// traço) e desce 1 linha, abrindo a linha 0 para o acento. A cedilha de Ç é a exceção correta (vai embaixo por
-// convenção) e não precisa encolher: a letra C já deixa a linha 7 livre sozinha.
+// os 5 acentos de cima (Ã Ê Ó Õ Ú) usam `shrinkTop: 1`: a letra-base perde 1 linha REPETIDA (igual à de cima, a mais
+// perto do meio — ex.: no A some a 2ª linha das pernas de cima, não a barra) e desce 1 linha, abrindo a linha 0 para o
+// acento. A cedilha de Ç é a exceção correta (vai embaixo por convenção) e não precisa encolher: a letra C já deixa a
+// linha 7 livre sozinha.
 const til = '13131311';
 const circunflexo = '11311311';
 const agudo = '11111311';

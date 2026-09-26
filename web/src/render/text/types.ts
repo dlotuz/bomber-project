@@ -13,8 +13,14 @@ export type StripSource =
   // os tiles t, t+1, t+16 e t+17 da região; −1 = bloco vazio. Serve para títulos montados por mapa (SCORE BOARD,
   // VICTORY!) e para frases em OBJ (BATTLE START!).
   | { kind: 'grid16'; scene: SceneId; region: 'bg' | 'bg3' | 'obj'; cells: readonly (readonly number[])[] };
-/** `seeds` (x, y na faixa) + `def.mask`: o glifo fica só com a letra das sementes (letras encostadas ou sobrepostas). */
-export interface GlyphCut { ch: string; strip: string; x: number; w: number; y?: number; h?: number; seeds?: readonly (readonly [number, number])[] }
+/** `seeds` (x, y na faixa) + `def.mask`: o glifo fica só com a letra das sementes (letras encostadas ou sobrepostas).
+ *  `spans`: um intervalo [x0, x1) por linha do recorte, em coordenadas da faixa; o pixel fora do intervalo da sua linha
+ *  vira 0. Serve para fontes cursivas em que a divisa entre duas letras vizinhas não é uma coluna reta (a letra da
+ *  direita começa em colunas diferentes em cada linha): recortes vizinhos com divisas iguais particionam a palavra. */
+export interface GlyphCut {
+  ch: string; strip: string; x: number; w: number; y?: number; h?: number; seeds?: readonly (readonly [number, number])[];
+  spans?: readonly (readonly [number, number])[];
+}
 /** Máscara por sementes: inundação 4-vizinha pelos índices `fill` a partir das sementes, depois `grow` camadas
  *  8-vizinhas pelos índices `edge` (contorno); o resto do retângulo do recorte vira 0. */
 export interface GlyphMask { fill: readonly number[]; edge: readonly number[]; grow: number }
@@ -45,7 +51,9 @@ export interface StyleRomDef {
  *  (regra do plano §1.2 item 3: "se a letra-base não couber com o acento na altura do estilo, encolha o miolo 1 px"):
  *  a base é reamostrada (linhas do meio descartadas, vizinho mais próximo) de `def.height` para `def.height −
  *  shrinkTop` linhas e desce esse tanto, abrindo `shrinkTop` linhas livres no topo para o acento (em vez de linhas
- *  fixas do desenho da ROM, que não sobram no topo de uma fonte 8×8). */
+ *  fixas do desenho da ROM, que não sobram no topo de uma fonte 8×8). As linhas descartadas são, primeiro, linhas
+ *  REPETIDAS (iguais à linha de cima), as mais perto do meio da letra; só se não houver repetidas suficientes o resto
+ *  cai na reamostragem — assim a barra do A ou do E, que não se repete, não some. */
 export interface ExtraGlyph { ch: string; rows: readonly string[]; legend?: Readonly<Record<string, number>>; base?: string; shrinkTop?: number }
 export interface IndexedImage { w: number; h: number; px: Uint8Array }
 

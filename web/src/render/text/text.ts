@@ -67,6 +67,10 @@ function applyBodyOnly(g: IndexedImage, body: readonly number[]): IndexedImage {
 function cutGlyph(s: IndexedImage, c: GlyphCut, def: StyleRomDef): IndexedImage {
   const y = c.y ?? 0;
   let g = crop(s, c.x, y, c.w, c.h ?? def.height);
+  if (c.spans) {
+    const sp = c.spans;
+    g = { ...g, px: g.px.map((v, i) => { const r = sp[Math.floor(i / g.w)], X = c.x + (i % g.w); return r && X >= r[0] && X < r[1] ? v : 0; }) };
+  }
   if (c.seeds && def.mask) g = maskCut(g, c.seeds.map(([sx, sy]) => [sx - c.x, sy - y] as const), def.mask);
   if (def.bodyOnly) g = applyBodyOnly(g, def.bodyOnly);
   return g;
@@ -109,16 +113,22 @@ function overlay(base: IndexedImage, over: IndexedImage): IndexedImage {
   return { w: base.w, h: base.h, px };
 }
 
-/** `ExtraGlyph.shrinkTop`: reamostra a base (vizinho mais próximo, linhas do meio descartadas) de `h` para `h − n`
- *  linhas e desce esse tanto, abrindo `n` linhas livres no topo (mesma largura/altura da imagem, só desloca o
- *  conteúdo). Sem isso não haveria onde desenhar um acento numa fonte em que a letra já ocupa a altura inteira. */
-function shrinkTop(base: IndexedImage, n: number): IndexedImage {
+/** `ExtraGlyph.shrinkTop`: tira `n` linhas da base e desce o resto `n` linhas, abrindo `n` linhas livres no topo (mesma
+ *  largura/altura da imagem). Tira primeiro linhas repetidas (iguais à de cima), as mais perto do meio; se faltar,
+ *  reamostra o que sobrou (vizinho mais próximo). Sem isso não haveria onde desenhar um acento numa fonte em que a letra
+ *  já ocupa a altura inteira. */
+export function shrinkTop(base: IndexedImage, n: number): IndexedImage {
   if (n <= 0) return base;
-  const { w, h } = base, newH = h - n, px = new Uint8Array(w * h);
-  for (let y = 0; y < newH; y++) {
-    const srcY = Math.min(h - 1, Math.round((y * h) / newH));
-    for (let x = 0; x < w; x++) px[(y + n) * w + x] = base.px[srcY * w + x];
-  }
+  const { w, h } = base;
+  const row = (y: number): string => base.px.subarray(y * w, y * w + w).join(',');
+  const dups = Array.from({ length: h - 1 }, (_, k) => k + 1).filter(y => row(y) === row(y - 1))
+    .sort((a, b) => Math.abs(a - (h - 1) / 2) - Math.abs(b - (h - 1) / 2) || a - b);
+  const drop = new Set(dups.slice(0, n));
+  let keep = Array.from({ length: h }, (_, y) => y).filter(y => !drop.has(y));
+  const newH = h - n;
+  if (keep.length > newH) keep = Array.from({ length: newH }, (_, y) => keep[Math.min(keep.length - 1, Math.round((y * keep.length) / newH))]);
+  const px = new Uint8Array(w * h);
+  keep.forEach((srcY, y) => px.set(base.px.subarray(srcY * w, srcY * w + w), (y + n) * w));
   return { w, h, px };
 }
 
