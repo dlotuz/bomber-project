@@ -69,13 +69,15 @@ describe('origens de mapa (A14)', () => {
     });
   });
   describe.skipIf(!ASSETS)('com ROM e capturas', () => {
-    it.each(Object.keys(TEXT))('%s: mapa da ROM = captura fora do texto (≥ 99 %)', scene => {
+    it.for(Object.keys(TEXT))('%s: mapa da ROM = captura fora do texto (≥ 99 %)', (scene, { skip }) => {
       const src = MAP_SOURCES[scene as keyof typeof MAP_SOURCES];
       const cap = loadCapture(scene);
-      if (!src || !cap) return;
+      if (!src || !cap) return skip();   // sem origem ou sem captura: pulado, não aprovado
       const maps = src(ASSETS!);
       const dyn = DYNAMIC[scene] ?? [];
-      for (const [layer, addr] of [['bg1', 0x4000], ['bg2', 0x4400]] as const) {
+      // draw2 tem outro layout de VRAM (T19/T14): BG12NBA=$44 põe os tiles em $4000–$5BFF (palavra), então o mapa do
+      // BG2 fica em $5C00, não em $4400 como nas outras cenas; BG1 está desligado (sem entrada aqui).
+      for (const [layer, addr] of [['bg1', 0x4000], ['bg2', scene === 'draw2' ? 0x5c00 : 0x4400]] as const) {
         const ign = [...(layer === 'bg1' ? bg1Rects(scene, TEXT[scene]) : TEXT[scene]), ...dyn];
         if (maps[layer]) expect(mapMatch(maps[layer]!, capturedMap(cap, addr), ign), `${scene} ${layer}`).toBeGreaterThanOrEqual(0.99);
       }
