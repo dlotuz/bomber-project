@@ -126,6 +126,7 @@ export interface BadBomberState {
   face: 0 | 2 | 4 | 6;
   live: number;                          // id da bomba arremessada ainda viva (-1)
   readyAt: number;                       // tick a partir do qual pode pegar outra bomba
+  born: number;                          // tick em que virou Bad Bomber (só anda a partir do seguinte)
 }
 
 export interface RoundResult { kind: 'win' | 'draw'; winner: number | null; reason: 'last' | 'dead' | 'time' }

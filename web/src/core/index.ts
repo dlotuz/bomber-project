@@ -15,3 +15,4 @@ export { clockText } from './clock';
 export { invisibleVisible } from './disease';
 export { hashState } from './hash';
 export { AI_LEVELS, createAi, aiInputs, aiRoll, type AiLevel, type AiState } from './ai';
+export { LAYOUTS } from './layouts';

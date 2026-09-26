@@ -14,7 +14,7 @@ export function becomeBad(s: RoundState, p: Player): void {
   const left = px(p.x) < 128;
   s.bad.push({
     slot: p.slot, x: left ? -16 : 271, y: Math.min(Y_MAX, Math.max(Y_MIN, px(p.y))),
-    phase: 'enter', face: left ? 2 : 6, live: -1, readyAt: 0,
+    phase: 'enter', face: left ? 2 : 6, live: -1, readyAt: 0, born: s.tick,
   });
 }
 
@@ -32,7 +32,8 @@ function patrol(b: BadBomberState, btn: number): void {
 }
 
 function tryThrow(s: RoundState, b: BadBomberState, ev: GameEvent[]): void {
-  if (b.live >= 0 || s.tick < b.readyAt) return;
+  // Em `won` as bombas congelam (voadores inclusive): uma bomba nova ficaria no ar para sempre e `live` nunca soltaria.
+  if (s.phase !== 'play' || b.live >= 0 || s.tick < b.readyAt) return;
   const vertical = b.x === X_MIN || b.x === X_MAX;
   const nearCorner = vertical
     ? b.y - Y_MIN < CORNER_GAP || Y_MAX - b.y < CORNER_GAP
@@ -55,6 +56,7 @@ export function tickBadBombers(s: RoundState, inputs: readonly number[], ev: Gam
     const btn = inputs[b.slot] ?? 0;
     const pressed = btn & ~p.prevBtn;
     p.prevBtn = btn;
+    if (b.born === s.tick) continue;             // como bombas e voadores: nasce no passo 3 e só anda no tick seguinte
     if (b.phase === 'enter') {
       b.x += b.x < X_MIN ? 1 : -1;
       if (b.x === X_MIN || b.x === X_MAX) b.phase = 'patrol';
