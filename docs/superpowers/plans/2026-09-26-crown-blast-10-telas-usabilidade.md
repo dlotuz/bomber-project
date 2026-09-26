@@ -566,6 +566,26 @@ Nomes reais que diferiram dos contratos do plano 10: <lista>
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
+#### Notas de sincronização (T1 executada sobre P5 + P6, base `53d5ed8`)
+
+As assinaturas exportadas pelas duas portas são as de "Contratos compartilhados". As tarefas seguintes importam só das portas e não precisam destas notas, a não ser para saber o que existe **além** do contrato.
+
+**Núcleo (`game/core-api.ts`):** todos os nomes do plano 6 conferem (`createMatch(rules, stage, seed: number | Rng16 = BOOT_SEED, chars)`, `setRacerPrize`, `finishRound → {winners, matchOver, champions}`, `RACER_PRIZES = 17`, `drawRacerPrize(rng)`, `INTRO_TICKS = 62` em `core/constants.ts`, `RoundResult.reason: 'last' | 'dead' | 'time'`). Diferenças:
+- O Racer fica em `src/core/racer.ts` (não em `src/core/tables/racer.ts`). A tabela de chaves bate com `applyRacerPrize`: 6 e 7 = luva, 9 e 10 = nada.
+- `MatchState` real também tem `over`, `roundNo`, `racerPrize`, `spawnSeed` e `chars`. O núcleo tem ainda `clearRacerPrize`. `isMatchOver`/`championSlots` da porta recalculam pelas coroas (o `m.over` do núcleo só muda em `finishRound`; com `setCrowns` + `finishRound` os dois dão o mesmo).
+- `Player.state` é `'alive' | 'dying' | 'out' | 'bad'`: os ajudantes usam `'out'`, sem ajuste.
+
+**ROM (`app/rom-api.ts`):**
+- Os tipos `RomAssets`, `SceneId`, `Tiles`, `Anim`, `AnimFrame` e `Piece` vêm de `rom/types.ts`. `rom/assets.ts` só exporta `createRomAssets(bytes)` (o construtor que `tests/screens/rom.ts` usa) e `BOMB_SCRIPTS`.
+- `forgetStoredRom` **já existe** em `rom/state.ts` (plano 5), e a porta o reexporta. Não há `romState.setAssets`. A versão real apaga do IndexedDB, põe `assets = null`, `status = 'vazio'` e chama `onRomChange`. Se o delete falhar, **não rejeita**: grava `erro` em PT-BR.
+- `romState` é um objeto simples `{ assets, status: RomStatus, erro: string | null }` com `RomStatus = 'vazio' | 'verificando' | 'ok' | 'erro'`. `onRomChange(cb: (s: RomState) => void)` devolve a função que cancela a inscrição.
+- Extras exportados pela porta, além do contrato: `useRomBytes(bytes, { persist? })` e os tipos `RomState` e `RomStatus`. `RomMotivo` (`rom/validate.ts`) ganhou `'falha'`, mas não passa pela porta porque o plano 10 não o usa.
+- `decodeTiles(bytes, bpp, off = 0, count)` recebe `off` e `count` e trata bytes além do fim como 0, e `tilesFrom` o chama direto. `decodeZte(rom: Uint8Array, addr)` recebe os bytes crus, então `zteBlock` passa `a.rom.data`. `a.rom` é um `RomView`, com `u16` por endereço SNES.
+- `drawRomBattle(ctx, round, vis: ViewState, assets, frame): boolean` ainda é o esboço do plano 5 (devolve `false`) até o plano 7. `AudioSink.bank` recebe `0x2f | 0x30` (tipo literal). `render/ppu` exporta também `createImage` (fora da porta).
+- O `main.ts` ainda importa `startRomUi` direto de `rom/ui.ts`: essa é a "linha do painel da ROM do plano 5" que a T22 preserva.
+
+**Testes antigos:** nenhum quebrou com P5 + P6, e não houve mudança em `src/screens`/`src/app`/`src/game`. Os 13 `describe` foram movidos literalmente (55 `it`). A única edição dentro de um `it` foi um `import('../../src/render/sprite-bank')` inline em `legacy/settings-screen.test.ts`, que virou `../../../`. Os `legacy/*` ainda importam `BTN`/`INTRO_TICKS` direto de `src/core`, porque saem com as tarefas que os apagam.
+
 ---
 
 ## Onda 2 (fundação)
