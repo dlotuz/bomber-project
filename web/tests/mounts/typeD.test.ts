@@ -49,9 +49,9 @@ describe('montaria tipo D (alcachofra): Y lança a montaria', () => {
     run(s, 1);
     expect(s.grid[cellOf(6, 1)]).not.toBe(0xcc80);
   });
-  it('míssil em voo conta no teto; some depois de explodir', () => {
+  it('míssil em voo não conta no teto (a ROM desconta no lançamento, $C2:60B9); some depois de explodir', () => {
     const { s } = launch(null);
-    expect(activeCount(s)).toBe(1);
+    expect(activeCount(s)).toBe(0);
     expect(mstate(s).projectiles[0]).toMatchObject({ kind: 0xd, slot: 1, state: 'fly' });
     run(s, 120);
     expect(mstate(s).projectiles).toHaveLength(0);

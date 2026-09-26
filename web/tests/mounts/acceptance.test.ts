@@ -33,7 +33,8 @@ describe('aceite do plano 9', () => {
     }
    }, 120_000);
   it('fase 8: ovos do caça-níquel (plano 8) respeitam o teto de 2 contando as reservas', () => {
-    // sementes 24 e 25 passavam para 3 (montado com 1 reserva + 1 ovo do caça-níquel) antes de `eggsInPlay` contar reservas
+    // sementes 24 e 25 passavam para 3 (montado com 1 reserva + 1 ovo do caça-níquel) antes de `eggsInPlay` contar reservas;
+    // desde a revisão final `eggsInPlay` é `activeCount` (fonte única do $1ED4)
     for (const seed of [24, 25]) expect(cpuRound(8, seed).maxActive, `semente ${seed}`).toBeLessThanOrEqual(2);
   }, 120_000);
   it('determinismo: mesma semente → mesmo hash, com montarias', () => {

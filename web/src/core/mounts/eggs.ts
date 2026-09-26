@@ -9,16 +9,21 @@ export function eggsOnGrid(s: RoundState): number {
   return n;
 }
 
-/** $1ED4 derivado (L2). */
+/** $1ED4 derivado (L2) — fonte única: o `eggsInPlay` do plano 8 (caça-níquel) usa esta conta. Referências da ROM:
+ *  +1 revelação ($C1:5E3D) e caça-níquel ($C3:19C5, ovo voando); +1 ao montar ($C1:64BF) e −1 no fim da explosão
+ *  do choco ($C1:5FD9) — o ovo pisado conta junto com a montaria durante `mounting` (medido: 41–45 ticks; core: a
+ *  fase inteira, 42); 0 ao virar reserva ($C1:6417); −1 no início de qualquer perda por $C2:4B89 ($C2:60B9), então
+ *  quem desmonta sem reserva e o míssil D em voo NÃO contam; −1 reserva queimada ($C2:6680, L22). */
 export function activeCount(s: RoundState): number {
   let n = eggsOnGrid(s);
+  for (const f of s.flyers) if (f.kind === 'item' && f.ref >= 0x30 && f.ref <= 0x3f) n++;
   for (const p of s.players) {
     const r = rider(p);
     if (!r) continue;
-    if (r.phase !== 'dismount' || r.remount) n++;
+    if (r.phase === 'mounting') n += 2;
+    else if (r.phase === 'riding' || r.remount) n++;
     n += r.reserves.length;
   }
-  for (const pr of mstate(s).projectiles) if (pr.kind === 0xd && pr.state === 'fly') n++;
   return n;
 }
 

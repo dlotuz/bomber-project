@@ -2,11 +2,12 @@
 import { BURN, CODE, FLAME_PIECE, type Bomb, type GameEvent, type Player, type RoundState, type Flyer } from '../types';
 import { rnd } from '../rng';
 import { cellAt, cellOf, centerX, centerY, colOf, linOf, px } from '../units';
-import { isEggCode, itemCode, newId, playerCell, setAct, standing } from '../state';
+import { itemCode, newId, playerCell, setAct, standing } from '../state';
 import { PRESSURE_BORDER_AT, PRESSURE_STEPS_SD, STUN_TICKS, FUSE } from '../constants';
 import { isImmune, stunPlayer } from '../hit';
 import { addBomb } from '../bombs';
 import { launchBomb } from '../flyers';
+import { activeCount } from '../mounts/eggs';
 
 export { BURN, CODE, rnd, cellAt, cellOf, centerX, centerY, colOf, linOf, px, playerCell, setAct, standing, itemCode };
 export type { Bomb, GameEvent, Player, RoundState };
@@ -96,14 +97,10 @@ export function startJackpotPressure(s: RoundState): void {
   s.pressure.total = PRESSURE_STEPS_SD;
 }
 
-/** Ovos no chão + ovos voando + montarias + ovos de reserva (substituto do $1ED4 da ROM, 🟡). As reservas contam como
- *  no `activeCount` do plano 9 (L2): sem elas, montado com 1 reserva + 1 ovo do caça-níquel passava do teto de 2 (T16). */
+/** $1ED4 da ROM + `extra` (ovos ainda caindo do caça-níquel). Fonte única: `activeCount` do plano 9 (ovos na grade e
+ *  voando, montarias com o +1 do choco, reservas; sem quem desmonta sem reserva nem o míssil D, já descontados). */
 export function eggsInPlay(s: RoundState, extra = 0): number {
-  let n = extra;
-  for (const v of s.grid) if (isEggCode(v)) n++;
-  for (const f of s.flyers) if (f.kind === 'item' && f.ref >= 0x30 && f.ref <= 0x3f) n++;
-  for (const p of s.players) if (p.mount !== null) n += 1 + ((p.mount as { reserves?: readonly unknown[] }).reserves?.length ?? 0);
-  return n;
+  return activeCount(s) + extra;
 }
 
 /** Volta pela borda do voo da gangorra, em px (D15). */

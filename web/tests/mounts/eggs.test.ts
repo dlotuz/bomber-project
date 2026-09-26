@@ -1,5 +1,6 @@
 import { mkRound, placePx, ride, run, BTN, cx, cy, X } from './helpers';
 import { revealEgg, stepOnEgg, activeCount } from '../../src/core/mounts/eggs';
+import { eggsInPlay } from '../../src/core/stages/kit';
 import { rider, mstate, type MountProjectile } from '../../src/core/mounts/types';
 import { cellOf } from '../../src/core/mounts/core-api';
 import type { GameEvent } from '../../src/core/types';
@@ -54,13 +55,51 @@ describe('revelação do ovo ($C1:5DB2)', () => {
     ride(s, 1, 0x2, { phase: 'dismount', remount: true });
     expect(activeCount(s)).toBe(1);
   });
-  it('míssil D em voo conta', () => {
+  it('míssil D em voo não conta: a ROM já descontou no lançamento ($C2:47BB → $C2:4B89 → $C2:60B9)', () => {
     const s = mkRound();
     const pr: MountProjectile = { id: 1, kind: 0xd, owner: 0, x: 0, y: 0, dir: 2, born: s.tick, state: 'fly', t: s.tick, slot: 1 };
     mstate(s).projectiles.push(pr);
-    expect(activeCount(s)).toBe(1);
-    pr.state = 'done';
     expect(activeCount(s)).toBe(0);
+  });
+  it('choco: montando conta ovo + montaria ($C1:64BF +1; $C1:5FD9 −1 no fim da explosão), depois 1', () => {
+    // Emulador (st_ride_pre, st_cpu5): $1ED4 sobe 1 no tick em que pisa e desce 41–45 ticks depois (7 casos);
+    // o core usa a fase `mounting` inteira (k < 42), o mesmo tempo com erro de ±3.
+    const s = mkRound();
+    const p = placePx(s, 0, cx(2), cy(1));
+    s.grid[cellOf(2, 1)] = 0x0973;
+    expect(activeCount(s)).toBe(1);
+    run(s, 1);
+    expect(rider(p)!.phase).toBe('mounting');
+    expect(activeCount(s)).toBe(2);
+    run(s, 41);                                              // T+1..T+41
+    expect(rider(p)!.phase).toBe('mounting');
+    expect(activeCount(s)).toBe(2);
+    run(s, 1);                                               // T+42
+    expect(rider(p)!.phase).toBe('riding');
+    expect(activeCount(s)).toBe(1);
+  });
+  it('durante o choco com 1 ovo na grade, o bloco não dá ovo (ROM chega a $1ED4 = 3)', () => {
+    const s = mkRound(); s.rng.seed = 0x0012;
+    ride(s, 0, 0x3, { phase: 'mounting' });
+    s.grid[cellOf(4, 3)] = 0x0972;
+    expect(activeCount(s)).toBe(3);
+    revealEgg(s, cellOf(6, 1), []);
+    expect(s.grid[cellOf(6, 1)]).toBe(0);
+  });
+  it('ovo do caça-níquel voando conta ($C3:19C5 +1 ao soltar)', () => {
+    const s = mkRound();
+    s.flyers.push({ id: 1, kind: 'item', ref: 0x33, x: 0, y: 0, z: 0, dir: 0, flight: 'item', script: 0, i: 0, born: s.tick } as never);
+    expect(activeCount(s)).toBe(1);
+  });
+  it('eggsInPlay (plano 8) = activeCount + extra: fonte única do $1ED4', () => {
+    const s = mkRound({ players: [0, 1] });
+    s.grid[cellOf(4, 1)] = 0x0972;
+    ride(s, 0, 0x3, { reserves: [0x2] });
+    ride(s, 1, 0x2, { phase: 'dismount', remount: false, slot: 0 });   // já descontado no acerto
+    mstate(s).projectiles.push({ id: 1, kind: 0xd, owner: 0, x: 0, y: 0, dir: 2, born: s.tick, state: 'fly', t: s.tick, slot: 1 });
+    expect(activeCount(s)).toBe(3);
+    expect(eggsInPlay(s)).toBe(3);
+    expect(eggsInPlay(s, 2)).toBe(5);
   });
   it('ovo queimado (EDC0) sai da conta', () => {
     const s = mkRound();
