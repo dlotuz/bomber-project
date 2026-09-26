@@ -1,88 +1,150 @@
-import { CELL, DIR, DX, DY, ITEM, type Bomb, type GameEvent, type RoundState } from './types';
-import { FLAME_FRAMES, FLY_CELLS, MOVE_BOMB_SUB, T } from './constants';
-import { cellX, cellY, centerX, centerY, idx, inPlayfield } from './grid';
-import { bombAt, blocksBomb } from './query';
+// bombs.ts (T6) — pavio, explosões, chamas e queima (decisões 9–13 da spec)
+import { BURN, CODE, DISEASE, FLAME_PIECE, type Bomb, type GameEvent, type Player, type RoundState } from './types';
+import { BAD_COOLDOWN, BURN_TICKS, CHAIN_DELAY, FLAME_TICKS, FUSE, FUSE_LONG, FUSE_SHORT, rangeOf } from './constants';
+import { CELLS, cellCenter, colOf, faceStep, inGrid, linOf } from './units';
+import { isItemCode, itemCode, newId, playerCell } from './state';
+import { STAGES } from './stages';
+import { MOUNTS } from './mounts';
+import { slideStep } from './kick';
 
-export function launch(b: Bomb, dir: number): void {
-  b.flight = { dx: DX[dir], dy: DY[dir], cellsLeft: FLY_CELLS, progress: 0, bounces: 0 };
-  b.slide = DIR.NONE; b.carried = false; b.passers = [];
+const ARM = [FLAME_PIECE.ARM_UP, 0, FLAME_PIECE.ARM_RIGHT, 0, FLAME_PIECE.ARM_DOWN, 0, FLAME_PIECE.ARM_LEFT];
+const TIP = [FLAME_PIECE.TIP_UP, 0, FLAME_PIECE.TIP_RIGHT, 0, FLAME_PIECE.TIP_DOWN, 0, FLAME_PIECE.TIP_LEFT];
+
+export function fuseOf(p: Player): number {
+  return p.disease === DISEASE.SHORT_FUSE ? FUSE_SHORT : p.disease === DISEASE.LONG_FUSE ? FUSE_LONG : FUSE;
+}
+export function bombFireOf(p: Player): number {
+  return p.disease === DISEASE.LOW_FIRE ? 10 : p.fullFire ? 7 : p.fire;
+}
+export function canPlaceBomb(p: Player): boolean {
+  if (p.bombsFree <= 0 || p.disease === DISEASE.CONSTIPATION) return false;
+  return p.disease !== DISEASE.LOW_FIRE || p.bombsFree === p.bombsCap;
 }
 
-function stepSlide(s: RoundState, b: Bomb): void {
-  if (b.x % T === 0 && b.y % T === 0) {
-    if (blocksBomb(s, cellX(b.x) + DX[b.slide], cellY(b.y) + DY[b.slide])) { b.slide = DIR.NONE; return; }
+export function bombAt(s: RoundState, cell: number): Bomb | undefined { return s.bombs.find(b => b.state === 'idle' && b.cell === cell); }
+export function bombById(s: RoundState, id: number): Bomb | undefined { return s.bombs.find(b => b.id === id); }
+/** Cria uma bomba; parada (padrão) ocupa a grade. */
+export function addBomb(s: RoundState, owner: number, cell: number, init: Partial<Bomb> = {}): Bomb {
+  const [x, y] = cellCenter(cell);
+  const b: Bomb = { id: newId(s), owner, bad: false, cell, x, y, fuse: FUSE, fire: 0, type: 0, state: 'idle',
+    dir: 4, step: 0, kickedBy: -1, turn: -1, chainAt: 0, born: s.tick, ...init };
+  if (b.state === 'idle') s.grid[cell] = CODE.BOMB;
+  s.bombs.push(b);
+  return b;
+}
+/** Devolve a bomba ao dono (ou inicia a cadência do Bad Bomber: +48 ticks). */
+export function refundBomb(s: RoundState, b: Bomb): void {
+  if (b.bad) {
+    const bb = s.bad.find(q => q.slot === b.owner);
+    if (bb && bb.live === b.id) { bb.live = -1; bb.readyAt = s.tick + BAD_COOLDOWN; }
+    return;
   }
-  b.x += DX[b.slide] * MOVE_BOMB_SUB;
-  b.y += DY[b.slide] * MOVE_BOMB_SUB;
+  const p = s.players[b.owner];
+  if (p) p.bombsFree = Math.min(p.bombsCap, p.bombsFree + 1);
+}
+/** Tira a bomba do jogo sem explodir (pressão, pouso em bloco queimando). */
+export function removeBomb(s: RoundState, b: Bomb, refund: boolean): void {
+  const i = s.bombs.indexOf(b);
+  if (i < 0) return;
+  s.bombs.splice(i, 1);
+  if (b.state === 'idle' && s.grid[b.cell] === CODE.BOMB) s.grid[b.cell] = CODE.FLOOR;
+  if (refund) refundBomb(s, b);
 }
 
-/** Retorna true quando o voo excedeu o limite de quiques e a bomba deve sumir. */
-function stepFlight(s: RoundState, b: Bomb): boolean {
-  const f = b.flight!;
-  b.x += f.dx * MOVE_BOMB_SUB; b.y += f.dy * MOVE_BOMB_SUB; f.progress += MOVE_BOMB_SUB;
-  if (f.progress < T) return false;
-  f.progress = 0; f.cellsLeft--;
-  let gx = cellX(b.x), gy = cellY(b.y);
-  if (gx < 1) gx = 13; else if (gx > 13) gx = 1;
-  if (gy < 1) gy = 11; else if (gy > 11) gy = 1;
-  b.x = centerX(gx); b.y = centerY(gy);
-  if (f.cellsLeft > 0) return false;
-  if (blocksBomb(s, gx, gy)) {
-    f.bounces++;
-    if (f.bounces > 20) return true;
-    f.cellsLeft = 1;
-    return false;
-  }
-  b.flight = null;
-  return false;
+export function placeBomb(s: RoundState, p: Player, ev: GameEvent[]): boolean {
+  if (!canPlaceBomb(p)) return false;
+  const cell = playerCell(p);
+  if (cell < 0 || s.grid[cell] !== CODE.FLOOR) return false;
+  if (s.bombs.some(b => b.cell === cell && (b.state === 'idle' || b.state === 'kicked'))) return false;
+  addBomb(s, p.slot, cell, { fuse: fuseOf(p), fire: bombFireOf(p), type: MOUNTS.current.bombType?.(p) ?? p.bombType });
+  p.bombsFree--;
+  ev.push({ type: 'bomb_placed', slot: p.slot, cell });
+  return true;
 }
 
-export function explode(s: RoundState, b: Bomb, ev: GameEvent[]): void {
-  const k = s.bombs.indexOf(b);
-  if (k < 0) return;
-  s.bombs.splice(k, 1);
-  const gx = cellX(b.x), gy = cellY(b.y);
-  const arms: [number, number, number, number] = [0, 0, 0, 0];
-  s.arena.flame[idx(gx, gy)] = FLAME_FRAMES;
-  for (let d = 1; d <= 4; d++) {
-    for (let r = 1; r <= b.range; r++) {
-      const x = gx + DX[d] * r, y = gy + DY[d] * r;
-      if (!inPlayfield(x, y)) break;
-      const i = idx(x, y);
-      const c = s.arena.cells[i];
-      if (c === CELL.HARD) break;
-      if (c === CELL.SOFT) {
-        if (s.arena.burning[i] === 0) { s.arena.burning[i] = FLAME_FRAMES; ev.push({ type: 'block_destroyed', gx: x, gy: y }); }
-        arms[d - 1]++;
-        if (!b.pierce) break;
-        continue;
+export function setFlame(s: RoundState, cell: number, piece: number): void {
+  s.grid[cell] = CODE.FLAME; s.cellT0[cell] = s.tick; s.cellAux[cell] = piece;
+}
+export function burnCell(s: RoundState, cell: number, kind: number): void {
+  s.grid[cell] = CODE.BURNING; s.cellT0[cell] = s.tick; s.cellAux[cell] = kind;
+}
+
+export function explodeBomb(s: RoundState, b: Bomb, ev: GameEvent[]): void {
+  const i = s.bombs.indexOf(b);
+  if (i < 0) return;
+  s.bombs.splice(i, 1);
+  refundBomb(s, b);
+  const st = STAGES[s.stage];
+  const c0 = b.cell;
+  const v0 = s.grid[c0];
+  if (v0 === CODE.BOMB || v0 === CODE.FLOOR || v0 === CODE.FLAME) setFlame(s, c0, FLAME_PIECE.CENTER);
+  else st?.onFlameCell?.(s, c0, -1, ev);
+  ev.push({ type: 'explosion', cell: c0, owner: b.owner });
+  const range = rangeOf(b.fire);
+  for (const face of [0, 2, 4, 6]) {
+    let c = c0, last = -1;
+    for (let k = 1; k <= range; k++) {
+      c = faceStep(c, face);
+      if (!inGrid(colOf(c), linOf(c))) break;
+      const v = s.grid[c];
+      if (v === CODE.HARD || v === CODE.PRESSURE || v === CODE.BURNING) break;
+      if (v === CODE.SOFT) { burnCell(s, c, BURN.SOFT); if (b.type === 2) continue; break; }
+      if (isItemCode(v)) { burnCell(s, c, BURN.ITEM); break; }
+      if (v === CODE.BOMB) {
+        const o = bombAt(s, c);
+        if (o && (o.chainAt === 0 || o.chainAt > s.tick + CHAIN_DELAY)) o.chainAt = s.tick + CHAIN_DELAY;
+        break;
       }
-      s.arena.flame[i] = FLAME_FRAMES;
-      arms[d - 1]++;
-      if (s.arena.items[i] !== ITEM.NONE) { s.arena.items[i] = ITEM.NONE; break; }
-      const other = bombAt(s, x, y);
-      if (other) { explode(s, other, ev); break; }
+      if (v === CODE.FLOOR || v === CODE.FLAME) { setFlame(s, c, ARM[face]); last = c; continue; }
+      st?.onFlameCell?.(s, c, face, ev);         // código especial passável: a arena decide; o braço segue
     }
+    if (last >= 0) s.cellAux[last] = TIP[face];
   }
-  ev.push({ type: 'explosion', gx, gy, arms });
 }
 
-export function updateBombs(s: RoundState, ev: GameEvent[]): void {
-  const due: Bomb[] = [];
-  const vanished: Bomb[] = [];
-  for (const b of s.bombs) {
-    if (b.carried) continue;
-    if (b.flight) { if (stepFlight(s, b)) vanished.push(b); continue; }
-    if (b.slide !== DIR.NONE) stepSlide(s, b);
-    b.fuse--;
-    if (b.fuse <= 0 || s.arena.flame[idx(cellX(b.x), cellY(b.y))] > 0) due.push(b);
+export function detonateRemote(s: RoundState, p: Player, _ev: GameEvent[]): boolean {
+  const b = s.bombs
+    .filter(x => x.owner === p.slot && !x.bad && x.type === 1 && (x.state === 'idle' || x.state === 'kicked') && x.chainAt === 0)
+    .sort((a, c) => a.id - c.id)[0];
+  if (!b) return false;
+  b.chainAt = s.tick;
+  return true;
+}
+
+export function revealCell(s: RoundState, cell: number, ev: GameEvent[]): void {
+  s.grid[cell] = CODE.FLOOR; s.cellT0[cell] = s.tick; s.cellAux[cell] = 0;
+  const k = s.hidden.findIndex(([c]) => c === cell);
+  if (k < 0) return;
+  const item = s.hidden[k][1];
+  s.hidden.splice(k, 1);
+  if (item >= 0x30 && item <= 0x3f) MOUNTS.current.revealEgg(s, cell, ev);
+  else s.grid[cell] = itemCode(item);
+}
+
+export function tickBombs(s: RoundState, ev: GameEvent[]): void {
+  if (s.phase === 'won') return;
+  const st = STAGES[s.stage];
+  for (const b of [...s.bombs]) {
+    if (!s.bombs.includes(b)) continue;
+    if (b.born === s.tick || b.state === 'held' || b.state === 'air') continue;
+    if (b.chainAt && s.tick >= b.chainAt) { explodeBomb(s, b, ev); continue; }
+    if (b.state === 'kicked') {
+      slideStep(s, b, ev);
+      if (s.grid[b.cell] === CODE.FLAME && !b.chainAt) b.chainAt = s.tick + 1;
+    }
+    if (b.type === 1) continue;
+    if (b.fuse === 0) { explodeBomb(s, b, ev); continue; }
+    b.fuse = Math.max(0, b.fuse - (st?.fuseStep?.(s, b) ?? 1));
   }
-  for (const b of due) explode(s, b, ev);
-  if (vanished.length) s.bombs = s.bombs.filter(b => !vanished.includes(b));
-  for (const b of s.bombs) {
-    b.passers = b.passers.filter(slot => {
-      const q = s.players[slot];
-      return q.alive && cellX(q.x) === cellX(b.x) && cellY(q.y) === cellY(b.y);
-    });
+}
+
+export function tickCells(s: RoundState, ev: GameEvent[]): void {
+  for (let c = 0; c < CELLS; c++) {
+    const v = s.grid[c];
+    if (v === CODE.FLAME && s.tick - s.cellT0[c] >= FLAME_TICKS) { s.grid[c] = CODE.FLOOR; s.cellAux[c] = 0; }
+    else if (v === CODE.BURNING && s.tick - s.cellT0[c] >= BURN_TICKS) {
+      if (s.cellAux[c] === BURN.SOFT) revealCell(s, c, ev);
+      else { s.grid[c] = CODE.FLOOR; s.cellAux[c] = 0; }
+    }
   }
 }

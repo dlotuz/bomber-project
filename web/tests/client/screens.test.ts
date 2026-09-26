@@ -1,7 +1,7 @@
 import { App } from '../../src/app/app';
 import { defaultSettings, type Settings } from '../../src/app/settings';
 import { idleInput, buildInput, InputManager, emptyDevices, type DeviceState } from '../../src/input/input';
-import { BTN, INTRO_FRAMES } from '../../src/core';
+import { BTN, INTRO_TICKS } from '../../src/core';
 import type { Session } from '../../src/game/session';
 import { ROUND_OVER_FRAMES, SCOREBOARD_FRAMES, SKIP_AFTER } from '../../src/game/session';
 import { titleScreen } from '../../src/screens/title';
@@ -247,9 +247,9 @@ describe('fase e batalha', () => {
     idle(app, START_DELAY_FRAMES);
     expect(app.screen.id).toBe('battle');
     const s = (app.screen as unknown as { session: Session }).session;
-    idle(app, INTRO_FRAMES + 1);
-    s.round.players.forEach((p, i) => { if (i !== 0) p.alive = false; });
-    idle(app, 1);
+    idle(app, INTRO_TICKS);
+    s.round.players.forEach((p, i) => { if (i !== 0) p.state = 'out'; });
+    idle(app, 140);
     expect(s.phase).toBe('roundOver');
     idle(app, ROUND_OVER_FRAMES);
     expect(s.phase).toBe('scoreboard');

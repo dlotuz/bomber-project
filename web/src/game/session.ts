@@ -1,9 +1,10 @@
 import { BTN, createMatch, startRound, finishRound, step, createAi, aiInputs, type AiState, type GameEvent, type MatchState, type RoundState } from '../core';
 import type { GameConfig } from './config';
 
-export const ROUND_OVER_FRAMES = 150;
-export const SCOREBOARD_FRAMES = 540;   // ≈9 s, como o placar do original
-export const SKIP_AFTER = 60;
+/** Fim de rodada → placar: fade-out 15 + preto 48 (§6.10). O plano 10 troca pelas telas com brilho. */
+export const ROUND_OVER_FRAMES = 63;
+export const SCOREBOARD_FRAMES = 512;   // fade-in 15 + 497
+export const SKIP_AFTER = 19;           // fade-in 15 + 4
 
 export type SessionPhase = 'battle' | 'roundOver' | 'scoreboard' | 'victory';
 
@@ -36,7 +37,7 @@ export interface Session {
 }
 
 export function createSession(cfg: GameConfig, seed: number, initialPads: number[] = [0, 0, 0, 0, 0]): Session {
-  const match = createMatch(cfg.rules, cfg.stage, seed);
+  const match = createMatch(cfg.rules, cfg.stage, seed & 0xffff, cfg.chars);
   return {
     cfg, seed, match, round: startRound(match), phase: 'battle', timer: 0, paused: false, matchOver: false,
     stepped: false, finished: false, aborted: false, confirmQuit: false, anyControl: !cfg.humans.some(Boolean),
@@ -76,7 +77,7 @@ export function updateSession(s: Session, pads: number[], anyPressed = 0): GameE
         ev = step(s.round, pads.map((p, i) => (s.cfg.humans[i] ? p : ai[i])));
       }
       s.stepped = true;
-      if (s.round.phase === 'result') { s.phase = 'roundOver'; s.timer = ROUND_OVER_FRAMES; }
+      if (s.round.phase === 'over') { s.phase = 'roundOver'; s.timer = ROUND_OVER_FRAMES; }
       break;
     case 'roundOver':
       if (--s.timer <= 0) {

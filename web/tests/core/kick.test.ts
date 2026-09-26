@@ -1,0 +1,91 @@
+import { arena, put, setCell, codeAt, C } from './kit';
+import { tryKick, slideStep, stopKick } from '../../src/core/kick';
+import { addBomb } from '../../src/core/bombs';
+import { CODE, type Bomb, type GameEvent, type RoundState } from '../../src/core/types';
+import { centerX, centerY } from '../../src/core/units';
+import { itemCode } from '../../src/core/state';
+import { STAGES } from '../../src/core/stages';
+
+function slide(s: RoundState, b: Bomb, n: number, ev: GameEvent[] = []): void {
+  for (let i = 0; i < n; i++) { s.tick++; if (b.state === 'kicked') slideStep(s, b, ev); }
+}
+function setup(bombCol = 5, lin = 1) {
+  const s = arena();
+  const p = put(s, 0, bombCol - 1, lin); p.kick = true; p.face = 2;
+  const b = addBomb(s, 1, C(bombCol, lin));
+  return { s, p, b };
+}
+
+describe('chute (t36, t41, t91)', () => {
+  it('dispara no centro olhando para a bomba; a bomba sai da grade', () => {
+    const { s, p, b } = setup(); const ev: GameEvent[] = [];
+    expect(tryKick(s, p, ev)).toBe(true);
+    expect([b.state, b.dir, b.kickedBy, codeAt(s, 5, 1)]).toEqual(['kicked', 2, 0, CODE.FLOOR]);
+    expect(ev).toEqual([{ type: 'bomb_kicked', slot: 0 }]);
+  });
+  it('não dispara sem Chute, 2 px antes do centro, nem com pavio 1', () => {
+    let k = setup(); k.p.kick = false; expect(tryKick(k.s, k.p, [])).toBe(false);
+    k = setup(); k.p.x = centerX(4) - 2 * 256; expect(tryKick(k.s, k.p, [])).toBe(false);
+    k = setup(); k.p.x = centerX(4) - 256; expect(tryKick(k.s, k.p, [])).toBe(true);
+    k = setup(); k.b.fuse = 1; expect(tryKick(k.s, k.p, [])).toBe(false);
+  });
+  it('2 px/tick, 8 ticks por casa; para alinhada antes da parede (col 14)', () => {
+    const { s, p, b } = setup();
+    tryKick(s, p, []);
+    slide(s, b, 1); expect(b.x).toBe(centerX(5) + 2 * 256);
+    slide(s, b, 7); expect([b.cell, b.x]).toEqual([C(6, 1), centerX(6)]);
+    slide(s, b, 64); expect([b.cell, b.state]).toEqual([C(14, 1), 'kicked']);
+    slide(s, b, 1); expect([b.state, codeAt(s, 14, 1), b.x, b.y]).toEqual(['idle', CODE.BOMB, centerX(14), centerY(1)]);
+  });
+  it('para antes de jogador, soft e outra bomba', () => {
+    for (const block of ['player', 'soft', 'bomb'] as const) {
+      const { s, p, b } = setup();
+      if (block === 'player') put(s, 1, 8, 1);
+      if (block === 'soft') setCell(s, 8, 1, CODE.SOFT);
+      if (block === 'bomb') addBomb(s, 1, C(8, 1));
+      tryKick(s, p, []);
+      slide(s, b, 40);
+      expect([b.state, b.cell]).toEqual(['idle', C(7, 1)]);
+    }
+  });
+  it('item no caminho é esmagado e a bomba segue', () => {
+    const { s, p, b } = setup(); setCell(s, 7, 1, itemCode(0x03));
+    tryKick(s, p, []);
+    slide(s, b, 100);
+    expect([codeAt(s, 7, 1), b.cell]).toEqual([CODE.FLOOR, C(14, 1)]);
+  });
+  it('ovo bloqueia', () => {
+    const { s, p, b } = setup(); setCell(s, 7, 1, 0x097a);
+    tryKick(s, p, []); slide(s, b, 40);
+    expect(b.cell).toBe(C(6, 1));
+  });
+  it('X para a bomba chutada pelo jogador na casa em que ela está', () => {
+    const { s, p, b } = setup();
+    tryKick(s, p, []);
+    slide(s, b, 12);                               // centro em x = centro(5) + 24 px → casa 6
+    stopKick(s, p);
+    expect([b.state, b.cell, b.x, codeAt(s, 6, 1)]).toEqual(['idle', C(6, 1), centerX(6), CODE.BOMB]);
+  });
+  it('entrar em casa com chama marca a explosão para o tick seguinte', () => {
+    const { s, p, b } = setup(); setCell(s, 7, 1, CODE.FLAME);
+    tryKick(s, p, []);
+    slide(s, b, 8);                                // chega em (6,1) no tick 108
+    slide(s, b, 1);                                // tick 109: decide entrar em (7,1)
+    expect(b.chainAt).toBe(110);
+  });
+  it('kickedBombEnter: stop para antes; {turn} entra e vira', () => {
+    STAGES[1] = { kickedBombEnter: (_s, _b, cell) => (cell === C(8, 3) ? { turn: 4 } : 'go') };
+    try {
+      const { s, p, b } = setup(5, 3);
+      tryKick(s, p, []);
+      slide(s, b, 200);
+      expect([b.state, b.cell]).toEqual(['idle', C(8, 11)]);
+    } finally { STAGES[1] = {}; }
+    STAGES[1] = { kickedBombEnter: (_s, _b, cell) => (cell === C(9, 1) ? 'stop' : 'go') };
+    try {
+      const { s, p, b } = setup();
+      tryKick(s, p, []); slide(s, b, 100);
+      expect(b.cell).toBe(C(8, 1));
+    } finally { STAGES[1] = {}; }
+  });
+});
