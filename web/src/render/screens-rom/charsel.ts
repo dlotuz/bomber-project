@@ -68,10 +68,15 @@ export const CHARSEL_TITLE_PX = {
 export const CHARSEL_GRID_PX = {
   x0: CHARSEL_GRID.x[0], y0: CHARSEL_STANDEE_Y[0] - 16, x1: CHARSEL_GRID.x[2] + CHARSEL_GRID.cellW - 1, y1: CHARSEL_STANDEE_Y[1] + 32 - 1,
 };
-/** Ícone (colunas 1–2, linhas 2–11), em px. `MAP_SOURCES.charsel` (T19) reconstrói o BG1 mantendo só a paleta 5
- *  da corda (`keepPalette`), então essas casas saem vazias ali — o teste que compara a origem real da ROM (T19)
- *  ignora essa área pelo mesmo motivo que `tests/screens/map-sources.test.ts` (`DYNAMIC.charsel`); a comparação
- *  do nosso `charselMaps` (sem `MAP_SOURCES`) não precisa dela, porque a reproduz de verdade. */
+/** Ícone (colunas 1–2, linhas 2–11), em px. Revisão da Task 10 (rodada 3): conferido direto na ROM
+ *  (`rawMap`/`descriptorMap` de `PATCH_BG1.charsel` e do descritor original, ver comentário de `charselBg1` em
+ *  `map-sources.ts`) que essas casas **não** têm o ícone em nenhum dos dois — a tabela crua só tem paleta 0
+ *  (vazio), 1 (texto) e 5 (corda); o ícone visto na captura (paletas 0/2/3/4/7) não vem de nenhuma origem de BG1
+ *  conhecida. Por isso `MAP_SOURCES.charsel` continua sem ele (não é um filtro de paleta descartando algo que
+ *  existe — o dado simplesmente não está lá), e essa área continua ignorada na comparação com a origem real da
+ *  ROM (mesmo motivo de `tests/screens/map-sources.test.ts`, `DYNAMIC.charsel`; sem ignorar, o placar cai a
+ *  87,5 %, medido). A comparação do nosso `charselMaps` (sem `MAP_SOURCES`) não precisa dela, porque reproduz o
+ *  ícone medido na captura de verdade. */
 export const CHARSEL_ICON_PX = { x0: 1 * 16, y0: CHARSEL_ROPE.l0 * 16, x1: 2 * 16 + 15, y1: CHARSEL_ROPE.l1 * 16 + 15 };
 
 /**

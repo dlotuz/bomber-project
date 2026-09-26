@@ -33,8 +33,9 @@ describe('cena "charsel" (ROM, brief T10): personagens e equipes reaproveitam a 
   const cap = loadCapture('charsel');
   it.skipIf(!cap)('charselMaps (nosso, sem MAP_SOURCES) bate ≥ 97% com a captura fora do título e da grade', () => {
     // `charselMaps` é o que `sceneMaps(a, 'charsel', charselMaps)` (T5) monta quando `MAP_SOURCES.charsel`
-    // não existe — cobre o ícone de verdade (por isso não precisa ignorá-lo aqui), diferente da origem real
-    // da ROM (T19) abaixo, que descarta qualquer paleta que não seja a da corda.
+    // não existe — cobre o ícone de verdade (por isso não precisa ignorá-lo aqui). A origem real da ROM (T19)
+    // abaixo não tem o ícone (conferido: não é um filtro descartando algo que existe — ver `charselBg1` em
+    // `map-sources.ts`), por isso ainda ignora aquela área.
     const built = charselMaps({} as RomAssets);
     const ignore: Rect[] = [CHARSEL_TITLE_PX, CHARSEL_GRID_PX];
     for (const [layer, addr] of [['bg1', 0x4000], ['bg2', 0x4400]] as const) {
