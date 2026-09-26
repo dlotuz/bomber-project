@@ -4,10 +4,10 @@ import { lockAct } from '../core-api';
 import { mev } from '../events';
 
 export const F_FLIGHT = 159;    // o voo acaba em k = 159 (80 px), medido (L7)
-// $C0 = 192 ticks de dança medidos (ROM: tick 79 ao 270, livre no 271). Desvio do brief: lockAct desconta 1
-// (p.act já mostra o valor livre no último tick travado — core-api.test.ts/eggs.test.ts confirmam a convenção),
-// então para 192 ticks *visíveis* de 'dance' é preciso passar 193 aqui. Conferido no emulador (vs_F_Y_72).
-export const DANCE_TICKS = 193;
+// $C0 = 192 ticks de dança ($C2:0DDC; ROM: atingido no 79, livre no 271 — vs_F_Y_72). lockAct(t) deixa o jogador
+// livre em T + t, como o stun do plano 6 (STUN_TICKS); p.act vira 'idle' 1 tick antes (convenção do tickAct, só
+// visual). Revisão final do plano 9 (I3): o 193 da T13 soltava no 272.
+export const DANCE_TICKS = 192;
 
 /** Tipo F: notas musicais ($C1:2F21); atingido dança ($C2:0D83 → $C2:0DDC). */
 export const ABILITY_F: MountAbility = {
