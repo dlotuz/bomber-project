@@ -3260,3 +3260,19 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - **R5. Painel e atalhos.** O painel engole teclas enquanto está aberto (D12). Se o plano 10 abrir o painel pela tela de Opções, o foco volta ao jogo quando ele fecha. Uma tela que dependa de tecla segurada pode ver um `keyup` sem `keydown`, e o `InputManager` atual tolera isso.
 - **R6. Modo 7 "mínimo".** Não emula o recorte de 13 bits nem o +1 de linha (D1). Serve para o DRAW GAME do plano 10, que ajusta a posição visualmente. Se o plano 10 precisar de fidelidade de pixel no zoom, estender `Mode7Layer` com acordo.
 - **R7. `render_rom.py` como verdade nas arenas 3, 5, 8, 9 e 10.** Nessas arenas, o modelo difere do emulador só por quadros de animação, sprites e fundo da arena 8 (ARN §6). O golden de paridade garante o porte, não esses detalhes, que são dos planos 7 e 8.
+
+## Resultado da execução (2026-09-26)
+
+Branch `feat/p5`: 387 testes com `SB4_ROM` (320 + 67 pulados sem a ROM), `tsc` limpo, `npm run build` ok. Executado em 4 ondas com tarefas paralelas em worktrees separadas; cada tarefa revisada e aprovada; revisão final (branch inteira) com uma rodada de correções, re-revisada.
+
+### Decisões tomadas durante a execução
+- **Painel da ROM robusto:** qualquer falha na verificação (inclusive `crypto.subtle` ausente fora de HTTPS/localhost) devolve o painel ao estado normal com mensagem em PT-BR ("Não foi possível verificar a ROM neste navegador (precisa de HTTPS ou localhost)."); falhas do IndexedDB nunca impedem o painel de abrir nem deixam rejeição solta. Novo motivo `'falha'` em `RomMotivo` (aditivo).
+- **Teclado no painel:** Enter/Espaço agem no botão focado; Ctrl/Meta/Alt e F1–F12 passam (F5, Cmd+R funcionam); arquivo com tamanho diferente de 4 MiB (ou 4 MiB + 512) é recusado antes de ser lido.
+- **Cache:** `bombScript`, `victoryFrame` e `hudHead` memorizados por argumento, com `RangeError` fora das faixas.
+- **Para o plano 7:** `applyTileAnimTiles(tiles, cmd)` aplica um comando de animação de tiles sobre os tiles decodificados (convenção do DMA documentada em `TileAnimCmd`).
+- Decisões D1–D12 do plano valem como extensões registradas dos contratos: `hudHead(slot)` é função; `ScanBand.mathLayers` opcional; `ArenaAssets.record/removeN`, `CharacterAssets.char`, `SceneAssets`, `AudioRomSlices`.
+
+### Pendências
+- A lógica de foco do painel (Enter/Espaço no botão) só tem teste da função pura; o fio no DOM foi revisado a olho (não há jsdom no projeto).
+- `ctl.file` não tem proteção contra reentrada (dois arquivos soltos muito rápido).
+- Rostos do HUD com personagem ≠ slot continuam 🟡 (R3).
