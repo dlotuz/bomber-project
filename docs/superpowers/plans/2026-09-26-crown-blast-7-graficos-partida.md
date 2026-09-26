@@ -2795,6 +2795,17 @@ Preencher uma linha por nome ou formato que diferiu do esperado (ou "nenhuma dif
 
 | Contrato | Esperado neste plano | Real (planos 5/6) | O que foi trocado |
 |---|---|---|---|
+| Base conferida | P5 + P6 mesclados, verde | `feat/wave2-base` 53d5ed8 (P6 antes da correção final: ocupação da bomba, piso da arena 4, clone da IA); 530 testes com ROM (455 + 76 *skipped* sem ROM), `tsc` limpo | nada |
+| `rom/types.ts` (`RomAssets`, `ArenaAssets`, `CharacterAssets`, `Tiles`, `Anim`, `AnimFrame`, `Piece`, `TileAnimCmd`, `PalAnim`) | como na tabela da T1 | idênticos; `hudHead(slot)` é método com cache; `ArenaAssets.hudMap` já com `+$2200` | nada |
+| `bombScript(type)` | corpo do laço | `decodeBombScript(...).frames`, já sem `FFFF`/`FFFE`; tipo fora de 0–6 lança `RangeError` | nada |
+| `RomView` | `data; u8; u16; u24; p24; s8; s16; bytes` | idem (`p24` valida com `hiromOffset`) | nada |
+| `createMatch` | `(rules, stage, seed?, chars?)` | `(rules, stage, seed: number \| Rng16 = BOOT_SEED, chars = [0..4])` | nada (aceita o número `0x12`) |
+| `render/ppu` | `renderPpu`, `createImage`, tipos; HUD `[8, −33]`, campo `[8, −25]` | idem (o golden do plano 5 usa esses valores) | nada |
+| Golden `gfx-render-bg.json` | `{arenas:[{stage, bg1Hofs, tileCopies, sha1}] × 11}` | idem, mais as chaves `origem`, `rom_sha1`, `hash` no topo | nada |
+| `staticObjects` | `{off, word}[]` | idem; `off` em bytes do mapa (`applyStatic` usa `off >> 1`), como `writeStatic()` já supõe | nada |
+| `battle-layers.ts` | `a: object`, `BattleObj` interface | era isso; sem `romPlayerHooks` | T1 Step 3 aplicado: `a: RomAssets`, `BattleObj = ObjEntry` (alias), `RomPlayerHook`/`romPlayerHooks` novos |
+| Núcleo (`Bomb`, `Flyer`, `Falling`, `FLAME_PIECE`, `BURN`, `Player.carry`/`diseaseT`, `bad[]`, `floor[]`, `invisibleVisible`, `emptyRound`, `INTRO_TICKS`, `GRID_W/H`, `colOf`, `linOf`, `px`) | como na tabela da T1 | idênticos (`BadBomberState` tem campos extras `phase`, `live`, `readyAt`, `born`) | nada |
+| Golden do plano 5 (para a T9) | — | `tests/rom/ppu-golden.test.ts` monta o BG1 com `hudWithStart(hudMap)` (de `tests/rom/helpers.ts`: relógio 3:00, ícones e rostos dos 5 slots) na linha 28 do mapa e o BG2 com `buildArena(view, stage)` + `applyStatic`; CGRAM só com `bgCgram` (OBJ zerado). Conferido com a ROM: `newRound(stage)` (semente `0x12`) dá **a mesma** grade de soft blocks que `buildArena` nas 10 arenas | nada (registrado para a T9) |
 
 ### Decisões tomadas durante a execução
 
