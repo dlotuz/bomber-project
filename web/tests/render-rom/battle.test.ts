@@ -176,7 +176,7 @@ describe('isolamento de falhas por camada/gancho (M1)', () => {
 describe('tick visual para camadas e ganchos (M5, D6)', () => {
   it('uma camada recebe o tick já congelado depois do TIME UP, igual ao das camadas base', () => {
     const s = fakeRound({ tick: 560, phase: 'timeUp', phaseT0: 500 });
-    let seen: number | null = null;
+    let seen: number | null | undefined = null;
     const layer: RomBattleLayer = { id: 'tick', draw: (_s, _b, _a, _frame, tick) => { seen = tick; } };
     buildBattleFrame(s, VIS, fakeAssets(), 9, { layers: [layer], sprites: false });
     expect(seen).toBe(500);
@@ -184,7 +184,7 @@ describe('tick visual para camadas e ganchos (M5, D6)', () => {
   });
   it('em jogo, o tick visual segue s.tick', () => {
     const s = fakeRound({ tick: 42 });
-    let seen: number | null = null;
+    let seen: number | null | undefined = null;
     const layer: RomBattleLayer = { id: 'tick', draw: (_s, _b, _a, _frame, tick) => { seen = tick; } };
     buildBattleFrame(s, VIS, fakeAssets(), 0, { layers: [layer], sprites: false });
     expect(seen).toBe(42);
@@ -215,7 +215,7 @@ describe.skipIf(!ASSETS)('1ª imagem de cada arena, sem sprites = golden do plan
     s.clock.sec = 180;   // o golden mostra 3:00
     const layers: RomBattleLayer[] = [{
       id: 'golden',
-      draw: (_s, b, a) => { b.bg1Scroll(g.bg1Hofs); writeStatic(b, a, g.stage); },
+      draw: (_s, b, a) => { b.bg1Scroll(g.bg1Hofs); writeStatic(b, a as RomAssets, g.stage); },
     }];
     const f = buildBattleFrame(s, { crowns: [0, 0, 0, 0, 0] }, ASSETS!, 0,
       { sprites: false, hudHeads: false, blink: false, palAnim: false, layers, tileCopies: g.tileCopies });

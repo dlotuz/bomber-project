@@ -128,7 +128,7 @@ describe('jogadores', () => {
   it('gancho recebe o tick visual (5º argumento), igual ao das camadas base (M5)', () => {
     const s = fakeRound();
     only(s, 0);
-    let seen: number | null = null;
+    let seen: number | null | undefined = null;
     romPlayerHooks.push((_s, _p, _a, _frame, tick) => { seen = tick; return null; });
     try { run(s, { tick: 42 }); expect(seen).toBe(42); } finally { romPlayerHooks.pop(); }
   });

@@ -15,15 +15,24 @@ export interface RomBattleBuilder {
   bg1Scroll(hofs: number): void;
 }
 
-/** `visualTick` (M5, D6): tick visual já congelado no TIME UP/vitória — o mesmo valor das camadas base. */
-export interface RomBattleLayer { id: string; draw(s: RoundState, b: RomBattleBuilder, a: RomAssets, frame: number, visualTick: number): void }
-export interface FallbackBattleLayer { id: string; draw(s: RoundState, ctx: CanvasRenderingContext2D, bank: SpriteBank, frame: number): void }
+/** `a` é o RomAssets (as implementações declaram `a: RomAssets`); `visualTick` (M5, D6): tick visual já congelado no
+ *  TIME UP/vitória — o mesmo das camadas base; opcional para quem chama `draw` direto (testes). */
+export interface RomBattleLayer { id: string; draw(s: RoundState, b: RomBattleBuilder, a: object, frame: number, visualTick?: number): void }
+/** `over: true` desenha depois de bombas, flyers e jogadores, em vez de antes (plano 8, M4 da revisão final: as
+ *  moitas da arena 7 têm de esconder bombas e jogadores, não só o chão, §4.6). Ausente/false = como sempre, antes
+ *  de tudo. Genérico de propósito: o plano 9 vai reusar para desenhar a montaria por cima do cavaleiro. */
+export interface FallbackBattleLayer {
+  id: string; over?: boolean;
+  draw(s: RoundState, ctx: CanvasRenderingContext2D, bank: SpriteBank, frame: number): void;
+}
 
 /** Plano 9 (L17): troca o sprite do jogador (montado, traje). `null` = desenho padrão do plano 7. */
-export type RomPlayerHook = (s: RoundState, p: Player, a: RomAssets, frame: number, visualTick: number) => ObjEntry[] | null;
+export type RomPlayerHook = (s: RoundState, p: Player, a: RomAssets, frame: number, visualTick?: number) => ObjEntry[] | null;
 
 export const romLayers: RomBattleLayer[] = [];
 export const fallbackLayers: FallbackBattleLayer[] = [];
 export const romPlayerHooks: RomPlayerHook[] = [];
+/** Camadas de fallback com `over: true` (ver `FallbackBattleLayer`); `drawRound` as desenha por último. */
+export const fallbackOverLayers: FallbackBattleLayer[] = [];
 export function registerRomLayer(l: RomBattleLayer): void { romLayers.push(l); }
-export function registerFallbackLayer(l: FallbackBattleLayer): void { fallbackLayers.push(l); }
+export function registerFallbackLayer(l: FallbackBattleLayer): void { (l.over ? fallbackOverLayers : fallbackLayers).push(l); }
