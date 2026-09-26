@@ -1,0 +1,658 @@
+{
+ "origem": "web/scripts/rom-facts/gfx-fixtures-formats.py (graficos-formato/decomp.py)",
+ "rom_sha1": "38f4394986bd39fcbe32a722a3fe103ee6177d9b",
+ "zte": [
+  {
+   "addr": 12910907,
+   "used": 1245,
+   "len": 2048,
+   "sha1": "1739f461e0089dcd7fe14a1715532f3220d3b493"
+  },
+  {
+   "addr": 12912591,
+   "used": 3479,
+   "len": 4096,
+   "sha1": "7d0620703830398b05bdae0ed714ccb6abba6a48"
+  },
+  {
+   "addr": 12916070,
+   "used": 3355,
+   "len": 4096,
+   "sha1": "95622501b48ddf9710d7f9819c080e689d5e4a4e"
+  },
+  {
+   "addr": 12919425,
+   "used": 2611,
+   "len": 4096,
+   "sha1": "8ae93f783cb4a328a95f17ec6ffccf54d03cbd47"
+  },
+  {
+   "addr": 12922036,
+   "used": 3727,
+   "len": 4096,
+   "sha1": "ed3355292fb5fc627164afe9dced45b970299fe5"
+  },
+  {
+   "addr": 12925763,
+   "used": 4099,
+   "len": 4096,
+   "sha1": "42752761890c9adc8703f2a4d9ec0bcc4d400a83"
+  },
+  {
+   "addr": 12929862,
+   "used": 2983,
+   "len": 4096,
+   "sha1": "a002e90805018e249e9f1a409cdbebfaaa539892"
+  },
+  {
+   "addr": 12975708,
+   "used": 191,
+   "len": 2048,
+   "sha1": "d2e346063191e26812a2721ecedce8857c2f8d22"
+  },
+  {
+   "addr": 13099446,
+   "used": 1338,
+   "len": 2048,
+   "sha1": "5fd5cf54a8c72982b4317350a072fe8a6febd4b3"
+  },
+  {
+   "addr": 13100784,
+   "used": 1896,
+   "len": 2048,
+   "sha1": "0b2a8e6b7c3423ce8ff5b3bb930c44d4e85af5c1"
+  },
+  {
+   "addr": 13102680,
+   "used": 1555,
+   "len": 2048,
+   "sha1": "dc240fa9162d0a928b6e05769c1f70daeb4101e4"
+  },
+  {
+   "addr": 13104235,
+   "used": 1555,
+   "len": 2048,
+   "sha1": "fd78e7ef3b7b30dd1192170b8c154b1cfc13b3fa"
+  },
+  {
+   "addr": 13105790,
+   "used": 1059,
+   "len": 2048,
+   "sha1": "b3f598fcd6d316086cd05681ac1f5c080e72cfc3"
+  },
+  {
+   "addr": 13106849,
+   "used": 315,
+   "len": 2048,
+   "sha1": "007c3e3474a6b1be604fc12a0c7587a05f3c7efc"
+  },
+  {
+   "addr": 13107200,
+   "used": 1648,
+   "len": 2048,
+   "sha1": "6506d9782ac19d41fc5aa7372bfd62198032f318"
+  },
+  {
+   "addr": 13108848,
+   "used": 1524,
+   "len": 2048,
+   "sha1": "38f535b3c9182ccf0eb8b8b533848c4a01d40f54"
+  },
+  {
+   "addr": 13110372,
+   "used": 222,
+   "len": 2048,
+   "sha1": "e450101b4165deae92c6bd7906789ce37b4e1aba"
+  },
+  {
+   "addr": 13122282,
+   "used": 3975,
+   "len": 4096,
+   "sha1": "57edb1c55f1387f201412b8260c243de49b520b5"
+  },
+  {
+   "addr": 13126257,
+   "used": 4099,
+   "len": 4096,
+   "sha1": "288a07bb34020c6b154fa7fd1209635291dfea1a"
+  },
+  {
+   "addr": 13130356,
+   "used": 1495,
+   "len": 4096,
+   "sha1": "8c71deeb5ee37a74c96c50bcbf58ffb1b77f6bfa"
+  },
+  {
+   "addr": 13171268,
+   "used": 439,
+   "len": 2048,
+   "sha1": "e5531ffb8663fb81b4bd066a662d24dab1171f84"
+  },
+  {
+   "addr": 13172022,
+   "used": 439,
+   "len": 2048,
+   "sha1": "12c90d3c5d7b20d44ff732a3239f9bff95d09bd2"
+  },
+  {
+   "addr": 13236631,
+   "used": 1369,
+   "len": 2048,
+   "sha1": "f7e03a3cba0c4e882c85ce6e5c0b03eeee374298"
+  },
+  {
+   "addr": 13299888,
+   "used": 2051,
+   "len": 2048,
+   "sha1": "667a5569a702677be1ae83a263bd3072d4e35693"
+  },
+  {
+   "addr": 13301939,
+   "used": 1307,
+   "len": 2048,
+   "sha1": "7620d8dc7e99e040930d1ae6c6658ee7a2919ddb"
+  },
+  {
+   "addr": 13480341,
+   "used": 3975,
+   "len": 4096,
+   "sha1": "f8a2b7e90d03b2083b9fbde20c550c02f52cdae6"
+  },
+  {
+   "addr": 13484316,
+   "used": 4099,
+   "len": 4096,
+   "sha1": "a9b31dfd711f5f7213520a2d005230634acaff72"
+  },
+  {
+   "addr": 13488415,
+   "used": 4099,
+   "len": 4096,
+   "sha1": "d381f218f2e11e2f2ef43b3f85d429965323c99a"
+  },
+  {
+   "addr": 13492514,
+   "used": 1123,
+   "len": 4096,
+   "sha1": "c910016e1eddc42639190f64f2975cffef57aa03"
+  },
+  {
+   "addr": 13493637,
+   "used": 3603,
+   "len": 4096,
+   "sha1": "163442033752a4a47576f693fda70e286a49dfd0"
+  },
+  {
+   "addr": 13497240,
+   "used": 2363,
+   "len": 4096,
+   "sha1": "efc929a2d4d8087fe0d2dc09e473c7ebf4a09697"
+  },
+  {
+   "addr": 13500416,
+   "used": 3975,
+   "len": 4096,
+   "sha1": "56441d528b885115d5663da59d3303db27e38d09"
+  },
+  {
+   "addr": 13504391,
+   "used": 4099,
+   "len": 4096,
+   "sha1": "af58922c61cc7f3334e9d9df12207567505b4584"
+  },
+  {
+   "addr": 13508490,
+   "used": 3696,
+   "len": 4096,
+   "sha1": "0664a3d8f86a8e1a9b37ef7f8abb023618cd0817"
+  },
+  {
+   "addr": 13512186,
+   "used": 3603,
+   "len": 4096,
+   "sha1": "983e9940511f5146f8653db6da3cb3f64118d64d"
+  },
+  {
+   "addr": 13515789,
+   "used": 3293,
+   "len": 4096,
+   "sha1": "b935d6c87fe12265872bd9e335c78cc53fadb6b3"
+  },
+  {
+   "addr": 13519082,
+   "used": 2797,
+   "len": 4096,
+   "sha1": "4aee6ecc14f32fca337eb028a2518110bb8e0d84"
+  },
+  {
+   "addr": 13521879,
+   "used": 2020,
+   "len": 2048,
+   "sha1": "5bbc0c37e633724bb4aa38acab54b3c87cf661b5"
+  },
+  {
+   "addr": 13523899,
+   "used": 1338,
+   "len": 2048,
+   "sha1": "e02ae7b444c713c15eb4b0ab4fe4d1b2bf4fe3cd"
+  },
+  {
+   "addr": 13525237,
+   "used": 625,
+   "len": 2048,
+   "sha1": "02e9f80988d6a5a05e3221731526258851556745"
+  },
+  {
+   "addr": 13527913,
+   "used": 3572,
+   "len": 4096,
+   "sha1": "cb4c411e3ed59fa8b01177b9a7a2a0f80eba9bbd"
+  },
+  {
+   "addr": 13531485,
+   "used": 3696,
+   "len": 4096,
+   "sha1": "9654701f42d65a9a163f5cf0e767bedf0d463fe2"
+  },
+  {
+   "addr": 13535181,
+   "used": 3479,
+   "len": 4096,
+   "sha1": "9a09cd745485e3209106c1a8dcfb1660e23ce70d"
+  },
+  {
+   "addr": 13538660,
+   "used": 3541,
+   "len": 4096,
+   "sha1": "5dfbcef7cec67046c529c8f208d0d08f3f3cc9bd"
+  },
+  {
+   "addr": 13542201,
+   "used": 3045,
+   "len": 4096,
+   "sha1": "842181e9642352c9cfee58461ae189c48d95a21a"
+  },
+  {
+   "addr": 13545246,
+   "used": 3944,
+   "len": 4096,
+   "sha1": "4c1ab5444bc6647e80a7966366bca98839fe0dfb"
+  },
+  {
+   "addr": 13549190,
+   "used": 4037,
+   "len": 4096,
+   "sha1": "54b887f37ea36aba99ddc325c73d04a5bc84cd43"
+  },
+  {
+   "addr": 13553227,
+   "used": 4099,
+   "len": 4096,
+   "sha1": "e77f05a50161f18750d45cc89e5d8aea2505a10e"
+  },
+  {
+   "addr": 13557326,
+   "used": 4037,
+   "len": 4096,
+   "sha1": "b93b59d566f030cd6e421c340f6ab2f1c1cdfb30"
+  },
+  {
+   "addr": 13561363,
+   "used": 2394,
+   "len": 4096,
+   "sha1": "f7e5d3196441a475e2791bc9d1e472f4536010ec"
+  },
+  {
+   "addr": 13603764,
+   "used": 3014,
+   "len": 4096,
+   "sha1": "8f57d21ed6b3b9a5d55bde18cfafe73f5c0338d6"
+  },
+  {
+   "addr": 13606778,
+   "used": 4099,
+   "len": 4096,
+   "sha1": "4cdbb750ece40d795c862c202ffcb4ae2f83493c"
+  },
+  {
+   "addr": 13610877,
+   "used": 3603,
+   "len": 4096,
+   "sha1": "690347b35fc45ec061524018910bbb2652613af4"
+  },
+  {
+   "addr": 13614480,
+   "used": 3603,
+   "len": 4096,
+   "sha1": "c93cedcaf37314d77e24f4bd469fd766ceef37fe"
+  },
+  {
+   "addr": 13618083,
+   "used": 379,
+   "len": 4096,
+   "sha1": "f06cd4b4a07d217b60eab3c7a0a80e500ed56954"
+  },
+  {
+   "addr": 13631488,
+   "used": 3665,
+   "len": 4096,
+   "sha1": "a5e3a4308429f6a64134b325776ca2263540e33c"
+  },
+  {
+   "addr": 13635153,
+   "used": 3696,
+   "len": 4096,
+   "sha1": "543d4d2629c2367d7182c19aedbd37bc56248f71"
+  },
+  {
+   "addr": 13682895,
+   "used": 3603,
+   "len": 4096,
+   "sha1": "df0f6fbbfda1a1d244ced6e6bf531f052de9f598"
+  },
+  {
+   "addr": 13686498,
+   "used": 3603,
+   "len": 4096,
+   "sha1": "2756fa5a22c52dce2b4f97c711d2fd51f8f7ac14"
+  },
+  {
+   "addr": 13690101,
+   "used": 1743,
+   "len": 4096,
+   "sha1": "bebdf757f76efff6d6aac11326a23f9f5b586512"
+  },
+  {
+   "addr": 13691844,
+   "used": 2487,
+   "len": 4096,
+   "sha1": "99cac30d0456e309e647f867da158668614b3ee4"
+  },
+  {
+   "addr": 13697024,
+   "used": 3727,
+   "len": 4096,
+   "sha1": "b859882352eab6ada77e3a148a942bb47b51b2a0"
+  },
+  {
+   "addr": 13700751,
+   "used": 3479,
+   "len": 4096,
+   "sha1": "80e1f533fde76c50498ceac402159ec0cf64d3c1"
+  },
+  {
+   "addr": 13711684,
+   "used": 3603,
+   "len": 4096,
+   "sha1": "a8e3741d5d79d576894035bd60d9aa07ed1d24c7"
+  },
+  {
+   "addr": 13715287,
+   "used": 2115,
+   "len": 4096,
+   "sha1": "caab65fd37bbdb70f7d82ea4072a3c45dae15e69"
+  },
+  {
+   "addr": 13717402,
+   "used": 4099,
+   "len": 4096,
+   "sha1": "749568e38ea8578d4b7324be24262b6c26e25678"
+  },
+  {
+   "addr": 13721501,
+   "used": 2115,
+   "len": 4096,
+   "sha1": "b8dd8071aa27d4a3021d962b4f1e3486e921b54d"
+  },
+  {
+   "addr": 13723616,
+   "used": 3107,
+   "len": 4096,
+   "sha1": "942246e67673b3bb98877c5822481a860f7ae37d"
+  },
+  {
+   "addr": 13726723,
+   "used": 1557,
+   "len": 4096,
+   "sha1": "ac561c6a12f8712ca5fbfb5e7d51076138dd7670"
+  },
+  {
+   "addr": 13728280,
+   "used": 3510,
+   "len": 4096,
+   "sha1": "619cec9211846acb3a31ab79958559026e44a1c7"
+  },
+  {
+   "addr": 13731790,
+   "used": 1989,
+   "len": 2048,
+   "sha1": "e6bddb551d57723d97890c2cb255c6814da4693e"
+  },
+  {
+   "addr": 13733779,
+   "used": 1772,
+   "len": 2048,
+   "sha1": "89d64de6702d2c9bad4398aa1e96462e179dc49c"
+  },
+  {
+   "addr": 13735551,
+   "used": 1431,
+   "len": 2048,
+   "sha1": "1d35fdeb67e476673aea4dd080cf14de5c345789"
+  },
+  {
+   "addr": 13746198,
+   "used": 4099,
+   "len": 4096,
+   "sha1": "294e5bcb2d29b5d75b96ef5141d09acc0ad5dac5"
+  },
+  {
+   "addr": 13750297,
+   "used": 4099,
+   "len": 4096,
+   "sha1": "041c73ac3025b977abe0a13f1b200563d8166086"
+  },
+  {
+   "addr": 13754396,
+   "used": 3975,
+   "len": 4096,
+   "sha1": "e9ca36573c84402c5cbe4f1b0afb8e8a34ad3d01"
+  },
+  {
+   "addr": 13812575,
+   "used": 1867,
+   "len": 4096,
+   "sha1": "157a59b95b927d5cda3c0f7c0f467f85bef0c350"
+  },
+  {
+   "addr": 13814442,
+   "used": 3355,
+   "len": 4096,
+   "sha1": "e4399892cfb856471f572d6ec8aea6a7569d440d"
+  },
+  {
+   "addr": 13817797,
+   "used": 1061,
+   "len": 4096,
+   "sha1": "b5afc3aa6a335ebb15b8e447fad1205c2539a211"
+  },
+  {
+   "addr": 13818858,
+   "used": 3603,
+   "len": 4096,
+   "sha1": "0e7fe40c01dbcbc989b3408708034ddc3d43bd1e"
+  },
+  {
+   "addr": 13822461,
+   "used": 3603,
+   "len": 4096,
+   "sha1": "d2a79d5b149ca66e490f06890c0f31f3d41c3bed"
+  },
+  {
+   "addr": 13840927,
+   "used": 4099,
+   "len": 4096,
+   "sha1": "cd4bf07c4fbb4cc05d1e20504bd4abedecbf5c33"
+  },
+  {
+   "addr": 13845026,
+   "used": 4037,
+   "len": 4096,
+   "sha1": "61aaceffa545ebb132013b488e861a2e7bb2c585"
+  },
+  {
+   "addr": 13852235,
+   "used": 3665,
+   "len": 4096,
+   "sha1": "cb795d078b250d08da1e2679a8df8d3cadcd7a1e"
+  },
+  {
+   "addr": 13855900,
+   "used": 3107,
+   "len": 4096,
+   "sha1": "d60280d213d9be528cd674d19e5958a39b310586"
+  },
+  {
+   "addr": 13859007,
+   "used": 2239,
+   "len": 4096,
+   "sha1": "f05d9d066bf982b06b1bb167b67ac2e488bc5709"
+  },
+  {
+   "addr": 13861246,
+   "used": 4006,
+   "len": 4096,
+   "sha1": "31b783f863ccf8c9b71e964f68242de437243278"
+  },
+  {
+   "addr": 13865252,
+   "used": 1867,
+   "len": 4096,
+   "sha1": "3684d6a422f4a0b4af70dfe3b27ee52312658bcf"
+  },
+  {
+   "addr": 13872093,
+   "used": 3355,
+   "len": 4096,
+   "sha1": "99aa140d581434c4436415b51888a54e9abe62c0"
+  },
+  {
+   "addr": 13875448,
+   "used": 1340,
+   "len": 4096,
+   "sha1": "117b0a10b8a430924ddfdca0c179f204e052460d"
+  },
+  {
+   "addr": 13876788,
+   "used": 503,
+   "len": 4096,
+   "sha1": "ce66f1952db2e57cd6779b67c34653607eac2c71"
+  }
+ ],
+ "m7": {
+  "pix": 13473792,
+  "map": 14049497,
+  "usedPix": 6548,
+  "usedMap": 499,
+  "sha1": "812ccb458fc2019f7b52ec93e29baff53478f923"
+ },
+ "arenaUploads": [
+  {
+   "arena": 1,
+   "upload": 1,
+   "sha1": "94e3bd3c1d6d9951d96dac7bf8f55cd0b30f5df6"
+  },
+  {
+   "arena": 2,
+   "upload": 1,
+   "sha1": "6dc3ba7009351e6dbd15f948bc16da0d67a84b66"
+  },
+  {
+   "arena": 3,
+   "upload": 1,
+   "sha1": "71d7a016cdeb6f037399b8da56cf51bbb09982c0"
+  },
+  {
+   "arena": 4,
+   "upload": 1,
+   "sha1": "16f5997e15e0d2226f0d00377ef10cd56f29c411"
+  },
+  {
+   "arena": 5,
+   "upload": 1,
+   "sha1": "ed0e69186b5e0046837246ee280e545029b15af9"
+  },
+  {
+   "arena": 6,
+   "upload": 1,
+   "sha1": "6f5180f7963e80ff9d6bac41d6356b49e44e2925"
+  },
+  {
+   "arena": 7,
+   "upload": 1,
+   "sha1": "9675103b8072a929f9e410807ddc1ec7997e09d2"
+  },
+  {
+   "arena": 8,
+   "upload": 1,
+   "sha1": "1f7864ab54cf74157121ecf97f6edfa35bbff0dc"
+  },
+  {
+   "arena": 9,
+   "upload": 1,
+   "sha1": "cf53ce5f91d187da59b9ec907cf041ae9d983201"
+  },
+  {
+   "arena": 9,
+   "upload": 2,
+   "sha1": "e9ff3e34e97cecd25afc2f83801158d3f47325e8"
+  },
+  {
+   "arena": 10,
+   "upload": 1,
+   "sha1": "c3a06b9884c2bf8d663d904986aa22408255939d"
+  }
+ ],
+ "arenaPalettes": [
+  {
+   "arena": 1,
+   "sha1": "44528fda72d156ddf4771056649a227ce7c7fe94"
+  },
+  {
+   "arena": 2,
+   "sha1": "710e4e437b04e87ec1488ffc110b3dd00b4c36f9"
+  },
+  {
+   "arena": 3,
+   "sha1": "1dcb91c2ce3172d9d64e560c6fbb07ae6f82b9f4"
+  },
+  {
+   "arena": 4,
+   "sha1": "a8366d8f8426e2b51983cf273a826d740ae918f5"
+  },
+  {
+   "arena": 5,
+   "sha1": "f18de97b2a974e2963e9299f78ea3ebe5455ff2f"
+  },
+  {
+   "arena": 6,
+   "sha1": "e958b356220e24b2e489df70437b4f17f99f4b9a"
+  },
+  {
+   "arena": 7,
+   "sha1": "c83c6068af36711fa0683e9aabaa9d7abbac403d"
+  },
+  {
+   "arena": 8,
+   "sha1": "8a2d9b1719f100ed951d4df45fd2a7f19103cb79"
+  },
+  {
+   "arena": 9,
+   "sha1": "dceaeded5e996d9a6a5b10f4094a8ded2525e4a4"
+  },
+  {
+   "arena": 10,
+   "sha1": "cb7f028a7913cb36d6dd47a4ed17ed036af9d041"
+  }
+ ]
+}
