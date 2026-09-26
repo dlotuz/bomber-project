@@ -1,8 +1,9 @@
 import { arena, put, setCell, codeAt, run, runUntil, C } from './kit';
-import { addBomb, placeBomb, detonateRemote, tickBombs, bombAt, fuseOf, bombFireOf, canPlaceBomb } from '../../src/core/bombs';
+import { addBomb, placeBomb, detonateRemote, tickBombs, bombAt, bombOccupies, fuseOf, bombFireOf, canPlaceBomb } from '../../src/core/bombs';
 import { BURN, CODE, FLAME_PIECE, type GameEvent } from '../../src/core/types';
 import { itemCode } from '../../src/core/state';
 import { STAGES } from '../../src/core/stages';
+import { centerX } from '../../src/core/units';
 
 const explodedAt = (s: ReturnType<typeof arena>, max = 400) => runUntil(s, (_s, ev) => ev.some(e => e.type === 'explosion'), max);
 
@@ -14,6 +15,20 @@ describe('colocação', () => {
     expect(ev).toEqual([{ type: 'bomb_placed', slot: 0, cell: C(4, 1) }]);
     p.bombsFree = 1;
     expect(placeBomb(s, p, ev)).toBe(false);
+  });
+  it('bombOccupies: parada na casa; chutada na origem, no centro e (em movimento) na próxima', () => {
+    const s = arena();
+    const a = addBomb(s, 1, C(4, 1));
+    expect([bombOccupies(s, C(4, 1)), bombOccupies(s, C(4, 1), a), bombOccupies(s, C(5, 1))]).toEqual([true, false, false]);
+    const k = addBomb(s, 1, C(6, 3), { state: 'kicked', dir: 2, step: 0 });
+    expect([bombOccupies(s, C(6, 3)), bombOccupies(s, C(7, 3))]).toEqual([true, false]);
+    k.step = 1; k.x += 2 * 256;
+    expect([bombOccupies(s, C(6, 3)), bombOccupies(s, C(7, 3)), bombOccupies(s, C(8, 3))]).toEqual([true, true, false]);
+  });
+  it('não coloca na casa por onde passa uma bomba chutada', () => {
+    const s = arena(); const p = put(s, 0, 5, 1);
+    addBomb(s, 1, C(4, 1), { state: 'kicked', dir: 2, step: 3, x: centerX(4) + 6 * 256 });   // de (4,1) para (5,1)
+    expect(placeBomb(s, p, [])).toBe(false);
   });
   it('só em casa de piso', () => {
     const s = arena(); const p = put(s, 0, 4, 1);

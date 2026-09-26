@@ -1,8 +1,9 @@
 import { arena, put, setCell, codeAt, C } from './kit';
 import { tryKick, slideStep, stopKick } from '../../src/core/kick';
-import { addBomb } from '../../src/core/bombs';
+import { addBomb, tickBombs } from '../../src/core/bombs';
+import { launchBomb, tickFlyers } from '../../src/core/flyers';
 import { CODE, type Bomb, type GameEvent, type RoundState } from '../../src/core/types';
-import { centerX, centerY } from '../../src/core/units';
+import { CELLS, cellCenter, centerX, centerY } from '../../src/core/units';
 import { itemCode } from '../../src/core/state';
 import { STAGES } from '../../src/core/stages';
 
@@ -87,5 +88,63 @@ describe('chute (t36, t41, t91)', () => {
       tryKick(s, p, []); slide(s, b, 100);
       expect(b.cell).toBe(C(8, 1));
     } finally { STAGES[1] = {}; }
+  });
+
+  it('parar em casa ocupada por outra bomba: estaciona na casa anterior', () => {
+    const { s, p, b } = setup();
+    tryKick(s, p, []);
+    slide(s, b, 12);                               // centro na casa 6; a casa 6 já tem bomba
+    addBomb(s, 1, C(6, 1));
+    stopKick(s, p);
+    expect([b.state, b.cell, codeAt(s, 5, 1)]).toEqual(['idle', C(5, 1), CODE.BOMB]);
+  });
+  it('parar em casa de pressão ($EE80): estaciona na anterior; sem nenhuma, continua deslizando', () => {
+    let k = setup();
+    tryKick(k.s, k.p, []); slide(k.s, k.b, 12);
+    setCell(k.s, 6, 1, CODE.PRESSURE);
+    stopKick(k.s, k.p);
+    expect([k.b.state, k.b.cell]).toEqual(['idle', C(5, 1)]);
+    k = setup();
+    tryKick(k.s, k.p, []); slide(k.s, k.b, 12);
+    setCell(k.s, 6, 1, CODE.PRESSURE); addBomb(k.s, 1, C(5, 1));
+    stopKick(k.s, k.p);
+    expect(k.b.state).toBe('kicked');
+  });
+  it('parar sobre chama marca a explosão para o tick seguinte', () => {
+    const { s, p, b } = setup();
+    tryKick(s, p, []); slide(s, b, 12);
+    setCell(s, 6, 1, CODE.FLAME);
+    stopKick(s, p);
+    expect([b.state, b.cell, b.chainAt]).toEqual(['idle', C(6, 1), s.tick + 1]);
+  });
+  it('cenário: chutar, arremessar sobre a casa da bomba que desliza, chutar de novo, X → nunca 2 bombas na mesma casa', () => {
+    const s = arena({ players: 1 });
+    const p = put(s, 0, 4, 3); p.kick = true; p.face = 2;
+    const a = addBomb(s, 1, C(5, 3), { born: 0 });
+    const b = addBomb(s, 1, C(2, 3), { born: 0 });
+    const ev: GameEvent[] = [];
+    const idleCount = (): number[] => {
+      const n = new Array<number>(CELLS).fill(0);
+      for (const o of s.bombs) if (o.state === 'idle') n[o.cell]++;
+      return n;
+    };
+    const tick = (act?: () => void): void => {
+      s.tick++; act?.(); tickBombs(s, ev); tickFlyers(s, ev);
+      const n = idleCount();
+      for (let c = 0; c < CELLS; c++) expect((s.grid[c] === CODE.BOMB) === (n[c] === 1) && n[c] <= 1, `tick ${s.tick}, casa ${c}`).toBe(true);
+    };
+    const t0 = s.tick;
+    const [x, y] = cellCenter(C(2, 3));
+    launchBomb(s, b, 'punch', 1, { x, y, z: 0 });            // soco de 3 casas: pousa em (5,3) em t0 + 17
+    while (s.tick < t0 + 16) tick();
+    tick(() => tryKick(s, p, ev));                            // t0 + 16: chuta A, que ainda ocupa (5,3) no pouso
+    tick();                                                   // t0 + 17: B pousaria em (5,3)
+    expect(ev.some(e => e.type === 'bomb_bounce' && e.cell === C(5, 3))).toBe(true);
+    tick(() => tryKick(s, p, ev));                            // chutar de novo: não há bomba parada em (5,3)
+    while (s.tick < t0 + 22) tick();
+    tick(() => stopKick(s, p));                               // X
+    while (s.tick < t0 + 60) tick();
+    expect([a.state, b.state]).toEqual(['idle', 'idle']);
+    expect(a.cell).not.toBe(b.cell);
   });
 });
