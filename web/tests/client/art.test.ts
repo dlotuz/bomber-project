@@ -62,11 +62,12 @@ describe('personagens', () => {
 });
 
 describe('itens, bomba e chamas', () => {
-  it('8 ícones 16×16 com borda opaca', () => {
-    for (let i = 1; i <= 8; i++) {
-      const p = itemIcon(i);
+  it('ícones 16×16 com borda opaca para todos os itens do Battle (IDs da ROM)', () => {
+    for (const id of [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x11, 0x12, 0x21, 0x2b, 0x30, 0x3f]) {
+      const p = itemIcon(id);
       expect([p.w, p.h]).toEqual([16, 16]);
       expect(alphaAt(p, 0, 0)).toBe(255);
+      expect(alphaAt(p, 15, 15)).toBe(255);
     }
   });
   it('bomba pulsa (quadros diferentes)', () => {

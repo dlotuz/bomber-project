@@ -1,6 +1,6 @@
 import {
   readKeyMap, readGamepad, readDevices, buildInput, emptyDevices, keyLabel, InputManager, DEFAULT_KEYMAPS,
-  withEscapeAsBack, idleInput, type GamepadLike,
+  withEscapeAsBack, idleInput, KEY_FIELDS, type GamepadLike,
 } from '../../src/input/input';
 import { stepsFor, STEP_MS, MAX_STEPS } from '../../src/app/loop';
 import { BTN } from '../../src/core';
@@ -127,8 +127,8 @@ describe('InputManager', () => {
   });
   it('setKeymaps troca o mapeamento; dispose remove os ouvintes', () => {
     const { t, m } = make();
-    m.setKeymaps([{ ...DEFAULT_KEYMAPS[0], up: 'KeyI' }, DEFAULT_KEYMAPS[1]]);
-    t.key('keydown', 'KeyI');
+    m.setKeymaps([{ ...DEFAULT_KEYMAPS[0], up: 'KeyZ' }, DEFAULT_KEYMAPS[1]]);
+    t.key('keydown', 'KeyZ');
     expect(m.poll().kb0).toBe(BTN.UP);
     m.dispose();
     expect([...t.handlers.values()].every(s => s.size === 0)).toBe(true);
@@ -165,5 +165,19 @@ describe('loop de passo fixo', () => {
       expect(r.steps).toBe(1);
       acc = r.acc;
     }
+  });
+});
+
+describe('botão X e botões extras (§2.6)', () => {
+  it('teclado: I (P1) e Numpad5 (P2) = X', () => {
+    expect(readKeyMap(new Set(['KeyI']), DEFAULT_KEYMAPS[0])).toBe(BTN.X);
+    expect(readKeyMap(new Set(['Numpad5']), DEFAULT_KEYMAPS[1])).toBe(BTN.X);
+  });
+  it('gamepad standard: X = 3, L = 4, R = 5, SELECT = 8', () => {
+    const pad = (i: number) => ({ buttons: Array.from({ length: 16 }, (_, k) => ({ pressed: k === i })), axes: [0, 0] });
+    expect([readGamepad(pad(3)), readGamepad(pad(4)), readGamepad(pad(5)), readGamepad(pad(8))]).toEqual([BTN.X, BTN.L, BTN.R, BTN.SELECT]);
+  });
+  it('X entra na lista de remapeamento sem mudar o índice de B', () => {
+    expect(KEY_FIELDS).toEqual(['up', 'down', 'left', 'right', 'a', 'b', 'y', 'x', 'start']);
   });
 });

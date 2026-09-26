@@ -1,0 +1,1550 @@
+{
+ "origem": "web/scripts/rom-facts/gfx-fixtures-scenes.py (graficos-formato/catalogo.json, loader_test.py)",
+ "rom_sha1": "38f4394986bd39fcbe32a722a3fe103ee6177d9b",
+ "scenes": [
+  {
+   "id": "title",
+   "segments": [
+    {
+     "vramByte": 0,
+     "bytes": 4096,
+     "sha1": "cb4c411e3ed59fa8b01177b9a7a2a0f80eba9bbd"
+    },
+    {
+     "vramByte": 4096,
+     "bytes": 4096,
+     "sha1": "9654701f42d65a9a163f5cf0e767bedf0d463fe2"
+    },
+    {
+     "vramByte": 8192,
+     "bytes": 4096,
+     "sha1": "9a09cd745485e3209106c1a8dcfb1660e23ce70d"
+    },
+    {
+     "vramByte": 12288,
+     "bytes": 4096,
+     "sha1": "5dfbcef7cec67046c529c8f208d0d08f3f3cc9bd"
+    },
+    {
+     "vramByte": 16384,
+     "bytes": 4096,
+     "sha1": "57edb1c55f1387f201412b8260c243de49b520b5"
+    },
+    {
+     "vramByte": 20480,
+     "bytes": 4096,
+     "sha1": "288a07bb34020c6b154fa7fd1209635291dfea1a"
+    },
+    {
+     "vramByte": 24576,
+     "bytes": 2080,
+     "sha1": "2e7268ad23a6098cadc8234c36b9da417a7a4a5b"
+    },
+    {
+     "vramByte": 26656,
+     "bytes": 32,
+     "sha1": "ec422098b0f1ae0314ef0a889b9544525c34a382"
+    },
+    {
+     "vramByte": 26688,
+     "bytes": 32,
+     "sha1": "de8a847bff8c343d69b853a215e6ee775ef2ef96"
+    },
+    {
+     "vramByte": 26720,
+     "bytes": 256,
+     "sha1": "2cd70b6f1777d2f32a439bb06360d721fa926024"
+    },
+    {
+     "vramByte": 26976,
+     "bytes": 32,
+     "sha1": "de8a847bff8c343d69b853a215e6ee775ef2ef96"
+    },
+    {
+     "vramByte": 27008,
+     "bytes": 128,
+     "sha1": "96ed9148af057fd5a8217549dd273de45cb39d2f"
+    },
+    {
+     "vramByte": 27136,
+     "bytes": 32,
+     "sha1": "de8a847bff8c343d69b853a215e6ee775ef2ef96"
+    },
+    {
+     "vramByte": 27168,
+     "bytes": 32,
+     "sha1": "b641192b3c3131677079225ad84a62f11cc87ea8"
+    },
+    {
+     "vramByte": 27200,
+     "bytes": 32,
+     "sha1": "de8a847bff8c343d69b853a215e6ee775ef2ef96"
+    },
+    {
+     "vramByte": 27232,
+     "bytes": 256,
+     "sha1": "4ade9056b3b01ef4f9bd768c3f48612e1db7f159"
+    },
+    {
+     "vramByte": 27488,
+     "bytes": 32,
+     "sha1": "de8a847bff8c343d69b853a215e6ee775ef2ef96"
+    },
+    {
+     "vramByte": 27520,
+     "bytes": 256,
+     "sha1": "50d5d0c2dfc0007d59ae1e9fd780bcbbbbf95220"
+    },
+    {
+     "vramByte": 27776,
+     "bytes": 384,
+     "sha1": "4fe93eeebc5593fe2e231a3986ce86c95c1100dd"
+    },
+    {
+     "vramByte": 28160,
+     "bytes": 128,
+     "sha1": "54ac98ec78d4cecdd218e781518e12a15b3710f1"
+    },
+    {
+     "vramByte": 28288,
+     "bytes": 384,
+     "sha1": "4fe93eeebc5593fe2e231a3986ce86c95c1100dd"
+    },
+    {
+     "vramByte": 28672,
+     "bytes": 2656,
+     "sha1": "bfb7dd734e79f729675c453dfd3b30783c9e4b90"
+    },
+    {
+     "vramByte": 31328,
+     "bytes": 32,
+     "sha1": "770ac67ee24125cd59b14508e4b1965d73c16e85"
+    },
+    {
+     "vramByte": 31360,
+     "bytes": 1408,
+     "sha1": "a210febc34756b1cf38c9d30c518a158f8a9986a"
+    },
+    {
+     "vramByte": 49152,
+     "bytes": 2048,
+     "sha1": "6506d9782ac19d41fc5aa7372bfd62198032f318"
+    },
+    {
+     "vramByte": 51200,
+     "bytes": 2048,
+     "sha1": "38f535b3c9182ccf0eb8b8b533848c4a01d40f54"
+    },
+    {
+     "vramByte": 53248,
+     "bytes": 2048,
+     "sha1": "e450101b4165deae92c6bd7906789ce37b4e1aba"
+    },
+    {
+     "vramByte": 55296,
+     "bytes": 2048,
+     "sha1": "b3f598fcd6d316086cd05681ac1f5c080e72cfc3"
+    },
+    {
+     "vramByte": 57344,
+     "bytes": 2048,
+     "sha1": "5fd5cf54a8c72982b4317350a072fe8a6febd4b3"
+    },
+    {
+     "vramByte": 59392,
+     "bytes": 2048,
+     "sha1": "0b2a8e6b7c3423ce8ff5b3bb930c44d4e85af5c1"
+    },
+    {
+     "vramByte": 61440,
+     "bytes": 2048,
+     "sha1": "dc240fa9162d0a928b6e05769c1f70daeb4101e4"
+    },
+    {
+     "vramByte": 63488,
+     "bytes": 2048,
+     "sha1": "fd78e7ef3b7b30dd1192170b8c154b1cfc13b3fa"
+    }
+   ],
+   "written": 49152,
+   "vramSha1": "f5fd07ba9af1b43d0c4d6691473523a25bf2252a",
+   "cgramSha1": "f768925e47fc8908ec41c31ce08f7501f4f7720e",
+   "cgramLinesEqualCapture": 16
+  },
+  {
+   "id": "vsmode",
+   "segments": [
+    {
+     "vramByte": 0,
+     "bytes": 64,
+     "sha1": "c8d7d0ef0eedfa82d2ea1aa592845b9a6d4b02b7"
+    },
+    {
+     "vramByte": 64,
+     "bytes": 448,
+     "sha1": "8bf851516f4fd77369a201cea6ce30f387cb31cd"
+    },
+    {
+     "vramByte": 512,
+     "bytes": 64,
+     "sha1": "c8d7d0ef0eedfa82d2ea1aa592845b9a6d4b02b7"
+    },
+    {
+     "vramByte": 576,
+     "bytes": 4288,
+     "sha1": "c67885444cb7d36ca7df4f56366c5a8f27e671bc"
+    },
+    {
+     "vramByte": 4864,
+     "bytes": 3328,
+     "sha1": "2d0b3bf287feae19225cd529d432f2a7b145d311"
+    },
+    {
+     "vramByte": 8192,
+     "bytes": 4096,
+     "sha1": "e77f05a50161f18750d45cc89e5d8aea2505a10e"
+    },
+    {
+     "vramByte": 12288,
+     "bytes": 4096,
+     "sha1": "b93b59d566f030cd6e421c340f6ab2f1c1cdfb30"
+    },
+    {
+     "vramByte": 16384,
+     "bytes": 4096,
+     "sha1": "163442033752a4a47576f693fda70e286a49dfd0"
+    },
+    {
+     "vramByte": 20480,
+     "bytes": 4096,
+     "sha1": "efc929a2d4d8087fe0d2dc09e473c7ebf4a09697"
+    },
+    {
+     "vramByte": 24576,
+     "bytes": 4096,
+     "sha1": "f7e5d3196441a475e2791bc9d1e472f4536010ec"
+    },
+    {
+     "vramByte": 28672,
+     "bytes": 4096,
+     "sha1": "efc929a2d4d8087fe0d2dc09e473c7ebf4a09697"
+    },
+    {
+     "vramByte": 40960,
+     "bytes": 32,
+     "sha1": "dacb44dd447a66103e99d42359b53470d2709dc5"
+    },
+    {
+     "vramByte": 40992,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41024,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41056,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41088,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41120,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41152,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41184,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41216,
+     "bytes": 2240,
+     "sha1": "f399fe870112b71a5c004f57c087c82a99c58680"
+    },
+    {
+     "vramByte": 49152,
+     "bytes": 2048,
+     "sha1": "f7e03a3cba0c4e882c85ce6e5c0b03eeee374298"
+    }
+   ],
+   "written": 37312,
+   "vramSha1": "1b5770fd6dbfa5288f765144676e3dd04915a50f",
+   "cgramSha1": "63472a7e8e16b285b57e714c3335e56b9af7fc95",
+   "cgramLinesEqualCapture": 16
+  },
+  {
+   "id": "ffa",
+   "segments": [
+    {
+     "vramByte": 0,
+     "bytes": 64,
+     "sha1": "c8d7d0ef0eedfa82d2ea1aa592845b9a6d4b02b7"
+    },
+    {
+     "vramByte": 64,
+     "bytes": 448,
+     "sha1": "8bf851516f4fd77369a201cea6ce30f387cb31cd"
+    },
+    {
+     "vramByte": 512,
+     "bytes": 64,
+     "sha1": "c8d7d0ef0eedfa82d2ea1aa592845b9a6d4b02b7"
+    },
+    {
+     "vramByte": 576,
+     "bytes": 3392,
+     "sha1": "d73bc11ace81c1a3e57aa8f8c11094d537e5c60f"
+    },
+    {
+     "vramByte": 3968,
+     "bytes": 128,
+     "sha1": "1857aefcba36a51c4274b8c617b953b9d86bbcb6"
+    },
+    {
+     "vramByte": 4096,
+     "bytes": 4096,
+     "sha1": "54b887f37ea36aba99ddc325c73d04a5bc84cd43"
+    },
+    {
+     "vramByte": 8192,
+     "bytes": 4096,
+     "sha1": "e77f05a50161f18750d45cc89e5d8aea2505a10e"
+    },
+    {
+     "vramByte": 12288,
+     "bytes": 4096,
+     "sha1": "b93b59d566f030cd6e421c340f6ab2f1c1cdfb30"
+    },
+    {
+     "vramByte": 16384,
+     "bytes": 4096,
+     "sha1": "163442033752a4a47576f693fda70e286a49dfd0"
+    },
+    {
+     "vramByte": 20480,
+     "bytes": 4096,
+     "sha1": "efc929a2d4d8087fe0d2dc09e473c7ebf4a09697"
+    },
+    {
+     "vramByte": 24576,
+     "bytes": 4096,
+     "sha1": "f7e5d3196441a475e2791bc9d1e472f4536010ec"
+    },
+    {
+     "vramByte": 28672,
+     "bytes": 4096,
+     "sha1": "efc929a2d4d8087fe0d2dc09e473c7ebf4a09697"
+    },
+    {
+     "vramByte": 40960,
+     "bytes": 32,
+     "sha1": "dacb44dd447a66103e99d42359b53470d2709dc5"
+    },
+    {
+     "vramByte": 40992,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41024,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41056,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41088,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41120,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41152,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41184,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41216,
+     "bytes": 2368,
+     "sha1": "533d90ec9f7ec6981398ae06ddc9c184ff63b340"
+    },
+    {
+     "vramByte": 49152,
+     "bytes": 2048,
+     "sha1": "f7e03a3cba0c4e882c85ce6e5c0b03eeee374298"
+    }
+   ],
+   "written": 37440,
+   "vramSha1": "6e431a5b88e6b5e428063160b6d9578e6ff3b1c1",
+   "cgramSha1": "163c8bcac02bb8947457dc2b264b9fa8903accb0",
+   "cgramLinesEqualCapture": 16
+  },
+  {
+   "id": "players",
+   "segments": [
+    {
+     "vramByte": 0,
+     "bytes": 64,
+     "sha1": "c8d7d0ef0eedfa82d2ea1aa592845b9a6d4b02b7"
+    },
+    {
+     "vramByte": 64,
+     "bytes": 448,
+     "sha1": "561801ae64509addfe2340a2f568a9881781399b"
+    },
+    {
+     "vramByte": 512,
+     "bytes": 64,
+     "sha1": "c8d7d0ef0eedfa82d2ea1aa592845b9a6d4b02b7"
+    },
+    {
+     "vramByte": 576,
+     "bytes": 4416,
+     "sha1": "3b0a0a810c72ff201de9e7cd7782bbdaf5c4c5f6"
+    },
+    {
+     "vramByte": 4992,
+     "bytes": 3200,
+     "sha1": "321945cc3fb89b27ff574d82e389cc4420061d96"
+    },
+    {
+     "vramByte": 8192,
+     "bytes": 4096,
+     "sha1": "e77f05a50161f18750d45cc89e5d8aea2505a10e"
+    },
+    {
+     "vramByte": 12288,
+     "bytes": 4096,
+     "sha1": "b93b59d566f030cd6e421c340f6ab2f1c1cdfb30"
+    },
+    {
+     "vramByte": 16384,
+     "bytes": 4096,
+     "sha1": "163442033752a4a47576f693fda70e286a49dfd0"
+    },
+    {
+     "vramByte": 20480,
+     "bytes": 4096,
+     "sha1": "efc929a2d4d8087fe0d2dc09e473c7ebf4a09697"
+    },
+    {
+     "vramByte": 24576,
+     "bytes": 4096,
+     "sha1": "f7e5d3196441a475e2791bc9d1e472f4536010ec"
+    },
+    {
+     "vramByte": 28672,
+     "bytes": 4096,
+     "sha1": "efc929a2d4d8087fe0d2dc09e473c7ebf4a09697"
+    },
+    {
+     "vramByte": 40960,
+     "bytes": 32,
+     "sha1": "dacb44dd447a66103e99d42359b53470d2709dc5"
+    },
+    {
+     "vramByte": 40992,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41024,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41056,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41088,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41120,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41152,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41184,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41216,
+     "bytes": 1984,
+     "sha1": "8461f78c4c8d0fc5ccf73df5321132fd77a15729"
+    },
+    {
+     "vramByte": 49152,
+     "bytes": 2048,
+     "sha1": "f7e03a3cba0c4e882c85ce6e5c0b03eeee374298"
+    }
+   ],
+   "written": 37056,
+   "vramSha1": "fceee5188116fb80be30dceaae9fa95e0094eb4e",
+   "cgramSha1": "2c62cf4468f14c0dc0ed9b9194ac01ab50115f67",
+   "cgramLinesEqualCapture": 16
+  },
+  {
+   "id": "rules",
+   "segments": [
+    {
+     "vramByte": 0,
+     "bytes": 64,
+     "sha1": "c8d7d0ef0eedfa82d2ea1aa592845b9a6d4b02b7"
+    },
+    {
+     "vramByte": 64,
+     "bytes": 448,
+     "sha1": "aef3dc590fa56ec73ce29c1aea691d2e62f23e65"
+    },
+    {
+     "vramByte": 512,
+     "bytes": 64,
+     "sha1": "c8d7d0ef0eedfa82d2ea1aa592845b9a6d4b02b7"
+    },
+    {
+     "vramByte": 576,
+     "bytes": 9280,
+     "sha1": "0ee0e37777840b6d6186da6fb46438c89aa81092"
+    },
+    {
+     "vramByte": 9856,
+     "bytes": 2432,
+     "sha1": "9b33bc08e6c389a7eaa9affbccef9ba0a9c97bc7"
+    },
+    {
+     "vramByte": 12288,
+     "bytes": 4096,
+     "sha1": "b93b59d566f030cd6e421c340f6ab2f1c1cdfb30"
+    },
+    {
+     "vramByte": 16384,
+     "bytes": 4096,
+     "sha1": "163442033752a4a47576f693fda70e286a49dfd0"
+    },
+    {
+     "vramByte": 20480,
+     "bytes": 4096,
+     "sha1": "efc929a2d4d8087fe0d2dc09e473c7ebf4a09697"
+    },
+    {
+     "vramByte": 24576,
+     "bytes": 4096,
+     "sha1": "f7e5d3196441a475e2791bc9d1e472f4536010ec"
+    },
+    {
+     "vramByte": 28672,
+     "bytes": 4096,
+     "sha1": "efc929a2d4d8087fe0d2dc09e473c7ebf4a09697"
+    },
+    {
+     "vramByte": 40960,
+     "bytes": 32,
+     "sha1": "dacb44dd447a66103e99d42359b53470d2709dc5"
+    },
+    {
+     "vramByte": 40992,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41024,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41056,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41088,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41120,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41152,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41184,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41216,
+     "bytes": 2048,
+     "sha1": "605db3fdbaff4ba13729371ad0c4fbab3889378e"
+    },
+    {
+     "vramByte": 49152,
+     "bytes": 2048,
+     "sha1": "f7e03a3cba0c4e882c85ce6e5c0b03eeee374298"
+    }
+   ],
+   "written": 37120,
+   "vramSha1": "7a19a4b0dea0edbc4bb6fda90781cc018d44d758",
+   "cgramSha1": "63472a7e8e16b285b57e714c3335e56b9af7fc95",
+   "cgramLinesEqualCapture": 16
+  },
+  {
+   "id": "charsel",
+   "segments": [
+    {
+     "vramByte": 0,
+     "bytes": 64,
+     "sha1": "c8d7d0ef0eedfa82d2ea1aa592845b9a6d4b02b7"
+    },
+    {
+     "vramByte": 64,
+     "bytes": 448,
+     "sha1": "24e99f50ecc2178a169089d2dadd9fd3aa758e6a"
+    },
+    {
+     "vramByte": 512,
+     "bytes": 64,
+     "sha1": "c8d7d0ef0eedfa82d2ea1aa592845b9a6d4b02b7"
+    },
+    {
+     "vramByte": 576,
+     "bytes": 2240,
+     "sha1": "18dac7707df5155ba3bc7118729319d58da0862c"
+    },
+    {
+     "vramByte": 2816,
+     "bytes": 1280,
+     "sha1": "21011325cf8a8ea22f2e488f2c040781099bb167"
+    },
+    {
+     "vramByte": 4096,
+     "bytes": 4096,
+     "sha1": "54b887f37ea36aba99ddc325c73d04a5bc84cd43"
+    },
+    {
+     "vramByte": 8192,
+     "bytes": 4096,
+     "sha1": "e77f05a50161f18750d45cc89e5d8aea2505a10e"
+    },
+    {
+     "vramByte": 12288,
+     "bytes": 4096,
+     "sha1": "b93b59d566f030cd6e421c340f6ab2f1c1cdfb30"
+    },
+    {
+     "vramByte": 16384,
+     "bytes": 4096,
+     "sha1": "163442033752a4a47576f693fda70e286a49dfd0"
+    },
+    {
+     "vramByte": 20480,
+     "bytes": 4096,
+     "sha1": "efc929a2d4d8087fe0d2dc09e473c7ebf4a09697"
+    },
+    {
+     "vramByte": 24576,
+     "bytes": 4096,
+     "sha1": "f7e5d3196441a475e2791bc9d1e472f4536010ec"
+    },
+    {
+     "vramByte": 28672,
+     "bytes": 4096,
+     "sha1": "efc929a2d4d8087fe0d2dc09e473c7ebf4a09697"
+    },
+    {
+     "vramByte": 40960,
+     "bytes": 32,
+     "sha1": "dacb44dd447a66103e99d42359b53470d2709dc5"
+    },
+    {
+     "vramByte": 40992,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41024,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41056,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41088,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41120,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41152,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41184,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41216,
+     "bytes": 2112,
+     "sha1": "4ab2bfd107b85f0d5a6539ab18759335f0e58851"
+    },
+    {
+     "vramByte": 49152,
+     "bytes": 2048,
+     "sha1": "f7e03a3cba0c4e882c85ce6e5c0b03eeee374298"
+    },
+    {
+     "vramByte": 51200,
+     "bytes": 2048,
+     "sha1": "e02ae7b444c713c15eb4b0ab4fe4d1b2bf4fe3cd"
+    },
+    {
+     "vramByte": 53248,
+     "bytes": 2048,
+     "sha1": "02e9f80988d6a5a05e3221731526258851556745"
+    },
+    {
+     "vramByte": 55296,
+     "bytes": 2048,
+     "sha1": "5bbc0c37e633724bb4aa38acab54b3c87cf661b5"
+    }
+   ],
+   "written": 43328,
+   "vramSha1": "11e73900c00fce20f950b8a97f2f5ad111e1be19",
+   "cgramSha1": "eedfe17fa4d343fe73525e292a736c9bcf22c2ec",
+   "cgramLinesEqualCapture": 16
+  },
+  {
+   "id": "stagesel",
+   "segments": [
+    {
+     "vramByte": 0,
+     "bytes": 4096,
+     "sha1": "7d0620703830398b05bdae0ed714ccb6abba6a48"
+    },
+    {
+     "vramByte": 4096,
+     "bytes": 4096,
+     "sha1": "95622501b48ddf9710d7f9819c080e689d5e4a4e"
+    },
+    {
+     "vramByte": 8192,
+     "bytes": 4096,
+     "sha1": "8ae93f783cb4a328a95f17ec6ffccf54d03cbd47"
+    },
+    {
+     "vramByte": 12288,
+     "bytes": 4096,
+     "sha1": "ed3355292fb5fc627164afe9dced45b970299fe5"
+    },
+    {
+     "vramByte": 16384,
+     "bytes": 4096,
+     "sha1": "42752761890c9adc8703f2a4d9ec0bcc4d400a83"
+    },
+    {
+     "vramByte": 20480,
+     "bytes": 4096,
+     "sha1": "efc929a2d4d8087fe0d2dc09e473c7ebf4a09697"
+    },
+    {
+     "vramByte": 24576,
+     "bytes": 4096,
+     "sha1": "a002e90805018e249e9f1a409cdbebfaaa539892"
+    },
+    {
+     "vramByte": 28672,
+     "bytes": 4096,
+     "sha1": "a002e90805018e249e9f1a409cdbebfaaa539892"
+    },
+    {
+     "vramByte": 40960,
+     "bytes": 32,
+     "sha1": "dacb44dd447a66103e99d42359b53470d2709dc5"
+    },
+    {
+     "vramByte": 40992,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41024,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41056,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41088,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41120,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41152,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41184,
+     "bytes": 32,
+     "sha1": "9e5175008751d08f361488c9927086b276b965fa"
+    },
+    {
+     "vramByte": 41216,
+     "bytes": 2112,
+     "sha1": "4ab2bfd107b85f0d5a6539ab18759335f0e58851"
+    },
+    {
+     "vramByte": 49152,
+     "bytes": 2040,
+     "sha1": "acf2ea99918754abd28597903b7677796655be30"
+    },
+    {
+     "vramByte": 51192,
+     "bytes": 2040,
+     "sha1": "749f0b4bc76cda2be4160bbf8966db9e32bf986d"
+    },
+    {
+     "vramByte": 53232,
+     "bytes": 2040,
+     "sha1": "463e8a20f5e6ff871d82fec3941e379ead2ec47d"
+    },
+    {
+     "vramByte": 55272,
+     "bytes": 2040,
+     "sha1": "cea02cce7b5b4bf24a389f46d6cd8b53bfe711b5"
+    },
+    {
+     "vramByte": 57312,
+     "bytes": 2040,
+     "sha1": "637f96ccf42e78ec72dbfb356b5968c61c12c92e"
+    },
+    {
+     "vramByte": 59352,
+     "bytes": 2040,
+     "sha1": "b7c4465fa9dea94ca607e3c4c3a6829f1ceb02c6"
+    },
+    {
+     "vramByte": 61392,
+     "bytes": 2040,
+     "sha1": "41e3f09e84c80d44432d45864fa8f73f1ffc1416"
+    },
+    {
+     "vramByte": 63432,
+     "bytes": 2040,
+     "sha1": "c580985784f1add4eff2fb4f01e6e76134ad3cd0"
+    }
+   ],
+   "written": 51456,
+   "vramSha1": "941ef3757c4212405a4cf6a05e40b277c4a010c2",
+   "cgramSha1": "f30a52937c7e1a1fbaf82524a5e300ecf14f2a51",
+   "cgramLinesEqualCapture": 16
+  },
+  {
+   "id": "scoreboard",
+   "segments": [
+    {
+     "vramByte": 0,
+     "bytes": 4096,
+     "sha1": "56441d528b885115d5663da59d3303db27e38d09"
+    },
+    {
+     "vramByte": 4096,
+     "bytes": 4096,
+     "sha1": "af58922c61cc7f3334e9d9df12207567505b4584"
+    },
+    {
+     "vramByte": 8192,
+     "bytes": 4096,
+     "sha1": "0664a3d8f86a8e1a9b37ef7f8abb023618cd0817"
+    },
+    {
+     "vramByte": 12288,
+     "bytes": 4096,
+     "sha1": "983e9940511f5146f8653db6da3cb3f64118d64d"
+    },
+    {
+     "vramByte": 16384,
+     "bytes": 4096,
+     "sha1": "b935d6c87fe12265872bd9e335c78cc53fadb6b3"
+    },
+    {
+     "vramByte": 20480,
+     "bytes": 4096,
+     "sha1": "4aee6ecc14f32fca337eb028a2518110bb8e0d84"
+    },
+    {
+     "vramByte": 24576,
+     "bytes": 4096,
+     "sha1": "b935d6c87fe12265872bd9e335c78cc53fadb6b3"
+    },
+    {
+     "vramByte": 28672,
+     "bytes": 4096,
+     "sha1": "4aee6ecc14f32fca337eb028a2518110bb8e0d84"
+    },
+    {
+     "vramByte": 49408,
+     "bytes": 128,
+     "sha1": "e1be4223ff414e70e294c64f0543abac7a814f8f"
+    },
+    {
+     "vramByte": 49920,
+     "bytes": 128,
+     "sha1": "ea974523e3896a1c2c27c83c26b7c63ca874f80e"
+    },
+    {
+     "vramByte": 50432,
+     "bytes": 128,
+     "sha1": "ea886aa980d7eee2544d21ce5e112954452cde83"
+    },
+    {
+     "vramByte": 50944,
+     "bytes": 128,
+     "sha1": "bd9e3a651b388b51949e17dcc3355b579cc792aa"
+    },
+    {
+     "vramByte": 51200,
+     "bytes": 128,
+     "sha1": "f9de7620b41d8c5673d86f3cf6a9d0f96a2e45ee"
+    },
+    {
+     "vramByte": 51328,
+     "bytes": 128,
+     "sha1": "85b28f613be5c66fc266551daa53d3c8dd0f198e"
+    },
+    {
+     "vramByte": 51712,
+     "bytes": 128,
+     "sha1": "a2f5735518837431aad12b09ec9e20da4f2dde33"
+    },
+    {
+     "vramByte": 51840,
+     "bytes": 128,
+     "sha1": "05f9b002bcc92fb0571987e69e66c1374b98dc89"
+    },
+    {
+     "vramByte": 52224,
+     "bytes": 128,
+     "sha1": "d521e226cd9ad4fb79c3c340b8204dea8c7b71c6"
+    },
+    {
+     "vramByte": 52352,
+     "bytes": 128,
+     "sha1": "1eb43f390b0e04600f2e64d5cce8ed1a0e11511a"
+    },
+    {
+     "vramByte": 52736,
+     "bytes": 128,
+     "sha1": "977e55f4577bb7802adecfc1ab2b446389610ad8"
+    },
+    {
+     "vramByte": 52864,
+     "bytes": 128,
+     "sha1": "ffb8666adf034788622f8813fb2ca889071abfed"
+    },
+    {
+     "vramByte": 53248,
+     "bytes": 4096,
+     "sha1": "163442033752a4a47576f693fda70e286a49dfd0"
+    },
+    {
+     "vramByte": 57344,
+     "bytes": 2048,
+     "sha1": "667a5569a702677be1ae83a263bd3072d4e35693"
+    },
+    {
+     "vramByte": 59392,
+     "bytes": 2048,
+     "sha1": "7620d8dc7e99e040930d1ae6c6658ee7a2919ddb"
+    },
+    {
+     "vramByte": 63488,
+     "bytes": 2048,
+     "sha1": "f7e03a3cba0c4e882c85ce6e5c0b03eeee374298"
+    }
+   ],
+   "written": 44544,
+   "vramSha1": "1d31e9ed8429e3a3e917d4e05dbbb66f5555a7c0",
+   "cgramSha1": "41ca7e30f10f005585b1c01e1b18efb718421cf2",
+   "cgramLinesEqualCapture": 16
+  },
+  {
+   "id": "victory",
+   "segments": [
+    {
+     "vramByte": 0,
+     "bytes": 4096,
+     "sha1": "56441d528b885115d5663da59d3303db27e38d09"
+    },
+    {
+     "vramByte": 4096,
+     "bytes": 4096,
+     "sha1": "af58922c61cc7f3334e9d9df12207567505b4584"
+    },
+    {
+     "vramByte": 8192,
+     "bytes": 4096,
+     "sha1": "0664a3d8f86a8e1a9b37ef7f8abb023618cd0817"
+    },
+    {
+     "vramByte": 12288,
+     "bytes": 1024,
+     "sha1": "3b4652daabe6f6961b5857a5d1ffbd7eb6c51329"
+    },
+    {
+     "vramByte": 13312,
+     "bytes": 128,
+     "sha1": "52f4fb274582829fea107c2803d42bb0286aed3b"
+    },
+    {
+     "vramByte": 13440,
+     "bytes": 64,
+     "sha1": "93784052b7ec38756e692ea5a69f0fc5c498291c"
+    },
+    {
+     "vramByte": 13504,
+     "bytes": 64,
+     "sha1": "93784052b7ec38756e692ea5a69f0fc5c498291c"
+    },
+    {
+     "vramByte": 13568,
+     "bytes": 64,
+     "sha1": "aabf4f551ea169b3fcdfe7e028e71a82087e0816"
+    },
+    {
+     "vramByte": 13632,
+     "bytes": 64,
+     "sha1": "c84ca75a035a302ca5e4d09ef8ea42b79e7364df"
+    },
+    {
+     "vramByte": 13696,
+     "bytes": 128,
+     "sha1": "f063a00fd2e02bee04173730e032ccd49de2c73c"
+    },
+    {
+     "vramByte": 13824,
+     "bytes": 128,
+     "sha1": "dd0f94afc91eb00cbf19716284c06bede8d32ccc"
+    },
+    {
+     "vramByte": 13952,
+     "bytes": 64,
+     "sha1": "3c3bc7648dfc1ccd8e53b97ae77f51052912f9b2"
+    },
+    {
+     "vramByte": 14016,
+     "bytes": 64,
+     "sha1": "3c3bc7648dfc1ccd8e53b97ae77f51052912f9b2"
+    },
+    {
+     "vramByte": 14080,
+     "bytes": 64,
+     "sha1": "136c6f9b27f9ef7e6f22349ad409a516ce55d311"
+    },
+    {
+     "vramByte": 14144,
+     "bytes": 64,
+     "sha1": "c8429a0cca1408b059b93780eaad15eb160bbd8f"
+    },
+    {
+     "vramByte": 14208,
+     "bytes": 2176,
+     "sha1": "265867723952799bbccb19a05cbeb89ceb7fcbba"
+    },
+    {
+     "vramByte": 16384,
+     "bytes": 4096,
+     "sha1": "b935d6c87fe12265872bd9e335c78cc53fadb6b3"
+    },
+    {
+     "vramByte": 20480,
+     "bytes": 2496,
+     "sha1": "514fb27cd30ebb1899f5e75d0f6b8c3c6babdb8a"
+    },
+    {
+     "vramByte": 22976,
+     "bytes": 64,
+     "sha1": "8a864f17559da9fddc9970112ad79afc1a6a4d97"
+    },
+    {
+     "vramByte": 23040,
+     "bytes": 448,
+     "sha1": "5f30600697486701dbb9f88e80ed578e33dc407c"
+    },
+    {
+     "vramByte": 23488,
+     "bytes": 64,
+     "sha1": "c35b54ca5fc912dde13b039e1b718a8cf3a2eead"
+    },
+    {
+     "vramByte": 23552,
+     "bytes": 64,
+     "sha1": "8a864f17559da9fddc9970112ad79afc1a6a4d97"
+    },
+    {
+     "vramByte": 23616,
+     "bytes": 448,
+     "sha1": "7aeae9bc21885be7c7fe2cae0dc68b9e745c31f4"
+    },
+    {
+     "vramByte": 24064,
+     "bytes": 64,
+     "sha1": "c35b54ca5fc912dde13b039e1b718a8cf3a2eead"
+    },
+    {
+     "vramByte": 24128,
+     "bytes": 448,
+     "sha1": "7aeae9bc21885be7c7fe2cae0dc68b9e745c31f4"
+    },
+    {
+     "vramByte": 24576,
+     "bytes": 4096,
+     "sha1": "b935d6c87fe12265872bd9e335c78cc53fadb6b3"
+    },
+    {
+     "vramByte": 28672,
+     "bytes": 4096,
+     "sha1": "4aee6ecc14f32fca337eb028a2518110bb8e0d84"
+    },
+    {
+     "vramByte": 49152,
+     "bytes": 128,
+     "sha1": "5af443b07d2b178f81385b514a547f662f2514ef"
+    },
+    {
+     "vramByte": 49280,
+     "bytes": 128,
+     "sha1": "a7c9beb71b49c107c9540e9c4ebb682cc48710d0"
+    },
+    {
+     "vramByte": 49408,
+     "bytes": 128,
+     "sha1": "e1be4223ff414e70e294c64f0543abac7a814f8f"
+    },
+    {
+     "vramByte": 49664,
+     "bytes": 128,
+     "sha1": "4994df22d53299cf7f518e8114a1d3855fdf0cf1"
+    },
+    {
+     "vramByte": 49792,
+     "bytes": 128,
+     "sha1": "dbf32ad0e0681a37e837eef36d787790d0de7721"
+    },
+    {
+     "vramByte": 49920,
+     "bytes": 128,
+     "sha1": "ea974523e3896a1c2c27c83c26b7c63ca874f80e"
+    },
+    {
+     "vramByte": 50176,
+     "bytes": 128,
+     "sha1": "76b892d239b96db370c5e3e099f9126aa9d20b7e"
+    },
+    {
+     "vramByte": 50304,
+     "bytes": 128,
+     "sha1": "0b254fda830994b97476436ebc266cfe851f7717"
+    },
+    {
+     "vramByte": 50432,
+     "bytes": 128,
+     "sha1": "ea886aa980d7eee2544d21ce5e112954452cde83"
+    },
+    {
+     "vramByte": 50688,
+     "bytes": 128,
+     "sha1": "ecd5af87bc86a40198070bf6f9344ed04bcec030"
+    },
+    {
+     "vramByte": 50816,
+     "bytes": 128,
+     "sha1": "5165c16a5a48fbeccad35059b4874ca5dd11cbbb"
+    },
+    {
+     "vramByte": 50944,
+     "bytes": 128,
+     "sha1": "bd9e3a651b388b51949e17dcc3355b579cc792aa"
+    },
+    {
+     "vramByte": 51200,
+     "bytes": 128,
+     "sha1": "f9de7620b41d8c5673d86f3cf6a9d0f96a2e45ee"
+    },
+    {
+     "vramByte": 51328,
+     "bytes": 128,
+     "sha1": "9df1d10d65ffe07f8bd255c26713415423a44557"
+    },
+    {
+     "vramByte": 51456,
+     "bytes": 128,
+     "sha1": "dab4250a534915a7abaf7ba905d34aacce6e446e"
+    },
+    {
+     "vramByte": 51712,
+     "bytes": 128,
+     "sha1": "87d80d46301003995771746667c058c35fca7f6d"
+    },
+    {
+     "vramByte": 51840,
+     "bytes": 128,
+     "sha1": "2d55f0fa48f0c224f072c4abfe043cc82441d3e7"
+    },
+    {
+     "vramByte": 51968,
+     "bytes": 128,
+     "sha1": "86bf03a2d7677553c9881e345bc29b7f34604cae"
+    },
+    {
+     "vramByte": 52224,
+     "bytes": 128,
+     "sha1": "82c2693b2f63ab43d182cd57157421b81f340a9c"
+    },
+    {
+     "vramByte": 52352,
+     "bytes": 128,
+     "sha1": "c0104eb8f6a4502a27e6b5bc740cb93cfbb56bdd"
+    },
+    {
+     "vramByte": 52480,
+     "bytes": 128,
+     "sha1": "344e5858a8426c93448a2e15ab13a7e0f9525f27"
+    },
+    {
+     "vramByte": 52736,
+     "bytes": 128,
+     "sha1": "3707d9a5f2324a555e2a759b2d526551e956ce26"
+    },
+    {
+     "vramByte": 52864,
+     "bytes": 128,
+     "sha1": "80601ec6e3e57a923b0bd20aa44d088c6b1db373"
+    },
+    {
+     "vramByte": 52992,
+     "bytes": 128,
+     "sha1": "bc80958b41bc27ab34c3ad4cc350891ca9dae511"
+    },
+    {
+     "vramByte": 53248,
+     "bytes": 4096,
+     "sha1": "163442033752a4a47576f693fda70e286a49dfd0"
+    },
+    {
+     "vramByte": 57344,
+     "bytes": 2048,
+     "sha1": "667a5569a702677be1ae83a263bd3072d4e35693"
+    },
+    {
+     "vramByte": 59392,
+     "bytes": 2048,
+     "sha1": "7620d8dc7e99e040930d1ae6c6658ee7a2919ddb"
+    },
+    {
+     "vramByte": 63488,
+     "bytes": 2048,
+     "sha1": "f7e03a3cba0c4e882c85ce6e5c0b03eeee374298"
+    }
+   ],
+   "written": 46080,
+   "vramSha1": "d97fa30d197f41765a71c28ad41736b22da2716f",
+   "cgramSha1": "a24df25912d66bc3e921616ea8fa5e29a517b09c",
+   "cgramLinesEqualCapture": 16
+  },
+  {
+   "id": "draw1",
+   "segments": [
+    {
+     "vramByte": 40960,
+     "bytes": 4096,
+     "sha1": "d381f218f2e11e2f2ef43b3f85d429965323c99a"
+    },
+    {
+     "vramByte": 49152,
+     "bytes": 128,
+     "sha1": "e1c3bb3c0da3f12046930046ac5fc98ae62daf3e"
+    },
+    {
+     "vramByte": 49280,
+     "bytes": 128,
+     "sha1": "f48dbf6ea478a6c4118bb261f0c5ed533ff6b347"
+    },
+    {
+     "vramByte": 49408,
+     "bytes": 128,
+     "sha1": "0ae4f711ef5d6e9d26c611fd2c8c8ac45ecbf9e7"
+    },
+    {
+     "vramByte": 49664,
+     "bytes": 128,
+     "sha1": "02a0636dff9b66d10a628ef5fa5f4736d7fe9ea6"
+    },
+    {
+     "vramByte": 49792,
+     "bytes": 128,
+     "sha1": "53d262553c6f19166df978a57b272bf6a50e9651"
+    },
+    {
+     "vramByte": 50176,
+     "bytes": 128,
+     "sha1": "f0205bfe4c84bb043b8d0d1dd909e8778ad63d98"
+    },
+    {
+     "vramByte": 50304,
+     "bytes": 128,
+     "sha1": "ab925a21f4ed6ad6c520fa61bc909869ba0e8853"
+    },
+    {
+     "vramByte": 50688,
+     "bytes": 128,
+     "sha1": "4875dda7c93b3e4df573930412aab00e4cc957bd"
+    },
+    {
+     "vramByte": 50816,
+     "bytes": 128,
+     "sha1": "9ef7db29ee8a1cf08a4a7b89391ce5959dacda92"
+    },
+    {
+     "vramByte": 51200,
+     "bytes": 128,
+     "sha1": "eff8d7ea5458332161e0c83beb1155d116657fa7"
+    },
+    {
+     "vramByte": 51328,
+     "bytes": 128,
+     "sha1": "24c97bc950de4fe81c38f24be1bbfca97bbab876"
+    },
+    {
+     "vramByte": 51456,
+     "bytes": 128,
+     "sha1": "e5d1d6b75f94f839ba9ae02849bc234899c65ba2"
+    },
+    {
+     "vramByte": 51712,
+     "bytes": 128,
+     "sha1": "eebb5a93a68364bd14140e75b360ef2dd19164fb"
+    },
+    {
+     "vramByte": 51840,
+     "bytes": 128,
+     "sha1": "b3d504ccd655f488372f7f84aabdeb443a20a88e"
+    },
+    {
+     "vramByte": 51968,
+     "bytes": 128,
+     "sha1": "97a6b08b8a76213655159bac4edde383b7eeb713"
+    },
+    {
+     "vramByte": 52224,
+     "bytes": 128,
+     "sha1": "3950a84ab50cebd15b33dc3670b7972d56ad87d7"
+    },
+    {
+     "vramByte": 52352,
+     "bytes": 128,
+     "sha1": "04aab9c19d4afa3d1bf626298a3d8100f5ae9539"
+    },
+    {
+     "vramByte": 52480,
+     "bytes": 128,
+     "sha1": "0fdd2f02230bbe5d77b5dd61fb6591a09be20b21"
+    },
+    {
+     "vramByte": 52736,
+     "bytes": 128,
+     "sha1": "ca3de3e77ec47a98e84a46189a448dac4ca1760d"
+    },
+    {
+     "vramByte": 52864,
+     "bytes": 128,
+     "sha1": "f5c125b6852ec4bfd5b12c52f479dde567838a93"
+    },
+    {
+     "vramByte": 52992,
+     "bytes": 128,
+     "sha1": "2b0739601c62638ec7add475e3cabe43e84acc46"
+    }
+   ],
+   "written": 6784,
+   "vramSha1": "89246165dd838720f677c0acac5fb29d3c01f5aa",
+   "cgramSha1": "66ca30dad9516551a4ad0a2eb257b600b3face0e",
+   "cgramLinesEqualCapture": 16
+  },
+  {
+   "id": "draw2",
+   "segments": [
+    {
+     "vramByte": 40960,
+     "bytes": 4096,
+     "sha1": "d381f218f2e11e2f2ef43b3f85d429965323c99a"
+    },
+    {
+     "vramByte": 49152,
+     "bytes": 128,
+     "sha1": "2a7b5753e0cddc3a7ed756fb359578ca5fa4e6ef"
+    },
+    {
+     "vramByte": 49280,
+     "bytes": 128,
+     "sha1": "333c8d9601f4ff01beaf0e705486543a421633a8"
+    },
+    {
+     "vramByte": 49408,
+     "bytes": 128,
+     "sha1": "0ae4f711ef5d6e9d26c611fd2c8c8ac45ecbf9e7"
+    },
+    {
+     "vramByte": 49664,
+     "bytes": 128,
+     "sha1": "35ccba4b7a24a3b81264db3c8fbdd9ee4e94cbb8"
+    },
+    {
+     "vramByte": 49792,
+     "bytes": 128,
+     "sha1": "bfed60e184c4b9e6b4eac03e6c0995f2cba7a3c3"
+    },
+    {
+     "vramByte": 50176,
+     "bytes": 128,
+     "sha1": "4cad9c8dae43f6b12765d4bb379ecd3f09405afe"
+    },
+    {
+     "vramByte": 50304,
+     "bytes": 128,
+     "sha1": "f373209aabf3aceeabedf6478a3dd96c13697a56"
+    },
+    {
+     "vramByte": 50688,
+     "bytes": 128,
+     "sha1": "9141476a1ab0c003cde3ed3f3da1eb4e05934d91"
+    },
+    {
+     "vramByte": 50816,
+     "bytes": 128,
+     "sha1": "058bc458548d47f3d690ce44d31612bf14a2df9f"
+    },
+    {
+     "vramByte": 51200,
+     "bytes": 128,
+     "sha1": "77e490ed65c6b201a29d37215607611ba2611eca"
+    },
+    {
+     "vramByte": 51328,
+     "bytes": 128,
+     "sha1": "6152e9ec4853b4d5d2ea95edd809fa2e803ecb66"
+    },
+    {
+     "vramByte": 51456,
+     "bytes": 128,
+     "sha1": "dab4250a534915a7abaf7ba905d34aacce6e446e"
+    },
+    {
+     "vramByte": 51712,
+     "bytes": 128,
+     "sha1": "112c365cb148906c236c2dfc6f2a4e557697fddc"
+    },
+    {
+     "vramByte": 51840,
+     "bytes": 128,
+     "sha1": "efbfc0d0fc842150a78b3cbe1dceab5d8e90e559"
+    },
+    {
+     "vramByte": 51968,
+     "bytes": 128,
+     "sha1": "8608ee2cf20878262c077604ad694fe5b5278866"
+    },
+    {
+     "vramByte": 52224,
+     "bytes": 128,
+     "sha1": "7caf8162a9be9337db86607ae4c482d0d0e5acc9"
+    },
+    {
+     "vramByte": 52352,
+     "bytes": 128,
+     "sha1": "426c17efb219470e05f9c9c666184aee7264cf2a"
+    },
+    {
+     "vramByte": 52480,
+     "bytes": 128,
+     "sha1": "ab974087d0e95aff4a171b5ba63d69834584d6be"
+    },
+    {
+     "vramByte": 52736,
+     "bytes": 128,
+     "sha1": "43147c2ea4a8885fb467f71897ec531a5fb79e46"
+    },
+    {
+     "vramByte": 52864,
+     "bytes": 128,
+     "sha1": "32ecf6cea1e6e9fff5f4ce264b4e1c950848f6f0"
+    },
+    {
+     "vramByte": 52992,
+     "bytes": 128,
+     "sha1": "eb13272b0eb6f9732ad67e56833414347760e386"
+    }
+   ],
+   "written": 6784,
+   "vramSha1": "072d9c0aa4becfe7eba7f2c69efd24749b3b0c76",
+   "cgramSha1": "f4c472fbc88f883e5e95d02dbf5ba79444266604",
+   "cgramLinesEqualCapture": 16
+  }
+ ]
+}

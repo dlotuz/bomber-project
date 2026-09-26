@@ -8,6 +8,7 @@ import { createDisplay } from './render/display';
 import { SpriteBank } from './render/sprite-bank';
 import { titleScreen } from './screens/title';
 import { battleScreen } from './screens/battle';
+import { startRomUi } from './rom/ui';
 
 const store = browserStorage();
 const search = window.location.search;
@@ -22,6 +23,8 @@ const app = new App(settings, {
   setKeymaps: maps => input.setKeymaps(maps),
   seed: () => Date.now() >>> 0,
 });
+// Painel da ROM (plano 5): usa a ROM guardada ou, sem ela, pede o arquivo (não abre sozinho em ?debug/?quick).
+void startRomUi(document, { autoShow: !params.has('debug') && !params.has('quick') });
 const ctx = createDisplay(document.getElementById('screen') as HTMLCanvasElement);
 const bank = new SpriteBank();
 

@@ -1,0 +1,73 @@
+{
+ "origem": "web/scripts/rom-facts/gfx-fixtures-render.py (arenas-cenario/render_rom.render_arena)",
+ "rom_sha1": "38f4394986bd39fcbe32a722a3fe103ee6177d9b",
+ "hash": "SHA-1 de ImageData.data: RGBA 256x224 linha a linha, alfa 255",
+ "arenas": [
+  {
+   "stage": 1,
+   "bg1Hofs": 8,
+   "tileCopies": [],
+   "sha1": "4a62299b1b0299e50152c0df45ad91cf2b79179a"
+  },
+  {
+   "stage": 2,
+   "bg1Hofs": 8,
+   "tileCopies": [],
+   "sha1": "e3a47b7518ccfa7892602d31c94c5ee95e695412"
+  },
+  {
+   "stage": 3,
+   "bg1Hofs": 8,
+   "tileCopies": [],
+   "sha1": "24b94456fa35241f8b30cb1c567cbd9be7f028ee"
+  },
+  {
+   "stage": 4,
+   "bg1Hofs": 8,
+   "tileCopies": [],
+   "sha1": "35cdf46089c3ad9a8fd4a585c584ad1eb6cdb2fb"
+  },
+  {
+   "stage": 5,
+   "bg1Hofs": 8,
+   "tileCopies": [],
+   "sha1": "665de32d3bd1841abe4d02e0178ff5c148a1857e"
+  },
+  {
+   "stage": 6,
+   "bg1Hofs": 8,
+   "tileCopies": [],
+   "sha1": "01236f0f0a368b2495252c4b483a22f7c472b048"
+  },
+  {
+   "stage": 7,
+   "bg1Hofs": 8,
+   "tileCopies": [],
+   "sha1": "97ee659b852505615ad0cfd08f89cc3a73aa061d"
+  },
+  {
+   "stage": 8,
+   "bg1Hofs": 8,
+   "tileCopies": [],
+   "sha1": "ce960e49ef34feaf9a3a8439f58d444588fe2791"
+  },
+  {
+   "stage": 9,
+   "bg1Hofs": 8,
+   "tileCopies": [],
+   "sha1": "2bd1d8d2015c47cf432a83d7e2388b9f448bd930"
+  },
+  {
+   "stage": 10,
+   "bg1Hofs": 8,
+   "tileCopies": [],
+   "sha1": "3ac7856dd617413955920b909ae7bb396ec9efd9"
+  },
+  {
+   "stage": 2,
+   "bg1Hofs": 24,
+   "tileCopies": [],
+   "sha1": "c7384cbf92b3a660326f8dedaae967cb737faf98"
+  }
+ ]
+}

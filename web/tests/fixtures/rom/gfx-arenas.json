@@ -1,0 +1,362 @@
+{
+ "origem": "web/scripts/rom-facts/gfx-fixtures-arenas.py (arenas-cenario/arena_rom.py, render_rom.py)",
+ "rom_sha1": "38f4394986bd39fcbe32a722a3fe103ee6177d9b",
+ "arenas": [
+  {
+   "arena": 1,
+   "record": 12804827,
+   "script": 12809538,
+   "removeN": 14,
+   "colorMath": "none",
+   "tilesLoadedSha1": "94e3bd3c1d6d9951d96dac7bf8f55cd0b30f5df6",
+   "bg1": {
+    "used": 63,
+    "sha1": "605db3fdbaff4ba13729371ad0c4fbab3889378e"
+   },
+   "bg2Base": {
+    "used": 287,
+    "sha1": "b8f9fe330d67926ed36b67a1641a7ff3724db169"
+   },
+   "floor": {
+    "used": 407,
+    "sha1": "0e32623e77b8103c8ca12bce43c2b4348d2fde54"
+   },
+   "logicBaseSha1": "4b3bdbb1157738e35cbf121265ad527b52e99c2a",
+   "build": {
+    "seedIn": 50825,
+    "seedOut": 20881,
+    "soft": 80,
+    "bg2Sha1": "fecc685bb13a91bcfe2e64bb6ec83e530ca6f0b7",
+    "logicSha1": "8b5fd29a33028bf4698e08259c4ced4a4a053986",
+    "floorSha1": "0e32623e77b8103c8ca12bce43c2b4348d2fde54"
+   },
+   "staticBg2Sha1": "fecc685bb13a91bcfe2e64bb6ec83e530ca6f0b7",
+   "tileAnim": null
+  },
+  {
+   "arena": 2,
+   "record": 12804963,
+   "script": 12809586,
+   "removeN": 14,
+   "colorMath": "half",
+   "tilesLoadedSha1": "6dc3ba7009351e6dbd15f948bc16da0d67a84b66",
+   "bg1": {
+    "used": 265,
+    "sha1": "75a83e1d9bff15dd45c9d2a2bb82855ec68011a4"
+   },
+   "bg2Base": {
+    "used": 343,
+    "sha1": "43e58990ed52e3275b3a6edb710cab346e344096"
+   },
+   "floor": {
+    "used": 463,
+    "sha1": "b193d00c9c4458c7d087691a72d13fcbb19aeebd"
+   },
+   "logicBaseSha1": "4b3bdbb1157738e35cbf121265ad527b52e99c2a",
+   "build": {
+    "seedIn": 50825,
+    "seedOut": 20881,
+    "soft": 80,
+    "bg2Sha1": "fdca1945f3925327dbcf37cc858faf8143217ebf",
+    "logicSha1": "8b5fd29a33028bf4698e08259c4ced4a4a053986",
+    "floorSha1": "b193d00c9c4458c7d087691a72d13fcbb19aeebd"
+   },
+   "staticBg2Sha1": "fdca1945f3925327dbcf37cc858faf8143217ebf",
+   "tileAnim": {
+    "addr": 12806289,
+    "count": 97,
+    "key": "de974f57a1686af64179a0c404c30371eea1ced6"
+   }
+  },
+  {
+   "arena": 3,
+   "record": 12805099,
+   "script": 12809682,
+   "removeN": 12,
+   "colorMath": "none",
+   "tilesLoadedSha1": "5e963eb12bc397d9241909d4208c1dc74ab19372",
+   "bg1": {
+    "used": 71,
+    "sha1": "f37244db1f36b6155a2f08ad173f02f5cf2a6ea9"
+   },
+   "bg2Base": {
+    "used": 343,
+    "sha1": "45e1277c5916df5975f498d7cd72af80850f7675"
+   },
+   "floor": {
+    "used": 455,
+    "sha1": "80a61cc7e52162c1afee74291a08ed699dc3d3ef"
+   },
+   "logicBaseSha1": "31a02ce0fd835c3989e0d687ddb22e818be19189",
+   "build": {
+    "seedIn": 50825,
+    "seedOut": 9689,
+    "soft": 80,
+    "bg2Sha1": "9e588dc7c25ffa05f2de663acf5e3d40d73cdc51",
+    "logicSha1": "a1a00d7a5e979d8311dc1ea7517dfe2f6faca8e6",
+    "floorSha1": "80a61cc7e52162c1afee74291a08ed699dc3d3ef"
+   },
+   "staticBg2Sha1": "9e588dc7c25ffa05f2de663acf5e3d40d73cdc51",
+   "tileAnim": {
+    "addr": 12807921,
+    "count": 49,
+    "key": "a89396541189f3d87b4be448209c1c8b7732bf89"
+   }
+  },
+  {
+   "arena": 4,
+   "record": 12805235,
+   "script": 12809730,
+   "removeN": 4,
+   "colorMath": "none",
+   "tilesLoadedSha1": "c88f5adea1d5be42cd8abfaa023052df995217dc",
+   "bg1": {
+    "used": 199,
+    "sha1": "7576ed76d07db8ba8fe08261d2a0e17589b7516a"
+   },
+   "bg2Base": {
+    "used": 291,
+    "sha1": "49da9a82e3cdb3e184b0e959a2be8b154daaa931"
+   },
+   "floor": {
+    "used": 371,
+    "sha1": "0e46c712bdb3327af5891e9aacb4a553eb105465"
+   },
+   "logicBaseSha1": "1ded74a9ce25dfcd9ab97c244ff07221bb01e36d",
+   "build": {
+    "seedIn": 50825,
+    "seedOut": 8137,
+    "soft": 70,
+    "bg2Sha1": "3eef6c4721d3f4dbd7ff2b4a887d55ef68be7d71",
+    "logicSha1": "366beb501a38ede3ed9fef46348b36c5431516dc",
+    "floorSha1": "0e46c712bdb3327af5891e9aacb4a553eb105465"
+   },
+   "staticBg2Sha1": "3eef6c4721d3f4dbd7ff2b4a887d55ef68be7d71",
+   "tileAnim": null
+  },
+  {
+   "arena": 5,
+   "record": 12805371,
+   "script": 12809778,
+   "removeN": 8,
+   "colorMath": "none",
+   "tilesLoadedSha1": "238e7dafb7657d3491bd12d7783ad6b153cb612e",
+   "bg1": {
+    "used": 223,
+    "sha1": "b449e79054a6de47009be6a08fae3432d5769a7d"
+   },
+   "bg2Base": {
+    "used": 343,
+    "sha1": "3ab87f99ebb118adb35581b23d2ef154c5c975de"
+   },
+   "floor": {
+    "used": 343,
+    "sha1": "3ab87f99ebb118adb35581b23d2ef154c5c975de"
+   },
+   "logicBaseSha1": "6b6fd828e10c94e8b6ea176e765f7da05eef2575",
+   "build": {
+    "seedIn": 50825,
+    "seedOut": 37889,
+    "soft": 0,
+    "bg2Sha1": "3ab87f99ebb118adb35581b23d2ef154c5c975de",
+    "logicSha1": "6b6fd828e10c94e8b6ea176e765f7da05eef2575",
+    "floorSha1": "3ab87f99ebb118adb35581b23d2ef154c5c975de"
+   },
+   "staticBg2Sha1": "3ab87f99ebb118adb35581b23d2ef154c5c975de",
+   "tileAnim": {
+    "addr": 12808695,
+    "count": 37,
+    "key": "a6dce22a31fea9f123e8bb1f04b37a4426b87fe7"
+   }
+  },
+  {
+   "arena": 6,
+   "record": 12805507,
+   "script": 12809826,
+   "removeN": 14,
+   "colorMath": "half",
+   "tilesLoadedSha1": "6f5180f7963e80ff9d6bac41d6356b49e44e2925",
+   "bg1": {
+    "used": 103,
+    "sha1": "12b4f2c735edea7694428f9034cb9f2fbe73d6fe"
+   },
+   "bg2Base": {
+    "used": 287,
+    "sha1": "0f84234b6a8c33632fb20c7962942564ad75ebdf"
+   },
+   "floor": {
+    "used": 287,
+    "sha1": "8420e1b28f3c020bd03c3569d3d4ac26346d4826"
+   },
+   "logicBaseSha1": "4b3bdbb1157738e35cbf121265ad527b52e99c2a",
+   "build": {
+    "seedIn": 50825,
+    "seedOut": 20881,
+    "soft": 80,
+    "bg2Sha1": "7c86ba2654173e51dcb9cfff558232821b4b3769",
+    "logicSha1": "8b5fd29a33028bf4698e08259c4ced4a4a053986",
+    "floorSha1": "8420e1b28f3c020bd03c3569d3d4ac26346d4826"
+   },
+   "staticBg2Sha1": "7c86ba2654173e51dcb9cfff558232821b4b3769",
+   "tileAnim": {
+    "addr": 12807321,
+    "count": 17,
+    "key": "3f8cd00a6f88f5b67a8f74e2ba16b838450a3c9b"
+   }
+  },
+  {
+   "arena": 7,
+   "record": 12805643,
+   "script": 12809874,
+   "removeN": 4,
+   "colorMath": "none",
+   "tilesLoadedSha1": "03bfc06e37a644480921a4be90b28fd8137821ed",
+   "bg1": {
+    "used": 175,
+    "sha1": "aff4794a97ff8a17596bc97267c44e036e81cc23"
+   },
+   "bg2Base": {
+    "used": 407,
+    "sha1": "2c2cbbc86e54c802e0b1417a925325970c9c0d61"
+   },
+   "floor": {
+    "used": 463,
+    "sha1": "28d1518bf8b94b7bd5830202faba123c6668bbd5"
+   },
+   "logicBaseSha1": "d3f6d13236b54797acf8bd47e408a47c1eee1f09",
+   "build": {
+    "seedIn": 50825,
+    "seedOut": 8137,
+    "soft": 62,
+    "bg2Sha1": "615f2a58307afa2ad62dedf67e8732df34adaa9c",
+    "logicSha1": "20e145d8433a20ca60c1bd8e2ea045e3a3dd86f5",
+    "floorSha1": "28d1518bf8b94b7bd5830202faba123c6668bbd5"
+   },
+   "staticBg2Sha1": "018f243cd63442234e4baab76340bc33bd3766f2",
+   "tileAnim": {
+    "addr": 12807882,
+    "count": 9,
+    "key": "3e6be7cc6ac298e70b7652f77430a0266e1a99b4"
+   }
+  },
+  {
+   "arena": 8,
+   "record": 12805779,
+   "script": 12809922,
+   "removeN": 0,
+   "colorMath": "none",
+   "tilesLoadedSha1": "1f7864ab54cf74157121ecf97f6edfa35bbff0dc",
+   "bg1": {
+    "used": 249,
+    "sha1": "3ff3b3d6b70cba5563ab5f434ea5e321a395ee3e"
+   },
+   "bg2Base": {
+    "used": 457,
+    "sha1": "3784dc9c1d163678ba5fac5d68b8530573599b40"
+   },
+   "floor": {
+    "used": 457,
+    "sha1": "3784dc9c1d163678ba5fac5d68b8530573599b40"
+   },
+   "logicBaseSha1": "6b6fd828e10c94e8b6ea176e765f7da05eef2575",
+   "build": {
+    "seedIn": 50825,
+    "seedOut": 50825,
+    "soft": 0,
+    "bg2Sha1": "3784dc9c1d163678ba5fac5d68b8530573599b40",
+    "logicSha1": "6b6fd828e10c94e8b6ea176e765f7da05eef2575",
+    "floorSha1": "3784dc9c1d163678ba5fac5d68b8530573599b40"
+   },
+   "staticBg2Sha1": "48f6f08a2465741c5c62751681f190d33eb477d4",
+   "tileAnim": null
+  },
+  {
+   "arena": 9,
+   "record": 12805915,
+   "script": 12810018,
+   "removeN": 4,
+   "colorMath": "none",
+   "tilesLoadedSha1": "6c494b057abb5727ebdab2220a38ec2ab88e925f",
+   "bg1": {
+    "used": 151,
+    "sha1": "9564264ecbeddb168fc6961ccc5e02af8b177746"
+   },
+   "bg2Base": {
+    "used": 375,
+    "sha1": "93c9767084303e76d638ea14cabc486ed07e96a3"
+   },
+   "floor": {
+    "used": 463,
+    "sha1": "919628e3353ddb57abbba4f21eac145808295000"
+   },
+   "logicBaseSha1": "fed15860d385bceea3c3dbb11d37af471f709404",
+   "build": {
+    "seedIn": 50825,
+    "seedOut": 58561,
+    "soft": 78,
+    "bg2Sha1": "8d59434f8573618469d6f655a314c1da7c475e4d",
+    "logicSha1": "1ea20e905e9219b1752d3faddc0acc751182a226",
+    "floorSha1": "919628e3353ddb57abbba4f21eac145808295000"
+   },
+   "staticBg2Sha1": "53eca2945e7bd17bc40111bc8d69fce523fcebe9",
+   "tileAnim": null
+  },
+  {
+   "arena": 10,
+   "record": 12806051,
+   "script": 12810066,
+   "removeN": 14,
+   "colorMath": "add",
+   "tilesLoadedSha1": "c3a06b9884c2bf8d663d904986aa22408255939d",
+   "bg1": {
+    "used": 315,
+    "sha1": "11de81b637e5bf87d1af7c4bc0cb1ca38022350d"
+   },
+   "bg2Base": {
+    "used": 335,
+    "sha1": "7e48fcbc17e231788ec18959f9a03954e2952d02"
+   },
+   "floor": {
+    "used": 335,
+    "sha1": "196a2928d53eda9ddc72d1bf4839750e567d8b35"
+   },
+   "logicBaseSha1": "4b3bdbb1157738e35cbf121265ad527b52e99c2a",
+   "build": {
+    "seedIn": 50825,
+    "seedOut": 20881,
+    "soft": 80,
+    "bg2Sha1": "f55d3b8d71d15515e13e8b33809188fcce120bbf",
+    "logicSha1": "8b5fd29a33028bf4698e08259c4ced4a4a053986",
+    "floorSha1": "196a2928d53eda9ddc72d1bf4839750e567d8b35"
+   },
+   "staticBg2Sha1": "f55d3b8d71d15515e13e8b33809188fcce120bbf",
+   "tileAnim": {
+    "addr": 12807408,
+    "count": 9,
+    "key": "8089da30ef8a963b9468704a7a9bbd2a26c67d0e"
+   }
+  }
+ ],
+ "hud": {
+  "baseSha1": "830f7a1761998f0f1519012b05f7ae7d0648b720",
+  "startSha1": "d3dec561c7bf094efbcddd248a02d2696541ae1f"
+ },
+ "fallback": {
+  "count": 113,
+  "first": [
+   212,
+   726,
+   88
+  ],
+  "sha1": "aa5104c089ab54832d73975030fefdb56def2439"
+ },
+ "objCommon": {
+  "1": "b0e7628bc79a35b3b6b6320783ba053d1a7c1481",
+  "3": "84a53d85023d0bbd749da6ee3d339e25483f251b"
+ },
+ "bg3": {
+  "fontSha1": "1badc9322280d11609d66c2cbe0075f9e68dd36c",
+  "bannersSha1": "9b79699b9794a6c9c1b9da3b3c01176fb5db7f2a"
+ },
+ "objPal7Sha1": "7016e44bc5184a4bb83314c73c11bf69ba8b4f47"
+}
