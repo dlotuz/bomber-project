@@ -2,23 +2,93 @@ import { charactersScreen } from '../../src/screens/characters';
 import { teamsScreen } from '../../src/screens/teams';
 import { BTN } from '../../src/game/core-api';
 import type { RomAssets } from '../../src/app/rom-api';
+import type { SpriteBank } from '../../src/render/sprite-bank';
+import { PLAYER_COLORS } from '../../src/render/draw-game';
 import { sceneMaps } from '../../src/render/screens-rom/scene';
-import { CHARSEL_GRID_PX, CHARSEL_TITLE_PX, charselMaps } from '../../src/render/screens-rom/charsel';
+import { MAP_SOURCES } from '../../src/render/screens-rom/map-sources';
+import { CHARSEL_GRID_PX, CHARSEL_ICON_PX, CHARSEL_TITLE_PX, charselMaps } from '../../src/render/screens-rom/charsel';
 import { mkApp, press, hold, settle } from './helpers';
+import { ASSETS } from './rom';
 import { loadCapture, capturedMap, mapMatch, type Rect } from './captures';
+
+/** Bank falso (sem DOM): só precisa devolver algo com `width`/`height` para os `drawImage` não quebrarem. */
+const fakeBank = {
+  head: () => ({ width: 32, height: 32 }),
+  bomber: () => ({ width: 32, height: 40 }),
+  text: () => ({ width: 40, height: 12 }),
+} as unknown as SpriteBank;
+/** Contexto falso: grava `fillRect` (estilo:x,y,w,h) e a posição de cada `drawImage`. */
+function recCtx() {
+  const fills: string[] = [];
+  const images: { x: number; y: number }[] = [];
+  const ctx = {
+    fillStyle: '',
+    fillRect(x: number, y: number, w: number, h: number) { fills.push(`${this.fillStyle}:${x},${y},${w},${h}`); },
+    drawImage(_img: unknown, x: number, y: number) { images.push({ x, y }); },
+  };
+  return { fills, images, ctx: ctx as unknown as CanvasRenderingContext2D };
+}
 
 describe('cena "charsel" (ROM, brief T10): personagens e equipes reaproveitam a mesma moldura', () => {
   const cap = loadCapture('charsel');
-  it.skipIf(!cap)('BG1 (corda + ícone) e BG2 (quebra-cabeça) batem ≥ 97% fora do título e da grade', () => {
-    // `sceneMaps` (T5) é o mesmo ponto de entrada usado por `screens/characters.ts`/`teams.ts`: sem
-    // `MAP_SOURCES.charsel` (T19) ainda, cai no nosso `charselMaps`, que é o que este teste confere.
-    const built = sceneMaps({} as RomAssets, 'charsel', charselMaps);
+  it.skipIf(!cap)('charselMaps (nosso, sem MAP_SOURCES) bate ≥ 97% com a captura fora do título e da grade', () => {
+    // `charselMaps` é o que `sceneMaps(a, 'charsel', charselMaps)` (T5) monta quando `MAP_SOURCES.charsel`
+    // não existe — cobre o ícone de verdade (por isso não precisa ignorá-lo aqui), diferente da origem real
+    // da ROM (T19) abaixo, que descarta qualquer paleta que não seja a da corda.
+    const built = charselMaps({} as RomAssets);
     const ignore: Rect[] = [CHARSEL_TITLE_PX, CHARSEL_GRID_PX];
     for (const [layer, addr] of [['bg1', 0x4000], ['bg2', 0x4400]] as const) {
       const ours = built[layer];
       expect(ours, layer).toBeDefined();
       expect(mapMatch(ours!, capturedMap(cap!, addr), ignore), layer).toBeGreaterThanOrEqual(0.97);
     }
+  });
+  it.skipIf(!cap || !ASSETS)('com ROM: sceneMaps devolve a origem real da T19 (MAP_SOURCES.charsel) e ainda bate ≥ 97%', () => {
+    // `screens/characters.ts`/`teams.ts` chamam `sceneMaps(a, 'charsel', charselMaps)`: com a T19 mesclada,
+    // `MAP_SOURCES.charsel` existe e vence — `charselMaps` fica de reserva (usado só no teste acima).
+    expect(MAP_SOURCES.charsel).toBeDefined();
+    const built = sceneMaps(ASSETS!, 'charsel', charselMaps);
+    const ignore: Rect[] = [CHARSEL_TITLE_PX, CHARSEL_GRID_PX, CHARSEL_ICON_PX];
+    for (const [layer, addr] of [['bg1', 0x4000], ['bg2', 0x4400]] as const) {
+      const ours = built[layer];
+      expect(ours, layer).toBeDefined();
+      expect(mapMatch(ours!, capturedMap(cap!, addr), ignore), layer).toBeGreaterThanOrEqual(0.97);
+    }
+  });
+});
+
+describe('desenho (revisão da Task 10, rodada 2)', () => {
+  it('cursor "[ ]" da grade: 4 cantos com fillRect na cor do jogador, não um retângulo só', () => {
+    const { app } = mkApp();
+    const c = charactersScreen(app); app.go(c);
+    const { fills, ctx } = recCtx();
+    c.draw(ctx, fakeBank, 0);
+    // P1/P2 (default: ambos humanos com dispositivo, nenhum confirmado) têm cursor aberto: 8 fillRect cada
+    // (2 por canto × 4 cantos), nunca 1 retângulo (`strokeRect`, que nem existe no ctx falso) cobrindo a célula.
+    expect(fills.filter(k => k.startsWith(`${PLAYER_COLORS[0]}:`))).toHaveLength(8);
+    expect(fills.filter(k => k.startsWith(`${PLAYER_COLORS[1]}:`))).toHaveLength(8);
+  });
+  it('título de personagens vai dentro do vão da corda (CHARSEL_TITLE_PX), não na barra fixa y=12', () => {
+    const { app } = mkApp();
+    const c = charactersScreen(app); app.go(c);
+    const { images, ctx } = recCtx();
+    c.draw(ctx, fakeBank, 0);
+    const cx = (CHARSEL_TITLE_PX.x0 + CHARSEL_TITLE_PX.x1 + 1) / 2, cy = (CHARSEL_TITLE_PX.y0 + CHARSEL_TITLE_PX.y1 + 1) / 2;
+    const w = fakeBank.text('', '').width * 2, h = fakeBank.text('', '').height * 2;
+    const x = Math.round(cx - w / 2), y = Math.round(cy - h / 2);
+    expect(images).toContainEqual({ x, y });
+    expect(images.some(p => p.y === 12)).toBe(false);
+  });
+  it('título de equipes também vai dentro do mesmo vão', () => {
+    const { app } = mkApp();
+    const t = teamsScreen(app); app.go(t);
+    const { images, ctx } = recCtx();
+    t.draw(ctx, fakeBank, 0);
+    const cx = (CHARSEL_TITLE_PX.x0 + CHARSEL_TITLE_PX.x1 + 1) / 2, cy = (CHARSEL_TITLE_PX.y0 + CHARSEL_TITLE_PX.y1 + 1) / 2;
+    const w = fakeBank.text('', '').width * 2, h = fakeBank.text('', '').height * 2;
+    const x = Math.round(cx - w / 2), y = Math.round(cy - h / 2);
+    expect(images).toContainEqual({ x, y });
+    expect(images.some(p => p.y === 12)).toBe(false);
   });
 });
 

@@ -4,8 +4,11 @@
 // quebra-cabeça já existente em `MENU_GEO` (T5), do mesmo jeito que `menuMaps` monta as outras cenas de menu.
 // `screens/characters.ts` e `screens/teams.ts` (que reaproveita esta mesma cena — não tem captura própria, A1)
 // montam a `PpuFrame` com `sceneGfx`/`sceneMaps`/`sceneFrame` (T5) daqui; retratos, cursores e "VS" são conteúdo
-// dinâmico desenhado por cima, depois do `PpuCanvas.draw`. `MAP_SOURCES.charsel` (T19) troca `charselMaps` por um
-// mapa de verdade quando existir — o `sceneMaps(a, 'charsel', charselMaps)` do T5 já escolhe sozinho.
+// dinâmico desenhado por cima, depois do `PpuCanvas.draw`, com `drawCharselTitle` pondo o nosso título dentro do
+// vão que a ROM deixava para "Select a character!" (`CHARSEL_TITLE_PX`). `MAP_SOURCES.charsel` (T19, já
+// mesclada) fornece o mapa de verdade da ROM — `sceneMaps(a, 'charsel', charselMaps)` (T5) já escolhe sozinho,
+// e `charselMaps` (geometria nossa) só entra em cena nos testes/telas sem essa origem.
+import type { SpriteBank } from '../sprite-bank';
 import type { RomAssets } from '../../app/rom-api';
 import { box, MENU_GEO, newMap, pattern, put, type SceneMaps } from './scene';
 
@@ -42,8 +45,9 @@ export const CHARSEL_ROPE = {
   tl: 0x1402, top: 0x1404, tr: 0x1424, left: 0x1426, right: 0x1442, bl: 0x1444, bottom: 0x5404, br: 0x1446,
   topRight: 0x5404, titleEnds: [0x1406, 0x1422] as [number, number],
 };
-/** "Select a character!" ocupa 2 linhas de tile (fonte da ROM) nas colunas 6–10; a nossa "ESCOLHA O PERSONAGEM"
- *  vai por cima (por isso essas células ficam em branco no mapa montado, e o teste ignora esse retângulo). */
+/** "Select a character!" ocupa 2 linhas de tile (fonte da ROM) nas colunas 6–10: essas células ficam em branco
+ *  no mapa montado (o texto é nosso — `drawCharselTitle` o desenha exatamente nesse vão, `CHARSEL_TITLE_PX`),
+ *  e o teste de captura ignora esse retângulo. */
 export const CHARSEL_TITLE_TILES = { l0: 2, l1: 3, c0: 6, c1: 10 };
 /** Ícone decorativo à esquerda da corda (colunas 1–2, linhas 2–11): 20 palavras medidas no `charsel-bg1.txt`, sem
  *  fórmula (não é um padrão geométrico) — igual em espírito a `MENU_GEO.rope` guardar tiles específicos por cena. */
@@ -64,6 +68,11 @@ export const CHARSEL_TITLE_PX = {
 export const CHARSEL_GRID_PX = {
   x0: CHARSEL_GRID.x[0], y0: CHARSEL_STANDEE_Y[0] - 16, x1: CHARSEL_GRID.x[2] + CHARSEL_GRID.cellW - 1, y1: CHARSEL_STANDEE_Y[1] + 32 - 1,
 };
+/** Ícone (colunas 1–2, linhas 2–11), em px. `MAP_SOURCES.charsel` (T19) reconstrói o BG1 mantendo só a paleta 5
+ *  da corda (`keepPalette`), então essas casas saem vazias ali — o teste que compara a origem real da ROM (T19)
+ *  ignora essa área pelo mesmo motivo que `tests/screens/map-sources.test.ts` (`DYNAMIC.charsel`); a comparação
+ *  do nosso `charselMaps` (sem `MAP_SOURCES`) não precisa dela, porque a reproduz de verdade. */
+export const CHARSEL_ICON_PX = { x0: 1 * 16, y0: CHARSEL_ROPE.l0 * 16, x1: 2 * 16 + 15, y1: CHARSEL_ROPE.l1 * 16 + 15 };
 
 /**
  * BG1 (corda + ícone) e BG2 (quebra-cabeça, `MENU_GEO.bgPattern`, igual às outras cenas de menu) da cena `charsel`,
@@ -78,7 +87,8 @@ export function charselMaps(_a: RomAssets): SceneMaps {
   CHARSEL_ICON.forEach(([a, b], r) => { put(bg1, 1, CHARSEL_ROPE.l0 + r, a); put(bg1, 2, CHARSEL_ROPE.l0 + r, b); });
   const { c0, l0, c1, l1, ...rope } = CHARSEL_ROPE;
   box(bg1, c0, l0, c1, l1, rope);
-  // título: recorta o texto da ROM (o nosso vai por cima) e fecha a borda de cima com titleEnds + topRight.
+  // título: deixa em branco onde a ROM tinha "Select a character!" (o nosso vai por cima, `drawCharselTitle`)
+  // e fecha a borda de cima com titleEnds + topRight.
   for (let l = CHARSEL_TITLE_TILES.l0; l <= CHARSEL_TITLE_TILES.l1; l++) {
     for (let c = CHARSEL_TITLE_TILES.c0; c <= CHARSEL_TITLE_TILES.c1; c++) put(bg1, c, l, 0);
   }
@@ -87,4 +97,14 @@ export function charselMaps(_a: RomAssets): SceneMaps {
   for (let c = CHARSEL_TITLE_TILES.c1 + 2; c < c1; c++) put(bg1, c, l0, rope.topRight);
 
   return { bg1, bg2 };
+}
+
+/** Nosso título (PT-BR) dentro do vão que a ROM deixava para "Select a character!" (`CHARSEL_TITLE_PX`, medido
+ *  na captura), centralizado — em vez da barra fixa em y=12 usada pelas telas sem cena própria. */
+export function drawCharselTitle(ctx: CanvasRenderingContext2D, bank: SpriteBank, text: string, color: string): void {
+  const img = bank.text(text, color);
+  const scale = 2;
+  const w = img.width * scale, h = img.height * scale;
+  const cx = (CHARSEL_TITLE_PX.x0 + CHARSEL_TITLE_PX.x1 + 1) / 2, cy = (CHARSEL_TITLE_PX.y0 + CHARSEL_TITLE_PX.y1 + 1) / 2;
+  ctx.drawImage(img, Math.round(cx - w / 2), Math.round(cy - h / 2), w, h);
 }
