@@ -59,7 +59,9 @@ export function moveStep(s: RoundState, p: Player, btn: number, level: number): 
   let [vx, vy] = d < 9 ? speedVec(level, d) : [0, 0];
   const txp = (X + vx) >> 8, typ = (Y + vy) >> 8;
   const tcell = cellOfPx(txp, typ);
-  if (tcell !== cell0 && !p.passBomb && ((s.grid[tcell] ?? 0) & 0xefc0) === 0xc900) return d;   // entrar em casa com bomba zera tudo
+  // Entrar em casa com bomba zera o tick. Desvio do movesim.py: o `!p.passBomb` é nosso, porque o movesim não modela
+  // o atravessa-bomba (+$4C), que no jogo deixa andar através de bombas (impossível se esta regra valesse sempre).
+  if (tcell !== cell0 && !p.passBomb && ((s.grid[tcell] ?? 0) & 0xefc0) === 0xc900) return d;
   let b86: number;
   [b82, b86] = neigh(s, p, tcell);
   ys = (typ - 8) & 15; xs = (txp - 8) & 15;

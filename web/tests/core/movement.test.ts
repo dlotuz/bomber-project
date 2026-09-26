@@ -69,6 +69,22 @@ describe('velocidade e regras', () => {
     p.passSoft = true; p.passBomb = true;
     expect([b(CODE.SOFT), b(CODE.BOMB), b(CODE.HARD)]).toEqual([false, false, true]);
   });
+  it('bomba na casa à frente: sem atravessa-bomba para no centro; com atravessa-bomba (+$4C) entra e passa', () => {
+    for (const pass of [false, true]) {
+      const s = arena(); const p = put(s, 0, 4, 1); p.passBomb = pass;
+      setCell(s, 5, 1, CODE.BOMB);
+      const ev: GameEvent[] = [];
+      for (let i = 0; i < 8; i++) moveStep(s, p, BTN.RIGHT, 1);
+      for (let i = 0; i < 12; i++) movePlayer(s, p, BTN.RIGHT, ev);
+      if (pass) {
+        expect(p.x - centerX(4)).toBe(20 * 256);
+        expect(cellAt(p.x, p.y)).toBe(C(5, 1));
+      } else {
+        expect([p.x, p.y]).toEqual([centerX(4), centerY(1)]);
+        expect(p.face).toBe(2);
+      }
+    }
+  });
   it('bomba na própria casa não prende; depois de sair não volta', () => {
     const s = arena(); const p = put(s, 0, 5, 1);
     setCell(s, 5, 1, CODE.BOMB);
