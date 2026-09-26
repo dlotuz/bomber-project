@@ -34,6 +34,14 @@ describe('colocação', () => {
     setCell(s, 4, 1, itemCode(3));
     expect(placeBomb(s, p, [])).toBe(false);
   });
+  it('M6: nem em seta (arena 7, lógico $0040) nem em pad (arena 8, lógico $0C00) — confirmado em $C1:1D65/1D79 '
+    + 'da ROM (ARROW/PAD sobrevivem à máscara $EFC0, mesmo desvio de rejeição de item/bomba)', () => {
+    const s = arena(); const p = put(s, 0, 4, 1);
+    setCell(s, 4, 1, CODE.ARROW);
+    expect(placeBomb(s, p, [])).toBe(false);
+    setCell(s, 4, 1, CODE.PAD);
+    expect(placeBomb(s, p, [])).toBe(false);
+  });
   it('doenças: $27/$28 mudam o contador; $25 fogo 10 e só com todas livres; $24 impede; fogo total = 7', () => {
     const p = arena().players[0];
     p.disease = 0x27; expect(fuseOf(p)).toBe(62);
@@ -174,7 +182,7 @@ describe('explosão', () => {
       const b = addBomb(s, 0, C(4, 1), { fuse: 0 }); b.born = 0;
       run(s, 1);
     });
-    expect(calls).toEqual([[C(5, 1), 2]]);
+    expect(calls).toEqual([[C(4, 1), -1], [C(5, 1), 2], [C(6, 1), 2], [C(4, 2), 4], [C(4, 3), 4], [C(3, 1), 6], [C(2, 1), 6]]);   // toda casa alcançada (acordo do plano 8)
     expect([codeAt(s, 5, 1), codeAt(s, 6, 1)]).toEqual([CODE.ARROW, CODE.FLAME]);
   });
   it('bombAt só acha bomba parada', () => {
