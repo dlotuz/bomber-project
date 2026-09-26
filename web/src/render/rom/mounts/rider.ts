@@ -1,4 +1,7 @@
 // Jogador montado, montando, desmontando/remontando ou dançando (T14, spec §7.4).
+// T14b: notas da dança (mont. F) e "ovo brilhando → explosão → montaria" do remonte — objetos OAM independentes
+// (não peças de RIDER_ANIMS/DANCE_ANIMS/REMOUNT_ANIMS; ver facts.ts DANCE_NOTE_ANIMS/REMOUNT_GLOW_ANIMS e o
+// relatório da T14b). Ambos são "objetos comuns" (piecePx role 'common', paleta 7), como ovo/reserva/projétil.
 import type { Player } from '../../../core/types';
 import type { RomAssets } from '../../../rom/types';
 import type { AnimFrame, Piece } from '../../../rom/types';
@@ -7,9 +10,11 @@ import type { RomPlayerHook } from '../../battle-layers';
 import { rider } from '../../../core/mounts/types';
 import {
   RIDER_ANIMS, MOUNT_ANIMS, MOUNTING_ANIMS, MOUNTING_MOUNT_ANIMS, DISMOUNT_ANIMS,
-  REMOUNT_ANIMS, REMOUNT_MOUNT_ANIMS, DANCE_ANIMS, MOUNT_GFX,
+  REMOUNT_ANIMS, REMOUNT_MOUNT_ANIMS, DANCE_ANIMS, DANCE_NOTE_ANIMS, DANCE_NOTE_TICKS,
+  DANCE_NOTE_FRAME_TICKS, REMOUNT_GLOW_ANIMS, REMOUNT_GLOW_STAGE_TICKS, MOUNT_GFX,
 } from './facts';
-import { sampleSeq, piecePx, fallbackMountFrame, COMMON_BASE_TILE } from './gfx';
+import { sampleSeq, piecePx, fallbackMountFrame, playerCellXY, COMMON_BASE_TILE } from './gfx';
+import { commonPieces } from './sprites';
 
 /** Paleta OBJ do slot do jogador (P1..P5), [ANI/spec §7.4]. */
 const PLAYER_OBJ_PAL = [0, 1, 4, 5, 6] as const;
@@ -55,7 +60,45 @@ function mountPieces(a: RomAssets, stage: number, type: number, face: 0 | 2 | 4 
   return entriesFor(a, stage, X, Y, fr, 'mount', type, pal);
 }
 
+/** Índice do quadro em `ticks` (duração medida de cada quadro, não a `dur` da própria tabela) para um `t` dado —
+ *  T14b: a captura das notas da dança começa no tick em que o jogador entra na rotina de dança, que já é alguns
+ *  ticks depois do objeto da nota ter entrado no quadro 0 da explosão (`DANCE_NOTE_FRAME_TICKS[0]` mais curto que
+ *  os outros, medido); por isso não dá para usar `sampleSeq` (que assume um `t` alinhado ao início da tabela). */
+function frameAtTicks(ticks: readonly number[], t: number): number {
+  let acc = 0;
+  for (let i = 0; i < ticks.length; i++) { acc += ticks[i]; if (t < acc) return i; }
+  return ticks.length - 1;
+}
+
+/** Anda 1 px/tick de `from` até `to` (por eixo), parando exatamente no alvo — medido no remonte (T14b): o "ovo
+ *  brilhando" fecha os 16 px de 1 casa em 16 ticks a 1 px/tick, não numa interpolação proporcional à duração do
+ *  quadro. `ticks` já deve ser 0 antes do 1º tick de movimento (então o 1º passo dá `from + 1`, como medido). */
+function step1px(from: number, to: number, ticks: number): number {
+  if (ticks <= 0 || from === to) return from;
+  const d = to - from;
+  const dist = Math.min(Math.abs(d), ticks);
+  return from + Math.sign(d) * dist;
+}
+
+/** T14b: as 3 fases do "ovo brilhando" do remonte, ancoradas só em estado do core (`r.trail`, posição atual do
+ *  jogador) — sem estado novo. Fases (medidas): brilha parado na casa de origem (`r.trail[1]`, 1 casa atrás —
+ *  mesma referência da reserva em `sprites.ts`) por `REMOUNT_GLOW_STAGE_TICKS[0]` ticks (o gráfico) enquanto
+ *  "pula" 1 px/tick até a posição do jogador (o movimento, medido à parte — continua no início da explosão até
+ *  chegar) → estoura na posição do jogador (mesma tabela usada pelas notas da dança). REMOUNT_TICKS do core (45)
+ *  já corta a fase antes do fim medido da explosão sozinho (~71 ticks na ROM) — ver relatório da T14b. */
+function remountGlowPieces(a: RomAssets, stage: number, trail: number[], t: number, X: number, Y: number): ObjEntry[] {
+  const origin = trail[1] ?? trail[0];
+  const { X: oX, Y: oY } = origin === undefined ? { X, Y } : playerCellXY(origin);
+  const [aTicks, bTicks] = REMOUNT_GLOW_STAGE_TICKS;
+  const gx = step1px(oX, X, t - aTicks + 1), gy = step1px(oY, Y, t - aTicks + 1);
+  const addr = t < aTicks ? REMOUNT_GLOW_ANIMS[0] : t < aTicks + bTicks ? REMOUNT_GLOW_ANIMS[1] : REMOUNT_GLOW_ANIMS[2];
+  const lt = t < aTicks ? t : t < aTicks + bTicks ? t - aTicks : t - aTicks - bTicks;
+  const { frame: fr } = sampleSeq(a, [addr], lt);
+  return commonPieces(a, stage, gx, gy, fr).map(m => m.e);
+}
+
 // `frame` = visualTick (5º argumento, tick do core congelado no TIME UP; sem ele, o quadro do host) — base de `actT0`/`t0` (T16).
+// T14b: notas/brilho também usam esse `frame` (visualTick), não `hostFrame` — congelam junto com o resto no TIME UP.
 export const riderHook: RomPlayerHook = (s, p, a, hostFrame, frame = hostFrame) => {
   const r = rider(p);
   const X = Math.floor(p.x / 256), Y = Math.floor(p.y / 256);
@@ -65,7 +108,14 @@ export const riderHook: RomPlayerHook = (s, p, a, hostFrame, frame = hostFrame) 
     if (p.act !== 'dance') return null;
     const t = frame - p.actT0;
     const { frame: fr } = sampleSeq(a, DANCE_ANIMS, t);
-    return charPieces(a, s.stage, p, X, Y, pal, fr);
+    const out = charPieces(a, s.stage, p, X, Y, pal, fr);
+    // T14b: notas do acerto (mont. F) — objeto próprio que nasce no tick do acerto e dura só os ticks medidos
+    // (facts.ts DANCE_NOTE_TICKS), ancorado na posição do próprio jogador dançando.
+    if (t >= 0 && t < DANCE_NOTE_TICKS) {
+      const nfr = (a.anim(DANCE_NOTE_ANIMS[0]) as AnimFrame[])[frameAtTicks(DANCE_NOTE_FRAME_TICKS, t)];
+      out.push(...commonPieces(a, s.stage, X, Y, nfr).map(m => m.e));
+    }
+    return out;
   }
 
   const mountPal = 1 + (r.slot || 1);
@@ -93,7 +143,12 @@ export const riderHook: RomPlayerHook = (s, p, a, hostFrame, frame = hostFrame) 
   if (r.remount) {
     const rf = sampleSeq(a, REMOUNT_ANIMS, t).frame;
     const mf = sampleSeq(a, REMOUNT_MOUNT_ANIMS, t).frame;
-    return [...charPieces(a, s.stage, p, X, Y, pal, rf), ...mountPieces(a, s.stage, r.type, face, step, X, Y, mountPal, mf)];
+    const out = [...charPieces(a, s.stage, p, X, Y, pal, rf), ...mountPieces(a, s.stage, r.type, face, step, X, Y, mountPal, mf)];
+    // T14b: o próprio ovo reserva "brilha" na casa de origem, "pula" até o jogador e estoura, revelando a
+    // montaria — não nasce outro objeto (facts.ts REMOUNT_GLOW_ANIMS/REMOUNT_GLOW_STAGE_TICKS). O core não guarda
+    // a posição da origem além de `r.trail` (§7.2, mesma referência usada para os reservas em sprites.ts).
+    if (t >= 0) out.push(...remountGlowPieces(a, s.stage, r.trail, t, X, Y));
+    return out;
   }
   const rf = sampleSeq(a, DISMOUNT_ANIMS, t).frame;
   return charPieces(a, s.stage, p, X, Y, pal, rf);

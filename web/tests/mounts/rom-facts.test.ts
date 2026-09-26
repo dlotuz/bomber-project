@@ -2,10 +2,12 @@ import { createHash } from 'node:crypto';
 import fx from '../fixtures/rom/mount-render.json';
 import { ASSETS, ROM, stable } from './rom-helpers';
 import { sheetFrame } from '../../src/rom/assets-char';
+import { objPx, COMMON_BASE_TILE } from '../../src/render/rom/mounts/gfx';
 import {
   RIDER_ANIMS, MOUNT_ANIMS, COSTUME_ANIMS, MOUNTING_ANIMS, MOUNTING_MOUNT_ANIMS, DISMOUNT_ANIMS, REMOUNT_ANIMS,
   REMOUNT_MOUNT_ANIMS, RESERVE_EGG_ANIMS, PROJ_ANIMS, DANCE_ANIMS, EGG_ANIMS, SHEET2, MOUNT_GFX, MOUNT_SHEET_TABLE,
-  COSTUME_SHEETS, COSTUME_SHEET_TABLE,
+  COSTUME_SHEETS, COSTUME_SHEET_TABLE, DANCE_NOTE_ANIMS, DANCE_NOTE_TICKS, DANCE_NOTE_FRAME_TICKS,
+  REMOUNT_GLOW_ANIMS, REMOUNT_GLOW_STAGE_TICKS,
 } from '../../src/render/rom/mounts/facts';
 
 const sha1 = (b: Uint8Array) => createHash('sha1').update(b).digest('hex');
@@ -45,6 +47,18 @@ describe('fixture das montarias (sem ROM)', () => {
     expect(REMOUNT_ANIMS.length * REMOUNT_MOUNT_ANIMS.length * RESERVE_EGG_ANIMS.length).toBeGreaterThan(0);
     expect(Object.keys(COSTUME_SHEETS)).toHaveLength(8);
   });
+  // T14b: notas da dança (mont. F) e "ovo brilhando → explosão → montaria" do remonte — objetos OAM
+  // independentes, não peças de DANCE_ANIMS/REMOUNT_ANIMS (ver relatório da T14/T14b).
+  it('T14b: notas da dança e brilho do remonte medidos (objetos independentes)', () => {
+    expect(DANCE_NOTE_ANIMS).toEqual([0xd8d327]);
+    expect(DANCE_NOTE_TICKS).toBeGreaterThan(0);
+    expect(DANCE_NOTE_FRAME_TICKS).toHaveLength(4);
+    for (const t of DANCE_NOTE_FRAME_TICKS) expect(t).toBeGreaterThan(0);
+    expect(REMOUNT_GLOW_ANIMS).toHaveLength(3);
+    expect(REMOUNT_GLOW_ANIMS[2]).toBe(DANCE_NOTE_ANIMS[0]);   // mesma explosão/revelação das notas
+    expect(REMOUNT_GLOW_STAGE_TICKS).toHaveLength(2);
+    for (const t of REMOUNT_GLOW_STAGE_TICKS) expect(t).toBeGreaterThan(0);
+  });
 });
 
 describe.skipIf(!ASSETS)('fatos das montarias × ROM', () => {
@@ -55,6 +69,7 @@ describe.skipIf(!ASSETS)('fatos das montarias × ROM', () => {
       ...Object.values(MOUNTING_ANIMS).flat(), ...Object.values(MOUNTING_MOUNT_ANIMS).flat(),
       ...DISMOUNT_ANIMS, ...REMOUNT_ANIMS, ...REMOUNT_MOUNT_ANIMS, ...RESERVE_EGG_ANIMS,
       ...DANCE_ANIMS, ...EGG_ANIMS, ...PROJ_ANIMS.d, ...PROJ_ANIMS.e, ...PROJ_ANIMS.f,
+      ...DANCE_NOTE_ANIMS, ...REMOUNT_GLOW_ANIMS,
     ];
     for (const a of all) {
       const anim = ASSETS!.anim(a);
@@ -94,5 +109,30 @@ describe.skipIf(!ASSETS)('fatos das montarias × ROM', () => {
       n++;
     }
     expect(n).toBeGreaterThan(700);
+  });
+
+  // T14b: notas da dança e brilho do remonte — peças medidas (fx.danceNote/fx.remountGlow) batem com
+  // ASSETS.anim(DANCE_NOTE_ANIMS[0]/REMOUNT_GLOW_ANIMS[i]) decodificado + objCommon (piece.tile + COMMON_BASE_TILE
+  // = tile OBJ absoluto medido — mesma regra do relatório da T14 para peças "extras", §"tile ≥ $100").
+  it('T14b: notas da dança e brilho do remonte decodificam e batem com o objeto medido (objCommon)', () => {
+    type FxPieceDxDy = { dx: number; dy: number; tile: number; pxSha1: string };
+    type FxSampleDxDy = { anim: number; frame: number; pieces: FxPieceDxDy[] };
+    const objCommon = ASSETS!.arena(1).objCommon;   // st_arena01, a arena da medição
+    const dn = fx.danceNote as unknown as FxSampleDxDy[];
+    const rg = fx.remountGlow as unknown as FxSampleDxDy[];
+    let n = 0;
+    for (const raw of [...stable(dn.slice(0, DANCE_NOTE_TICKS)), ...stable(rg)]) {
+      if (!raw.pieces.length) continue;
+      const decoded = ASSETS!.anim(raw.anim)[raw.frame].pieces;
+      for (const dp of decoded) {
+        const size = (dp.big ? 32 : 16) as 16 | 32;
+        const abs = dp.tile + COMMON_BASE_TILE;
+        const measured = raw.pieces.find(p => p.dx === dp.dx && p.dy === dp.dy && p.tile === abs);
+        expect(measured, `anim ${raw.anim.toString(16)} frame ${raw.frame} dx${dp.dx} dy${dp.dy}`).toBeDefined();
+        expect(measured!.pxSha1).toBe(sha1(objPx(objCommon, COMMON_BASE_TILE, dp.tile, size)));
+        n++;
+      }
+    }
+    expect(n).toBeGreaterThan(50);
   });
 });

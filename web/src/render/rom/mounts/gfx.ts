@@ -1,9 +1,10 @@
-// Utilidades de gráfico e amostragem de animação das montarias (T14, spec §7.4/§7.2, ANI §2.1).
+// Utilidades de gráfico e amostragem de animação das montarias (T14/T14b, spec §7.4/§7.2, ANI §2.1).
 import type { RomAssets, Tiles, Anim, AnimFrame, Piece } from '../../../rom/types';
 import { decodeZte } from '../../../rom/decode/zte';
 import { decodeTiles } from '../../../rom/decode/tiles';
 import { sheetFrame } from '../../../rom/assets-char';
 import { mountPix } from '../../fallback/mounts/art';
+import { colOf, linOf } from '../../../core/mounts/core-api';
 import { MOUNT_GFX } from './facts';
 
 /** As peças "comuns" (ovo/reserva/projétil, `EGG_ANIMS`/`RESERVE_EGG_ANIMS`/`PROJ_ANIMS`, e qualquer peça extra que
@@ -99,6 +100,20 @@ export function fallbackMountFrame(type: number, face: 0 | 2 | 4 | 6, step: 0 | 
   const cgram = new Uint16Array(16);
   colors.forEach((c, i) => { cgram[i + 1] = c; });
   return { px: out, colors: cgram };
+}
+
+/** X, Y (px) do ovo/objeto sentado na casa `cell` (sem o −1 dos jogadores) [spec §7.2]. Usado por `sprites.ts`
+ *  para ovo/reserva. */
+export function cellXY(cell: number): { X: number; Y: number } {
+  return { X: 16 * colOf(cell), Y: 16 * (linOf(cell) + 2) };
+}
+
+/** X, Y (px) do centro da casa `cell`, na convenção "com −1" da posição do jogador (`core/units.centerX/centerY`
+ *  ÷ 256) — T14b: medido que a origem do "ovo brilhando" do remonte segue esta convenção (não a de `cellXY`, que
+ *  é 1 px maior em cada eixo): a peça do jogo tem, nesse ponto, o pé fincado na casa como um jogador, não "sentada"
+ *  como um ovo solto na grade. */
+export function playerCellXY(cell: number): { X: number; Y: number } {
+  return { X: 16 * colOf(cell) - 1, Y: 16 * (linOf(cell) + 2) - 1 };
 }
 
 export interface SeqSample { addr: number; frame: AnimFrame }

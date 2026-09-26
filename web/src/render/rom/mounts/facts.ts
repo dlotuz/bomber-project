@@ -29,6 +29,21 @@ export const RESERVE_EGG_ANIMS: number[] = [0xd8d1f1, 0xd8d258, 0xd8d206];
 export const EGG_ANIMS: number[] = [0xd8d271];
 export const PROJ_ANIMS: Record<'d' | 'e' | 'f', number[]> = {d: [0xd80edb], e: [0xd80f93, 0xd8d327], f: [0xd80f14]};
 export const DANCE_ANIMS: number[] = [0xd81653, 0xd82a0d];
+// Notas da dança (T14b): objeto OAM independente da nota que acerta (tipo F, Y), não o jogador dançando.
+// Nasce no tick do acerto e usa esta única animação, medida com 4 quadros de 10 ticks (40 no total); depois some.
+export const DANCE_NOTE_ANIMS: number[] = [0xd8d327];
+// Ticks medidos em que o objeto da nota tem peça visível perto do jogador (0 = no próprio tick do acerto).
+export const DANCE_NOTE_TICKS: number = 39;
+// Ticks medidos de cada quadro de DANCE_NOTE_ANIMS[0] (não a duração da tabela: o quadro 0 já nasce
+// parcial, porque a captura começa no tick em que o jogador entra na rotina de dança, alguns ticks
+// depois do próprio objeto da nota já ter entrado no quadro 0 da explosão).
+export const DANCE_NOTE_FRAME_TICKS: number[] = [8, 10, 10, 10];
+// Ovo reserva "brilhando" → explosão de brilho → revelação da montaria, no remonte (T14b). É o próprio objeto
+// do ovo reserva (não nasce outro): brilha parado na casa de origem, "pula" até o jogador e estoura.
+export const REMOUNT_GLOW_ANIMS: number[] = [0xd8d23f, 0xd8d226, 0xd8d327];
+// Ticks medidos de cada um dos 2 primeiros endereços de REMOUNT_GLOW_ANIMS antes de trocar (o 3º, a explosão,
+// não tem limite próprio medido aqui — REMOUNT_TICKS do core já corta a fase antes dele se esgotar sozinho).
+export const REMOUNT_GLOW_STAGE_TICKS: number[] = [16, 15];
 export const COSTUME_ANIMS: Record<number, DirAnims[]> = {
   0: [{ walk: [0xd81513, 0xd8157a], idle: [0xd81528] }, { walk: [0xd81561], idle: [0xd81521] }, { walk: [0xd81513, 0xd8152f], idle: [0xd81513] }, { walk: [0xd81548], idle: [0xd8151a] }],
   1: [{ walk: [0xd815ac, 0xd81613], idle: [0xd815c1] }, { walk: [0xd815fa], idle: [0xd815ba] }, { walk: [0xd815ac, 0xd815c8], idle: [0xd815ac] }, { walk: [0xd815e1], idle: [0xd815b3] }],

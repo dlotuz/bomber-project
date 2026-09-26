@@ -3,9 +3,9 @@ import type { RoundState } from '../../../core/types';
 import type { RomAssets, Piece, AnimFrame } from '../../../rom/types';
 import type { ObjEntry } from '../../ppu/types';
 import { rider, type MountState } from '../../../core/mounts/types';
-import { isEggCode, colOf, linOf } from '../../../core/mounts/core-api';
+import { isEggCode } from '../../../core/mounts/core-api';
 import { EGG_ANIMS, RESERVE_EGG_ANIMS, PROJ_ANIMS } from './facts';
-import { sampleSeq, piecePx } from './gfx';
+import { sampleSeq, piecePx, cellXY } from './gfx';
 
 const EGG_PAL = 7;   // paleta comum (bomba/itens/ovos), medida pal:7 em todas as peças de ovo/reserva/projétil
 
@@ -14,9 +14,10 @@ const projectilesOf = (s: RoundState) => (s.mountState as MountState | null)?.pr
 
 export interface MountSprite { e: ObjEntry; sortY: number }
 
-/** Peças "comuns" (ovo/reserva/projétil): `piece.tile` é um número de tile literal em `objCommon` (não um quadro
- *  `g` de personagem/montaria), paleta OBJ 7 [spec §7.2]. */
-function commonPieces(a: RomAssets, stage: number, X: number, Y: number, fr: AnimFrame): MountSprite[] {
+/** Peças "comuns" (ovo/reserva/projétil, e T14b: notas da dança/brilho do remonte): `piece.tile` é um número de
+ *  tile literal em `objCommon` (não um quadro `g` de personagem/montaria), paleta OBJ 7 [spec §7.2]. Exportada
+ *  porque `rider.ts` (T14b) reaproveita para as notas/brilho, que são objetos comuns ancorados no jogador. */
+export function commonPieces(a: RomAssets, stage: number, X: number, Y: number, fr: AnimFrame): MountSprite[] {
   return fr.pieces.map((piece: Piece) => ({
     e: {
       x: X + piece.dx + fr.mx, y: Y + piece.dy + fr.my, size: (piece.big ? 32 : 16) as 16 | 32, pal: EGG_PAL, prio: 2 as const,
@@ -24,11 +25,6 @@ function commonPieces(a: RomAssets, stage: number, X: number, Y: number, fr: Ani
     },
     sortY: Y,
   }));
-}
-
-/** X, Y (px) do ovo/objeto sentado na casa `cell` (sem o −1 dos jogadores). */
-function cellXY(cell: number): { X: number; Y: number } {
-  return { X: 16 * colOf(cell), Y: 16 * (linOf(cell) + 2) };
 }
 
 export function mountRomSprites(s: RoundState, a: RomAssets, frame: number): MountSprite[] {
