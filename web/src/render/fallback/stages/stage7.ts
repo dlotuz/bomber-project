@@ -30,6 +30,17 @@ registerFallbackLayer({
       ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(5, 4); ctx.lineTo(-5, 4); ctx.closePath(); ctx.fill();
       ctx.restore();
     }
+  },
+});
+
+/** Moitas depois de bombas e jogadores (M4 da revisão final do plano 8): a ROM as desenha em BG1 com prioridade 1,
+ *  acima de OBJ (§4.6) — cobrem tudo, não só o chão ("Esconde-Explode"). No fallback (sem PPU) isso vira uma 2ª
+ *  camada com `over: true`, desenhada depois dos sprites por `drawRound`. */
+registerFallbackLayer({
+  id: 'stage7-bushes',
+  over: true,
+  draw(s, ctx) {
+    if (s.stage !== 7) return;
     ctx.save();
     ctx.globalAlpha = 0.85;
     ctx.fillStyle = '#2f7a2f';

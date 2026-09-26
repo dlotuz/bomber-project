@@ -18,9 +18,17 @@ export interface RomBattleBuilder {
 
 /** `a` é o RomAssets do plano 5 (aqui `object`; a implementação declara `a: RomAssets`). */
 export interface RomBattleLayer { id: string; draw(s: RoundState, b: RomBattleBuilder, a: object, frame: number): void }
-export interface FallbackBattleLayer { id: string; draw(s: RoundState, ctx: CanvasRenderingContext2D, bank: SpriteBank, frame: number): void }
+/** `over: true` desenha depois de bombas, flyers e jogadores, em vez de antes (plano 8, M4 da revisão final: as
+ *  moitas da arena 7 têm de esconder bombas e jogadores, não só o chão, §4.6). Ausente/false = como sempre, antes
+ *  de tudo. Genérico de propósito: o plano 9 vai reusar para desenhar a montaria por cima do cavaleiro. */
+export interface FallbackBattleLayer {
+  id: string; over?: boolean;
+  draw(s: RoundState, ctx: CanvasRenderingContext2D, bank: SpriteBank, frame: number): void;
+}
 
 export const romLayers: RomBattleLayer[] = [];
 export const fallbackLayers: FallbackBattleLayer[] = [];
+/** Camadas de fallback com `over: true` (ver `FallbackBattleLayer`); `drawRound` as desenha por último. */
+export const fallbackOverLayers: FallbackBattleLayer[] = [];
 export function registerRomLayer(l: RomBattleLayer): void { romLayers.push(l); }
-export function registerFallbackLayer(l: FallbackBattleLayer): void { fallbackLayers.push(l); }
+export function registerFallbackLayer(l: FallbackBattleLayer): void { (l.over ? fallbackOverLayers : fallbackLayers).push(l); }

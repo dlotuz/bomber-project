@@ -4,7 +4,7 @@ import { stage7Ai } from '../../src/core/ai/stages/stage7';
 import { addBomb } from '../../src/core/bombs';
 import { BTN, CODE } from '../../src/core/types';
 import { cellOf, centerX, px } from '../../src/core/units';
-import { romLayers, fallbackLayers } from '../../src/render/battle-layers';
+import { romLayers, fallbackLayers, fallbackOverLayers } from '../../src/render/battle-layers';
 import '../../src/render/rom/stages/stage7';
 import '../../src/render/fallback/stages/stage7';
 
@@ -66,10 +66,17 @@ describe('arena 7: IA e camadas', () => {
     romLayers.find(l => l.id === 'stage7')!.draw(s, b, fakeAssets(), 0);
     expect([...calls.bg2.entries()].sort()).toEqual([['12,3', 0x1cc4], ['4,3', 0x1cc2], ['4,9', 0x1cc0]]);
   });
-  it('fallback: setas e moitas', () => {
+  it('fallback: setas (camada normal, antes de bombas/jogadores)', () => {
     const a = fakeCtx();
     fallbackLayers.find(l => l.id === 'stage7')!.draw(stageArena(7), a.ctx, {} as never, 0);
     expect(a.log.filter(x => x === 'fill').length).toBeGreaterThanOrEqual(4);
+    expect(a.log.filter(x => x === 'fillRect').length).toBe(0);
+  });
+  it('fallback (M4): moitas na camada "over", desenhada depois de bombas e jogadores', () => {
+    const a = fakeCtx();
+    const bushes = fallbackOverLayers.find(l => l.id === 'stage7-bushes')!;
+    expect(bushes.over).toBe(true);
+    bushes.draw(stageArena(7), a.ctx, {} as never, 0);
     expect(a.log.filter(x => x === 'fillRect').length).toBe(36);
   });
 });
