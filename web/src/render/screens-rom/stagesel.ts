@@ -1,46 +1,159 @@
-// Reconstrução da cena `stagesel` ["Escolha a fase!", $C1:A901/$C1:A262] a partir da captura real (SB4_CAPTURES).
+// Reconstrução da cena `stagesel` ["Escolha a fase!", $C1:A901/$C1:A262] a partir de capturas reais
+// (SB4_CAPTURES) e da própria ROM.
 //
-// Confirmado por captura (ver `web/tests/screens/stage.test.ts`, describe.skipIf):
+// Confirmado por captura + desmontagem (ver `web/tests/screens/stage.test.ts`, describe.skipIf, e o
+// relatório de follow-up da T11):
 // - BG2 (quebra-cabeça de fundo) é byte a byte o mesmo padrão 6×6 dos outros menus (`MENU_GEO.bgPattern`,
 //   T5) — nenhuma cena nova precisou ser medida para o fundo.
-// - BG1 guarda 3 prévias lado a lado (anterior/atual/seguinte), cada uma num bloco de 7×7 casas (112 px) a
-//   cada 128 px (colunas 0–6, 8–14, 16–22 do mapa; 1 coluna de vão entre elas), tile16. A rolagem do jogo
-//   desloca o hofs do BG1 (não o conteúdo do mapa).
+// - `$C1:A901` é uma tabela de 8 ponteiros de 3 bytes para os blocos ZTE de gráfico (tiles) das prévias,
+//   carregados uma única vez ao entrar na tela (rotina em `$C1:A243`, 8× `JSL $C409A5`); bate byte a byte
+//   com os 8 blocos já cadastrados em `web/src/rom/catalog.ts` (cena `stagesel`) — ou seja, os tiles das 10
+//   prévias já ficam todos residentes de uma vez (`a.scene('stagesel').bgTiles`), sem recarga por fase.
+// - A rotina em `$C1:A209` copia um bloco de 7×7 casas (112 px) de `[$58]` (fonte, avança 1 palavra por
+//   casa) para `[$60],Y` (destino, uma faixa de 32 colunas — o mesmo passo de linha de um mapa de BG
+//   32×32), aplicando `AND #$E3FF` (limpa os bits de paleta 10–12) e `ORA` com a paleta desejada — a pista
+//   do Task 19. O BG1 real guarda 3+ prévias lado a lado em blocos de 128 px (colunas 0/8/16/24 do mapa,
+//   1 coluna de vão): qual fase mora em qual coluna é um buffer giratório de 4 posições, carregado sob
+//   demanda pela rolagem (não uma função pura de (fase, hofs) sem também reconstruir esse histórico).
+// - `$7F:202B` é o índice da fase atual (0–9) e `$7F:202D` = 10 (contagem de fases) — confirmado lendo a
+//   WRAM dos savestates `analise/estados/st_stage00..09.bin`.
 //
-// Não confirmado: as prévias de cada uma das 10 fases (o bloco de 7×7 acima é só o da fase 1, medido na
-// captura `stagesel`). Reconstruir as outras 9 exigiria capturar cada uma no emulador (`stage_scroll.py`) e
-// decidir como `$C1:A262` escolhe qual gráfico carregar em qual dos slots — pesquisa não concluída nesta
-// tarefa (ver o relatório da T11). `buildStageScene` aplica R29 nesse caso: repete o ícone da fase 1.
+// `STAGE_ICONS` abaixo foi extraído das 10 capturas de VRAM (uma por savestate `st_stageNN`, uma por fase
+// já centralizada), pegando o bloco de 7×7 que bate (comparação de pixels, ≥ 1 casa de vantagem clara sobre
+// as outras 3 posições do buffer giratório) com a imagem de fato mostrada na tela naquele savestate. A fase
+// 1 foi conferida contra a captura oficial já existente (`analise/extraido/graficos-formato/cenas/
+// stagesel.*`); as fases 2–10 foram conferidas contra capturas próprias desta tarefa
+// (`analise/extraido/graficos-formato/cenas/stagesel-faseNN.*`, geradas a partir dos mesmos savestates —
+// não versionadas, `analise/extraido/` está no `.gitignore`). O teste com captura cobre as 10.
 import type { RomAssets } from '../../app/rom-api';
 import { newMap, put, pattern, MENU_GEO, type SceneMaps } from './scene';
 
-/** Ícone da fase 1 (7×7 casas, tile16), medido em `$4000` col 8–14, lin 2–8 da captura `stagesel`. */
-export const STAGE1_ICON: readonly (readonly number[])[] = [
-  [0x0404, 0x0404, 0x0404, 0x0404, 0x0404, 0x0404, 0x0404],
-  [0x0404, 0x0408, 0x0408, 0x0408, 0x0408, 0x0408, 0x0404],
-  [0x0404, 0x0406, 0x0402, 0x0406, 0x0402, 0x0406, 0x0404],
-  [0x0404, 0x0406, 0x0408, 0x0406, 0x0408, 0x0406, 0x0404],
-  [0x0404, 0x0406, 0x0402, 0x0406, 0x0402, 0x0406, 0x0404],
-  [0x0404, 0x0406, 0x0406, 0x0406, 0x0406, 0x0406, 0x0404],
-  [0x0404, 0x0404, 0x0404, 0x0404, 0x0404, 0x0404, 0x0404],
-];
-/** Colunas/linha do slot central (128 px de passo, igual a `STAGE.scrollPx * STAGE.scrollFrames`). */
+/** Bloco de 7×7 casas (tile16, `vhopppcc cccccccc`) de cada fase, na ordem em que aparece centralizado. */
+export const STAGE_ICONS: Record<number, readonly (readonly number[])[]> = {
+  1: [   // captura oficial `stagesel` ($4000, col 8-14, lin 2-8)
+    [0x0404, 0x0404, 0x0404, 0x0404, 0x0404, 0x0404, 0x0404],
+    [0x0404, 0x0408, 0x0408, 0x0408, 0x0408, 0x0408, 0x0404],
+    [0x0404, 0x0406, 0x0402, 0x0406, 0x0402, 0x0406, 0x0404],
+    [0x0404, 0x0406, 0x0408, 0x0406, 0x0408, 0x0406, 0x0404],
+    [0x0404, 0x0406, 0x0402, 0x0406, 0x0402, 0x0406, 0x0404],
+    [0x0404, 0x0406, 0x0406, 0x0406, 0x0406, 0x0406, 0x0404],
+    [0x0404, 0x0404, 0x0404, 0x0404, 0x0404, 0x0404, 0x0404],
+  ],
+  2: [   // stagesel-fase02, coluna 16
+    [0x0828, 0x082a, 0x082c, 0x0828, 0x082a, 0x082c, 0x0828],
+    [0x4844, 0x0826, 0x0826, 0x0826, 0x0826, 0x0826, 0x0844],
+    [0x4846, 0x0822, 0x0820, 0x0822, 0x0820, 0x0822, 0x0846],
+    [0x4848, 0x0822, 0x0824, 0x0822, 0x0824, 0x0822, 0x0848],
+    [0x484a, 0x0822, 0x0820, 0x0822, 0x0820, 0x0822, 0x084a],
+    [0x484c, 0x0822, 0x0824, 0x0822, 0x0824, 0x0822, 0x084c],
+    [0x082e, 0x0840, 0x0842, 0x082e, 0x0840, 0x0842, 0x082e],
+  ],
+  3: [   // stagesel-fase03, coluna 24
+    [0x0c66, 0x0c8e, 0x0c8e, 0x0c8e, 0x0c8e, 0x0c8e, 0x4c66],
+    [0x0c68, 0x0c62, 0x0c62, 0x0c62, 0x0c62, 0x0c62, 0x4c68],
+    [0x0c6a, 0x0c60, 0x0c64, 0x0c60, 0x0c64, 0x0c60, 0x4c6a],
+    [0x0c6c, 0x0c60, 0x0c62, 0x0c60, 0x0c62, 0x0c60, 0x4c6c],
+    [0x0c6e, 0x0c60, 0x0c64, 0x0c60, 0x0c64, 0x0c60, 0x4c6e],
+    [0x0c80, 0x0c60, 0x0c62, 0x0c60, 0x0c62, 0x0c60, 0x4c80],
+    [0x0c82, 0x0c84, 0x0c86, 0x0c88, 0x0c8a, 0x0c8c, 0x4c82],
+  ],
+  4: [   // stagesel-fase04, coluna 0
+    [0x0124, 0x0126, 0x0126, 0x0126, 0x0126, 0x0126, 0x4124],
+    [0x0128, 0x0104, 0x0104, 0x0104, 0x0104, 0x0104, 0x4128],
+    [0x0128, 0x0104, 0x0102, 0x0104, 0x0102, 0x0104, 0x4128],
+    [0x0128, 0x0104, 0x0104, 0x0104, 0x0104, 0x0104, 0x4128],
+    [0x0128, 0x0104, 0x0102, 0x0104, 0x0102, 0x0104, 0x4128],
+    [0x0128, 0x0104, 0x0104, 0x0104, 0x0104, 0x0104, 0x4128],
+    [0x012a, 0x012e, 0x012e, 0x012e, 0x012e, 0x012e, 0x412a],
+  ],
+  5: [   // stagesel-fase05, coluna 8
+    [0x0544, 0x054a, 0x0548, 0x0546, 0x0548, 0x054a, 0x4544],
+    [0x054c, 0x0542, 0x0542, 0x0542, 0x0542, 0x0542, 0x454c],
+    [0x054e, 0x0542, 0x0540, 0x0542, 0x0540, 0x0542, 0x454e],
+    [0x0560, 0x0542, 0x0542, 0x0542, 0x0542, 0x0542, 0x4560],
+    [0x054e, 0x0542, 0x0540, 0x0542, 0x0540, 0x0542, 0x454e],
+    [0x054c, 0x0542, 0x0542, 0x0542, 0x0542, 0x0542, 0x454c],
+    [0x8544, 0x854a, 0x8548, 0x8546, 0x8548, 0x854a, 0xc544],
+  ],
+  6: [   // stagesel-fase06, coluna 16
+    [0x49a2, 0x09a0, 0x09a0, 0x09a0, 0x09a0, 0x09a0, 0x09a2],
+    [0x49a4, 0x0988, 0x0988, 0x0984, 0x0984, 0x098c, 0x09a4],
+    [0x49a6, 0x0986, 0x0980, 0x0982, 0x0980, 0x098a, 0x09a6],
+    [0x49a8, 0x0986, 0x0988, 0x098a, 0x098c, 0x098a, 0x09a8],
+    [0x49aa, 0x098a, 0x0980, 0x0982, 0x0980, 0x0982, 0x09aa],
+    [0x49ac, 0x098a, 0x098c, 0x0982, 0x0984, 0x0982, 0x09ac],
+    [0x09ae, 0x09ae, 0x09ae, 0x09ae, 0x09ae, 0x09ae, 0x09ae],
+  ],
+  7: [   // stagesel-fase07, coluna 24
+    [0x0de4, 0x0de6, 0x0de4, 0x0de6, 0x0de4, 0x0de6, 0x0de4],
+    [0x4dc8, 0x0dc2, 0x0dc2, 0x0dc2, 0x0dc2, 0x0dc2, 0x0dc8],
+    [0x4dca, 0x0dc0, 0x0dc6, 0x0dc0, 0x0dc6, 0x0dc0, 0x0dca],
+    [0x4dcc, 0x0dc0, 0x0dc2, 0x0dc0, 0x0dc2, 0x0dc0, 0x0dcc],
+    [0x4dce, 0x0dc0, 0x0dc6, 0x0dc0, 0x0dc6, 0x0dc0, 0x0dce],
+    [0x4dc8, 0x0dc0, 0x0dc2, 0x0dc0, 0x0dc2, 0x0dc0, 0x0dc8],
+    [0x0de8, 0x0dea, 0x0de8, 0x0dea, 0x0de8, 0x0dea, 0x0de8],
+  ],
+  8: [   // stagesel-fase08, coluna 0
+    [0x4208, 0x0206, 0x0200, 0x0202, 0x0204, 0x0206, 0x0208],
+    [0x422c, 0x022e, 0x022e, 0x022e, 0x022e, 0x022e, 0x022c],
+    [0x420a, 0x022e, 0x020e, 0x022e, 0x020e, 0x022e, 0x020a],
+    [0x422a, 0x022e, 0x022e, 0x022e, 0x022e, 0x022e, 0x022a],
+    [0x420c, 0x022e, 0x020e, 0x022e, 0x020e, 0x022e, 0x020c],
+    [0x422c, 0x022e, 0x022e, 0x022e, 0x022e, 0x022e, 0x022c],
+    [0x4228, 0x0226, 0x0220, 0x0222, 0x0224, 0x0226, 0x0228],
+  ],
+  9: [   // stagesel-fase09, coluna 8
+    [0x0708, 0x0700, 0x0702, 0x0700, 0x0702, 0x0700, 0x4708],
+    [0x070a, 0x0722, 0x0722, 0x0722, 0x0722, 0x0722, 0x470a],
+    [0x070c, 0x0722, 0x0720, 0x0722, 0x0720, 0x0722, 0x470c],
+    [0x070e, 0x0722, 0x0726, 0x0728, 0x072a, 0x0722, 0x470e],
+    [0x0708, 0x0722, 0x0720, 0x0722, 0x0720, 0x0722, 0x4708],
+    [0x070a, 0x0722, 0x0724, 0x0722, 0x0724, 0x0722, 0x470a],
+    [0x070c, 0x0704, 0x0706, 0x0704, 0x0706, 0x0704, 0x470c],
+  ],
+  10: [   // stagesel-fase10, coluna 16
+    [0x4b44, 0x0b4e, 0x0b4c, 0x0b60, 0x0b4c, 0x0b4e, 0x0b44],
+    [0x4b46, 0x0b40, 0x0b40, 0x0b40, 0x0b40, 0x0b40, 0x0b46],
+    [0x4b48, 0x0b40, 0x0b42, 0x0b40, 0x0b42, 0x0b40, 0x0b48],
+    [0x4b4a, 0x0b40, 0x0b40, 0x0b40, 0x0b40, 0x0b40, 0x0b4a],
+    [0x4b48, 0x0b40, 0x0b42, 0x0b40, 0x0b42, 0x0b40, 0x0b48],
+    [0x4b46, 0x0b40, 0x0b40, 0x0b40, 0x0b40, 0x0b40, 0x0b46],
+    [0xcb44, 0x8b4e, 0x8b4c, 0x8b60, 0x8b4c, 0x8b4e, 0x8b44],
+  ],
+};
+
+/** Coluna/linha do slot central (128 px de passo, igual a `STAGE.scrollPx * STAGE.scrollFrames`). */
 export const STAGE_ICON_COL = 8, STAGE_ICON_ROW = 2;
 /** Registrador de HOFS do BG1 que deixa o slot central em x = 72; `stageScreen.scroll()` soma-se a isto. */
 export const STAGE_ICON_HOFS_BASE = 56;
 
+const wrapStage10 = (n: number): number => ((n - 1 + 10) % 10) + 1;
+/** Ícone de `stage` (com volta 1↔10, para poder pedir "fase 0" = a fase 10, etc.). */
+export const iconFor = (stage: number): readonly (readonly number[])[] => STAGE_ICONS[wrapStage10(stage)];
+
 function placeIcon(m: Uint16Array, col0: number, row0: number, icon: readonly (readonly number[])[]): void {
   icon.forEach((row, gy) => row.forEach((w, gx) => put(m, col0 + gx, row0 + gy, w)));
 }
-
-/** Reconstrói os mapas de `stagesel` com `stage` no slot central. `hofs` é o mesmo valor de
- *  `stageScreen.scroll()` (0 parado); a rolagem em si é o registrador de HOFS do BG1 (`STAGE_ICON_HOFS_BASE -
- *  hofs`), não uma mudança no mapa — o parâmetro só existe para a assinatura combinar com o resto da tela. */
-export function buildStageScene(_a: RomAssets, _stage: number, hofs = 0): SceneMaps {
-  void hofs;
+function puzzleBg(): Uint16Array {
   const bg2 = newMap();
   pattern(bg2, 0, 0, 32, 32, MENU_GEO.bgPattern);
+  return bg2;
+}
+
+/** Reconstrói os mapas de `stagesel` com `stage` sozinho no slot central (usado pelo teste com captura). */
+export function buildStageScene(_a: RomAssets, stage: number, hofs = 0): SceneMaps {
+  void hofs;
   const bg1 = newMap();
-  placeIcon(bg1, STAGE_ICON_COL, STAGE_ICON_ROW, STAGE1_ICON);   // R29: só a fase 1 foi reconstruída da captura
-  return { bg1, bg2 };
+  placeIcon(bg1, STAGE_ICON_COL, STAGE_ICON_ROW, iconFor(stage));
+  return { bg1, bg2: puzzleBg() };
+}
+
+/** Os 3 ícones visíveis ao vivo (anterior/atual/seguinte), lado a lado como no jogo, prontos para o BG1
+ *  rolar por baixo (`hofs = STAGE_ICON_HOFS_BASE - stageScreen.scroll()`). */
+export function buildStagePreviewStrip(_a: RomAssets, stage: number): SceneMaps {
+  const bg1 = newMap();
+  placeIcon(bg1, STAGE_ICON_COL - 8, STAGE_ICON_ROW, iconFor(stage - 1));
+  placeIcon(bg1, STAGE_ICON_COL, STAGE_ICON_ROW, iconFor(stage));
+  placeIcon(bg1, STAGE_ICON_COL + 8, STAGE_ICON_ROW, iconFor(stage + 1));
+  return { bg1, bg2: puzzleBg() };
 }
