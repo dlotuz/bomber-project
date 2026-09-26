@@ -4,8 +4,10 @@ import { parseConfig } from '../../src/game/config';
 import { BTN, matchRngState } from '../../src/game/core-api';
 import { forceWin, runUntil, skipIntro } from './core-helpers';
 import { mkApp, tap, idle, settle } from './helpers';
-import { victoryGeometry } from '../../src/render/screens-rom/victory';
-import { loadCapture, capturedMap, mapMatch } from './captures';
+import { championDrawOrder, victoryGeometry, victoryMaps } from '../../src/render/screens-rom/victory';
+import { loadCapture, capturedMap, mapMatch, type Rect } from './captures';
+import { ASSETS } from './rom';
+import type { SpriteBank } from '../../src/render/sprite-bank';
 
 beforeEach(() => resetCarry());
 function champ(q = '?players=3&humans=1&matches=1') {
@@ -60,14 +62,66 @@ describe('VITÓRIA (§6.12)', () => {
   });
 });
 
-// Teste de captura (A14): a geometria do BG2 (checkerboard + moldura de cima) bate a cena `victory` capturada em
-// `analise/extraido/graficos-formato/cenas`, fora do texto (aqui, nenhum: "VITÓRIA!" não faz parte do mapa da ROM,
-// é OBJ/texto nosso). `victoryGeometry` não depende de `RomAssets` (mapa medido, A14 pendente da T19 para a
-// origem exata na ROM — `sceneMaps` prioriza `MAP_SOURCES.victory` quando ela existir).
+// Fix round 1: em Em Equipes, todos os campeões do time ficam sobre o troféu com `champions[0]` por cima —
+// quem desenha por último fica na frente, então a ordem de desenho tem de ser a inversa de `ms.champions`.
+describe('campeões sobre o troféu em Em Equipes (fix round 1)', () => {
+  it('championDrawOrder inverte (o [0] desenha por último = por cima)', () => {
+    expect(championDrawOrder([3, 1])).toEqual([1, 3]);
+    expect(championDrawOrder([2, 0, 4])).toEqual([4, 0, 2]);
+  });
+
+  it('draw(): com 2+ campeões, o slot de champions[0] é desenhado por último (fica por cima)', () => {
+    const env = mkApp();
+    const ms = createMatchSession(parseConfig('?players=4&humans=1&matches=1&mode=team'));
+    ms.champions = [3, 1];   // champions[0] = slot 3: tem de ficar por cima (desenhado por último)
+    const v = victoryScreen(env.app, ms, 557);
+    env.app.go(v);
+    idle(env.app, 227);   // s = 557 + 226 = 783 = VICTORY.jumpAt: campeões já subiram no troféu
+    expect(v.championOnTrophy()).toBe(true);
+
+    const calls: string[] = [];
+    const bank = {
+      bomber: (ch: number) => { const tag = `b${ch}`; return { width: 32, height: 40, tag }; },
+      text: () => ({ width: 0, height: 0, tag: 't' }),
+      trophy: () => ({ width: 48, height: 48, tag: 'trophy' }),
+    } as unknown as SpriteBank;
+    const ctx = {
+      fillStyle: '', save() {}, restore() {}, translate() {}, fillRect() {},
+      drawImage(img: { tag?: string }) { if (img?.tag) calls.push(img.tag); },
+    } as unknown as CanvasRenderingContext2D;
+    env.app.screen.draw(ctx, bank, 0);
+
+    const char3 = ms.cfg.chars[3], char1 = ms.cfg.chars[1];
+    const idx3 = calls.lastIndexOf(`b${char3}`), idx1 = calls.lastIndexOf(`b${char1}`);
+    expect(idx3).toBeGreaterThan(-1); expect(idx1).toBeGreaterThan(-1);
+    expect(idx3).toBeGreaterThan(idx1);
+  });
+});
+
 describe('geometria da cena victory (captura, A14)', () => {
   const cap = loadCapture('victory');
-  it.skipIf(!cap)('BG2 bate a captura ≥ 97 % fora do texto', () => {
+
+  // `victoryGeometry` é a geometria própria (medida na captura), usada só quando `MAP_SOURCES.victory` não
+  // existir (T19). "VITÓRIA!" não faz parte do mapa da ROM (é o nosso texto, por cima) — sem casas para ignorar.
+  it.skipIf(!cap)('victoryGeometry (reserva): BG2 bate a captura ≥ 97 % fora do texto', () => {
     const maps = victoryGeometry({} as never);
     expect(mapMatch(maps.bg2!, capturedMap(cap!, 0x4400))).toBeGreaterThanOrEqual(0.97);
+  });
+
+  // Com a T19 mesclada, `victoryMaps` (usada de fato pela tela) resolve pelo descritor real da ROM
+  // ($C2:9C17). O miolo do xadrez (colunas 3–14, linhas 4–13) tem uma animação de cor/tile periódica
+  // [§7.1] que a captura mostra num instante e o descritor decodifica no estado-base — por isso ele fica de
+  // fora da comparação; a moldura de cima e as bordas batem 100 %.
+  describe.skipIf(!ASSETS)('victoryMaps (de verdade, com a ROM)', () => {
+    const CHECKERBOARD_INTERIOR: Rect = { x0: 48, y0: 64, x1: 239, y1: 223 };
+    it.skipIf(!cap)('BG2 bate a captura ≥ 97 % fora do miolo animado', () => {
+      const maps = victoryMaps(ASSETS!);
+      expect(mapMatch(maps.bg2!, capturedMap(cap!, 0x4400), [CHECKERBOARD_INTERIOR])).toBeGreaterThanOrEqual(0.97);
+    });
+    it('não sobra nenhuma casa do logotipo "VICTORY!" original no BG1 (paleta 6, T18/T19)', () => {
+      const maps = victoryMaps(ASSETS!);
+      const withEnglishTitle = maps.bg1 ? Array.from(maps.bg1).some(w => w !== 0 && ((w >> 10) & 7) === 6) : false;
+      expect(withEnglishTitle).toBe(false);
+    });
   });
 });

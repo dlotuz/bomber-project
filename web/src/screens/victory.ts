@@ -12,14 +12,16 @@ import { S } from '../render/text/strings';
 import { drawScoreboard } from './scoreboard';
 import { racerScreen } from './racer';
 import { stageScreen } from './stage';
-import { PpuCanvas, sceneFrame, sceneGfx, sceneMaps } from '../render/screens-rom/scene';
-import { TROPHY_TOP_Y, TROPHY_X0, drawCharAnim, victoryGeometry, victoryOam } from '../render/screens-rom/victory';
+import { PpuCanvas, sceneFrame, sceneGfx } from '../render/screens-rom/scene';
+import { TROPHY_TOP_Y, TROPHY_X0, championDrawOrder, drawCharAnim, victoryMaps, victoryOam } from '../render/screens-rom/victory';
 
 /** `D8:2A81` (corredores, "palmas") e `C3:E7F7` (campeão sobre o troféu, folha `victoryFrame`) [§7.4]. */
 const RUN_ANIM = 0xd82a81, CHAMP_ANIM = 0xc3e7f7;
 /** Chão da cena (âncora do pé dos corredores) e plataforma do troféu (âncora do campeão), em y local da cena. */
 const GROUND_Y = 224, TROPHY_CENTER_X = TROPHY_X0 + 24;
-const TEXT_Y = 24;
+/** Topo do logotipo original "VICTORY!" no BG1 medido em `victory.vram` (linha 2 do mapa × 16 px):
+ *  "VITÓRIA!" entra na mesma altura em que o original ficava. */
+const TEXT_Y = 32;
 
 const lerp = (from: number, to: number, t0: number, t1: number, now: number): number =>
   Math.round(from + (to - from) * Math.min(1, Math.max(0, (now - t0) / (t1 - t0))));
@@ -67,7 +69,7 @@ export function victoryScreen(app: App, ms: MatchSession, startS: number): Scree
   const champions = ms.champions;
   const ppu = new PpuCanvas();
 
-  const cameraY = (): number => 2 * Math.min(SCORE.descentFrames, Math.max(0, s - SCORE.descentAt));
+  const cameraY = (): number => SCORE.descentSpeed * Math.min(SCORE.descentFrames, Math.max(0, s - SCORE.descentAt));
   const textX = (): number | null => {
     if (s < VICTORY.textFrom) return null;
     const target = 128 - Math.floor(textWidth('bigVictory', S.victory.title) / 2);
@@ -103,7 +105,7 @@ export function victoryScreen(app: App, ms: MatchSession, startS: number): Scree
       drawScoreboard(ctx, bank, ms, s, -camY);
       const a = romState.assets;
       if (a) {
-        const f = sceneFrame(sceneGfx(a, 'victory'), sceneMaps(a, 'victory', victoryGeometry), { oam: victoryOam() });
+        const f = sceneFrame(sceneGfx(a, 'victory'), victoryMaps(a), { oam: victoryOam() });
         ppu.draw(ctx, f, yTop);
       }
       ctx.save();
@@ -121,7 +123,10 @@ export function victoryScreen(app: App, ms: MatchSession, startS: number): Scree
       });
       if (jumped) {
         const n = champions.length;
-        champions.forEach((slot, i) => {
+        // champions[0] fica por cima (Em Equipes, todos sobem no troféu): desenha por último = campeões em
+        // ordem inversa (championDrawOrder), mas o deslocamento em x usa a posição original `i` em `champions`.
+        championDrawOrder(champions).forEach(slot => {
+          const i = champions.indexOf(slot);
           const x = TROPHY_CENTER_X + (i - (n - 1) / 2) * 14;
           drawPerson(ctx, bank, a, ms.cfg.chars[slot], slot, CHAMP_ANIM, (as, c) => g => as.character(c).victoryFrame(g),
             x, TROPHY_TOP_Y, frame, 2, `c${slot}`);
