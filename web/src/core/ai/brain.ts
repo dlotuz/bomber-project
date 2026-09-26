@@ -1,19 +1,29 @@
 // Decisões da IA (porte do legado): fugir → item → bomba com fuga garantida → caçar/blocos → passear.
 import { CODE, DISEASE, type Bomb, type Player, type RoundState } from '../types';
-import { CELLS, cellAt, colOf, faceStep, inField, linOf } from '../units';
+import { CELLS, colOf, faceStep, inField, linOf } from '../units';
 import { isEggCode, isItemCode, playerCell, standing } from '../state';
 import { bombFireOf, canPlaceBomb, fuseOf } from '../bombs';
 import { rangeOf } from '../constants';
 import { STAGES } from '../stages';
 import { MOUNTS } from '../mounts';
-import { SAFE, crossCells, hazards, type Extra, type Hazard } from './danger';
-import { centered, escape, hasRefuge, route, search, ticksPerCell, type Route } from './nav';
+import { SAFE, crossCells, hazards, pressureCells, type Extra, type Hazard } from './danger';
+import { kickWorth } from './actions';
+import { centered, escape, hasRefuge, lockOf, route, search, ticksPerCell, walkBlocked, type Route } from './nav';
 import { aiRoll, type AiLevel } from './level';
 
-/** `go[k]`: tick (absoluto) a partir do qual pode andar rumo a `path[k]` (espera chamas passarem). */
-export interface Brain { path: number[]; go: number[]; bomb: boolean; nextThink: number }
+export { walkBlocked } from './nav';
 
-export function newBrain(): Brain { return { path: [], go: [], bomb: false, nextThink: 0 }; }
+/** `go[k]`: tick (absoluto) a partir do qual pode andar rumo a `path[k]` (espera chamas passarem). `push`: face a
+ *  apertar para chutar a bomba vizinha (-1 = nenhuma). `liftAt`: tick em que apertou A para levantar com a luva
+ *  (-1 = nenhum). `still`: a ação deste tick precisa da CPU parada (sem direção). `seed`: semente do aiRoll. */
+export interface Brain {
+  path: number[]; go: number[]; bomb: boolean; nextThink: number; push: number; liftAt: number; still: boolean;
+  seed: number;
+}
+
+export function newBrain(seed = 0): Brain {
+  return { path: [], go: [], bomb: false, nextThink: 0, push: -1, liftAt: -1, still: false, seed };
+}
 
 /** Quantas casas candidatas (as mais próximas perto de adversários) a caça testa por decisão. */
 const HUNT_TRIES = 3;
@@ -21,6 +31,10 @@ const HUNT_TRIES = 3;
 const HUNT_NEAR = 6;
 /** Na pressão, uma bomba a até esta distância de um adversário conta como útil. */
 const PRESS_NEAR = 3;
+/** Até quantas casas a CPU anda para chutar uma bomba que encurrala um adversário. */
+const KICK_WALK = 4;
+/** Chegando atrás da bomba para chutá-la, folga mínima (ticks) antes de a casa explodir. */
+const KICK_SLACK = 24;
 /** Na pressão, folga máxima exigida na fuga da própria bomba (arrisca mais para decidir a rodada). */
 const LATE_MARGIN = 2;
 
@@ -42,15 +56,6 @@ export function bombTypeOf(p: Player): 0 | 1 | 2 {
 /** Bomba hipotética de `p` em `cell`, solta `after` ticks depois do próximo (pavio com as caveiras $27/$28). */
 function extraOf(p: Player, cell: number, after = 0): Extra {
   return { cell, fire: bombFireOf(p), pierce: bombTypeOf(p) === 2, t: fuseOf(p) + 1 + after };
-}
-
-/** Bloqueios extras para andar: bombas deslizando e casas que a arena manda evitar. */
-export function walkBlocked(s: RoundState, p: Player): Set<number> {
-  const out = new Set<number>();
-  for (const b of s.bombs) if (b.state === 'kicked') { const c = cellAt(b.x, b.y); if (c >= 0) out.add(c); }
-  const avoid = STAGES[s.stage]?.ai?.avoid?.(s, p.slot);
-  if (avoid) for (const c of avoid) out.add(c);
-  return out;
 }
 
 /** Casas ocupadas por adversários de `p` (alvos da caça). */
@@ -129,17 +134,20 @@ function waryEscape(s: RoundState, p: Player, cell: number, blocked: ReadonlySet
 /** Caveira no chão ($0980+id). */
 const isSkull = (v: number): boolean => isItemCode(v) && !isEggCode(v) && (v & 0xff) >= 0x80;
 
-/** Vale a pena ir buscar o que está na casa (item bom, ovo, alvo da arena)? */
-function wanted(s: RoundState, p: Player, c: number, goals: ReadonlySet<number>): boolean {
+/** Peso de ir buscar o que está na casa: 0 = não vale; 1 = item bom; ovo = `eggValue` da montaria. */
+function worth(s: RoundState, p: Player, c: number): number {
   const v = s.grid[c];
-  if (isEggCode(v)) return (MOUNTS.current.ai?.eggValue?.(s, p.slot, c) ?? 0) > 0;
-  if (isItemCode(v)) return !isSkull(v);
-  return goals.has(c);
+  if (isEggCode(v)) return Math.max(0, MOUNTS.current.ai?.eggValue?.(s, p.slot, c) ?? 0);
+  return isItemCode(v) && !isSkull(v) ? 1 : 0;
 }
+/** Quantos ticks de caminho a mais valem 1 ponto de peso de um ovo. */
+const EGG_TICKS = 16;
+/** Na pressão, uma casa cujo bloco pousa mais de 120 ticks depois da chegada ainda serve de destino (§9.8). */
+const PRESSURE_DEST = 120;
 
 /** Decide o que fazer: caminho a seguir e se coloca bomba agora. */
 export function think(s: RoundState, p: Player, level: AiLevel, brain: Brain, _ai?: unknown): void {
-  brain.bomb = false;
+  brain.bomb = false; brain.push = -1;
   const here = playerCell(p);
   if (here < 0) { brain.path = []; brain.go = []; return; }
   const hz = hazards(s, p.slot);
@@ -148,7 +156,11 @@ export function think(s: RoundState, p: Player, level: AiLevel, brain: Brain, _a
   const late = s.pressure.trigger >= 0;
   const foes = level.hunt || late ? foeCells(s, p) : new Set<number>();
   const trap = level.trap || (level.hunt && late);
-  const roll = aiRoll(s.tick, p.slot, 1);
+  const roll = aiRoll(s.tick, p.slot, 1, brain.seed);
+  // travado (golpe P, arremesso, atordoado...): só planeja, contando o tempo parado; bomba só destravado
+  const lock = lockOf(p);
+  // prisão de ventre ($24) e fogo mínimo ($25): não planeja bombas
+  const noBombs = p.disease === DISEASE.CONSTIPATION || p.disease === DISEASE.LOW_FIRE;
   const follow = (r: Route | null): void => {
     brain.path = r ? r.path : [];
     brain.go = r ? r.go.map(t => s.tick + t) : [];
@@ -157,7 +169,29 @@ export function think(s: RoundState, p: Player, level: AiLevel, brain: Brain, _a
   // 1) fugir (também no meio de um passo: a busca parte da posição real)
   if (hz.at[here] !== SAFE) {
     if (roll < level.mistake) { follow(null); return; }   // hesitou
-    follow(escape(s, p, hz, blocked, level, false, 0));
+    // chute que encurrala ou pega um adversário (a bomba vizinha põe a casa atual em perigo: acontece aqui)
+    if (foes.size && centered(s, p) && roll >= level.mistake) {
+      for (const aim of ['trap', 'hit'] as const) {
+        for (const face of [0, 2, 4, 6]) if (kickWorth(s, p, face, level, aim)) { follow(null); brain.push = face; return; }
+      }
+    }
+    const out = escape(s, p, hz, blocked, level, true, lock);
+    // fugindo, mais uma bomba aqui se for útil (ou encurralar) e a fuga continuar garantida com ela
+    if (out && !lock && level.hunt && !noBombs && centered(s, p) && canPlaceBomb(p) && p.carry < 0 && s.grid[here] === CODE.FLOOR
+      && !blocked.has(here) && enemiesNear(s, p, here)) {
+      const useful = bombUseful(s, p, here, foes) || (late && foeWithin(s, p, here, PRESS_NEAR));
+      const b = tryBomb(s, p, here, hz, blocked);
+      if ((useful || (trap && b.traps)) && !b.hurtsMate) {
+        const lv = late ? { ...level, margin: Math.min(level.margin, LATE_MARGIN) } : level;
+        const out2 = escape(s, p, b.hz, b.blocked, lv, true, 1);
+        if (out2 && out2.path.length > 0) { brain.bomb = true; follow(out2); return; }
+      }
+    }
+    // sem fuga garantida: chutar uma bomba vizinha pode abri-la (o soco é decidido em decideActions)
+    if (!out && centered(s, p)) {
+      for (const face of [0, 2, 4, 6]) if (kickWorth(s, p, face, level, 'rescue')) { follow(null); brain.push = face; return; }
+    }
+    follow(out ?? escape(s, p, hz, blocked, level, false, lock));
     return;
   }
 
@@ -170,18 +204,46 @@ export function think(s: RoundState, p: Player, level: AiLevel, brain: Brain, _a
   // sem pressa, não pisa em caveira (nem para buscar item nem na fuga da própria bomba)
   const calm = new Set(blocked);
   for (let i = 0; i < CELLS; i++) if (isSkull(s.grid[i])) calm.add(i);
-  const sr = search(s, p, hz, calm, level.margin, 0);
-  // alvos (itens, casas para bomba, passeio) só em casas sem perigo nenhum previsto
-  const target = (i: number): boolean => sr.time[i] >= 0 && hz.at[i] === SAFE;
+  const sr = search(s, p, hz, calm, level.margin, lock);
+  // alvos (itens, casas para bomba, passeio) só em casas sem perigo previsto; a pressão só conta se o bloco pousa em
+  // até 120 ticks depois da chegada
+  const pc = late ? pressureCells(s) : null;
+  const target = (i: number): boolean => {
+    if (sr.time[i] < 0) return false;
+    if (hz.at[i] === SAFE) return true;
+    const land = pc?.get(i);
+    return land !== undefined && hz.at[i] === land + 1 && land - sr.time[i] > PRESSURE_DEST;
+  };
 
-  // 2) item perto
-  const goals = new Set(STAGES[s.stage]?.ai?.goals?.(s, p.slot) ?? []);
-  let bestItem = -1;
-  for (let i = 0; i < CELLS; i++) {
-    if (sr.time[i] < 0 || !wanted(s, p, i, goals) || !target(i) || sr.dist[i] > 6) continue;
-    if (bestItem < 0 || sr.time[i] < sr.time[bestItem]) bestItem = i;
+  // 2) objetivos da arena (sem limite de distância) e item/ovo perto
+  const goals = STAGES[s.stage]?.ai?.goals?.(s, p.slot) ?? [];
+  let bestItem = -1, bestScore = 0;
+  for (const i of goals) {
+    if (i === here || !target(i)) continue;
+    if (bestItem < 0 || sr.time[i] < bestScore) { bestItem = i; bestScore = sr.time[i]; }
+  }
+  if (bestItem < 0) {
+    for (let i = 0; i < CELLS; i++) {
+      if (sr.time[i] < 0 || sr.dist[i] > 6 || !target(i)) continue;
+      const w = worth(s, p, i);
+      if (w <= 0) continue;
+      const score = sr.time[i] - (w - 1) * EGG_TICKS;
+      if (bestItem < 0 || score < bestScore) { bestItem = i; bestScore = score; }
+    }
   }
   if (bestItem >= 0 && bestItem !== here && roll >= level.mistake) { follow(route(sr, bestItem)); return; }
+
+  // 2b) doente: vai ao encontro do adversário sem doença mais próximo para passá-la no contato (sem soltar bombas)
+  if (p.disease) {
+    let best = -1;
+    for (const q of standingPlayers(s)) {
+      if (q === p || mate(s, p, q) || q.disease) continue;
+      const qc = playerCell(q);
+      if (qc === here || !target(qc)) continue;
+      if (best < 0 || sr.time[qc] < sr.time[best]) best = qc;
+    }
+    if (best >= 0) { follow(route(sr, best)); return; }
+  }
 
   // 3) bomba aqui, se for útil e der para fugir dela pela busca estrita. Estamos centrados: ela cai nesta casa. Neste
   //    tick só solta a bomba; a fuga começa no seguinte (delay 1). Fora da pressão, nunca com outro jogador com Luva
@@ -193,7 +255,7 @@ export function think(s: RoundState, p: Player, level: AiLevel, brain: Brain, _a
     if (q.glove && qc === here) return true;
     return (q.kick || !!MOUNTS.current.kicks?.(q)) && faceStep(qc, q.face) === here;
   });
-  const canPlace = canPlaceBomb(p) && p.carry < 0 && s.grid[here] === CODE.FLOOR && !blocked.has(here) && !crowded;
+  const canPlace = !lock && !noBombs && canPlaceBomb(p) && p.carry < 0 && s.grid[here] === CODE.FLOOR && !blocked.has(here) && !crowded;
   if (canPlace) {
     // na pressão, bomba colada num adversário também vale (fecha refúgios); e ninguém fica só na defensiva (`wary`)
     const useful = bombUseful(s, p, here, foes) || (late && foeWithin(s, p, here, PRESS_NEAR));
@@ -209,10 +271,31 @@ export function think(s: RoundState, p: Player, level: AiLevel, brain: Brain, _a
     }
   }
 
+  // 3b) chutar uma bomba vizinha que encurrala um adversário ou que, parada pelo X em algum ponto do trajeto, o pega
+  if (foes.size && roll >= level.mistake) {
+    for (const aim of ['trap', 'hit'] as const) {
+      for (const face of [0, 2, 4, 6]) if (kickWorth(s, p, face, level, aim)) { follow(null); brain.push = face; return; }
+    }
+    // 3c) ir até atrás de uma bomba parada cujo chute encurralaria um adversário
+    if (p.kick || MOUNTS.current.kicks?.(p)) {
+      let best = -1;
+      for (const b of s.bombs) {
+        if (b.state !== 'idle' || b.chainAt || s.grid[b.cell] !== CODE.BOMB) continue;
+        for (const face of [0, 2, 4, 6]) {
+          const k = faceStep(b.cell, (face + 4) & 7);
+          if (k === here || sr.time[k] < 0 || sr.dist[k] > KICK_WALK || hz.at[k] - sr.time[k] < KICK_SLACK
+            || (best >= 0 && sr.time[k] >= sr.time[best])) continue;
+          if (kickWorth(s, p, face, level, 'trap', k)) best = k;
+        }
+      }
+      if (best >= 0) { follow(route(sr, best)); return; }
+    }
+  }
+
   // 4) andar até uma casa de onde uma bomba seria útil: a mais próxima; caçando, antes uma das mais próximas
   //    que encurrale um adversário
   const spots: number[] = [];
-  for (let i = 0; i < CELLS; i++) {
+  for (let i = 0; !noBombs && i < CELLS; i++) {
     if (i !== here && target(i) && bombUseful(s, p, i, foes)) spots.push(i);
   }
   spots.sort((a, b) => sr.time[a] - sr.time[b] || a - b);
@@ -244,7 +327,7 @@ export function think(s: RoundState, p: Player, level: AiLevel, brain: Brain, _a
     const i = faceStep(here, face);
     if (inField(colOf(i), linOf(i)) && target(i) && sr.dist[i] === 1) options.push(i);
   }
-  follow(options.length ? route(sr, options[aiRoll(s.tick, p.slot, 2) % options.length]) : null);
+  follow(options.length ? route(sr, options[aiRoll(s.tick, p.slot, 2, brain.seed) % options.length]) : null);
 }
 
 /** Remota mais antiga de `p` ainda sem cadeia (a que o botão B detona). */

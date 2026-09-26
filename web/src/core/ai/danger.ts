@@ -94,17 +94,31 @@ function scriptOf(f: Flyer): Script {
   return THROW[Number(f.flight.slice(5)) as 2 | 3 | 4 | 5][f.dir];
 }
 
+/** Percorre o resto do script a partir de (x, y, passo i) com a volta pela borda: ponto de pouso. */
+function runScript(x: number, y: number, dir: number, sc: Script, i: number): { x: number; y: number; n: number } {
+  let n = 0;
+  for (; i < sc.length; i++, n++) {
+    const [dx, dy] = sc[i];
+    x += dx * SUB; if (dir === 0 || dir === 2) y += dy * SUB;
+    const col = colAt(x), lin = linAt(y);
+    if (col > 16) x -= WRAP_X; else if (col < 0) x += WRAP_X;
+    if (lin > 12) y -= WRAP_Y; else if (lin < 0) y += WRAP_Y;
+  }
+  return { x, y, n };
+}
+
+/** Casa do 1º pouso (antes de qualquer quique) de um voo `flight` saindo de (x, y) na direção `dir` (0..3). */
+export function firstLanding(x: number, y: number, dir: 0 | 1 | 2 | 3, flight: Flyer['flight']): number {
+  const r = runScript(x, y, dir, scriptOf({ flight, dir, script: 0 } as Flyer), 0);
+  return cellAt(r.x, r.y);
+}
+
 /** Casa e offset (passo de objetos) de pouso de um voador (até 8 quiques, regras de T8). */
 export function flightEnd(s: RoundState, f: Flyer): { cell: number; t: number } {
   let x = f.x, y = f.y, i = f.i, sc = scriptOf(f), t = 0;
   for (let bounces = 0; bounces <= 8; bounces++) {
-    for (; i < sc.length; i++, t++) {
-      const [dx, dy] = sc[i];
-      x += dx * SUB; if (f.dir === 0 || f.dir === 2) y += dy * SUB;
-      const col = colAt(x), lin = linAt(y);
-      if (col > 16) x -= WRAP_X; else if (col < 0) x += WRAP_X;
-      if (lin > 12) y -= WRAP_Y; else if (lin < 0) y += WRAP_Y;
-    }
+    const r = runScript(x, y, f.dir, sc, i);
+    x = r.x; y = r.y; t += r.n;
     const cell = cellAt(x, y);
     const v = cell >= 0 && inField(colOf(cell), linOf(cell)) ? s.grid[cell] : CODE.HARD;
     const player = s.players.some(q => standing(q) && playerCell(q) === cell);
