@@ -1,100 +1,150 @@
-import { BTN } from '../core';
+import { BTN } from '../game/core-api';
 import type { App, Screen } from '../app/app';
+import { Repeater, DIRS } from '../input/repeat';
+import { SFX } from '../app/audio';
+import { FADE_MENU } from '../app/fade';
 import { CHARACTERS } from '../render/art/bomber';
 import { displayName } from '../game/config';
-import { COLORS, PLAYER_COLORS, drawBackground, drawFooter, drawPanel, drawText, drawTitleBar } from './ui';
+import { CHARSEL_GRID, CHARSEL_PORTRAIT } from '../render/screens-rom/charsel';
+import { COLORS, PLAYER_COLORS, drawFallbackFrame, drawFooter, drawStaticBackground, drawText, drawTitleBar } from './ui';
 import { rulesScreen } from './rules';
 import { stageScreen } from './stage';
+import { teamsScreen } from './teams';
 
-const COLS = 3;
-const ROWS = 2;
-export const AUTO_ADVANCE_FRAMES = 90;
-const GRID_X = 100, GRID_Y = 42, CELL_W = 48, CELL_H = 66;
+const { cols: COLS, rows: ROWS } = CHARSEL_GRID;
+/** Moldura do fallback (spec §6.14), medida como as demais telas de menu. */
+const FRAME = { x0: 27, y0: 35, x1: 224, y1: 188 };
 
-/** "Escolha um personagem": cada jogador humano move o próprio cursor com o próprio controle. */
-export function charactersScreen(app: App): Screen & { readonly locked: readonly boolean[] } {
+/**
+ * "Escolha um personagem" (§6.6, R13, R32). Cada humano com dispositivo escolhe o próprio, sozinho e ao mesmo
+ * tempo; os outros ativos (CPUs e humanos sem dispositivo) entram numa fila que o "controlador" (o 1º humano com
+ * dispositivo) decide depois de confirmar o próprio — ou, sem controlador nenhum, qualquer controle decide por
+ * todos. B de qualquer controle, a qualquer momento, volta para as regras.
+ */
+export function charactersScreen(app: App): Screen & {
+  charOf(i: number): number;
+  readonly confirmed: readonly boolean[];
+  readonly controlling: number | null;
+  readonly controller: number | null;
+} {
   const setup = app.settings.setup;
-  const human = (i: number) => setup.slots[i] === 'human';
-  // CPUs, desligados e humanos sem controle já começam prontos.
-  const locked = [0, 1, 2, 3, 4].map(i => !human(i) || app.settings.devices[i] === 'none');
-  let readyFrames = 0;
+  const active = (i: number): boolean => setup.slots[i] !== 'off';
+  const human = (i: number): boolean => setup.slots[i] === 'human';
+  const selfPicking = (i: number): boolean => human(i) && app.settings.devices[i] !== 'none';
 
-  const moveCursor = (i: number, p: number) => {
+  const activeIdx = [0, 1, 2, 3, 4].filter(active);
+  const controller = activeIdx.find(selfPicking) ?? null;
+  const queue = activeIdx.filter(i => !selfPicking(i));
+  const confirmed = [0, 1, 2, 3, 4].map(i => !active(i));
+
+  const reps = new Map<number, Repeater>();
+  for (const i of activeIdx) if (selfPicking(i)) reps.set(i, new Repeater(20, 5));
+  const anyRep = new Repeater(20, 5);
+
+  /** ←/→ dão a volta nas 3 colunas; ↑/↓ trocam a linha (spec §6.6). */
+  const moveCursor = (i: number, p: number): void => {
+    if (!p) return;
     const c = setup.chars[i];
     const col = c % COLS, row = Math.floor(c / COLS);
     if (p & BTN.LEFT) setup.chars[i] = row * COLS + (col + COLS - 1) % COLS;
     if (p & BTN.RIGHT) setup.chars[i] = row * COLS + (col + 1) % COLS;
     if (p & (BTN.UP | BTN.DOWN)) setup.chars[i] = ((row + 1) % ROWS) * COLS + col;
+    app.audio.sfx(SFX.move);
+  };
+
+  /** Sem controlador confirmado ainda: ninguém decide pela fila. Com ele confirmado (ou sem controlador
+   *  nenhum): o 1º da fila ainda sem confirmar. */
+  const controllingSlot = (): number | null => {
+    if (controller !== null && !confirmed[controller]) return null;
+    return queue.find(i => !confirmed[i]) ?? null;
+  };
+
+  const finishIfDone = (): void => {
+    if (!activeIdx.every(i => confirmed[i])) return;
+    app.save();
+    if (setup.mode === 'team') app.transition(() => teamsScreen(app), FADE_MENU);
+    else app.transition(() => stageScreen(app), FADE_MENU);
+  };
+
+  const confirm = (i: number): void => {
+    confirmed[i] = true;
+    app.audio.sfx(SFX.confirm);
+    finishIfDone();
   };
 
   return {
     id: 'characters',
-    get locked() { return locked; },
+    charOf: (i: number) => setup.chars[i],
+    get confirmed() { return confirmed.slice(); },
+    get controlling() { return controllingSlot(); },
+    get controller() { return controller; },
     update(inp) {
-      for (let i = 0; i < 5; i++) {
-        if (!human(i)) continue;
-        const p = inp.pressed[i];
-        if (!locked[i]) {
-          moveCursor(i, p);
-          if (p & BTN.A) locked[i] = true;
-        } else if (p & BTN.B) {
-          locked[i] = false;
-        }
-      }
-      // B de qualquer dispositivo serve de saída: um humano pode ter um controle desconectado
-      // (device atribuído mas sem sinal), e travar nessa tela sem forma de voltar seria um beco sem saída.
-      const noOneLockedIn = [0, 1, 2, 3, 4].every(i => !human(i) || !locked[i] || app.settings.devices[i] === 'none');
-      if ((inp.pressedAny & BTN.B) && noOneLockedIn) {
-        app.save();
-        app.go(rulesScreen(app));
+      if (inp.pressedAny & BTN.B) {
+        app.audio.sfx(SFX.back);
+        app.transition(() => rulesScreen(app), FADE_MENU);
         return;
       }
-      if (locked.every(Boolean)) {
-        readyFrames++;
-        if (readyFrames > AUTO_ADVANCE_FRAMES || (readyFrames > 1 && (inp.pressedAny & (BTN.START | BTN.A)))) {
-          app.save();
-          app.go(stageScreen(app));
+      for (const i of activeIdx) {
+        if (!selfPicking(i)) continue;
+        const pulse = reps.get(i)!.step(inp.pads[i] & DIRS);
+        if (confirmed[i]) {
+          // Só o controlador continua tendo o que fazer depois de confirmar: o próprio dispositivo passa a
+          // mover/confirmar quem está na vez da fila. Os outros humanos confirmados não afetam mais nada.
+          if (i === controller) {
+            const c = controllingSlot();
+            if (c !== null) {
+              moveCursor(c, pulse);
+              if (inp.pressed[i] & (BTN.A | BTN.START)) confirm(c);
+            }
+          }
+          continue;
         }
-      } else {
-        readyFrames = 0;
+        moveCursor(i, pulse);
+        if (inp.pressed[i] & (BTN.A | BTN.START)) confirm(i);
+      }
+      // Sem controlador (nenhum humano com dispositivo): qualquer controle decide por todos, um de cada vez.
+      if (controller === null) {
+        const c = controllingSlot();
+        if (c !== null) {
+          const pulse = anyRep.step(inp.any & DIRS);
+          moveCursor(c, pulse);
+          if (inp.pressedAny & (BTN.A | BTN.START)) confirm(c);
+        }
       }
     },
     draw(ctx, bank, frame) {
-      drawBackground(ctx, frame);
+      drawStaticBackground(ctx);
+      drawFallbackFrame(ctx, FRAME);
       drawTitleBar(ctx, bank, 'ESCOLHA O PERSONAGEM');
-      // coluna da esquerda: quem joga e o estado de cada um
-      let row = 0;
-      for (let i = 0; i < 5; i++) {
-        if (setup.slots[i] === 'off') continue;
-        const y = GRID_Y - 4 + row * 30;
-        row++;
-        drawPanel(ctx, 6, y, 88, 28);
-        ctx.drawImage(bank.head(setup.chars[i]), 10, y + 7);
-        drawText(ctx, bank, displayName(app.settings.names, i), 28, y + 2, PLAYER_COLORS[i]);
-        const status = !human(i) ? 'CPU' : locked[i] ? 'PRONTO' : 'ESCOLHENDO';
-        drawText(ctx, bank, status, 28, y + 14, !human(i) ? COLORS.value : locked[i] ? COLORS.ok : COLORS.dim);
+      const ctrl = controllingSlot();
+      // Coluna da esquerda: retrato + nome/estado de cada jogador ativo.
+      for (const i of activeIdx) {
+        const y = CHARSEL_PORTRAIT.y0 + CHARSEL_PORTRAIT.dy * i;
+        ctx.drawImage(bank.head(setup.chars[i]), CHARSEL_PORTRAIT.x, y, CHARSEL_PORTRAIT.w, CHARSEL_PORTRAIT.w);
+        const label = human(i) ? displayName(app.settings.names, i) : 'CPU';
+        drawText(ctx, bank, label, CHARSEL_PORTRAIT.x + CHARSEL_PORTRAIT.w + 4, y + 2, PLAYER_COLORS[i]);
+        const st = confirmed[i] ? 'PRONTO' : (selfPicking(i) || i === ctrl) ? 'ESCOLHENDO' : 'AGUARDA';
+        drawText(ctx, bank, st, CHARSEL_PORTRAIT.x + CHARSEL_PORTRAIT.w + 4, y + 16, confirmed[i] ? COLORS.ok : COLORS.dim);
       }
-      // grade de personagens
-      drawPanel(ctx, GRID_X - 4, GRID_Y - 4, COLS * CELL_W + 8, ROWS * CELL_H + 8);
-      CHARACTERS.forEach((c, k) => {
-        const x = GRID_X + (k % COLS) * CELL_W, y = GRID_Y + Math.floor(k / COLS) * CELL_H;
-        ctx.drawImage(bank.bomber(k, 2, 0), x + 8, y + 8, 32, 40);
-        const name = bank.text(c.name, COLORS.text);
-        ctx.drawImage(name, x + Math.floor((CELL_W - name.width) / 2), y + 52);
+      // Grade 3×2 dos personagens.
+      CHARACTERS.forEach((ch, k) => {
+        const x = CHARSEL_GRID.x[k % COLS], y = CHARSEL_GRID.y[Math.floor(k / COLS)];
+        ctx.drawImage(bank.bomber(k, 2, 0), x, y, 32, 40);
       });
-      // cursores (um por humano), com recuo diferente para não se sobreporem
-      for (let i = 0; i < 5; i++) {
-        if (!human(i)) continue;
+      // Cursores "[ ]" com a etiqueta nP na cor de quem está escolhendo cada vaga ainda aberta.
+      for (const i of activeIdx) {
+        if (confirmed[i]) continue;
+        const driver = selfPicking(i) ? i : i === ctrl ? controller : null;
+        if (driver === null) continue;
         const k = setup.chars[i];
-        const x = GRID_X + (k % COLS) * CELL_W, y = GRID_Y + Math.floor(k / COLS) * CELL_H;
-        const inset = i * 2;
-        if (!locked[i] && ((frame >> 3) & 1)) continue;
-        ctx.strokeStyle = PLAYER_COLORS[i];
+        const x = CHARSEL_GRID.x[k % COLS], y = CHARSEL_GRID.y[Math.floor(k / COLS)];
+        const color = PLAYER_COLORS[driver];
+        ctx.strokeStyle = color;
         ctx.lineWidth = 1;
-        ctx.strokeRect(x + inset + 0.5, y + inset + 0.5, CELL_W - 1 - inset * 2, CELL_H - 1 - inset * 2);
-        drawText(ctx, bank, `${i + 1}P`, x + 2 + inset, y + 1 + inset, PLAYER_COLORS[i]);
+        ctx.strokeRect(x - 2.5, y - 2.5, CHARSEL_GRID.cellW - 12, CHARSEL_GRID.cellH - 4);
+        drawText(ctx, bank, `${driver + 1}P`, x - 3, y - 10, color);
       }
-      drawFooter(ctx, bank, locked.every(Boolean) ? 'TODOS PRONTOS! START PARA SEGUIR' : 'A: ESCOLHER   B: DESFAZER');
+      drawFooter(ctx, bank, activeIdx.every(i => confirmed[i]) ? 'TUDO PRONTO' : 'A: ESCOLHER   B: VOLTAR');
     },
   };
 }
