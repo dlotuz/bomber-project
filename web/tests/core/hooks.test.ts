@@ -5,9 +5,9 @@ import { emptyRound } from '../../src/core/state';
 import { defaultRules } from '../../src/core/types';
 
 describe('pontos de extensão (§2.5)', () => {
-  it('STAGES tem 11 entradas (índice = fase) e começam vazias', () => {
+  it('STAGES tem 11 entradas (índice = fase)', () => {
     expect(STAGES.length).toBe(11);
-    for (let n = 1; n <= 10; n++) expect(Object.keys(STAGES[n])).toEqual([]);
+    for (let n = 1; n <= 10; n++) expect(STAGES[n]).toBeDefined();   // o plano 8 preenche 2..10 (acordo do plano 8)
   });
   it('montaria padrão é no-op', () => {
     const s = emptyRound(1, defaultRules());

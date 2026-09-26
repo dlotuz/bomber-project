@@ -162,7 +162,7 @@ describe('explosão', () => {
       const b = addBomb(s, 0, C(4, 1), { fuse: 0 }); b.born = 0;
       run(s, 1);
     } finally { STAGES[1] = {}; }
-    expect(calls).toEqual([[C(5, 1), 2]]);
+    expect(calls).toEqual([[C(4, 1), -1], [C(5, 1), 2], [C(6, 1), 2], [C(4, 2), 4], [C(4, 3), 4], [C(3, 1), 6], [C(2, 1), 6]]);   // toda casa alcançada (acordo do plano 8)
     expect([codeAt(s, 5, 1), codeAt(s, 6, 1)]).toEqual([CODE.ARROW, CODE.FLAME]);
   });
   it('bombAt só acha bomba parada', () => {

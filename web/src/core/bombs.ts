@@ -78,7 +78,7 @@ export function explodeBomb(s: RoundState, b: Bomb, ev: GameEvent[]): void {
   const c0 = b.cell;
   const v0 = s.grid[c0];
   if (v0 === CODE.BOMB || v0 === CODE.FLOOR || v0 === CODE.FLAME) setFlame(s, c0, FLAME_PIECE.CENTER);
-  else st?.onFlameCell?.(s, c0, -1, ev);
+  st?.onFlameCell?.(s, c0, -1, ev);            // plano 8: toda casa alcançada chama o gancho (centro = −1, primeiro)
   ev.push({ type: 'explosion', cell: c0, owner: b.owner });
   const range = rangeOf(b.fire);
   for (const face of [0, 2, 4, 6]) {
@@ -88,14 +88,14 @@ export function explodeBomb(s: RoundState, b: Bomb, ev: GameEvent[]): void {
       if (!inGrid(colOf(c), linOf(c))) break;
       const v = s.grid[c];
       if (v === CODE.HARD || v === CODE.PRESSURE || v === CODE.BURNING) break;
-      if (v === CODE.SOFT) { burnCell(s, c, BURN.SOFT); if (b.type === 2) continue; break; }
-      if (isItemCode(v)) { burnCell(s, c, BURN.ITEM); break; }
+      if (v === CODE.SOFT) { burnCell(s, c, BURN.SOFT); st?.onFlameCell?.(s, c, face, ev); if (b.type === 2) continue; break; }
+      if (isItemCode(v)) { burnCell(s, c, BURN.ITEM); st?.onFlameCell?.(s, c, face, ev); break; }
       if (v === CODE.BOMB) {
         const o = bombAt(s, c);
         if (o && (o.chainAt === 0 || o.chainAt > s.tick + CHAIN_DELAY)) o.chainAt = s.tick + CHAIN_DELAY;
         break;
       }
-      if (v === CODE.FLOOR || v === CODE.FLAME) { setFlame(s, c, ARM[face]); last = c; continue; }
+      if (v === CODE.FLOOR || v === CODE.FLAME) { setFlame(s, c, ARM[face]); last = c; st?.onFlameCell?.(s, c, face, ev); continue; }
       st?.onFlameCell?.(s, c, face, ev);         // código especial passável: a arena decide; o braço segue
     }
     if (last >= 0) s.cellAux[last] = TIP[face];

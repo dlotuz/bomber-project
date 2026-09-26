@@ -148,6 +148,26 @@ Ler o código mesclado e preencher a tabela abaixo no PR. Para cada "não", apli
 | 13 | `tests/core/kit.ts` exporta `arena`, `put`, `run`, `runUntil`, `setCell`, `codeAt`, `C` | sim (plano 6 T1) | – |
 | 14 | `core/disease.ts` (T11): `speedLevel(s, p)` termina com `STAGES[s.stage]?.speedLevel?.(s, p, lv) ?? lv` (nível da arena vence doença e efeito, D10) | sim (contrato §2.5: "recebe o nível já com doença") | pedir ao dono do plano 6 a linha (acordo no PR) |
 
+**Resultado da verificação (Task 1, base `53d5ed8` = planos 5 + 6 antes da correção final):**
+
+| # | Real | Adaptação |
+|---|---|---|
+| 1 | sim: `step` volta cedo em `intro`/`timeUp`/`over`; `tick` da arena roda em `play`/`won` depois de `tickObjects`. Intro = 62 ticks, relógio nos 10 primeiros | `INTRO_LOGIC = 10` mantido |
+| 2 | sim (`movePlayer`: `onEnterCell` se a casa mudou, `onStand` todo tick com casa ≥ 0) | – |
+| 3 | **não**: o núcleo só chamava `onFlameCell` no centro com código especial e nos braços em código especial passável. Codificação e ordem conferem (centro `-1` primeiro, braços face 0/2/4/6 em cima, dir, baixo, esq) | **acordo no PR (núcleo, `bombs.ts`)**: centro sempre chama (depois do `setFlame` se houver); braços chamam também depois de `setFlame` (piso/chama) e depois de `burnCell` (soft e item, já `BURNING`). Bomba em cadeia não chama (a chama para antes). `tests/core/bombs.test.ts` ("código especial passável…") passa a esperar a lista de todas as casas. `armIndex` sem mudança. Travado em `tests/stages/contracts.test.ts` |
+| 4 | sim (`fuse = max(0, fuse − fuseStep)`; `born === tick` pulado) | – |
+| 5 | sim; `'stop'` estaciona na casa atual (a correção final do plano 6 põe `park` com recuo para a casa anterior se a atual estiver ocupada); `{turn}` grava `b.turn` e vira ao chegar | – |
+| 6 | sim (`applyPush` → `outOfBounds` a cada tick de movimento; `tickAct` devolve true com `actLeft > 0` e pula entrada/`movePlayer`). Obs.: contra casa sólida o empurrão para alinhado e **não** chama `outOfBounds` nesse tick | registrado |
+| 7 | sim (`stunPlayer`: solta a bomba da mão, zera `push.left`, `setAct('stunned', 63)`, perdas `((rnd255 & 6) >> 1) + 1`, evento `stunned`; nada se não está vivo ou está imune em `won`) | – |
+| 8 | sim (`Flyer` item `bounce` dir 2 pousa como item em piso, some em `BURNING`, quica no resto; `launchBomb` idem). `Flyer.dir` é 0..3 (0 cima, 1 dir, 2 baixo, 3 esq) | – |
+| 9 | sim: `refundBomb` faz `const p = s.players[b.owner]; if (p) …` (guarda equivalente); nenhum outro ponto indexa pelo dono | nenhuma; o teste de T10 da bomba pode ser `it` normal. Travado em `contracts.test.ts` |
+| 10 | sim (bordas em `tick − trigger === 192`, passos em `205 + 14k`, `total` lido a cada passo) | – |
+| 11 | **não**: `rom/decode/zte.ts` exporta `decodeZte(rom: Uint8Array, addr, limit = 0x10000): { data: Uint8Array; used: number }` (bytes do arquivo, não o `RomView`). `RomAssets.rom` é `RomView` (`u8/u16/u24/p24/s8/s16/bytes` e `data: Uint8Array`); `RomAssets.anim(addr): AnimFrame[]` com a mesma forma de `RomAnimFrame` | `decodeZteAt` passa `a.rom.data` e devolve `.data`; `StageRomAssets.rom` ganhou `readonly data?: Uint8Array` (opcional, os fakes não têm) |
+| 12 | sim (`draw-game.ts`: `tileX = 16·col − 8`, `tileY = 16·lin + 24`; voadores em `px(x) − 7`) | – |
+| 13 | sim (`arena({stage, players, rules, seed})`, `put`, `run`, `runUntil`, `setCell`, `codeAt`, `C`) | – |
+| 14 | **não**: o gancho era aplicado antes do efeito lento (`effect.kind === 2` vencia a arena) | **acordo no PR (núcleo, `disease.ts`)**: `lv` = doença; `effect.kind === 2` → 7; por fim `STAGES[s.stage]?.speedLevel?.(s, p, lv) ?? lv`. Testes do plano 6 inalterados. Travado em `contracts.test.ts` |
+| – | `tests/core/hooks.test.ts` esperava `STAGES[n]` vazios | **acordo**: a asserção vira `toBeDefined()` (os esqueletos ainda são `{}`, mas a onda 2 os preenche) |
+
 - [ ] **Step 2: Escrever o teste dos contratos**
 
 `web/tests/stages/contracts.test.ts`:
