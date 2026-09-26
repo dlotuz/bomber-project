@@ -1,10 +1,13 @@
 import { createHash } from 'node:crypto';
 import fx from '../fixtures/rom/mount-render.json';
-import { ASSETS } from './rom-helpers';
+import { ASSETS, stable } from './rom-helpers';
 import { mkRound, placePx, ride, cx, cy } from './helpers';
 import { riderHook } from '../../src/render/rom/mounts/rider';
 import { mountRomSprites } from '../../src/render/rom/mounts/sprites';
+import { fallbackMountFrame, objPx } from '../../src/render/rom/mounts/gfx';
+import { MOUNT_GFX, MOUNTING_ANIMS } from '../../src/render/rom/mounts/facts';
 import type { ObjEntry } from '../../src/render/ppu';
+import type { Anim, RomAssets } from '../../src/rom/types';
 
 const sha1 = (b: Uint8Array) => createHash('sha1').update(b).digest('hex');
 const DIRS = ['up', 'right', 'down', 'left'] as const;
@@ -15,12 +18,6 @@ const norm = (ps: FxPiece[]) => ps.map(p => `${p.dx},${p.dy},${p.size},${+p.hfli
 function facts(es: ObjEntry[], X: number, Y: number) {
   return norm(es.map(e => ({ dx: e.x - X, dy: e.y - Y, size: e.size, hflip: e.hflip, vflip: e.vflip, pxSha1: sha1((e.src as { px: Uint8Array }).px) })));
 }
-/** Amostras estáveis (mesma ideia de `rom-facts.test.ts`): mesma animação/quadro que a anterior. Na troca, a VRAM
- *  ainda mostra o gráfico anterior por 1 quadro (o DMA do novo quadro chega no quadro seguinte — atraso medido pela
- *  T4), então a 1ª amostra de cada troca não serve para conferir o gráfico. Um `RomPlayerHook` sem estado (não tem
- *  memória do quadro anterior) não reproduz esse atraso, então comparamos só as amostras estáveis. */
-const stable = (ss: FxSample[]) => ss.filter((s, i) => i > 0 &&
-  [s.anim, s.frame, s.anim2, s.frame2].join() === [ss[i - 1].anim, ss[i - 1].frame, ss[i - 1].anim2, ss[i - 1].frame2].join());
 
 describe.skipIf(!ASSETS)('camada ROM das montarias × emulador', () => {
   for (const t of ['2', '3', 'a', 'c', 'd', 'e', 'f']) for (const d of DIRS) {
@@ -57,5 +54,69 @@ describe.skipIf(!ASSETS)('camada ROM das montarias × emulador', () => {
     const s = mkRound();
     const p = placePx(s, 0, cx(7), cy(5));
     expect(riderHook(s, p, ASSETS!, s.tick)).toBeNull();
+  });
+
+  // Fix round 2: Plano B (facts.ts marca MOUNT_GFX[type].format === 'unknown') — nenhum dos 7 tipos medidos está
+  // nesse caso hoje, então fabricamos uma entrada sintética para exercitar o ramo sem depender de dados reais.
+  it('Plano B: format "unknown" desenha o jogador normal e a montaria pelo fallback (mountPix)', () => {
+    const type = 0x2, original = MOUNT_GFX[type];
+    (MOUNT_GFX as Record<number, { src: number; format: 'zte' | 'raw' | 'unknown' }>)[type] = { src: original.src, format: 'unknown' };
+    try {
+      const s = mkRound();
+      const p = placePx(s, 0, cx(7), cy(5));
+      p.face = 4; p.act = 'idle'; p.actT0 = s.tick; p.moveDir = 8;
+      const r = ride(s, 0, type);
+      const got = riderHook(s, p, ASSETS!, s.tick)!;
+      expect(got).not.toBeNull();
+      expect(got).toHaveLength(2);
+      const X = cx(7), Y = cy(5);
+      const charEntry = got.find(e => e.size === 32 && e.pal === 0)!;
+      expect(charEntry).toBeDefined();   // peça do personagem: continua vindo da ROM, sem mudança
+      const mountEntry = got.find(e => e !== charEntry)!;
+      const { px } = fallbackMountFrame(type, 4, 0);
+      expect(sha1((mountEntry.src as { px: Uint8Array }).px)).toBe(sha1(px));
+      expect(mountEntry.pal).toBe(1 + r.slot);
+      expect(mountEntry.size).toBe(32);
+      expect(mountEntry.x - X).toBe(-16);
+      expect(mountEntry.y - Y).toBe(-18);
+    } finally {
+      (MOUNT_GFX as Record<number, unknown>)[type] = original;
+    }
+  });
+
+  // Fix round 2: nenhuma tabela medida hoje empacota mais de 1 peça por quadro (ver relatório da T14), então
+  // fabricamos um `RomAssets.anim` sintético para exercitar o roteamento de peça extra (tile absoluto >= 256 →
+  // objCommon, paleta 7) sem depender de dados reais.
+  it('peça extra (tile absoluto >= 256) de uma tabela de personagem sai por objCommon, paleta 7', () => {
+    const FAKE_ADDR = 0x123456;
+    const fakeFrames: Anim = [{
+      dur: 255, mx: 0, my: 0,
+      pieces: [
+        { dx: -16, dy: -24, tile: 22, hflip: false, vflip: false, big: true, palAdd: 0 },     // personagem (g=22)
+        { dx: -8, dy: -8, tile: 256 + 44, hflip: false, vflip: false, big: false, palAdd: 0 }, // extra: objCommon 44
+      ],
+    }];
+    const fakeAssets: RomAssets = { ...ASSETS!, anim: (addr: number) => (addr === FAKE_ADDR ? fakeFrames : ASSETS!.anim(addr)) };
+    const type = 0x2, original = MOUNTING_ANIMS[type];
+    MOUNTING_ANIMS[type] = [FAKE_ADDR];
+    try {
+      const s = mkRound();
+      const p = placePx(s, 0, cx(7), cy(5));
+      const r = ride(s, 0, type, { phase: 'mounting', t0: s.tick });
+      const got = riderHook(s, p, fakeAssets, s.tick)!;
+      expect(got).not.toBeNull();
+      const X = cx(7), Y = cy(5);
+      const charPiece = got.find(e => e.pal !== 7)!;
+      const extraPiece = got.find(e => e.pal === 7)!;
+      expect(charPiece).toBeDefined();
+      expect(extraPiece).toBeDefined();
+      expect(charPiece.x - X).toBe(-16); expect(charPiece.y - Y).toBe(-24); expect(charPiece.size).toBe(32);
+      expect(extraPiece.x - X).toBe(-8); expect(extraPiece.y - Y).toBe(-8); expect(extraPiece.size).toBe(16);
+      expect(extraPiece.pal).toBe(7);
+      expect(sha1((extraPiece.src as { px: Uint8Array }).px)).toBe(sha1(objPx(ASSETS!.arena(s.stage).objCommon, 0, 44, 16)));
+      void r;
+    } finally {
+      MOUNTING_ANIMS[type] = original;
+    }
   });
 });
