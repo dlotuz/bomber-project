@@ -2,7 +2,7 @@ import { stageScreen } from '../../src/screens/stage';
 import { BTN } from '../../src/game/core-api';
 import type { MatchSession } from '../../src/game/match-session';
 import { idleInput } from '../../src/input/input';
-import { buildStageScene } from '../../src/render/screens-rom/stagesel';
+import { buildStageScene, STAGE_ICON_COL, STAGE_ICON_ROW } from '../../src/render/screens-rom/stagesel';
 import { mkApp, press, tap, idle, hold, settle } from './helpers';
 import { ASSETS } from './rom';
 import { loadCapture, capturedMap, mapMatch, type Rect } from './captures';
@@ -78,19 +78,39 @@ describe('seleção de fase (§6.7)', () => {
   });
 });
 
-// R29: as prévias de $C1:A901 não foram reconstruídas para as 10 fases (só a fase 1, medida na captura
-// `stagesel`); fora da faixa das miniaturas (0,36)–(255,160) e dos textos, `buildStageScene` deve bater com a
-// captura real — o fundo de quebra-cabeça (BG2) é o mesmo dos outros menus (MENU_GEO.bgPattern, T5).
-describe.skipIf(!ASSETS || !loadCapture('stagesel'))('prévias × captura stagesel (R29)', () => {
-  it('BG1/BG2 batem ≥ 97% fora dos textos e da faixa das miniaturas', () => {
-    const cap = loadCapture('stagesel')!;
-    const maps = buildStageScene(ASSETS!, 1, 0);
-    const ignore: Rect[] = [
-      { x0: 60, y0: 0, x1: 196, y1: 28 },     // título "Escolha a fase!"
-      { x0: 40, y0: 146, x1: 216, y1: 200 },  // "Fase N" e o nome
-      { x0: 0, y0: 36, x1: 255, y1: 160 },    // R29: faixa das miniaturas (não reconstruída para as 10 fases)
-    ];
-    expect(mapMatch(maps.bg2!, capturedMap(cap, 0x4400), ignore)).toBeGreaterThanOrEqual(0.97);
-    expect(mapMatch(maps.bg1!, capturedMap(cap, 0x4000), ignore)).toBeGreaterThanOrEqual(0.97);
+// Follow-up (revisão da T11): as 10 prévias de $C1:A901/$C1:A209 foram reconstruídas (ver
+// `render/screens-rom/stagesel.ts`). A fase 1 é conferida contra a captura oficial já versionada
+// (`analise/extraido/graficos-formato/cenas/stagesel.*`); as fases 2–10, contra capturas próprias desta
+// tarefa nos mesmos savestates (`stagesel-faseNN.*`, não versionadas — `analise/extraido/` está no
+// `.gitignore`, geradas a partir de `analise/estados/st_stageNN.bin`). Sem essas capturas extras
+// (SB4_CAPTURES não aponta para uma pasta com elas), só a fase 1 roda; o resto pula.
+//
+// Cada captura tem a fase centralizada num dos 4 slots físicos do BG1 real (colunas 0/8/16/24 — um buffer
+// giratório carregado sob demanda pela rolagem, ver o relatório); `buildStageScene` sempre põe o ícone
+// pedido no slot canônico (coluna `STAGE_ICON_COL`), então a comparação lê o bloco de 7×7 de cada lado na
+// sua própria coluna, em vez do `mapMatch` de tela inteira (que assume as duas pontas na mesma posição).
+const captureNameOf = (stage: number): string => (stage === 1 ? 'stagesel' : `stagesel-fase${String(stage).padStart(2, '0')}`);
+const CAPTURE_COL: Record<number, number> = { 1: 8, 2: 16, 3: 24, 4: 0, 5: 8, 6: 16, 7: 24, 8: 0, 9: 8, 10: 16 };
+const TEXT_IGNORE: Rect[] = [
+  { x0: 60, y0: 0, x1: 196, y1: 28 },     // título "Escolha a fase!"
+  { x0: 40, y0: 146, x1: 216, y1: 200 },  // "Fase N" e o nome
+];
+function iconMatch(built: Uint16Array, capturedCol: number, cap: Uint16Array): number {
+  let same = 0, total = 0;
+  for (let gy = 0; gy < 7; gy++) for (let gx = 0; gx < 7; gx++) {
+    total++;
+    const lin = STAGE_ICON_ROW + gy;
+    if (built[lin * 32 + STAGE_ICON_COL + gx] === cap[lin * 32 + capturedCol + gx]) same++;
+  }
+  return same / total;
+}
+
+describe.skipIf(!ASSETS)('prévias reconstruídas × capturas reais (todas as 10 fases)', () => {
+  it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])('fase %s: ícone bate igual e o fundo (BG2) bate >= 97 fora dos textos', stage => {
+    const cap = loadCapture(captureNameOf(stage));
+    if (!cap) return;   // captura ausente (só a oficial da fase 1 é garantida no repo): pula
+    const maps = buildStageScene(ASSETS!, stage, 0);
+    expect(mapMatch(maps.bg2!, capturedMap(cap, 0x4400), TEXT_IGNORE)).toBeGreaterThanOrEqual(0.97);
+    expect(iconMatch(maps.bg1!, CAPTURE_COL[stage], capturedMap(cap, 0x4000))).toBe(1);
   });
 });

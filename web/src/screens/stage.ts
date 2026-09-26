@@ -12,7 +12,7 @@ import { S } from '../render/text/strings';
 import { drawText } from '../render/text/text';
 import { romState } from '../app/rom-api';
 import { sceneGfx, sceneFrame, PpuCanvas } from '../render/screens-rom/scene';
-import { buildStageScene, STAGE_ICON_HOFS_BASE } from '../render/screens-rom/stagesel';
+import { buildStagePreviewStrip, STAGE_ICON_HOFS_BASE } from '../render/screens-rom/stagesel';
 import { drawBackground } from './ui';
 import { battleScreen } from './battle';
 import { charactersScreen } from './characters';
@@ -115,19 +115,21 @@ export function stageScreen(app: App): Screen & {
       const s = currentScroll();
       const rom = romState.assets;
       if (rom) {
-        // ROM: fundo de quebra-cabeça igual aos outros menus (cena `stagesel`, T5) com o BG1 rolando por baixo
-        // das miniaturas (R29: só a fase 1 foi reconstruída — ver `render/screens-rom/stagesel.ts`).
+        // ROM: fundo de quebra-cabeça igual aos outros menus (cena `stagesel`, T5) e as 3 prévias reais
+        // (anterior/atual/seguinte) reconstruídas de `$C1:A901`/`$C1:A209`, com o BG1 rolando por baixo
+        // delas (`render/screens-rom/stagesel.ts`).
         const g = sceneGfx(rom, 'stagesel');
-        const maps = buildStageScene(rom, setup.stage, s);
+        const maps = buildStagePreviewStrip(rom, setup.stage);
         ppu.draw(ctx, sceneFrame(g, maps, { bg1: [STAGE_ICON_HOFS_BASE - s, 0] }));
       } else {
+        // Sem ROM: fallback com a arena reduzida (T-anterior), sem alpha, nas posições do R29.
         drawBackground(ctx, frame);
+        const cell = 112 / 15;
+        const prev = wrapStage(setup.stage - 1), next = wrapStage(setup.stage + 1);
+        drawMiniArena(ctx, prev, 72 - 128 + s, 40, cell);
+        drawMiniArena(ctx, setup.stage, 72 + s, 40, cell);
+        drawMiniArena(ctx, next, 72 + 128 + s, 40, cell);
       }
-      const cell = 112 / 15;
-      const prev = wrapStage(setup.stage - 1), next = wrapStage(setup.stage + 1);
-      drawMiniArena(ctx, prev, 72 - 128 + s, 40, cell);
-      drawMiniArena(ctx, setup.stage, 72 + s, 40, cell);
-      drawMiniArena(ctx, next, 72 + 128 + s, 40, cell);
       if (battleTextVisible(seqF)) {
         drawText(ctx, bank, 'bigBattle', S.stage.battle, 128, 8, { align: 'center' });
       } else {
