@@ -3,6 +3,7 @@ import type { App, Screen } from '../app/app';
 import { THEMES } from '../render/art/tiles';
 import { SCREEN_W, drawTextCentered } from '../render/draw-game';
 import { configFromSetup, validateSetup } from '../game/config';
+import { createMatchSession } from '../game/match-session';
 import { COLORS, drawBackground, drawFooter, drawPanel, drawTitleBar } from './ui';
 import { charactersScreen } from './characters';
 import { battleScreen } from './battle';
@@ -37,7 +38,10 @@ export function stageScreen(app: App): Screen & { readonly starting: number } {
     get starting() { return starting; },
     update(inp) {
       if (starting > 0) {
-        if (--starting === 0) app.go(battleScreen(app, configFromSetup(setup, app.settings.names), inp.pads));
+        if (--starting === 0) {
+          app.go(battleScreen(app, createMatchSession(configFromSetup(setup,
+            (app.settings as { options?: { randomSpawns: boolean } }).options?.randomSpawns ?? false, app.settings.devices))));
+        }
         return;
       }
       const p = inp.pressedAny;
