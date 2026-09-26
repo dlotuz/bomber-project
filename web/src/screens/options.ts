@@ -5,6 +5,7 @@ import { DEVICE_IDS, type DeviceId } from '../input/input';
 import { defaultSettings } from '../app/settings';
 import { romState, openRomDialog, forgetStoredRom } from '../app/rom-api';
 import { S } from '../render/text/strings';
+import { MUSIC } from '../app/audio';
 import { FADE_MENU, FADE_TO_TITLE } from '../app/fade';
 import { drawOptionsPage, PpuCanvas, type OptionsRow } from '../render/screens-rom/options';
 import { titleScreen } from './title';
@@ -18,8 +19,13 @@ interface Row extends MenuRow { label: string; value?: () => string }
  */
 export function optionsScreen(app: App): Screen & { readonly menu: Menu; rowIds(): string[]; value(id: string): string; readonly asking: boolean } {
   const st = app.settings;
-  const opt = st.options;
+  // `opt()` lê `st.options` na hora (nunca um alias congelado): "RESTAURAR PADRÃO" troca `st.options` por um
+  // objeto novo (`d.options`), e um alias tirado na criação da tela ficaria apontando para o objeto antigo —
+  // os controles de música/efeitos/spawns pareceriam obedecer, mas editariam um objeto órfão, nunca salvo.
+  const opt = (): typeof st.options => st.options;
   let asking = false;
+
+  app.audio.ensureMenus(MUSIC.title);
 
   const goBack = (): void => { app.transition(() => titleScreen(app, { cursor: 2 }), FADE_TO_TITLE); };
   const openRemap = (dev: Exclude<DeviceId, 'none'>) => (): void => { app.transition(() => remapScreen(app, dev), FADE_MENU); };
@@ -38,20 +44,20 @@ export function optionsScreen(app: App): Screen & { readonly menu: Menu; rowIds(
     rows.push({ id: `gp${i + 1}`, label: S.options.pad(i + 1), select: openRemap(dev) });
   });
   rows.push({
-    id: 'spawns', label: S.options.spawns, value: () => (opt.randomSpawns ? S.options.yes : S.options.no),
-    left: () => { const changed = opt.randomSpawns; opt.randomSpawns = false; app.save(); return changed; },
-    right: () => { const changed = !opt.randomSpawns; opt.randomSpawns = true; app.save(); return changed; },
+    id: 'spawns', label: S.options.spawns, value: () => (opt().randomSpawns ? S.options.yes : S.options.no),
+    left: () => { const changed = opt().randomSpawns; opt().randomSpawns = false; app.save(); return changed; },
+    right: () => { const changed = !opt().randomSpawns; opt().randomSpawns = true; app.save(); return changed; },
   });
-  const setVol = (): void => app.audio.setVolume(opt.musicVol / 10, opt.sfxVol / 10);
+  const setVol = (): void => app.audio.setVolume(opt().musicVol / 10, opt().sfxVol / 10);
   rows.push({
-    id: 'music', label: S.options.music, value: () => String(opt.musicVol),
-    left: () => { const b = opt.musicVol; opt.musicVol = clamp(opt.musicVol - 1, 0, 10); app.save(); setVol(); return opt.musicVol !== b; },
-    right: () => { const b = opt.musicVol; opt.musicVol = clamp(opt.musicVol + 1, 0, 10); app.save(); setVol(); return opt.musicVol !== b; },
+    id: 'music', label: S.options.music, value: () => String(opt().musicVol),
+    left: () => { const b = opt().musicVol; opt().musicVol = clamp(opt().musicVol - 1, 0, 10); app.save(); setVol(); return opt().musicVol !== b; },
+    right: () => { const b = opt().musicVol; opt().musicVol = clamp(opt().musicVol + 1, 0, 10); app.save(); setVol(); return opt().musicVol !== b; },
   });
   rows.push({
-    id: 'sfx', label: S.options.sfx, value: () => String(opt.sfxVol),
-    left: () => { const b = opt.sfxVol; opt.sfxVol = clamp(opt.sfxVol - 1, 0, 10); app.save(); setVol(); return opt.sfxVol !== b; },
-    right: () => { const b = opt.sfxVol; opt.sfxVol = clamp(opt.sfxVol + 1, 0, 10); app.save(); setVol(); return opt.sfxVol !== b; },
+    id: 'sfx', label: S.options.sfx, value: () => String(opt().sfxVol),
+    left: () => { const b = opt().sfxVol; opt().sfxVol = clamp(opt().sfxVol - 1, 0, 10); app.save(); setVol(); return opt().sfxVol !== b; },
+    right: () => { const b = opt().sfxVol; opt().sfxVol = clamp(opt().sfxVol + 1, 0, 10); app.save(); setVol(); return opt().sfxVol !== b; },
   });
   rows.push({
     id: 'romStatus', label: S.options.rom, disabled: true, value: () => (romState.assets ? S.options.romOk : S.options.romNo),

@@ -13,6 +13,7 @@ import { ASSETS } from './rom';
 import { optionsPpuFrame, OPTIONS_FRAME } from '../../src/render/screens-rom/options';
 import { MENU_GEO } from '../../src/render/screens-rom/scene';
 import { createImage, renderPpu } from '../../src/render/ppu';
+import { MUSIC, BANK } from '../../src/app/audio';
 
 type Opt = ReturnType<typeof optionsScreen>;
 const goRow = (o: Opt, id: string) => { o.menu.cursor = o.rowIds().indexOf(id); };
@@ -71,6 +72,31 @@ describe('opções (§6.13)', () => {
     press(app, BTN.A);
     const d = defaultSettings();
     expect([app.settings.devices, app.settings.options, app.settings.padmaps, app.settings.keymaps]).toEqual([d.devices, d.options, d.padmaps, d.keymaps]);
+  });
+  // Fix round 1: reset trocava `st.options` por um objeto novo, mas um alias tirado na criação da tela
+  // continuava apontando para o objeto antigo — música/efeitos/spawns pareciam obedecer, mas editavam um
+  // objeto órfão nunca salvo em `app.settings`. Cobre o valor mostrado, o volume repassado e uma edição
+  // depois do reset persistindo de verdade.
+  it('restaurar padrão também repõe volume/spawns "ao vivo" (sem alias congelado); edição depois do reset persiste', () => {
+    const { app } = mkApp();
+    const got: number[][] = [];
+    app.audio.setSink(Object.assign(new RecordingSink(), { setVolume: (m: number, s: number) => { got.push([m, s]); } }));
+    app.settings.options.musicVol = 2; app.settings.options.sfxVol = 3; app.settings.options.randomSpawns = true;
+    const o = optionsScreen(app); app.go(o);
+    goRow(o, 'reset'); press(app, BTN.A);
+    const d = defaultSettings();
+    expect([o.value('music'), o.value('sfx'), o.value('spawns')]).toEqual([String(d.options.musicVol), String(d.options.sfxVol), 'NÃO']);
+    expect(got.at(-1)).toEqual([d.options.musicVol / 10, d.options.sfxVol / 10]);
+    goRow(o, 'music'); press(app, BTN.RIGHT);
+    expect([app.settings.options.musicVol, o.value('music')]).toEqual([d.options.musicVol + 1, String(d.options.musicVol + 1)]);
+    expect(got.at(-1)).toEqual([(d.options.musicVol + 1) / 10, d.options.sfxVol / 10]);
+  });
+  // Fix round 1: brief pede `ensureMenus(MUSIC.title)` na criação (Opções é aberta direto do título, então
+  // mantém a mesma música — banco de menus $30 + música $01 — em vez de trocar para a dos outros menus).
+  it('ao entrar: ensureMenus(MUSIC.title) — banco de menus e música do título', () => {
+    const { app, sink } = mkApp();
+    app.go(optionsScreen(app));
+    expect(sink.calls.map(c => [c.op, c.id])).toEqual([['bank', BANK.menus], ['music', MUSIC.title]]);
   });
   it('B volta ao título com o cursor em "Opções"', () => {
     const { app } = mkApp();
