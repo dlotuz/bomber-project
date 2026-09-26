@@ -85,3 +85,24 @@ export function drawMenuPage(ctx: CanvasRenderingContext2D, bank: SpriteBank, fr
 export function drawFooter(ctx: CanvasRenderingContext2D, bank: SpriteBank, text: string, color = COLORS.dim): void {
   drawTextCentered(ctx, bank, text, color, SCREEN_H - 16, 1);
 }
+
+/** Fundo do fallback, fixo (o xadrez atual sem deslizar; spec §6.14). */
+export function drawStaticBackground(ctx: CanvasRenderingContext2D): void { drawBackground(ctx, 0); }
+/** Cursor do fallback, parado (a setinha atual, sem balançar), com a ponta em (x+3, y+3) como a mão 16×16. */
+export function drawStaticCursor(ctx: CanvasRenderingContext2D, x: number, y: number, color = COLORS.title): void {
+  ctx.fillStyle = color;
+  for (let i = 0; i < 4; i++) ctx.fillRect(x + i, y + 4 + i, 1, 7 - 2 * i);
+}
+/** Moldura do fallback no retângulo medido do original (px inclusivos). */
+export function drawFallbackFrame(ctx: CanvasRenderingContext2D, r: { x0: number; y0: number; x1: number; y1: number }): void {
+  drawPanel(ctx, r.x0, r.y0, r.x1 - r.x0 + 1, r.y1 - r.y0 + 1);
+}
+
+/**
+ * Cores do fallback por tom (spec §6.14), para as linhas desativadas etc. das telas sem ROM.
+ * Não está no Step 4 do brief (só listado em "Produces"); mantido igual ao `TONE_COLORS` da T4
+ * (`render/text/text.ts`) para não haver duas paletas de tom divergentes quando a T4 mesclar.
+ */
+export const FB_TONE: Record<'default' | 'gray' | 'green' | 'red' | 'blue' | 'white' | 'orange' | 'yellow', string> = {
+  default: '', gray: '#8a8a8a', green: '#3fb24a', red: '#e8402a', blue: '#3a6ae0', white: '#ffffff', orange: '#ff8c1a', yellow: '#ffd23f',
+};
