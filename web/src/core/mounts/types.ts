@@ -33,7 +33,10 @@ export interface MountProjectile {
   slot: 0 | 1 | 2;       // D: vaga de sprite da montaria lançada
 }
 
-export interface MountState { projectiles: MountProjectile[]; nextId: number }
+/** Ovo reserva queimado (L22): estoura na casa por EGG_BURST_TICKS e conta no $1ED4 até o fim ($C2:6680). */
+export interface EggBurst { cell: number; t0: number; mount: number }
+
+export interface MountState { projectiles: MountProjectile[]; nextId: number; bursts: EggBurst[] }
 
 export interface MountAbility {
   type: number;
@@ -53,6 +56,7 @@ export const REMOUNT_TICKS = DISMOUNT_TICKS;
 export const POST_INV = 32;         // +$96
 export const MAX_ACTIVE = 2;        // $1ED4
 export const MAX_RESERVES = 3;      // +$52/+$54/+$56
+export const EGG_BURST_TICKS = 40;  // $D8:D327: 4 quadros × 10 ticks (explosão do ovo; reserva queimada, L22)
 
 export function rider(p: Player): MountRider | null {
   return (p.mount as MountRider | null | undefined) ?? null;
@@ -60,6 +64,6 @@ export function rider(p: Player): MountRider | null {
 
 export function mstate(s: RoundState): MountState {
   let m = s.mountState as MountState | null | undefined;
-  if (!m) { m = { projectiles: [], nextId: 1 }; s.mountState = m; }
+  if (!m) { m = { projectiles: [], nextId: 1, bursts: [] }; s.mountState = m; }
   return m;
 }

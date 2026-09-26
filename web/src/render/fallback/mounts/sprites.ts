@@ -8,6 +8,7 @@ import { mountPix, eggPix, shotPix } from './art';
 /** Leitura sem efeito colateral: a camada de desenho nunca deve criar `s.mountState` (isso é papel do
  *  `step()`/`mstate()` da simulação). Uma rodada sem montarias ainda não tocadas fica com `mountState` null. */
 const projectilesOf = (s: RoundState) => (s.mountState as MountState | null)?.projectiles ?? [];
+const burstsOf = (s: RoundState) => (s.mountState as MountState | null)?.bursts ?? [];
 
 /** `front`: montaria de quem está montado — a camada `over` (`fallbackMountFrontLayer`) redesenha a parte de baixo
  *  dela por cima do cavaleiro (a montaria cobre a metade de baixo do jogador, como na ROM). */
@@ -38,6 +39,8 @@ export function fallbackMountSprites(s: RoundState, frame: number): FbSprite[] {
     if (!hidden) out.push({ key: `mount:${r.type}:${f}:${st}`, make: () => mountPix(r.type, f, st), x: Math.floor(p.x / 256) - 12, y: Math.floor(p.y / 256) - 12, front: true });
     r.reserves.forEach((t, i) => egg(r.trail[i + 1] ?? here, t, 0));
   }
+  // L22: reserva queimada — ovo piscando na casa enquanto o core mantém a explosão (EGG_BURST_TICKS).
+  for (const b of burstsOf(s)) egg(b.cell, b.mount, (frame >> 3) & 1);
   for (const pr of projectilesOf(s)) {
     if (pr.state === 'done') continue;
     const x = Math.floor(pr.x / 256), y = Math.floor(pr.y / 256), a = (frame >> 2) & 1;

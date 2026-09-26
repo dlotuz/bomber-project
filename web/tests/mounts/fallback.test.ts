@@ -92,6 +92,12 @@ describe('sprites da camada fallback', () => {
     p.disease = 0;
     expect(fallbackMountSprites(s, 0).map(x => x.key.split(':')[0])).toEqual(['egg']);
   });
+  it('L22: reserva queimada vira um ovo piscando na casa enquanto a explosão existe no core (40 ticks)', () => {
+    const s = mkRound();
+    s.mountState = { projectiles: [], nextId: 1, bursts: [{ cell: cellOf(6, 1), t0: 0, mount: 2 }] };
+    expect(fallbackMountSprites(s, 8)).toEqual([expect.objectContaining({ key: 'egg:0:1', x: 88 + 1, y: 40 })]);
+    expect(fallbackMountSprites(s, 0)).toEqual([expect.objectContaining({ key: 'egg:0:0', x: 88, y: 40 })]);
+  });
   it('projéteis: E em voo e nuvem, F e D', () => {
     const s = mkRound();
     const ms = mstate(s);

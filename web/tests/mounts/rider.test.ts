@@ -1,5 +1,6 @@
 import { mkRound, placePx, ride, run, flameAt, BTN, cx, cy } from './helpers';
-import { rider } from '../../src/core/mounts/types';
+import { rider, mstate } from '../../src/core/mounts/types';
+import { activeCount } from '../../src/core/mounts/eggs';
 import { cellOf } from '../../src/core/mounts/core-api';
 import { mountModule } from '../../src/core/mounts/module';
 import type { GameEvent } from '../../src/core/types';
@@ -84,5 +85,60 @@ describe('acerto de chama montado ($C2:4B89)', () => {
     p.state = 'out';
     run(s, 1);
     expect(p.mount).toBeNull();
+  });
+});
+
+// L22 (revisão final I6): o objeto reserva ($C2:62D7) chama $C2:6645 quando o dono não está invencível (+$96 == 0): casa
+// do ovo com o bit $1000 (chama) → sai da fila ($C2:6687, levando as de trás), estoura ($D8:D327, 40 ticks) e só no fim
+// DEC $1ED4 ($C2:6680). Emulador (mount_burn): queimar a 2ª deixa a 1ª; queimar a 1ª esvazia a fila; $1ED4 cai 40 depois.
+describe('ovo reserva queima na chama (L22)', () => {
+  const setup = (reserves: number[]) => {
+    const s = mkRound();
+    const p = placePx(s, 0, cx(4), cy(1));
+    const r = ride(s, 0, 0x3, { reserves, trail: [cellOf(4, 1), cellOf(3, 1), cellOf(2, 1), cellOf(1, 1)] });
+    return { s, p, r };
+  };
+  it('sem invencibilidade: sai da fila, estoura e conta no $1ED4 até o fim da explosão (40 ticks)', () => {
+    const { s, r } = setup([0x2]);
+    flameAt(s, cellOf(3, 1));
+    const ev = run(s, 1);                                    // H
+    expect(r.reserves).toEqual([]);
+    expect(r.phase).toBe('riding');
+    expect(ev).toContainEqual({ type: 'mount', id: 'reserve_burnt', slot: 0, cell: cellOf(3, 1), mount: 0x2 });
+    expect(mstate(s).bursts).toEqual([{ cell: cellOf(3, 1), t0: s.tick, mount: 0x2 }]);
+    expect(activeCount(s)).toBe(2);
+    run(s, 39);                                              // H+1..H+39
+    expect(activeCount(s)).toBe(2);
+    run(s, 1);                                               // H+40: DEC $1ED4
+    expect(activeCount(s)).toBe(1);
+    expect(mstate(s).bursts).toEqual([]);
+  });
+  it('dono invencível (inv > 0): a reserva atravessa a chama', () => {
+    const { s, p, r } = setup([0x2]);
+    p.inv = 10;
+    flameAt(s, cellOf(3, 1));
+    const ev = run(s, 1);
+    expect(r.reserves).toEqual([0x2]);
+    expect(ev.some(e => e.type === 'mount' && e.id === 'reserve_burnt')).toBe(false);
+  });
+  it('queimar a 1ª tira as de trás da fila ($C2:6687); queimar a 2ª mantém a 1ª', () => {
+    const a = setup([0x2, 0x3, 0x2]);
+    flameAt(a.s, cellOf(3, 1));
+    const ev = run(a.s, 1);
+    expect(a.r.reserves).toEqual([]);
+    expect(ev.filter(e => e.type === 'mount' && e.id === 'reserve_burnt')).toHaveLength(1);
+    expect(mstate(a.s).bursts).toHaveLength(1);
+    const b = setup([0x2, 0x3]);
+    flameAt(b.s, cellOf(2, 1));
+    run(b.s, 1);
+    expect(b.r.reserves).toEqual([0x2]);
+    expect(mstate(b.s).bursts).toEqual([{ cell: cellOf(2, 1), t0: b.s.tick, mount: 0x3 }]);
+  });
+  it('queima também durante o remonte (as reservas que sobraram seguem na fila)', () => {
+    const { s, r } = setup([0x2, 0x3]);
+    r.phase = 'dismount'; r.remount = true; r.t0 = s.tick; r.reserves = [0x3];
+    flameAt(s, cellOf(3, 1));
+    run(s, 1);
+    expect(r.reserves).toEqual([]);
   });
 });

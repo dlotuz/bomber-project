@@ -4,7 +4,7 @@ import { mountAiHints } from '../ai/mounts';
 import { ABILITIES } from './abilities';
 import { revealEgg, stepOnEgg } from './eggs';
 import { onHit, onStunLoss, tickRiders } from './rider';
-import { mstate, rider, type MountRider } from './types';
+import { mstate, rider, EGG_BURST_TICKS, type MountRider } from './types';
 
 function riding(p: Player): MountRider | null {
   const r = rider(p);
@@ -33,6 +33,7 @@ export const mountModule: MountModule = {
       ABILITIES[pr.kind]?.tickProjectile?.(s, pr, ev);
     }
     ms.projectiles = ms.projectiles.filter(pr => pr.state !== 'done');
+    ms.bursts = ms.bursts.filter(b => s.tick - b.t0 < EGG_BURST_TICKS);   // L22: fim da explosão = DEC $1ED4
   },
   ai: mountAiHints,
 };

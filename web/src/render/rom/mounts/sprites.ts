@@ -2,15 +2,16 @@
 import type { RoundState } from '../../../core/types';
 import type { RomAssets, Piece, AnimFrame } from '../../../rom/types';
 import type { ObjEntry } from '../../ppu/types';
-import { rider, type MountState } from '../../../core/mounts/types';
+import { rider, EGG_BURST_TICKS, type MountState } from '../../../core/mounts/types';
 import { isEggCode } from '../../../core/mounts/core-api';
-import { EGG_ANIMS, RESERVE_EGG_ANIMS, PROJ_ANIMS } from './facts';
+import { EGG_ANIMS, RESERVE_EGG_ANIMS, PROJ_ANIMS, REMOUNT_GLOW_ANIMS } from './facts';
 import { sampleSeq, piecePx, cellXY } from './gfx';
 
 const EGG_PAL = 7;   // paleta comum (bomba/itens/ovos), medida pal:7 em todas as peças de ovo/reserva/projétil
 
 /** Leitura sem efeito colateral (mesma regra da camada de fallback, T5): nunca criar `s.mountState` ao desenhar. */
 const projectilesOf = (s: RoundState) => (s.mountState as MountState | null)?.projectiles ?? [];
+const burstsOf = (s: RoundState) => (s.mountState as MountState | null)?.bursts ?? [];
 
 export interface MountSprite { e: ObjEntry; sortY: number }
 
@@ -52,6 +53,15 @@ export function mountRomSprites(s: RoundState, a: RomAssets, frame: number): Mou
       const { X, Y } = cellXY(cell);
       out.push(...commonPieces(a, s.stage, X, Y, fr));
     });
+  }
+
+  // L22: reserva queimada — a explosão do ovo ($D8:D327 = REMOUNT_GLOW_ANIMS[2], 4 × 10 ticks) na casa da reserva.
+  for (const b of burstsOf(s)) {
+    const t = frame - b.t0;
+    if (t < 0 || t >= EGG_BURST_TICKS) continue;
+    const { X, Y } = cellXY(b.cell);
+    const { frame: fr } = sampleSeq(a, [REMOUNT_GLOW_ANIMS[2]], t);
+    out.push(...commonPieces(a, s.stage, X, Y, fr));
   }
 
   // Projéteis (D em voo, E voo/nuvem, F).

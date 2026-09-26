@@ -1,5 +1,6 @@
 export type MountEventId =
-  | 'egg_revealed' | 'mount_start' | 'mount_ready' | 'egg_reserved' | 'mount_lost' | 'mount_ability' | 'mount_struck';
+  | 'egg_revealed' | 'mount_start' | 'mount_ready' | 'egg_reserved' | 'mount_lost' | 'mount_ability' | 'mount_struck'
+  | 'reserve_burnt';                                  // L22: ovo reserva queimado (cell, mount)
 
 /** Evento de montaria = variante { type: 'mount' } do GameEvent do plano 6, com dados extras. */
 export interface MountEvent {
@@ -16,5 +17,5 @@ export function mev(e: Omit<MountEvent, 'type'>): MountEvent {
 /** SFX por evento de montaria (plano 11 consome). null = sem som medido (spec §12 A8). */
 export const MOUNT_SFX: Readonly<Record<MountEventId, number | null>> = {
   egg_revealed: null, mount_start: null, mount_ready: null, egg_reserved: null,
-  mount_lost: null, mount_ability: null, mount_struck: null,
+  mount_lost: null, mount_ability: null, mount_struck: null, reserve_burnt: null,
 };

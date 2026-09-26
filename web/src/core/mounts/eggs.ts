@@ -1,5 +1,5 @@
 import type { RoundState, Player, GameEvent } from '../types';
-import { rider, mstate, MAX_ACTIVE, MAX_RESERVES, MOUNTING_TICKS, type MountRider } from './types';
+import { rider, mstate, MAX_ACTIVE, MAX_RESERVES, MOUNTING_TICKS, type MountRider, type MountState } from './types';
 import { EGG_TYPES, rnd, lockAct, isEggCode } from './core-api';
 import { mev } from './events';
 
@@ -24,6 +24,7 @@ export function activeCount(s: RoundState): number {
     else if (r.phase === 'riding' || r.remount) n++;
     n += r.reserves.length;
   }
+  n += (s.mountState as MountState | null)?.bursts?.length ?? 0;   // leitura sem criar o estado (L22)
   return n;
 }
 

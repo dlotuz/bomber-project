@@ -1,5 +1,5 @@
-import type { RoundState, Player, GameEvent } from '../types';
-import { rider, MOUNTING_TICKS, DISMOUNT_TICKS, REMOUNT_TICKS, POST_INV, MAX_RESERVES, type MountRider } from './types';
+import { CODE, type RoundState, type Player, type GameEvent } from '../types';
+import { rider, mstate, MOUNTING_TICKS, DISMOUNT_TICKS, REMOUNT_TICKS, POST_INV, MAX_RESERVES, type MountRider } from './types';
 import { cellAt, lockAct } from './core-api';
 import { mev } from './events';
 
@@ -64,5 +64,22 @@ export function tickRiders(s: RoundState, ev: GameEvent[]): void {
       continue;
     }
     if (r.phase === 'riding') updateTrail(p, r);
+    if (r.reserves.length && p.inv <= 0) burnReserves(s, p, r, ev);
+  }
+}
+
+/** L22: o objeto reserva ($C2:62D7), com o dono sem invencibilidade (+$96 == 0), chama $C2:6645: se a casa do ovo tem o
+ *  bit $1000 (chama), sai da fila levando as de trás ($C2:6687 zera +$52/+$54/+$56 dali em diante; as de trás viram
+ *  0x0940 na grade e somem — medido, ver pendências), estoura ($D8:D327) e DEC $1ED4 no fim ($C2:6680). A casa da
+ *  reserva i é `trail[i+1]`, a mesma do desenho. */
+function burnReserves(s: RoundState, p: Player, r: MountRider, ev: GameEvent[]): void {
+  for (let i = 0; i < r.reserves.length; i++) {
+    const cell = r.trail[i + 1] ?? r.trail[0];
+    if (cell === undefined || (s.grid[cell] & CODE.FLAME) === 0) continue;
+    const type = r.reserves[i];
+    r.reserves.length = i;
+    mstate(s).bursts.push({ cell, t0: s.tick, mount: type });
+    ev.push(mev({ id: 'reserve_burnt', slot: p.slot, cell, mount: type }));
+    return;
   }
 }

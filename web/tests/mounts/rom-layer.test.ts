@@ -188,4 +188,21 @@ describe.skipIf(!ASSETS)('camada ROM das montarias × emulador', () => {
     expect(riderHook(s, p, ASSETS!, H + 70, H + 70)!.filter(e => e.pal === 7).length).toBeGreaterThan(0);
     expect(riderHook(s, p, ASSETS!, H + 71, H + 71)!.filter(e => e.pal === 7)).toHaveLength(0);
   });
+
+  // L22 (revisão final I6): reserva queimada estoura na casa com $D8:D327 (a mesma explosão medida no remonte, t ≥ 31
+  // em fx.remountGlow), por EGG_BURST_TICKS; peças relativas à âncora (ovo = objeto X=16·col, como as reservas).
+  it('L22: explosão da reserva queimada = $D8:D327 medido, e some depois de 40 ticks', () => {
+    const s = mkRound();
+    const cell = cellOf(5, 3);
+    s.mountState = { projectiles: [], nextId: 1, bursts: [{ cell, t0: s.tick, mount: 2 }] };
+    const raw = (fx.remountGlow as unknown as (FxSample & { x: number; y: number })[]).map((smp, i) => ({ ...smp, i }));
+    let n = 0;
+    for (const smp of stable(raw).filter(q => q.i >= 33)) {
+      const got = mountRomSprites(s, ASSETS!, s.tick + smp.i - 31).map(x => x.e);
+      expect(facts(got, 16 * 5, 16 * (3 + 2)), `t=${smp.i - 31}`).toEqual(norm(smp.pieces as FxPiece[]));
+      n++;
+    }
+    expect(n).toBeGreaterThan(15);
+    expect(mountRomSprites(s, ASSETS!, s.tick + 40)).toHaveLength(0);
+  });
 });
