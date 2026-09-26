@@ -23,7 +23,7 @@ export function rulesScreen(app: App): Screen {
     left: () => setNum(key, clamp(r[key] - 1, min, max)),
     right: () => setNum(key, clamp(r[key] + 1, min, max)),
   });
-  const toggle = (label: string, key: keyof Pick<RuleChoices, 'suddenDeath' | 'badBomber' | 'racer' | 'randomSpawns'>): MenuItem => ({
+  const toggle = (label: string, key: keyof Pick<RuleChoices, 'suddenDeath' | 'badBomber' | 'racer'>): MenuItem => ({
     label, value: () => onOff(r[key]), select: next,
     left: () => { r[key] = !r[key]; app.save(); },
     right: () => { r[key] = !r[key]; app.save(); },
@@ -35,7 +35,6 @@ export function rulesScreen(app: App): Screen {
     toggle('MORTE SÚBITA', 'suddenDeath'),
     toggle('BOMBER VINGADOR', 'badBomber'),
     toggle('CORRIDA', 'racer'),
-    toggle('SPAWN ALEATÓRIO', 'randomSpawns'),
     { label: 'CONTINUAR', select: next },
   ]);
   return {
