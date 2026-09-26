@@ -21,8 +21,10 @@ export const S = {
     labels: ['Nível da CPU', 'Coroas', 'Tempo', 'Morte Súbita', 'Bomber Vingador', 'Corrida Bônus'],
     cpu: ['Fraco', 'Normal', 'Forte'], crowns: ['1', '2', '3', '4', '5'], time: ['1:00', '2:00', '3:00', '5:00', '∞'], no: 'Não', yes: 'Sim',
   },
-  chars: { title: 'Escolha um personagem!', tags: ['1P', '2P', '3P', '4P', '5P'] },
-  teams: { title: 'Escolha as equipes!', vs: 'VS' },
+  chars: {
+    title: 'Escolha um personagem!', tags: ['1P', '2P', '3P', '4P', '5P'], allReady: 'TUDO PRONTO', help: 'A: ESCOLHER   B: VOLTAR',
+  },
+  teams: { title: 'Escolha as equipes!', vs: 'VS', help: 'ESQ/DIR: LADO  A: OK  B: VOLTAR' },
   stage: { title: 'Escolha a fase!', stage: (n: number) => `Fase ${n}`, names: STAGE_NAMES_PT, battle: 'BATALHA!' },
   battle: { pause: 'PAUSA!', hurry: 'RÁPIDO!!', timeUp: 'TEMPO ESGOTADO!', timeUpShort: 'TEMPO!', disconnected: (n: number) => `CONTROLE ${n} DESCONECTADO` },
   score: { title: 'PLACAR', tags: ['1P', '2P', '3P', '4P', '5P'] },
@@ -35,7 +37,7 @@ export const S = {
     spawns: 'SPAWNS ALEATÓRIOS', music: 'VOLUME DA MÚSICA', sfx: 'VOLUME DOS EFEITOS',
     rom: 'ROM', romOk: 'CARREGADA ✓', romNo: 'NÃO CARREGADA', load: 'CARREGAR ROM...', forget: 'ESQUECER ROM',
     forgetAsk: 'ESQUECER A ROM? A: SIM  B: NÃO', reset: 'RESTAURAR PADRÃO', back: 'VOLTAR', no: 'NÃO', yes: 'SIM',
-    pressKey: 'APERTE A NOVA TECLA (ESC CANCELA)', pressPad: 'APERTE O NOVO BOTÃO (ESC CANCELA)', actions: ACTIONS,
+    pressKey: 'NOVA TECLA? (ESC CANCELA)', pressPad: 'NOVO BOTÃO? (ESC CANCELA)', actions: ACTIONS,
     button: (n: number) => `BOTÃO ${n}`,
   },
 } as const;
@@ -53,7 +55,7 @@ export const STRING_USES: readonly Use[] = uniq([
   ...as('spriteBlue', [S.stage.title, ...Array.from({ length: 10 }, (_, i) => S.stage.stage(i + 1)), ...STAGE_NAMES_PT]),
   ...as('banner', [S.battle.pause, S.battle.hurry, S.battle.timeUp, S.battle.timeUpShort, S.racer.press]),
   ...as('ascii8', [
-    ...[1, 2, 3, 4].map(S.battle.disconnected), ...S.score.tags, ...S.chars.tags, S.racer.prize, ...Object.values(RACER_PRIZE_NAMES),
+    ...[1, 2, 3, 4].map(S.battle.disconnected), ...S.score.tags, ...S.chars.tags, S.chars.allReady, S.chars.help, S.teams.help, S.racer.prize, ...Object.values(RACER_PRIZE_NAMES),
     ...[1, 2, 3, 4, 5].map(S.options.player), ...Object.values(DEVICE_NAMES), S.options.keys(1), S.options.keys(2),
     ...[1, 2, 3, 4].map(S.options.pad), S.options.spawns, S.options.music, S.options.sfx, S.options.rom, S.options.romOk,
     S.options.romNo, S.options.load, S.options.forget, S.options.forgetAsk, S.options.reset, S.options.back, S.options.no,

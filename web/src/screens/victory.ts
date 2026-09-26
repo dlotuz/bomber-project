@@ -59,6 +59,9 @@ function drawConfetti(ctx: CanvasRenderingContext2D, s: number): void {
   }
 }
 
+/** y do mapa de BG2 onde começa a cena da vitória (linha 14; as linhas 0–13 são o placar). */
+const VICTORY_MAP_Y = 224;
+
 /** Placar final (descida) e VITÓRIA [§6.12, §7.4, §7.5, R9]. */
 export function victoryScreen(app: App, ms: MatchSession, startS: number): Screen & {
   readonly s: number; cameraY(): number; textX(): number | null; runnerX(k: number): number | null;
@@ -105,8 +108,14 @@ export function victoryScreen(app: App, ms: MatchSession, startS: number): Scree
       drawScoreboard(ctx, bank, ms, s, -camY);
       const a = romState.assets;
       if (a) {
-        const f = sceneFrame(sceneGfx(a, 'victory'), victoryMaps(a), { oam: victoryOam() });
-        ppu.draw(ctx, f, yTop);
+        // T22: placar e vitória são um só mapa de BG2 (32×32 casas de 16 px): o placar nas linhas 0–13 e a vitória
+        // (torcida, faixa das bombas, chão) a partir da linha 14 (y = 224). A cena local começa em y = 224 do mapa;
+        // quando ela passa do topo da tela (descida de 256 px), o scroll continua pelo próprio mapa.
+        const vofs = VICTORY_MAP_Y + Math.max(0, -yTop);
+        const f = sceneFrame(sceneGfx(a, 'victory'), victoryMaps(a), {
+          oam: victoryOam().map(o => ({ ...o, y: o.y + Math.min(0, yTop) })), bg2: [0, vofs],
+        });
+        ppu.draw(ctx, f, Math.max(0, yTop));
       }
       ctx.save();
       ctx.translate(0, yTop);

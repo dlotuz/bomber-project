@@ -11,3 +11,6 @@ web/dist/
 analise/ferramentas/*.dylib
 analise/estados/
 analise/extraido/
+
+# screenshots do npm run snap (web/scripts/snapshots.mjs): imagens da ROM, não versionar
+web/snapshots/

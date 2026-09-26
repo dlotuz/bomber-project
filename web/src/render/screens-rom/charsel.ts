@@ -11,6 +11,7 @@
 import type { SpriteBank } from '../sprite-bank';
 import type { RomAssets } from '../../app/rom-api';
 import { box, MENU_GEO, newMap, pattern, put, type SceneMaps } from './scene';
+import { drawText } from '../text/text';
 
 /** Grade 3×2 dos 6 personagens (`render/art/bomber.ts` `CHARACTERS`), medida no `charsel.oam`. */
 export const CHARSEL_GRID = { cols: 3, rows: 2, x: [80, 128, 176] as const, y: [88, 136] as const, cellW: 48, cellH: 48 };
@@ -104,12 +105,18 @@ export function charselMaps(_a: RomAssets): SceneMaps {
   return { bg1, bg2 };
 }
 
-/** Nosso título (PT-BR) dentro do vão que a ROM deixava para "Select a character!" (`CHARSEL_TITLE_PX`, medido
- *  na captura), centralizado — em vez da barra fixa em y=12 usada pelas telas sem cena própria. */
+/** Divide o título em 2 linhas no espaço mais perto do meio (a ROM também usa 2: "Select a" / "character!"). */
+export function splitTitle(text: string): [string, string] {
+  let best = -1;
+  for (let k = 0; k < text.length; k++) if (text[k] === ' ' && (best < 0 || Math.abs(k - text.length / 2) < Math.abs(best - text.length / 2))) best = k;
+  return best < 0 ? [text, ''] : [text.slice(0, best), text.slice(best + 1)];
+}
+
+/** Nosso título (PT-BR) dentro do vão que a ROM deixava para "Select a character!" (`CHARSEL_TITLE_PX`, 2 linhas de
+ *  16 px medidas na captura), na fonte `menuTitle` (da ROM quando carregada), centrado em x; `color` só vale sem ROM. */
 export function drawCharselTitle(ctx: CanvasRenderingContext2D, bank: SpriteBank, text: string, color: string): void {
-  const img = bank.text(text, color);
-  const scale = 2;
-  const w = img.width * scale, h = img.height * scale;
-  const cx = (CHARSEL_TITLE_PX.x0 + CHARSEL_TITLE_PX.x1 + 1) / 2, cy = (CHARSEL_TITLE_PX.y0 + CHARSEL_TITLE_PX.y1 + 1) / 2;
-  ctx.drawImage(img, Math.round(cx - w / 2), Math.round(cy - h / 2), w, h);
+  const cx = Math.floor((CHARSEL_TITLE_PX.x0 + CHARSEL_TITLE_PX.x1 + 1) / 2);
+  splitTitle(text).forEach((line, k) => {
+    if (line) drawText(ctx, bank, 'menuTitle', line, cx, CHARSEL_TITLE_PX.y0 + 16 * k, { align: 'center', color });
+  });
 }

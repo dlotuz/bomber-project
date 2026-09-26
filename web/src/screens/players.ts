@@ -15,6 +15,8 @@ import { modeScreen } from './vs';
 import { rulesScreen } from './rules';
 
 /** Ordem do cursor de valor [A15]: ← avança (Humano→CPU→Nenhum), → recua; os dois param no limite. */
+/** Âncora (centro, topo) do título, presa à faixa de texto da captura em `tests/screens/menu-title.test.ts`. */
+export const PLAYERS_TITLE = { x: 127, y: 13 } as const;
 const KINDS: readonly SlotKind[] = ['human', 'cpu', 'off'];
 const LABEL: Record<SlotKind, string> = { human: S.players.human, cpu: S.players.cpu, off: S.players.off };
 const TONE: Record<SlotKind, Tone> = { human: 'green', cpu: 'red', off: 'blue' };
@@ -64,7 +66,7 @@ export function playersScreen(app: App): Screen & { readonly cursor: number; val
         drawFallbackFrame(ctx, PLAYERS_FRAME);
         drawStaticCursor(ctx, 24, 48 + 32 * menu.cursor);
       }
-      drawText(ctx, bank, 'menuTitle', S.players.title, 127, 13, { align: 'center' });
+      drawText(ctx, bank, 'menuTitle', S.players.title, PLAYERS_TITLE.x, PLAYERS_TITLE.y, { align: 'center' });
       for (let i = 0; i < 5; i++) {
         const y = 47 + 32 * i;
         drawText(ctx, bank, 'menuItem', S.players.row[i], 48, y);

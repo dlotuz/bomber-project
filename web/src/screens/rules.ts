@@ -14,6 +14,8 @@ import { playersScreen } from './players';
 import { charactersScreen } from './characters';
 
 type ToggleKey = keyof Pick<RuleChoices, 'suddenDeath' | 'badBomber' | 'racer'>;
+/** Âncora (centro, topo) do título, presa à faixa de texto da captura em `tests/screens/menu-title.test.ts`. */
+export const RULES_TITLE = { x: 127, y: 21 } as const;
 const TOGGLES: readonly ToggleKey[] = ['suddenDeath', 'badBomber', 'racer'];
 const onOff = (b: boolean): string => (b ? S.rules.yes : S.rules.no);
 
@@ -70,7 +72,7 @@ export function rulesScreen(app: App): Screen & { readonly cursor: number; value
         drawFallbackFrame(ctx, RULES_FRAME);
         drawStaticCursor(ctx, 16, 56 + 24 * menu.cursor);
       }
-      drawText(ctx, bank, 'menuTitle', S.rules.title, 127, 21, { align: 'center' });
+      drawText(ctx, bank, 'menuTitle', S.rules.title, RULES_TITLE.x, RULES_TITLE.y, { align: 'center' });
       const vals = values();
       for (let i = 0; i < S.rules.labels.length; i++) {
         const y = 55 + 24 * i;

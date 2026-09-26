@@ -23,10 +23,6 @@ export type BattleScreen = Screen & {
   readonly ms: MatchSession; readonly round: RoundState; readonly paused: boolean; readonly disconnected: number | null;
   banners(): Banners;
 };
-/** `vis` do `drawRomBattle`: o plano 7 (D1) usa `RomBattleVis = { crowns }`; enquanto o stub do plano 5 tipa `ViewState`,
- *  o objeto passa pelo tipo do parâmetro (com o plano 7 o cast não faz nada). */
-type RomVis = Parameters<typeof drawRomBattle>[2];
-
 /** Hospeda uma rodada (§6.8–§6.10): intro por brilho, faixas, pausa (START de qualquer controle, $04, sem escurecer),
  *  saída segurando SELECT+START ou Esc 60 f, pausa por desconexão e o fim de rodada com os tempos e sons medidos. */
 export function battleScreen(app: App, ms: MatchSession): BattleScreen {
@@ -107,7 +103,7 @@ export function battleScreen(app: App, ms: MatchSession): BattleScreen {
     draw(ctx, bank, frame) {
       const a = romState.assets;
       const crowns = crownsOf(ms.match);
-      if (!(a && drawRomBattle(ctx, round, { crowns } as unknown as RomVis, a, frame))) {
+      if (!(a && drawRomBattle(ctx, round, { crowns }, a, frame))) {
         drawRound(ctx, round, view, bank, ms.cfg.chars, frame, [...crowns]);
       }
       drawBattleOverlays(ctx, bank, { paused, disconnected, ...banners() });
