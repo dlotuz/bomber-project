@@ -16,9 +16,11 @@ export const AI_LEVELS: readonly AiLevel[] = [
   { react: 2, mistake: 0, hunt: true, margin: 4, open: true, alert: 0, trap: true, wary: false },
 ];
 
-/** 0..99 derivado só de (tick, slot, sal): a IA não consome o RNG do jogo. */
-export function aiRoll(tick: number, slot: number, salt: number): number {
+/** 0..99 derivado só de (tick, slot, sal, semente da IA): a IA não consome o RNG do jogo. `seed` = 0 (padrão) dá os
+ *  mesmos valores de antes; outra semente (createAi) varia as decisões entre rodadas iguais (arenas sem sorteio). */
+export function aiRoll(tick: number, slot: number, salt: number, seed = 0): number {
   let h = Math.imul(tick + 0x9e3779b1, 0x85ebca6b) ^ Math.imul(slot + 1, 0xc2b2ae35) ^ Math.imul(salt + 7, 0x27d4eb2f);
+  if (seed) h ^= Math.imul(seed, 0x165667b1);
   h ^= h >>> 15; h = Math.imul(h, 0x2c1b3c6d); h ^= h >>> 12;
   return (h >>> 0) % 100;
 }

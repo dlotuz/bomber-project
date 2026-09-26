@@ -1,11 +1,12 @@
 // Navegação da IA: Dijkstra no tempo a partir da posição real, refúgios, fuga e direção a mandar.
 import { BTN, CODE, type Player, type RoundState } from '../types';
-import { CELLS, SUB, centerX, centerY, colOf, faceStep, inField, linOf, px } from '../units';
+import { CELLS, SUB, cellAt, centerX, centerY, colOf, faceStep, inField, linOf, px } from '../units';
 import { playerCell, standing } from '../state';
 import { blockedFor, moveStep } from '../movement';
 import { speedLevel } from '../disease';
 import { SPEED_BY_LEVEL } from '../tables/movement';
 import { MOUNTS } from '../mounts';
+import { STAGES } from '../stages';
 import { SAFE, blockedUntil, type Hazard } from './danger';
 import type { AiLevel } from './level';
 
@@ -38,6 +39,15 @@ export function offsetOf(p: Player): { ox: number; oy: number } {
 export function centered(s: RoundState, p: Player): boolean {
   const spd = speedOf(s, p), { ox, oy } = offsetOf(p);
   return Math.abs(ox) < spd && Math.abs(oy) < spd;
+}
+
+/** Bloqueios extras para andar: bombas deslizando e casas que a arena manda evitar. */
+export function walkBlocked(s: RoundState, p: Player): Set<number> {
+  const out = new Set<number>();
+  for (const b of s.bombs) if (b.state === 'kicked') { const c = cellAt(b.x, b.y); if (c >= 0) out.add(c); }
+  const avoid = STAGES[s.stage]?.ai?.avoid?.(s, p.slot);
+  if (avoid) for (const c of avoid) out.add(c);
+  return out;
 }
 
 /** O jogador pode pisar na casa `i` (queimando conta: fica livre em `blockedUntil`)? `blocked`: bloqueios extras
@@ -209,10 +219,17 @@ export function escape(s: RoundState, p: Player, hz: Hazard, blocked: ReadonlySe
   return best >= 0 ? route(sr, best) : { path: [], go: [] };
 }
 
-/** `q` tem algum refúgio alcançável com este perigo (folga 0)? */
+/** Ticks em que o jogador ainda não obedece aos botões (ação travada: atordoado, golpe P, arremesso, empurrado...). */
+export function lockOf(p: Player): number {
+  return Math.max(0, p.actLeft, p.push.left);
+}
+
+/** `q` tem algum refúgio alcançável com este perigo (folga 0), contando o tempo em que ele está travado? */
 export function hasRefuge(s: RoundState, q: Player, hz: Hazard, blocked: ReadonlySet<number>): boolean {
+  const lock = lockOf(q);
+  if (lock > 0 && hits(hz, playerCell(q), 1, lock, 0)) return false;
   let found = false;
-  search(s, q, hz, blocked, 0, 0, (c, t) => (found = refuge(hz, c, t, 0)));
+  search(s, q, hz, blocked, 0, lock, (c, t) => (found = refuge(hz, c, t, 0)));
   return found;
 }
 
