@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import fx from '../fixtures/rom/mount-render.json';
-import { ASSETS, ROM } from './rom-helpers';
+import { ASSETS, ROM, stable } from './rom-helpers';
 import { sheetFrame } from '../../src/rom/assets-char';
 import {
   RIDER_ANIMS, MOUNT_ANIMS, COSTUME_ANIMS, MOUNTING_ANIMS, MOUNTING_MOUNT_ANIMS, DISMOUNT_ANIMS, REMOUNT_ANIMS,
@@ -16,10 +16,6 @@ type FxSample = { anim: number; frame: number; anim2?: number; frame2?: number; 
 type FxDirs = Record<(typeof DIRS)[number], { walk: FxSample[]; idle: FxSample[] }>;
 const riders = fx.riders as unknown as Record<string, FxDirs>;
 const costumes = fx.costumes as unknown as Record<string, FxDirs>;
-/** Amostras estáveis: mesma animação/quadro que a anterior. Na troca, a VRAM ainda mostra o gráfico anterior por 1 quadro
- *  (o DMA do novo quadro chega no quadro seguinte), então a troca não serve para conferir o gráfico. */
-const stable = (ss: FxSample[]) => ss.filter((s, i) => i > 0 &&
-  [s.anim, s.frame, s.anim2, s.frame2].join() === [ss[i - 1].anim, ss[i - 1].frame, ss[i - 1].anim2, ss[i - 1].frame2].join());
 
 describe('fixture das montarias (sem ROM)', () => {
   it('só fatos: nenhuma chave de bytes crus', () => {
