@@ -27,9 +27,8 @@ export function applyDiseaseInput(_s: RoundState, p: Player, btn: number): numbe
 
 export function speedLevel(s: RoundState, p: Player): number {
   let lv = p.disease === DISEASE.FAST ? 6 : p.disease === DISEASE.SLOW ? 7 : p.speedLv;
-  const st = STAGES[s.stage];
-  if (st?.speedLevel) lv = st.speedLevel(s, p, lv);
-  return p.effect.kind === 2 ? 7 : lv;
+  if (p.effect.kind === 2) lv = 7;
+  return STAGES[s.stage]?.speedLevel?.(s, p, lv) ?? lv;   // plano 8 (D10): o nível da arena vence doença e efeito
 }
 
 export function tickDisease(s: RoundState, p: Player, ev: GameEvent[]): void {

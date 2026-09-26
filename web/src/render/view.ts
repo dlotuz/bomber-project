@@ -1,6 +1,5 @@
 import { FLAME_PIECE, FLAME_TICKS, clockText, type GameEvent, type RoundState } from '../core';
 import type { FlamePart } from './art/flames';
-import { displayName } from '../game/config';
 
 export interface ViewState { roundKey: RoundState | null; walk: number[]; lastPos: [number, number][] }
 
@@ -44,10 +43,4 @@ export function formatClock(clock: { sec: number; sub: number }): string { retur
 export function dyingVisible(age: number): boolean {
   if (age > 21) return false;
   return ((age >> 2) & 1) === 0;
-}
-
-export function roundOverText(winners: number[], mode: 'ffa' | 'team', teams: number[], names: readonly string[] = []): string {
-  if (winners.length === 0) return 'EMPATE!';
-  if (mode === 'team') return teams[winners[0]] === 0 ? 'TIME VERMELHO VENCEU!' : 'TIME BRANCO VENCEU!';
-  return `${displayName(names, winners[0])} VENCEU!`;
 }

@@ -1,0 +1,21 @@
+{
+  "rom": "38f4394986bd39fcbe32a722a3fe103ee6177d9b",
+  "styles": {
+    "bigBattle": {
+      "glyphs": 9,
+      "sha1": "a2eeff6e76964712e67c0264b86b0880923ca450"
+    },
+    "bigScore": {
+      "glyphs": 10,
+      "sha1": "69d909a3596826807bc4ced04129724aa2b1c734"
+    },
+    "bigVictory": {
+      "glyphs": 10,
+      "sha1": "91095c5294d67cfbb18ecb2b7e97cb3c5f009540"
+    },
+    "bigDraw": {
+      "glyphs": 9,
+      "sha1": "b6b1c877bddb146c2eb47d5054fa04982053372e"
+    }
+  }
+}

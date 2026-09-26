@@ -1,0 +1,17 @@
+{
+  "rom": "38f4394986bd39fcbe32a722a3fe103ee6177d9b",
+  "styles": {
+    "titleMenu": {
+      "glyphs": 19,
+      "sha1": "0bdd446afd6bd33e65208eb3a1069508d663db5e"
+    },
+    "menuTitle": {
+      "glyphs": 34,
+      "sha1": "16d7012869cc4d67f7b95fcf91aae5d700f3ed31"
+    },
+    "menuItem": {
+      "glyphs": 51,
+      "sha1": "9aa09579056610c7340a2e08a8611127783b15df"
+    }
+  }
+}
