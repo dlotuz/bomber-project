@@ -6,7 +6,7 @@
 import type { AudioSink } from './sink';
 import type { AudioCmd } from './engine/commands';
 
-export interface AudioTransport { send(cmd: AudioCmd): void; setGain?(g: number): void }
+export interface AudioTransport { send(cmd: AudioCmd): void; resume?(): void }
 export interface RomSinkOptions { /** chamado no início de cada tick(), antes de tirar o SFX da fila (atrasos do BattleAudio) */ onTick?: () => void }
 export const SFX_QUEUE = 64;
 
@@ -36,7 +36,10 @@ export class RomAudioSink implements AudioSink {
       return;
     }
   }
-  /** VolumeControl (plano 10): o DSP mistura música e efeitos num só sinal; o ganho geral é o maior dos dois. */
-  setVolume(music: number, sfx: number): void { this.t.setGain?.(Math.max(0, Math.min(1, Math.max(music, sfx)))); }
+  /** VolumeControl (plano 10): música e efeitos separados, aplicados por voz do DSP no worklet (M5). */
+  setVolume(music: number, sfx: number): void {
+    const c = (x: number) => Math.max(0, Math.min(1, x));
+    this.t.send({ t: 'volume', music: c(music), sfx: c(sfx) });
+  }
   get pending(): number { return this.queue.length; }
 }

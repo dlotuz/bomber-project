@@ -124,6 +124,9 @@ export class SpcDsp implements DspBus {
   // estado fora da emulação
   private muteMask = 0;
   private stereoSwitch = 0xffff;
+  /** Acréscimo do Crown Blast (não existe no SPC_DSP): ganho por voz em 1/256 (256 = sem efeito, bit a bit
+   *  igual ao original), aplicado na saída da voz antes das somas principal e do eco. Volume música × efeitos. */
+  readonly voiceGain = new Int32Array(VOICE_COUNT).fill(256);
 
   constructor(ram: Uint8Array, out: SampleSink) {
     this.ram = ram;
@@ -469,6 +472,8 @@ export class SpcDsp implements DspBus {
     // Aplica o volume esquerdo/direito
     let amp = (this.tOutput * i8(this.regs[v.base + V_VOLL + ch])) >> 7;
     amp *= (this.stereoSwitch & (1 << (v.voiceNumber + ch * VOICE_COUNT))) ? 1 : 0;
+    const g = this.voiceGain[v.voiceNumber];
+    if (g !== 256) amp = (amp * g) >> 8;
 
     // Soma ao total de saída
     this.tMainOut[ch] = clamp16(this.tMainOut[ch] + amp);

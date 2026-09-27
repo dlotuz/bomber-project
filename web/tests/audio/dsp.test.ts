@@ -2,10 +2,11 @@ import { SpcDsp } from '../../src/audio/apu/dsp/spc-dsp';
 import { dspScenes } from './gen/inputs';
 import { fixture, sha1 } from './node';
 
-function render(sc: ReturnType<typeof dspScenes>[number]): Int16Array {
+function render(sc: ReturnType<typeof dspScenes>[number], gains?: number[]): Int16Array {
   const out: number[] = [];
   const dsp = new SpcDsp(sc.ram.slice(), { push: (l, r) => { out.push(l, r); } });
   dsp.reset();
+  if (gains) dsp.voiceGain.set(gains);
   let now = 0;
   for (const w of sc.writes) {
     if (w.clock > now) dsp.run(w.clock - now);
@@ -28,6 +29,16 @@ describe('DSP (porte do SPC_DSP): PCM bit a bit igual à referência', () => {
       expect(sha1(new Uint8Array(pcm.buffer))).toBe(want.sha1);
     });
   }
+});
+
+describe('DSP: ganho por voz (fora da emulação, volume música × efeitos)', () => {
+  it('256 em todas as vozes = PCM bit a bit igual; 0 em todas = silêncio', () => {
+    const fx = fixture<{ scenes: Record<string, { sha1: string }> }>('audio-dsp.json');
+    for (const sc of dspScenes()) {
+      expect(sha1(new Uint8Array(render(sc, Array(8).fill(256)).buffer))).toBe(fx.scenes[sc.name].sha1);
+      expect(render(sc, Array(8).fill(0)).every(v => v === 0)).toBe(true);
+    }
+  });
 });
 
 describe('DSP: registradores', () => {

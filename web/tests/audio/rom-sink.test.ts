@@ -3,8 +3,7 @@ import type { AudioCmd } from '../../src/audio/engine/commands';
 
 function make(onTick?: () => void) {
   const sent: AudioCmd[] = [];
-  const gains: number[] = [];
-  return { sent, gains, sink: new RomAudioSink({ send: c => { sent.push(c); }, setGain: g => { gains.push(g); } }, { onTick }) };
+  return { sent, sink: new RomAudioSink({ send: c => { sent.push(c); } }, { onTick }) };
 }
 
 describe('RomAudioSink', () => {
@@ -49,9 +48,9 @@ describe('RomAudioSink', () => {
     expect(order).toEqual(['onTick']);
     expect(sent).toEqual([{ t: 'sfx', id: 0x10 }]);
   });
-  it('volume (VolumeControl do plano 10): ganho geral = o maior dos dois, entre 0 e 1', () => {
-    const { gains, sink } = make();
-    sink.setVolume(0.3, 0.8); sink.setVolume(0, 0); sink.setVolume(2, 0);
-    expect(gains).toEqual([0.8, 0, 1]);
+  it('volume (VolumeControl do plano 10): música e efeitos separados, entre 0 e 1, vão ao worklet (M5)', () => {
+    const { sent, sink } = make();
+    sink.setVolume(0.3, 0.8); sink.setVolume(0, 0); sink.setVolume(2, -1);
+    expect(sent).toEqual([{ t: 'volume', music: 0.3, sfx: 0.8 }, { t: 'volume', music: 0, sfx: 0 }, { t: 'volume', music: 1, sfx: 0 }]);
   });
 });

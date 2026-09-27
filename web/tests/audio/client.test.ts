@@ -10,7 +10,6 @@ function fakeEnv(opts: { failAddModule?: boolean; failNode?: boolean; resume?: '
     closed = 0;
     resumes = 0;
     readonly destination = {};
-    createGain() { return { gain: { value: 1 }, connect: <T>(d: T): T => d }; }
     readonly audioWorklet = { addModule: async () => { if (opts.failAddModule) throw new Error('sem AudioWorklet'); } };
     constructor() { contexts.push(this); }
     resume(): Promise<void> {
@@ -61,4 +60,10 @@ describe('AudioClient.create (I3)', () => {
     expect(f.contexts[0].resumes).toBe(1);
   });
 
+  it('volume vai ao worklet como comando (música e efeitos separados, M5)', async () => {
+    const f = fakeEnv({ resume: 'ok' });
+    const c = await AudioClient.create(slices(), undefined, f.env);
+    c.send({ t: 'volume', music: 0, sfx: 0.5 });
+    expect(f.posted.at(-1)).toEqual({ t: 'volume', music: 0, sfx: 0.5 });
+  });
 });

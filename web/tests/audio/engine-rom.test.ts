@@ -49,3 +49,28 @@ describe.skipIf(!ROM)('motor real: banco/música durante o stream de uma voz (I1
     }, 60_000);
   }
 });
+
+describe.skipIf(!ROM)('motor real: volume da música separado do dos efeitos (M5)', () => {
+  it('música em 0 cala a música mas não os SFX nem as vozes; efeitos em 0 calam os SFX', () => {
+    const { send, run } = setup();
+    send({ t: 'boot' }); send({ t: 'music', id: 0x14 });
+    run(150);
+    expect(run(30)).toBeGreaterThan(0.01);
+    send({ t: 'volume', music: 0, sfx: 1 });
+    run(180);                                            // o eco da música se esgota
+    expect(run(30)).toBeLessThan(0.0005);
+    send({ t: 'sfx', id: 0x07 });
+    expect(run(30)).toBeGreaterThan(0.01);               // explosão (voz 1 do DSP)
+    run(180);
+    send({ t: 'voice', id: 0x06 });
+    expect(run(60)).toBeGreaterThan(0.01);               // voz digitalizada (voz 0 do DSP)
+    send({ t: 'volume', music: 1, sfx: 0 });
+    send({ t: 'stop' });
+    run(180);
+    send({ t: 'sfx', id: 0x07 });
+    expect(run(30)).toBeLessThan(0.0005);
+    send({ t: 'volume', music: 0.5, sfx: 0.5 });
+    send({ t: 'sfx', id: 0x07 });
+    expect(run(30)).toBeGreaterThan(0.005);
+  }, 60_000);
+});

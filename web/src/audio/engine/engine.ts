@@ -22,7 +22,7 @@ export const SFX_FIFO = 64;
 export const MAX_RECOVERIES = 3;
 
 /** O APU real (`Apu`) sabe religar; o motor usa isso para se recuperar de um erro do host. */
-export type EngineBus = ApuBus & { power?(): void };
+export type EngineBus = ApuBus & { power?(): void; setVolume?(music: number, sfx: number): void; updateMix?(): void };
 
 export interface EngineStats { frames: number; nmis: number; droppedSfx: number; ignoredVoices: number; errors: number; lastError: string }
 
@@ -60,6 +60,9 @@ export class AudioEngine {
       case 'voice':
         if (!this.booted || !this.host.voice(cmd.id)) this.stats.ignoredVoices++;
         return;
+      case 'volume':
+        this.bus.setVolume?.(cmd.music, cmd.sfx);
+        return;
       case 'boot':
         if (this.bootQueued) return;
         this.bootQueued = true;
@@ -73,6 +76,7 @@ export class AudioEngine {
   /** Escreve `n` quadros a 32 kHz em outL/outR[off..]. */
   render(outL: Float32Array, outR: Float32Array, n: number, off = 0): void {
     if (this.broken) { outL.fill(0, off, off + n); outR.fill(0, off, off + n); return; }
+    this.bus.updateMix?.();
     try {
       while (this.ring.size < n) this.advance((n - this.ring.size) * SAMPLE_CYCLES);
     } catch (e) {

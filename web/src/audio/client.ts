@@ -10,7 +10,7 @@ import type { AudioCmd, WorkletIn, WorkletOut } from './engine/commands';
 import type { AudioSlices } from './host/image';
 
 /** O que o resto do jogo usa do cliente (a fábrica da Tarefa 11 recebe isto, e os testes, um falso). */
-export interface AudioClientLike { send(cmd: AudioCmd): void; setGain(g: number): void; resume?(): void; close(): Promise<void> }
+export interface AudioClientLike { send(cmd: AudioCmd): void; resume?(): void; close(): Promise<void> }
 
 /** Construtores do Web Audio (injetáveis nos testes). */
 export interface AudioEnv {
@@ -21,8 +21,7 @@ export interface AudioEnv {
 export class AudioClient implements AudioClientLike {
   private readonly ctx: AudioContext;
   private readonly node: AudioWorkletNode;
-  private readonly gain: GainNode;
-  private constructor(ctx: AudioContext, node: AudioWorkletNode, gain: GainNode) { this.ctx = ctx; this.node = node; this.gain = gain; }
+  private constructor(ctx: AudioContext, node: AudioWorkletNode) { this.ctx = ctx; this.node = node; }
 
   static async create(s: AudioSlices, onMessage?: (m: WorkletOut) => void, env: AudioEnv = globalThis as unknown as AudioEnv): Promise<AudioClient> {
     let ctx: AudioContext;
@@ -32,12 +31,11 @@ export class AudioClient implements AudioClientLike {
       await ctx.audioWorklet.addModule(workletUrl);
       const node = new env.AudioWorkletNode(ctx, 'crown-apu', { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2] });
       if (onMessage) node.port.onmessage = e => onMessage(e.data as WorkletOut);
-      const gain = ctx.createGain();
-      node.connect(gain).connect(ctx.destination);
+      node.connect(ctx.destination);                         // volume: comando 'volume' ao worklet (M5)
       const c0 = s.c0.slice(), data = s.data.slice();
       const msg: WorkletIn = { t: 'image', c0, data };
       node.port.postMessage(msg, [c0.buffer, data.buffer]);
-      const client = new AudioClient(ctx, node, gain);
+      const client = new AudioClient(ctx, node);
       client.resume();
       return client;
     } catch (e) {
@@ -47,7 +45,6 @@ export class AudioClient implements AudioClientLike {
   }
 
   send(cmd: AudioCmd): void { this.node.port.postMessage(cmd); }
-  setGain(g: number): void { this.gain.gain.value = g; }
   /** Pede para o contexto rodar (sem esperar); chamado na criação e a cada gesto do usuário. */
   resume(): void { if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => undefined); }
   async close(): Promise<void> { this.node.disconnect(); await this.ctx.close(); }

@@ -19,7 +19,7 @@ function setup() {
     createClient: async s => {
       const c = { sent: [] as AudioCmd[], closed: false, c0: s.c0.length, data: s.data.length, resumes: 0 };
       clients.push(c);
-      const api: AudioClientLike = { send: cmd => { c.sent.push(cmd); }, setGain: () => {}, resume: () => { c.resumes++; }, close: async () => { c.closed = true; } };
+      const api: AudioClientLike = { send: cmd => { c.sent.push(cmd); }, resume: () => { c.resumes++; }, close: async () => { c.closed = true; } };
       return api;
     },
     onTick: () => { ticks++; },

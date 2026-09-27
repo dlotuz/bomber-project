@@ -6,7 +6,9 @@ export type AudioCmd =
   | { t: 'sfx'; id: number }
   | { t: 'voice'; id: number }
   | { t: 'stop' }
-  | { t: 'fade' };
+  | { t: 'fade' }
+  /** volumes 0..1 da música e dos efeitos (SFX e vozes), aplicados por voz do DSP */
+  | { t: 'volume'; music: number; sfx: number };
 
 /** Mensagens do main thread para o processador: a imagem da ROM vem 1 vez, antes de tudo. */
 export type WorkletIn = { t: 'image'; c0: Uint8Array; data: Uint8Array } | AudioCmd;
