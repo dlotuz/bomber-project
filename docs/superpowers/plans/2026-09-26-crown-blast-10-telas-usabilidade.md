@@ -4384,3 +4384,43 @@ SB4_ROM="/Users/dlotuz/Projetos Claude/Bomber Project/Super Bomberman 4 (USA).sf
 7. **Modo 7 do EMPATE.** Se a PPU do plano 5 não tiver escala no Modo 7 ("mínimo"), a T14 desenha a textura já escalada por conta própria (vizinho mais próximo, num canvas) e registra isso no commit.
 8. **Seletor de arquivo.** `openRomDialog()` a partir da tecla A nas Opções depende da ativação transitória do navegador (o update roda no `requestAnimationFrame` logo depois do `keydown`). Se o navegador bloquear, o painel do plano 5 continua com o botão DOM "Escolher arquivo".
 9. **Capturas fora do repositório.** Os testes que comparam com capturas pulam sem `SB4_CAPTURES`. O controlador precisa rodá-los localmente antes de aceitar cada tarefa de tela.
+
+---
+
+## Resultado da execução (2026-09-26)
+
+**Concluído.** Branch `feat/p10` (com os planos 5–9 integrados): 1364 testes com `SB4_ROM` + `SB4_CAPTURES` (11 pulados),
+`tsc` limpo, `npm run build` ok, `npm run snap` com e sem ROM revisado. 22 tarefas em 4 ondas, cada uma revisada (várias
+com 2–3 rodadas de correção; T16 e T17 refeitas por um implementador novo); revisão final da branch com passada visual contra
+as capturas + uma onda de correção em 4 partes paralelas (A–D) + a correção R1, re-revisada.
+
+### Fidelidade conferida
+- Mapas de BG das telas lidos da ROM em tempo de execução (A14, T19): título, VS/FFA/jogadores/regras, personagem, fase,
+  placar, vitória, EMPATE (`draw2`); textos em inglês das faixas apagados; nenhum texto da ROM em inglês visível (só a linha
+  "©1996 HUDSON SOFT", decisão abaixo).
+- Glifos recortados da ROM: menus (cursiva, 96,5–100 % de tinta contra as faixas originais), grandes (BATALHA!, PLACAR,
+  VITÓRIA!, EMPATE), ascii8, faixas de 16 px (PAUSA/RÁPIDO/TEMPO) e o azul da seleção de fase; glifos próprios só onde a ROM
+  não tem a letra, no mesmo traço e índices.
+- Prévias das 10 fases e paletas por slot da ROM (`$C1:A8D1`, `$C1:A92B`), iguais às capturas; retratos dos jogadores da ROM
+  (`$CD:E585`, paletas `$C1:B3C3`) no placar e na seleção de personagem; coroas do placar (base `$100`, paleta 5, parada no
+  tile `$106`); subtração de cor do SNES no miolo das molduras (CGADSUB `$82`).
+- Tempos da §6 (fades, repetições 20/5 e 36/21, BATALHA! 646 f, placar 497/4, descida f954) conferidos pela revisão final;
+  EMPATE com os tempos medidos no emulador (preto 104 f, voz S = 147 — aplicados pelo plano 11).
+
+### Decisões tomadas durante a execução
+- Título com ROM mostra o logo original (BG1 + OBJ do mesmo quadro); sem ROM, o logo próprio CROWN BLAST.
+- "©1996 HUDSON SOFT" continua visível no título (aviso de direitos, igual em PT-BR).
+- R27: com a ROM, `timeUpLabel()` = "TEMPO!" ("TEMPO ESGOTADO!" passa de 1,25 × a largura de "TIME UP!").
+- Motor de texto ganhou opções aditivas (kern, grid16, máscara por sementes, `base`, `bodyOnly`, `outline`, `spans`, `remap`,
+  `under`, `grayscale`, `shrinkTop`, `bare`); estilos sem elas saem idênticos.
+- Tom cinza (item desabilitado) = luma de uma linha da ROM (não existe paleta cinza na ROM).
+- `mirrorBlankLeftHalf` no BG1 do título 🟡: reproduz a captura a 100 %, mas o motivo de o hardware duplicar as linhas não foi
+  achado.
+
+### Pendências
+- Coluna decorativa da seleção de personagem sem origem achada no mapa (os retratos vêm da ROM; a coluna fixa ao lado não).
+- Acento agudo de Ó/Ú no ascii8 quase some sem o fundo cinza ("ALEATÓRIOS").
+- Glifos próprios D, O, G, B das faixas são os mais fracos visualmente.
+- Feixes do EMPATE com corte reto no topo entre as letras (o original os esconde atrás de "DRAW GAME" em duas linhas).
+- M8 (largura de EMPATE), M9 (cursores da seleção de personagem como retângulos), M10 ("1P" encostando na corda nas equipes).
+- Dois leitores de PNG nos testes (`capture-png.ts`, `png-read.ts`).
