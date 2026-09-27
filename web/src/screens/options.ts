@@ -30,12 +30,20 @@ export function optionsScreen(app: App): Screen & { readonly menu: Menu; rowIds(
   const goBack = (): void => { app.transition(() => titleScreen(app, { cursor: 2 }), FADE_TO_TITLE); };
   const openRemap = (dev: Exclude<DeviceId, 'none'>) => (): void => { app.transition(() => remapScreen(app, dev), FADE_MENU); };
 
+  // M4: dois jogadores nunca ficam no mesmo dispositivo (os dois se mexeriam juntos). Escolher o de outro jogador
+  // troca: ele fica com o dispositivo antigo deste. 'none' pode repetir.
+  const setDevice = (i: number, d: DeviceId): void => {
+    const j = d === 'none' ? -1 : st.devices.findIndex((x, k) => k !== i && x === d);
+    if (j >= 0) st.devices[j] = st.devices[i];
+    st.devices[i] = d;
+    app.save();
+  };
   const rows: Row[] = [];
   for (let i = 0; i < 5; i++) {
     rows.push({
       id: `p${i + 1}`, label: S.options.player(i + 1), value: () => S.options.devices[st.devices[i]],
-      left: () => { st.devices[i] = cycle(DEVICE_IDS, st.devices[i], -1); app.save(); return true; },
-      right: () => { st.devices[i] = cycle(DEVICE_IDS, st.devices[i], 1); app.save(); return true; },
+      left: () => { setDevice(i, cycle(DEVICE_IDS, st.devices[i], -1)); return true; },
+      right: () => { setDevice(i, cycle(DEVICE_IDS, st.devices[i], 1)); return true; },
     });
   }
   rows.push({ id: 'kb1', label: S.options.keys(1), select: openRemap('kb0') });

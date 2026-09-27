@@ -28,4 +28,8 @@ export const DEF: StyleRomDef = {
   spacing: 0,
   spaceWidth: 8,
   palette: { kind: 'rom', addr: 0xd6918a, size: 4 },
+  // Índice 1 = campo cinza 80 da casa do HUD (opaco). Com `bare` (M1: Opções/remapeamento, texto sobre o quebra-cabeça)
+  // ele some e a letra (índices 2/3) ganha 1 px de contorno nesse mesmo cinza escuro. Os glifos não mudam.
+  field: 1,
+  fieldOutline: 1,
 };

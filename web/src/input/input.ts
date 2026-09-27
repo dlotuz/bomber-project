@@ -135,18 +135,51 @@ export function withEscapeAsBack(inp: MenuInput): MenuInput {
   return { ...inp, pressedAny: inp.pressedAny | BTN.B };
 }
 
-/** Nome legível de uma tecla (KeyboardEvent.code) para a tela de remapeamento. */
+/** Nomes em PT-BR das teclas (KeyboardEvent.code) sem letra/dígito próprio. Só usa caracteres da fonte `ascii8`
+ *  (A–Z, 0–9, pontuação e Ã Ç Ê Ó Õ Ú): símbolos aparecem como o próprio símbolo. */
+export const KEY_NAMES: Readonly<Record<string, string>> = {
+  ArrowUp: 'SETA CIMA', ArrowDown: 'SETA BAIXO', ArrowLeft: 'SETA ESQ', ArrowRight: 'SETA DIR',
+  Enter: 'ENTER', NumpadEnter: 'NUM ENTER', Space: 'ESPAÇO', Tab: 'TAB', Backspace: 'APAGAR', Delete: 'DELETE',
+  Insert: 'INSERT', Home: 'HOME', End: 'END', PageUp: 'PAGE UP', PageDown: 'PAGE DOWN', Escape: 'ESC',
+  ShiftLeft: 'SHIFT ESQ', ShiftRight: 'SHIFT DIR', ControlLeft: 'CTRL ESQ', ControlRight: 'CTRL DIR',
+  AltLeft: 'ALT ESQ', AltRight: 'ALT GR', MetaLeft: 'WIN ESQ', MetaRight: 'WIN DIR', CapsLock: 'CAPS LOCK',
+  ContextMenu: 'MENU', NumLock: 'NUM LOCK', ScrollLock: 'SCROLL LOCK', Pause: 'PAUSE', PrintScreen: 'PRINT SCREEN',
+  Minus: '-', Equal: '=', BracketLeft: '[', BracketRight: ']', Semicolon: ';', Quote: "'", Backquote: 'CRASE',
+  Comma: ',', Period: '.', Slash: '/', Backslash: 'BARRA INVERTIDA', IntlBackslash: 'BARRA INVERTIDA 2', IntlRo: '/ (ABNT)',
+  NumpadAdd: 'NUM +', NumpadSubtract: 'NUM -', NumpadMultiply: 'NUM *', NumpadDivide: 'NUM /', NumpadDecimal: 'NUM .',
+  NumpadComma: 'NUM ,', NumpadEqual: 'NUM =',
+};
+
+/** Nome legível de uma tecla (KeyboardEvent.code) para a tela de remapeamento, sempre em PT-BR (M3: antes caía no
+ *  código em inglês, ex.: "BRACKETLEFT"). Tecla sem nome conhecido: "OUTRA TECLA". */
 export function keyLabel(code: string): string {
   if (/^Key[A-Z]$/.test(code)) return code.slice(3);
   if (/^Digit[0-9]$/.test(code)) return code.slice(5);
   if (/^Numpad[0-9]$/.test(code)) return `NUM ${code.slice(6)}`;
-  const named: Record<string, string> = {
-    ArrowUp: 'SETA CIMA', ArrowDown: 'SETA BAIXO', ArrowLeft: 'SETA ESQ', ArrowRight: 'SETA DIR',
-    Enter: 'ENTER', NumpadEnter: 'NUM ENTER', Space: 'ESPAÇO', Tab: 'TAB', Backspace: 'BACKSPACE',
-    ShiftLeft: 'SHIFT ESQ', ShiftRight: 'SHIFT DIR', ControlLeft: 'CTRL ESQ', ControlRight: 'CTRL DIR',
-    AltLeft: 'ALT ESQ', AltRight: 'ALT DIR',
-  };
-  return named[code] ?? (code.toUpperCase().replace(/[^A-Z0-9 ]/g, '').slice(0, 10) || '?');
+  if (/^F[0-9]{1,2}$/.test(code)) return code;
+  return KEY_NAMES[code] ?? 'OUTRA TECLA';
+}
+
+/** Teclas que não viram teclas do jogo (M3): Esc cancela a captura; F1–F24, Tab, Windows/Meta, menu de contexto e
+ *  PrintScreen são do navegador/sistema (o jogo daria `preventDefault` nelas). */
+export function isReservedKey(code: string): boolean {
+  return code === 'Escape' || code === 'Tab' || /^F[0-9]{1,2}$/.test(code) || /^(Meta|OS)(Left|Right)$/.test(code)
+    || code === 'ContextMenu' || code === 'PrintScreen';
+}
+
+/** Grava `code` na ação `f` do teclado `idx`. Se a tecla já estava em outra ação (deste teclado ou do outro), as duas
+ *  trocam: a outra ação fica com a tecla antiga de `f` (M3: nenhuma tecla em duas ações ao mesmo tempo). */
+export function assignKey(maps: KeyMap[], idx: number, f: keyof KeyMap, code: string): void {
+  const old = maps[idx][f];
+  maps.forEach((m, k) => { for (const g of KEY_FIELDS) if (m[g] === code && !(k === idx && g === f)) m[g] = old; });
+  maps[idx][f] = code;
+}
+
+/** Mesmo que `assignKey` para os botões de um controle (o mesmo botão não fica em duas ações do mesmo controle). */
+export function assignPadButton(map: PadMap, f: keyof PadMap, button: number): void {
+  const old = map[f];
+  for (const g of PAD_FIELDS) if (map[g] === button && g !== f) map[g] = old;
+  map[f] = button;
 }
 
 export interface KeyTarget {

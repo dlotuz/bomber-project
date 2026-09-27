@@ -94,6 +94,13 @@ function blend(a: number, b: number, half: boolean): number {
   return r | (g << 5) | (bl << 10);
 }
 
+/** Subtração do SNES: canal a canal com piso 0; com `half`, o resultado (já no piso) é dividido por 2. */
+function subtract(a: number, b: number, half: boolean): number {
+  let r = Math.max(0, (a & 31) - (b & 31)), g = Math.max(0, ((a >> 5) & 31) - ((b >> 5) & 31)), bl = Math.max(0, ((a >> 10) & 31) - ((b >> 10) & 31));
+  if (half) { r >>= 1; g >>= 1; bl >>= 1; }
+  return r | (g << 5) | (bl << 10);
+}
+
 /** Desenha o quadro em `out` (largura fixa `W` = 256 px; a altura vem de `out.height`, normalmente 224). Um
  *  `BgLayer` com `mapW: 64` é lido em `bgLine` como mapa linear (uma faixa contínua de 64 colunas por linha),
  *  não o layout 2×2 telas de 32×32 do hardware SNES — é só como o CAT guarda esses mapas maiores. */
@@ -121,7 +128,11 @@ export function renderPpu(f: PpuFrame, out: ImageData): void {
         if (band.math !== 'none' && (mathLayers & layer) && (layer !== OBJ || pal[x] >= 4)) {
           const s = pick(x, band.sub, !!m7);
           // Sub transparente: entra a cor fixa (0) e o 'half' não divide → pixel inalterado.
-          if (s) { px32[row + x] = rgba(blend(i ? f.cgram[i - 1] : back, f.cgram[s - 1], band.math === 'half')); continue; }
+          if (s) {
+            const m = i ? f.cgram[i - 1] : back, c = f.cgram[s - 1], op = band.math;
+            px32[row + x] = rgba(op === 'sub' || op === 'subHalf' ? subtract(m, c, op === 'subHalf') : blend(m, c, op === 'half'));
+            continue;
+          }
         }
         px32[row + x] = i ? pal32[i - 1] : backRgba;
       }

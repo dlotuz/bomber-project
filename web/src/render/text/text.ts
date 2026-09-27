@@ -313,7 +313,21 @@ export const STYLE_COLOR: Record<TextStyleId, string> = {
 };
 const isBig = (style: TextStyleId): boolean => style.startsWith('big');
 
-export interface TextOpts { align?: 'left' | 'center' | 'right'; tone?: Tone; color?: string; scale?: number }
+/** `bare` (M1): sem o campo opaco da casa (`StyleRomDef.field`), para texto de HUD por cima de gráficos. */
+export interface TextOpts { align?: 'left' | 'center' | 'right'; tone?: Tone; color?: string; scale?: number; bare?: boolean }
+
+/** Frase montada com os ajustes de desenho: `toneRemap` do tom e, com `bare`, o campo transparente (+ contorno). */
+export function styledLayout(f: RomFont, text: string, tone: Tone = 'default', bare = false): IndexedImage {
+  let lay = layoutText(f, text);
+  const remap = f.def.toneRemap?.[tone];
+  if (remap) lay = { ...lay, px: lay.px.map(v => remap[v] ?? v) };
+  if (bare && f.def.field !== undefined) {
+    const field = f.def.field;
+    lay = { ...lay, px: lay.px.map(v => (v === field ? 0 : v)) };
+    if (f.def.fieldOutline !== undefined) lay = addOutline(lay, { index: f.def.fieldOutline, conn: 8 });
+  }
+  return lay;
+}
 
 type Img = ReturnType<typeof pixToCanvas>;
 const romCanvas = new WeakMap<RomAssets, Map<string, Img>>();
@@ -338,10 +352,10 @@ export function drawText(ctx: CanvasRenderingContext2D, bank: SpriteBank, style:
     const tone = o.tone ?? 'default';
     let perRom = romCanvas.get(rf.a);
     if (!perRom) { perRom = new Map(); romCanvas.set(rf.a, perRom); }
-    const key = `${style}|${text}|${tone}`;
+    const key = `${style}|${text}|${tone}|${o.bare ? 1 : 0}`;
     let img = perRom.get(key);
     if (!img) {
-      const lay = layoutText(rf.f, text);
+      const lay = styledLayout(rf.f, text, tone, o.bare);
       img = pixToCanvas({ w: lay.w, h: lay.h, data: indexedToRgba(lay, styleColors(rf.f.def, rf.a, tone)) });
       perRom.set(key, img);
     }

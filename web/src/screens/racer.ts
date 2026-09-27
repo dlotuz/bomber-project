@@ -1,8 +1,9 @@
 import type { App, Screen } from '../app/app';
 import { carry, type MatchSession } from '../game/match-session';
 import { BTN, drawRacerPrize, racerPrizeKey, type Rng16, type RacerPrizeKey } from '../game/core-api';
-import { RACER } from '../game/timeline';
-import { FADE_MENU } from '../app/fade';
+import { RACER, VICTORY } from '../game/timeline';
+import { fadeSpec, FADE_OUT_1, FADE_IN_1 } from '../app/fade';
+import { MUSIC } from '../app/audio';
 import { stageScreen } from './stage';
 import { S, RACER_PRIZE_NAMES } from '../render/text/strings';
 import { drawText } from '../render/text/text';
@@ -77,7 +78,11 @@ export function racerScreen(app: App, ms: MatchSession): Screen & {
       afterFinish++;
       if (afterFinish >= RACER.showPrize || (inp.pressedAny & (BTN.A | BTN.B | BTN.START))) {
         leaving = true;
-        app.transition(() => stageScreen(app), FADE_MENU);
+        // I11: a mesma saída da VITÓRIA para a fase (victory.ts) — fade de 15, 123 f de preto e a música dos menus
+        // ($12) no fim do preto; com `FADE_MENU` a música da vitória continuava na seleção de fase.
+        const black = 15 + VICTORY.outBlack;
+        app.transition(() => stageScreen(app), fadeSpec(FADE_OUT_1, FADE_IN_1,
+          [{ at: black, run: x => x.audio.ensureMenus(MUSIC.menus) }], black));
       }
     },
     draw(ctx, bank, frame) {

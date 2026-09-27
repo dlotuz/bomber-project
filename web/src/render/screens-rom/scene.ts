@@ -1,8 +1,9 @@
-import { tilesFrom, sceneVramCgram, renderPpu, type RomAssets, type SceneId, type Tiles, type PpuFrame, type ObjEntry } from '../../app/rom-api';
+import { tilesFrom, sceneVramCgram, renderPpu, type RomAssets, type SceneId, type Tiles, type PpuFrame, type ObjEntry, type ScanBand, type BgLayer } from '../../app/rom-api';
 import { MAP_SOURCES } from './map-sources';
 
 export interface SceneGfx { bgTiles: Tiles; bg3Tiles: Tiles; objTiles: Tiles; cgram: Uint16Array }
-export interface SceneMaps { bg1?: Uint16Array; bg2?: Uint16Array; bg3?: Uint16Array }
+/** `shade` (plano 10, I7): casas 8×8 do miolo escurecido dos menus (ver `MENU_SHADE`); sem ele, cena sem color math. */
+export interface SceneMaps { bg1?: Uint16Array; bg2?: Uint16Array; bg3?: Uint16Array; shade?: ShadeCells }
 export type MapBuilder = (a: RomAssets) => SceneMaps;
 export interface BoxParts { tl: number; tr: number; bl: number; br: number; top: number; bottom: number; left: number; right: number; fill?: number }
 
@@ -40,14 +41,44 @@ export function sceneMaps(a: RomAssets, id: SceneId, geometry: MapBuilder): Scen
   return (MAP_SOURCES[id] ?? geometry)(a);
 }
 
+// ---- Miolo escurecido dos menus (I7) --------------------------------------------------------------------------------
+/** Casas 8×8 inclusivas do BG3 (colunas c0–c1, linhas l0–l1). */
+export interface ShadeCells { c0: number; l0: number; c1: number; l1: number }
+/** Registradores das capturas `vsmode`/`ffa`/`players`/`rules`/`charsel` (`.ppu`/`.vram`/`.cgram`): BG3SC = $57 (mapa em
+ *  $5400), BG3VOFS com o byte alto $FF (= −1: a linha y mostra a linha y do mapa), a palavra $1004 (tile 4 da BG3, todo
+ *  na cor 3, paleta 4 → CGRAM 19 = $2108, cinza 8/8/8) no miolo da moldura, TM = $17 (BG1+BG2+BG3+OBJ), TS = $04 (só
+ *  o BG3 na sub-tela), CGWSEL = $02 (sub-tela na conta, sem janela), CGADSUB = $82 (subtrai, sem ÷2, só no BG2) e
+ *  COLDATA = 0. Resultado: o quebra-cabeça do BG2 fica 8 pontos mais escuro em cada canal dentro da moldura. */
+export const MENU_SHADE = { word: 0x1004, vofs: -1, main: 4, sub: 4, math: 'sub' as const, mathLayers: 2 };
+/** Casas do miolo a partir da moldura medida (`MenuRect`): x0+1…x1−1, y0+5…y1−3 em px (conferido contra o BG3 das
+ *  quatro capturas de menu: VS 7–22, modo 9–20, jogadores 3–26, regras 4–25, colunas 1–30). */
+export function menuShade(frame: MenuRect): ShadeCells {
+  return { c0: Math.ceil((frame.x0 + 1) / 8), l0: Math.ceil((frame.y0 + 5) / 8), c1: Math.floor(frame.x1 / 8) - 1, l1: Math.floor((frame.y1 - 2) / 8) - 1 };
+}
+/** Mapa 32×32 do BG3 com `MENU_SHADE.word` nas casas do miolo (o resto vazio). */
+export function shadeMap(c: ShadeCells): Uint16Array {
+  const m = newMap();
+  fill(m, c.c0, c.l0, c.c1 - c.c0 + 1, c.l1 - c.l0 + 1, MENU_SHADE.word);
+  return m;
+}
+/** Campos de `ScanBand` do color math do miolo (vazio sem `shade`: faixa sem conta, como antes). */
+export function shadeBand(maps: SceneMaps): Pick<ScanBand, 'sub' | 'math'> & { mathLayers?: number } {
+  return maps.shade ? { sub: MENU_SHADE.sub, math: MENU_SHADE.math, mathLayers: MENU_SHADE.mathLayers } : { sub: 0, math: 'none' };
+}
+/** BG3 da cena: o mapa do miolo (com o VOFS da captura) quando há `shade` e nenhum BG3 próprio. */
+export function shadeLayer(g: SceneGfx, maps: SceneMaps): BgLayer | undefined {
+  return maps.shade && !maps.bg3 ? { map: shadeMap(maps.shade), mapW: 32, tiles: g.bg3Tiles, tile16: false, hofs: 0, vofs: MENU_SHADE.vofs } : undefined;
+}
+
 export interface FrameOpts { bg1?: [number, number]; bg2?: [number, number]; bg3?: [number, number]; oam?: ObjEntry[]; backdrop?: number }
 export function sceneFrame(g: SceneGfx, maps: SceneMaps, o: FrameOpts = {}): PpuFrame {
   const layer = (map: Uint16Array | undefined, tiles: Tiles, tile16: boolean, sc: [number, number] = [0, 0]) =>
     (map ? { map, mapW: 32 as const, tiles, tile16, hofs: sc[0], vofs: sc[1] } : undefined);
-  const main = (maps.bg1 ? 1 : 0) | (maps.bg2 ? 2 : 0) | (maps.bg3 ? 4 : 0) | 16;
+  const bg3 = layer(maps.bg3, g.bg3Tiles, false, o.bg3) ?? shadeLayer(g, maps);
+  const main = (maps.bg1 ? 1 : 0) | (maps.bg2 ? 2 : 0) | (bg3 ? 4 : 0) | 16;
   return {
     cgram: g.cgram, bg1: layer(maps.bg1, g.bgTiles, true, o.bg1), bg2: layer(maps.bg2, g.bgTiles, true, o.bg2),
-    bg3: layer(maps.bg3, g.bg3Tiles, false, o.bg3), bands: [{ y0: 0, y1: 224, bg1Tile16: true, main, sub: 0, math: 'none' }],
+    bg3, bands: [{ y0: 0, y1: 224, bg1Tile16: true, main, ...shadeBand(maps) }],
     objTiles: g.objTiles, oam: o.oam ?? [], backdrop: o.backdrop,
   };
 }
@@ -137,6 +168,7 @@ export function menuMaps(frame: MenuRect, scene: MenuScene = 'vsmode', title?: {
     right = t1 + 2;
   }
   for (let c = right; c < c1; c++) put(m, c, l0, r.topRight);
+  maps.shade = menuShade(frame);
   return maps;
 }
 

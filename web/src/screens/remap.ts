@@ -1,6 +1,6 @@
 import type { App, Screen } from '../app/app';
 import { Menu, type MenuRow } from './menu';
-import { KEY_FIELDS, keyLabel, padLabel, type DeviceId, type KeyMap, type PadMap } from '../input/input';
+import { KEY_FIELDS, keyLabel, padLabel, assignKey, assignPadButton, isReservedKey, type DeviceId, type KeyMap, type PadMap } from '../input/input';
 import { S } from '../render/text/strings';
 import { FADE_MENU } from '../app/fade';
 import { drawOptionsPage, PpuCanvas, type OptionsRow } from '../render/screens-rom/options';
@@ -8,7 +8,8 @@ import { optionsScreen } from './options';
 
 /**
  * Remapeamento de um dispositivo (teclado ou gamepad): A na ação captura, depois a tecla/botão nova grava.
- * Teclado: `inp.key` (Escape cancela). Gamepad: `inp.padButton` do próprio controle (Escape ainda cancela).
+ * Teclado: `inp.key` (Escape cancela; F1–F12, Tab e as teclas do sistema são ignoradas). Gamepad: `inp.padButton` do
+ * próprio controle (Escape ainda cancela). Tecla/botão já usado em outra ação: as duas trocam (`assignKey`/`assignPadButton`).
  * Depois de gravar ou cancelar: `applyInput()`, `save()` e ignora tudo até soltar (evita reabrir com a
  * tecla/botão novo ainda segurado).
  */
@@ -42,8 +43,8 @@ export function remapScreen(app: App, dev: Exclude<DeviceId, 'none'>): Screen & 
       if (capturing) {
         const f = capturing;
         if (inp.key === 'Escape') { finish(); return; }
-        if (km && inp.key) { km[f] = inp.key; finish(); return; }
-        if (pm && inp.padButton && inp.padButton.pad === idx) { pm[f] = inp.padButton.button; finish(); }
+        if (km && inp.key) { if (!isReservedKey(inp.key)) { assignKey(app.settings.keymaps, idx, f, inp.key); finish(); } return; }
+        if (pm && inp.padButton && inp.padButton.pad === idx) { assignPadButton(pm, f, inp.padButton.button); finish(); }
         return;
       }
       const ev = menu.update(inp.any, inp.pressedAny, app.audio);

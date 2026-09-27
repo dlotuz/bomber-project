@@ -1,12 +1,13 @@
 import type { RomAssets, PpuFrame } from '../../app/rom-api';
-import { sceneGfx, sceneMaps, sceneFrame, menuMaps, handCursor, type MenuRect } from './scene';
+import { sceneGfx, sceneMaps, sceneFrame, menuMaps, menuShade, handCursor, type MenuRect, type SceneMaps } from './scene';
 
 /** Moldura e faixa do título medidas [MNT §B.2] (mesmos números do teste de geometria da T5). */
 export const PLAYERS_FRAME: MenuRect = { x0: 7, y0: 19, x1: 248, y1: 218 };
 export const PLAYERS_TITLE = { x0: 50, x1: 204 };
 
-export function playersMaps(a: RomAssets) {
-  return sceneMaps(a, 'players', () => menuMaps(PLAYERS_FRAME, 'players', PLAYERS_TITLE));
+/** Mapas da cena com o miolo escurecido (I7): o BG1/BG2 da ROM (`MAP_SOURCES.players`) não traz o BG3 do miolo. */
+export function playersMaps(a: RomAssets): SceneMaps {
+  return { ...sceneMaps(a, 'players', () => menuMaps(PLAYERS_FRAME, 'players', PLAYERS_TITLE)), shade: menuShade(PLAYERS_FRAME) };
 }
 
 export interface PlayersSceneOpts { cursor?: number }

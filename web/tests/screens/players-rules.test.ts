@@ -1,5 +1,7 @@
 import { playersScreen } from '../../src/screens/players';
-import { rulesScreen } from '../../src/screens/rules';
+import { rulesScreen, RULES_VALUE_X } from '../../src/screens/rules';
+import { TONE_COLORS } from '../../src/render/text/text';
+import type { SpriteBank } from '../../src/render/sprite-bank';
 import { carry, resetCarry } from '../../src/game/match-session';
 import { BTN } from '../../src/game/core-api';
 import { mkApp, press, settle } from './helpers';
@@ -93,6 +95,38 @@ describe('regras (§6.5)', () => {
     const b = mkApp();
     b.app.go(rulesScreen(b.app)); press(b.app, BTN.B); settle(b.app);
     expect(b.app.screen.id).toBe('players');
+  });
+});
+
+describe('regras: valores como no original (I10)', () => {
+  it('cores por valor: Low/Off/∞ azul, Normal/números/tempos verde, Strong/On vermelho', () => {
+    const { app } = mkApp();
+    const r = rulesScreen(app); app.go(r);
+    expect(r.tones()).toEqual(['green', 'green', 'green', 'blue', 'blue', 'blue']);
+    const rl = app.settings.setup.rules;
+    rl.cpuLevel = 0; rl.timeIdx = 4; rl.suddenDeath = true;
+    expect(r.tones().slice(0, 4)).toEqual(['blue', 'green', 'blue', 'red']);
+    rl.cpuLevel = 2; rl.timeIdx = 0;
+    expect(r.tones().slice(0, 3)).toEqual(['red', 'green', 'green']);
+  });
+  it('valores alinhados à esquerda em x = 176 (coluna 11 do BG1 da captura), na cor do tom', () => {
+    vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => ({ putImageData() {} }) }) });
+    vi.stubGlobal('ImageData', class { constructor(public data: Uint8ClampedArray, public width: number, public height: number) {} });
+    try {
+      const { app } = mkApp();
+      app.settings.setup.rules.suddenDeath = true;
+      const r = rulesScreen(app); app.go(r);
+      const texts: { text: string; color: string }[] = [], pos: { x: number; y: number; w: number }[] = [];
+      const bank = { text: (t: string, color: string) => { texts.push({ text: t, color }); return { width: 7 * t.length, height: 8, tag: t }; } } as unknown as SpriteBank;
+      const ctx = { fillStyle: '', fillRect() {}, drawImage(img: { width: number }, x: number, y: number) { pos.push({ x, y, w: img.width }); } } as unknown as CanvasRenderingContext2D;
+      r.draw(ctx, bank, 0);
+      expect(RULES_VALUE_X).toBe(176);
+      // Valores: nas linhas 55 + 24·i, todos começando em x = 176 (sem alinhamento à direita).
+      const valueDraws = pos.filter(p => p.x >= 150);
+      expect(valueDraws.map(p => [p.x, p.y])).toEqual([0, 1, 2, 3, 4, 5].map(i => [176, 55 + 24 * i]));
+      const color = (t: string) => texts.find(x => x.text === t)?.color;
+      expect([color('NORMAL'), color('3'), color('3:00'), color('SIM')]).toEqual([TONE_COLORS.green, TONE_COLORS.green, TONE_COLORS.green, TONE_COLORS.red]);
+    } finally { vi.unstubAllGlobals(); }
   });
 });
 
