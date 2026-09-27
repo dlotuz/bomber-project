@@ -77,6 +77,7 @@ export const MAP_SOURCES: Partial<Record<SceneId, (a: RomAssets) => SceneMaps>> 
   scoreboard: fromDescriptor(SCOREBOARD),
   victory: fromDescriptor(SCOREBOARD),
   // Sem bg1 (BG1 desligado nessa cena — spec T19); os tiles do BG2 também não estão no lugar padrão (T14 monta um
-  // `SceneGfx` próprio com `bgTiles` de $8000, onde o BG12NBA=$44 desta cena realmente os coloca).
+  // `SceneGfx` próprio com `bgTiles` de $8000, onde o BG12NBA=$44 desta cena realmente os coloca). O mapa fica cru
+  // (= captura); as letras em inglês "DRAW GAME" (paletas 0–2, linhas 2–9) saem em `stageOnlyBg2` (draw.ts).
   draw2: a => ({ bg2: decodeSceneMap(a.rom, ...DRAW2_BG2) }),
 };
