@@ -3,8 +3,9 @@
 // Mesma ressalva de `charsel.ts`: sem captura para conferir tile a tile, só a disposição em pixels usada pelo
 // desenho de `screens/teams.ts` (ROM e fallback).
 
-/** Coluna de retratos à esquerda: um por jogador ativo, de cima a baixo. */
-export const TEAMSEL_PORTRAIT = { x: 16, w: 32, y0: 32, dy: 32 };
+/** Coluna de retratos à esquerda, na linha do slot: a mesma do BG1 da `charsel` com o HOFS −8 (com ROM os retratos
+ *  são esse BG1, `charselFrame`; sem ROM, `bank.head` aqui). */
+export const TEAMSEL_PORTRAIT = { x: 24, w: 32, y0: 31, dy: 32 };
 
 /** Marcador do lado: x por equipe (0 = esquerda/vermelha, 1 = direita/branca). */
 export const TEAMSEL_MARKER_X: readonly [number, number] = [64, 176];

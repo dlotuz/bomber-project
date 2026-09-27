@@ -49,19 +49,11 @@ const TEXT_PAL = 1;   // medido: `rawMap(a.rom, PATCH_BG1.charsel)` só tem pala
  *  outras 4 cenas de menu): tira exatamente o texto, sem presumir que "corda" é a única paleta válida. */
 const blankPalette = (m: Uint16Array, pal: number): Uint16Array => m.map(w => (((w >> 10) & 7) === pal ? 0 : w));
 /**
- * `charsel` tem um ícone decorativo visível à esquerda da corda na captura (`charsel.vram`/`.png`, dump-capture:
- * colunas 1–2, linhas 2–11, paletas 0/2/3/4/7) que `keepPalette(…, 5)` descartaria por engano se estivesse
- * nesta tabela — só que, conferido diretamente (`rawMap(a.rom, PATCH_BG1.charsel)`, histograma de paletas),
- * **não está**: a tabela crua de 1024 palavras só tem as 43 células citadas acima (texto + corda), o resto é
- * zero, inclusive nas colunas do ícone. O BG1 original (pré-tradução, `descriptorMap(a.rom, CHARSEL, 'bg1')`)
- * também não tem o ícone ali (preenchimento genérico `$0400` nas mesmas colunas). Ou esse ícone vem de uma
- * rotina separada ainda não mapeada (fora do escopo desta tarefa), ou é sobra de VRAM de outra cena na captura
- * (a sequência de paletas por linha — 2, 2, 3, 3, 4, 4, 0, 0, 7, 7 — não bate com nada documentado nem com um
- * efeito óbvio, tipo arco-íris). Por isso ele continua fora do `sceneMaps`/`MAP_SOURCES.charsel`: com ele
- * ignorado no teste (`CHARSEL_ICON_PX`), a comparação com a captura bate 100 %; sem ignorar, cai a 87,5 %
- * (medido) — abaixo dos 97 % pedidos. `blankPalette` troca o filtro por um mais correto (tira só o texto), mas
- * não muda o resultado numérico desta tabela específica (que só tem {0, 1, 5}); preservei mesmo assim, porque
- * é a semântica certa e não discartaria o ícone se um dia aparecer aí de verdade.
+ * A coluna à esquerda da corda na captura (colunas 1–2, linhas 2–11, paletas 2/2/3/3/4/4/0/0/7/7) **não** é um
+ * ícone: é a coluna dos retratos dos 5 jogadores (revisão final do plano 10, I6), conteúdo dinâmico que depende do
+ * personagem de cada slot — por isso não está nem nesta tabela crua (só paletas 0, 1 e 5) nem no descritor. A tela
+ * a monta por cima deste mapa (`charselPortraitWords`/`charselFrame` em `charsel.ts`, folha `$CD:E585` e paletas
+ * `$C1:B3C3`, ver `portraits.ts`). `blankPalette` tira só o texto em inglês (paleta 1).
  */
 const charselBg1 = (a: RomAssets): Uint16Array => blankPalette(rawMap(a.rom, PATCH_BG1.charsel), TEXT_PAL);
 

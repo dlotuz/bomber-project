@@ -8,7 +8,12 @@ import { forceWin, runUntil, skipIntro, setCrowns } from './core-helpers';
 import { mkApp, tap, idle, inputOf } from './helpers';
 import { defaultSetup } from '../../src/app/settings';
 import { ASSETS } from './rom';
-import { scoreboardMaps, scoreboardSceneMaps, dropTitleTextPalette } from '../../src/render/screens-rom/scoreboard';
+import {
+  scoreboardMaps, scoreboardSceneMaps, scoreboardFrame, crownObjs, REST_FRAME, SCOREBOARD_SCROLL, PLATE_INNER_PX,
+} from '../../src/render/screens-rom/scoreboard';
+import { createImage, renderPpu } from '../../src/render/ppu';
+import { loadCapturePng, pixelMatch } from './capture-png';
+import { parseOam } from './captures';
 import { sceneMaps } from '../../src/render/screens-rom/scene';
 import { loadCapture, capturedMap, mapMatch } from './captures';
 
@@ -105,15 +110,78 @@ describe.skipIf(!ASSETS || !loadCapture('scoreboard'))('fundo × captura (A14, �
   });
 });
 
-describe('sem o título original em inglês (T18, paleta 7)', () => {
-  it('dropTitleTextPalette apaga só as casas da paleta 7 (mantém as outras palavras)', () => {
-    const w7 = (7 << 10) | 0x123, w2 = (2 << 10) | 0x123;
-    const m = new Uint16Array([w7, w2, 0]);
-    expect(Array.from(dropTitleTextPalette(m))).toEqual([0, w2, 0]);
+/** Sessão no mesmo estado da captura `scoreboard`: personagens 0..4 nos slots 0..4, coroas 2/1/0/5/0 e o 4P acabou
+ *  de ganhar a 5ª (na captura, a coroa nova está no quadro 6 do giro: OAM `$140` espelhado ⇒ S = 4 + 6). */
+function captureLikeSession() {
+  const ms = createMatchSession(parseConfig('?players=5&humans=1&matches=5'));
+  ms.cfg.chars = [0, 1, 2, 3, 4];
+  [2, 1, 0, 5, 0].forEach((n, slot) => setCrowns(ms.match, slot, n));
+  ms.lastWinners = [3];
+  return ms;
+}
+const renderFrame = (f: ReturnType<typeof scoreboardFrame>) => { const img = createImage(256, 224); renderPpu(f, img); return img.data; };
+
+describe.skipIf(!ASSETS)('coroa girando (I4: base $100, paleta 5, para no $106)', () => {
+  it('peças relativas à base OBJ $100 na paleta 5; o quadro 2 é o tile $140', () => {
+    const [o] = crownObjs(ASSETS!, 2, 0, 0);
+    expect([o.src, o.pal, o.prio, o.size]).toEqual([{ tile: 0x140 }, 5, 3, 32]);
   });
-  it.skipIf(!ASSETS)('scoreboardSceneMaps (o que drawScoreboardRom desenha de verdade) não tem nenhuma casa BG1 na paleta 7', () => {
-    const maps = scoreboardSceneMaps(ASSETS!);
-    expect(maps.bg1!.some(w => ((w >> 10) & 7) === 7)).toBe(false);
+  it('o quadro de repouso é o 0 (tile $106, de frente), não o último da animação', () => {
+    expect(REST_FRAME).toBe(0);
+    expect(crownObjs(ASSETS!, REST_FRAME, 0, 0).map(o => [o.src, o.hflip])).toEqual([[{ tile: 0x106 }, false]]);
+  });
+  it.skipIf(!loadCapture('scoreboard'))('quadro 6 na casa 4 do 4P = a entrada do OAM da captura (x 208, y 152, $140, pal 5, espelhada)', () => {
+    const cap = parseOam(loadCapture('scoreboard')!.oam).find(r => r.tile === 0x140)!;
+    const [o] = crownObjs(ASSETS!, 6, 3, 4);
+    expect([o.x, o.y, o.src, o.pal, o.hflip, o.size]).toEqual([cap.x, cap.y, { tile: cap.tile }, cap.pal, cap.h, 32]);
+  });
+  it('cada quadro do giro: tile $100 + peça e paleta 5 + palAdd', () => {
+    const anim = ASSETS!.anim(0xc3da94);
+    anim.forEach((f, i) => {
+      const objs = crownObjs(ASSETS!, i, 2, 1);
+      expect(objs.map(o => [o.src, o.pal]), `quadro ${i}`).toEqual(f.pieces.map(p => [{ tile: 0x100 + p.tile }, 5 + p.palAdd]));
+    });
   });
 });
 
+describe.skipIf(!ASSETS || !loadCapturePng('scoreboard'))('quadro do placar × scoreboard.png (I4/I5/I6)', () => {
+  const cap = loadCapturePng('scoreboard')!;
+  it('scrolls medidos por pixel (registrador; o PPU soma 1 ao VOFS): BG1 (256, 263), BG2 (0, 7)', () => {
+    expect(SCOREBOARD_SCROLL.bg1).toEqual([256, 263]);
+    expect(SCOREBOARD_SCROLL.bg2).toEqual([0, 7]);
+  });
+  it('fora do miolo da placa (onde a ROM tem "SCORE BOARD" e nós o "PLACAR"), o quadro inteiro bate pixel a pixel', () => {
+    const px = renderFrame(scoreboardFrame(ASSETS!, captureLikeSession(), 10));
+    // 57 344 px menos o miolo; só 1 px (202, 51) da borda de baixo refeita por espelho perto da ponta direita difere.
+    const inner = (PLATE_INNER_PX.x1 - PLATE_INNER_PX.x0 + 1) * (PLATE_INNER_PX.y1 - PLATE_INNER_PX.y0 + 1);
+    const n = 256 * 224 - inner;
+    expect(Math.round((1 - pixelMatch(px, cap, [PLATE_INNER_PX])) * n)).toBeLessThanOrEqual(1);
+  });
+  it('cabeças = retratos da ROM (a mesma folha e paleta da captura), linha a linha', () => {
+    const px = renderFrame(scoreboardFrame(ASSETS!, captureLikeSession(), 10));
+    for (let slot = 0; slot < 5; slot++) {
+      const area = { x0: 48, y0: 56 + 32 * slot, x1: 79, y1: 87 + 32 * slot };
+      expect(pixelMatch(px, cap, [], area), `${slot + 1}P`).toBe(1);
+    }
+  });
+  it('sem o texto em inglês: o miolo da placa sai liso (uma cor só)', () => {
+    const px = renderFrame(scoreboardFrame(ASSETS!, captureLikeSession(), 10));
+    const colors = new Set<number>();
+    for (let y = PLATE_INNER_PX.y0; y <= PLATE_INNER_PX.y1; y++) for (let x = PLATE_INNER_PX.x0; x <= PLATE_INNER_PX.x1; x++) {
+      const i = (y * 256 + x) * 4; colors.add((px[i] << 16) | (px[i + 1] << 8) | px[i + 2]);
+    }
+    expect([...colors]).toEqual([0]);
+  });
+});
+
+describe.skipIf(!ASSETS)('mapas do placar', () => {
+  it('coroas cheias antigas vão para a grade do BG2; a nova (depois do giro) fica como OBJ no quadro 0', () => {
+    const ms = captureLikeSession();
+    const maps = scoreboardSceneMaps(ASSETS!, ms, 200);
+    const at = (c: number, r: number) => maps.bg2![r * 32 + c];
+    expect([at(5, 4), at(6, 4), at(5, 5), at(6, 5)]).toEqual([0x18a8, 0x18aa, 0x18c8, 0x18ca]);   // 1P, casa 0
+    expect(at(13, 10)).toBe(0x58ec);                                                            // 4P, casa 4: vazia no BG2
+    const f = scoreboardFrame(ASSETS!, ms, 200);
+    expect(f.oam.filter(o => 'tile' in o.src && o.src.tile === 0x106)).toHaveLength(1);
+  });
+});

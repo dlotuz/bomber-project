@@ -3,9 +3,9 @@ import type { App, Screen } from '../app/app';
 import { SFX } from '../app/audio';
 import { FADE_MENU } from '../app/fade';
 import { romState, type RomAssets } from '../app/rom-api';
-import { obj, PpuCanvas, sceneFrame, sceneGfx, sceneMaps } from '../render/screens-rom/scene';
+import { obj, PpuCanvas } from '../render/screens-rom/scene';
 import { CHARACTERS } from '../render/art/bomber';
-import { CHARSEL_GRID, CHARSEL_PORTRAIT, CHARSEL_STANDEE, CHARSEL_STANDEE_Y, charselMaps, drawCharselTitle } from '../render/screens-rom/charsel';
+import { CHARSEL_BG1_SHIFT, CHARSEL_GRID, CHARSEL_PORTRAIT, CHARSEL_STANDEE, CHARSEL_STANDEE_Y, charselFrame, drawCharselTitle } from '../render/screens-rom/charsel';
 import { drawText } from '../render/text/text';
 import { S } from '../render/text/strings';
 import { SCREEN_H } from '../render/display';
@@ -89,15 +89,14 @@ export function charactersScreen(app: App): Screen & {
     draw(ctx, bank, frame) {
       const a: RomAssets | null = romState.assets;
       if (a) {
-        // Cena real (§6.6): corda + quebra-cabeça vêm do BG (`charselMaps`/`MAP_SOURCES.charsel`, T5/T19) e os 6
-        // bonecos parados na grade são OBJ com o tile/paleta medidos em `charsel.oam` (`CHARSEL_STANDEE`) — só o
-        // título (no vão medido, `drawCharselTitle`), os retratos e os cursores (conteúdo dinâmico, não existem
-        // assim na ROM) vão por cima, depois do PPU.
-        const g = sceneGfx(a, 'charsel');
-        const maps = sceneMaps(a, 'charsel', charselMaps);
+        // Cena real (§6.6): corda + quebra-cabeça do BG (`MAP_SOURCES.charsel`, T19), a coluna de retratos da ROM
+        // no BG1 (I6: folha `$CD:E585`, cores `$C1:B3C3` por slot e personagem; "×" nos slots desligados) e os 6
+        // bonecos parados como OBJ (`CHARSEL_STANDEE`, medidos em `charsel.oam`), tudo com o HOFS −8 do BG1 (I8).
+        // Só o título (no vão da corda) e os cursores vão por cima, depois do PPU.
         const oam = CHARSEL_STANDEE.map((s, k) =>
           obj(CHARSEL_GRID.x[k % COLS], CHARSEL_STANDEE_Y[Math.floor(k / COLS)], s.tile, s.pal, { big: true, prio: 3 }));
-        ppu.draw(ctx, sceneFrame(g, maps, { oam }));
+        ppu.draw(ctx, charselFrame(a, [0, 1, 2, 3, 4].map(i => (setup.slots[i] !== 'off' ? setup.chars[i] : null)), oam));
+        drawCharselTitle(ctx, bank, S.chars.title, COLORS.title, CHARSEL_BG1_SHIFT);
       } else {
         drawStaticBackground(ctx);
         drawFallbackFrame(ctx, FRAME);
@@ -106,16 +105,14 @@ export function charactersScreen(app: App): Screen & {
           const x = CHARSEL_GRID.x[k % COLS], y = CHARSEL_GRID.y[Math.floor(k / COLS)];
           ctx.drawImage(bank.bomber(k, 2, 0), x, y, 32, 40);
         });
+        drawCharselTitle(ctx, bank, S.chars.title, COLORS.title);
+        // Coluna da esquerda: o retrato de cada jogador ativo (sem ROM: a arte do fallback).
+        for (const i of scheme.activeIdx) {
+          const y = CHARSEL_PORTRAIT.y0 + CHARSEL_PORTRAIT.dy * i;
+          ctx.drawImage(bank.head(setup.chars[i]), CHARSEL_PORTRAIT.x, y, CHARSEL_PORTRAIT.w, CHARSEL_PORTRAIT.w);
+        }
       }
-      drawCharselTitle(ctx, bank, S.chars.title, COLORS.title);
       const ctrl = scheme.controllingSlot();
-      // Coluna da esquerda: o retrato de cada jogador ativo (conteúdo nosso, por cima da cena). Sem rótulo de
-      // nome/estado (T22): no original essa coluna só tem retratos, e o texto colidia com o título de 2 linhas e a
-      // grade; quem ainda escolhe já aparece pelo cursor "[ ]" com a etiqueta nP.
-      for (const i of scheme.activeIdx) {
-        const y = CHARSEL_PORTRAIT.y0 + CHARSEL_PORTRAIT.dy * i;
-        ctx.drawImage(bank.head(setup.chars[i]), CHARSEL_PORTRAIT.x, y, CHARSEL_PORTRAIT.w, CHARSEL_PORTRAIT.w);
-      }
       // Cursores "[ ]" (4 cantos, fillRect) com a etiqueta nP na cor de quem está escolhendo cada vaga ainda aberta.
       for (const i of scheme.activeIdx) {
         if (scheme.confirmed[i]) continue;

@@ -6,8 +6,15 @@ import type { SpriteBank } from '../../src/render/sprite-bank';
 import { PLAYER_COLORS } from '../../src/render/draw-game';
 import { sceneMaps } from '../../src/render/screens-rom/scene';
 import { MAP_SOURCES } from '../../src/render/screens-rom/map-sources';
-import { CHARSEL_GRID_PX, CHARSEL_ICON_PX, CHARSEL_TITLE_PX, charselMaps } from '../../src/render/screens-rom/charsel';
-import { mkApp, press, hold, settle } from './helpers';
+import {
+  CHARSEL_GRID, CHARSEL_GRID_PX, CHARSEL_ICON_PX, CHARSEL_TITLE_PX, CHARSEL_SCROLL, CHARSEL_BG1_SHIFT, CHARSEL_STANDEE, CHARSEL_STANDEE_Y,
+  charselMaps, charselFrame, charselPortraitWords,
+} from '../../src/render/screens-rom/charsel';
+import { obj } from '../../src/render/screens-rom/scene';
+import { createImage, renderPpu } from '../../src/render/ppu';
+import { idleInput, type MenuInput } from '../../src/input/input';
+import { loadCapturePng, pixelMatch } from './capture-png';
+import { mkApp, press, hold, settle, inputOf } from './helpers';
 import { ASSETS } from './rom';
 import { loadCapture, capturedMap, mapMatch, type Rect } from './captures';
 
@@ -33,9 +40,8 @@ describe('cena "charsel" (ROM, brief T10): personagens e equipes reaproveitam a 
   const cap = loadCapture('charsel');
   it.skipIf(!cap)('charselMaps (nosso, sem MAP_SOURCES) bate ≥ 97% com a captura fora do título e da grade', () => {
     // `charselMaps` é o que `sceneMaps(a, 'charsel', charselMaps)` (T5) monta quando `MAP_SOURCES.charsel`
-    // não existe — cobre o ícone de verdade (por isso não precisa ignorá-lo aqui). A origem real da ROM (T19)
-    // abaixo não tem o ícone (conferido: não é um filtro descartando algo que existe — ver `charselBg1` em
-    // `map-sources.ts`), por isso ainda ignora aquela área.
+    // não existe — inclui a coluna de retratos dos personagens padrão 0..4 (os da captura). A origem real da ROM
+    // (T19) abaixo não tem essa coluna (é conteúdo dinâmico, que `charselFrame` acrescenta), por isso a ignora.
     const built = charselMaps({} as RomAssets);
     const ignore: Rect[] = [CHARSEL_TITLE_PX, CHARSEL_GRID_PX];
     for (const [layer, addr] of [['bg1', 0x4000], ['bg2', 0x4400]] as const) {
@@ -55,6 +61,32 @@ describe('cena "charsel" (ROM, brief T10): personagens e equipes reaproveitam a 
       expect(ours, layer).toBeDefined();
       expect(mapMatch(ours!, capturedMap(cap!, addr), ignore), layer).toBeGreaterThanOrEqual(0.97);
     }
+  });
+});
+
+describe.skipIf(!ASSETS || !loadCapturePng('charsel'))('quadro da charsel × charsel.png (I6, I8)', () => {
+  const png = loadCapturePng('charsel')!;
+  const standees = () => CHARSEL_STANDEE.map((s, k) =>
+    obj(CHARSEL_GRID.x[k % 3], CHARSEL_STANDEE_Y[Math.floor(k / 3)], s.tile, s.pal, { big: true, prio: 3 }));
+  const render = (chars: (number | null)[]) => { const img = createImage(256, 224); renderPpu(charselFrame(ASSETS!, chars, standees()), img); return img.data; };
+  const shifted = (r: Rect) => ({ x0: r.x0 + CHARSEL_BG1_SHIFT.x, y0: r.y0 + CHARSEL_BG1_SHIFT.y, x1: r.x1 + CHARSEL_BG1_SHIFT.x, y1: r.y1 + CHARSEL_BG1_SHIFT.y });
+  it('BG1 com HOFS −8 (a corda em x = 65/222 da captura), BG2 sem scroll', () => {
+    expect(CHARSEL_SCROLL).toEqual({ bg1: [-8, 0], bg2: [0, 0] });
+  });
+  it('coluna de retratos (x 24–55, y 31–190) = a da captura, pixel a pixel (personagens 0..4 nos slots 0..4)', () => {
+    expect(pixelMatch(render([0, 1, 2, 3, 4]), png, [], { x0: 24, y0: 31, x1: 55, y1: 190 })).toBe(1);
+  });
+  it('fora do miolo da moldura (escurecido pela subtração de cor), do título e dos cursores: o quadro inteiro bate', () => {
+    const inner = { x0: 64, y0: 40, x1: 223, y1: 190 };   // miolo dentro da corda (e a metade de dentro dela), na tela
+    expect(pixelMatch(render([0, 1, 2, 3, 4]), png, [inner, shifted(CHARSEL_TITLE_PX)])).toBe(1);
+  });
+  it('retratos por slot e personagem: palavras de BG1 da captura e "×" no slot desligado', () => {
+    const words = charselPortraitWords([0, 1, 2, 3, 4]);
+    const cap = capturedMap(loadCapture('charsel')!, 0x4000);
+    for (const p of words) expect(p.w, `${p.col},${p.row}`).toBe(cap[p.row * 32 + p.col]);
+    const off = charselPortraitWords([5, null, 0, 0, 0]);
+    expect(off[0].w & 0x3ff).toBe(0x240);        // RUBI = retrato 4 da folha
+    expect(off[4].w & 0x3ff).toBe(0x20c);        // "×"
   });
 });
 
@@ -136,6 +168,39 @@ describe('personagens (§6.6, R13, R32)', () => {
     press(app, BTN.A, 0);
     expect(c.controlling).toBe(1);
   });
+  it('I9: humano com gamepad desconectado não trava: entra na fila do P1 e a tela termina', () => {
+    const { app } = mkApp();
+    app.settings.setup.slots = ['human', 'human', 'human', 'cpu', 'off'];   // P3 = gp0 (padrão), desligado
+    const connected = [true, true, false, true, false];
+    const pressC = (btn: number, slot?: number) => { app.update(inputOf(btn, btn, slot, { connected })); app.update({ ...idleInput(), connected } as MenuInput); };
+    const c = charactersScreen(app); app.go(c);
+    pressC(BTN.A, 1); pressC(BTN.A, 0);
+    expect([c.controller, c.controlling]).toEqual([0, 2]);
+    pressC(BTN.RIGHT, 0); expect(c.charOf(2)).toBe(0);
+    pressC(BTN.A, 0); pressC(BTN.A, 0);
+    settle(app);
+    expect(app.screen.id).toBe('stage');
+  });
+  it('I9: sem nenhum humano conectado, qualquer controle decide por todos', () => {
+    const { app } = mkApp();
+    app.settings.setup.slots = ['cpu', 'off', 'human', 'cpu', 'off'];
+    const connected = [false, false, false, false, false];
+    const c = charactersScreen(app); app.go(c);
+    app.update({ ...idleInput(), connected } as MenuInput);
+    expect([c.controller, c.controlling]).toEqual([null, 0]);
+    for (let k = 0; k < 3; k++) { app.update(inputOf(BTN.A, BTN.A, undefined, { connected })); app.update({ ...idleInput(), connected } as MenuInput); }
+    settle(app);
+    expect(app.screen.id).toBe('stage');
+  });
+  it('I9: o gamepad volta → o humano volta a escolher sozinho', () => {
+    const { app } = mkApp();
+    app.settings.setup.slots = ['human', 'human', 'human', 'off', 'off'];
+    const c = charactersScreen(app); app.go(c);
+    app.update({ ...idleInput(), connected: [true, true, false, false, false] } as MenuInput);
+    expect(c.confirmed[2]).toBe(false);
+    press(app, BTN.RIGHT, 2);                                     // idleInput: tudo conectado
+    expect(c.charOf(2)).toBe(0);
+  });
   it('sem humano com dispositivo, qualquer controle escolhe por todos', () => {
     const { app } = mkApp();
     app.settings.setup.slots = ['cpu', 'cpu', 'off', 'cpu', 'off'];
@@ -192,6 +257,18 @@ describe('equipes (A1, R14)', () => {
     expect([t.confirmed[3], app.inTransition, sink.of('sfx')[0].id]).toEqual([false, false, 3]);
     press(app, BTN.RIGHT, 0); press(app, BTN.A, 0);
     expect(app.inTransition).toBe(true);
+  });
+  it('I9: humano desconectado também não trava as equipes', () => {
+    const { app } = teamApp();
+    app.settings.setup.slots = ['human', 'human', 'human', 'cpu', 'off'];
+    const t2 = teamsScreen(app); app.go(t2);
+    const connected = [true, true, false, true, false];
+    const pressC = (btn: number, slot?: number) => { app.update(inputOf(btn, btn, slot, { connected })); app.update({ ...idleInput(), connected } as MenuInput); };
+    pressC(BTN.A, 1); pressC(BTN.A, 0);
+    expect(t2.controlling).toBe(2);
+    pressC(BTN.A, 0); pressC(BTN.A, 0);
+    settle(app);
+    expect(app.screen.id).toBe('stage');
   });
   it('B de qualquer controle volta aos personagens', () => {
     const { app } = teamApp();
