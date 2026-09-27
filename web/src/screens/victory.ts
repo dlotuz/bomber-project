@@ -14,6 +14,8 @@ import { racerScreen } from './racer';
 import { stageScreen } from './stage';
 import { PpuCanvas, sceneFrame, sceneGfx } from '../render/screens-rom/scene';
 import { TROPHY_TOP_Y, TROPHY_X0, championDrawOrder, drawCharAnim, victoryMaps, victoryOam } from '../render/screens-rom/victory';
+import { SCOREBOARD_SCROLL } from '../render/screens-rom/scoreboard';
+import type { PpuFrame } from '../app/rom-api';
 
 /** `D8:2A81` (corredores, "palmas") e `C3:E7F7` (campeão sobre o troféu, folha `victoryFrame`) [§7.4]. */
 const RUN_ANIM = 0xd82a81, CHAMP_ANIM = 0xc3e7f7;
@@ -59,8 +61,21 @@ function drawConfetti(ctx: CanvasRenderingContext2D, s: number): void {
   }
 }
 
-/** y do mapa de BG2 onde começa a cena da vitória (linha 14; as linhas 0–13 são o placar). */
-const VICTORY_MAP_Y = 224;
+/** y do mapa de BG2 onde começa a cena da vitória (linha 14; as linhas 0–13 são o placar). Continua o BG2 do
+ *  placar (VOFS `SCOREBOARD_SCROLL.bg2[1]` = 7, T20/R1 — correção final): sem a soma, a linha 232 do mapa (onde
+ *  começa a faixa azul, logo abaixo do preto do placar) nunca aparecia — as linhas 225–231 saíam repetidas. */
+const VICTORY_MAP_Y = 224 + SCOREBOARD_SCROLL.bg2[1];
+
+/** Quadro de BG2/OAM da cena de vitória em `yTop` (`= 224 − cameraY()`, T20): exportado para os testes de pixel
+ *  da emenda placar → vitória (R1). Com `yTop ≥ 0` (antes do fim da descida) o VOFS fica fixo em
+ *  `VICTORY_MAP_Y`; só depois que a câmera passa dos 224 px (`yTop < 0`) o BG2 volta a rolar, dando o
+ *  "acabamento" extra da vitória parada (T20). */
+export function victorySceneFrame(a: RomAssets, yTop: number): PpuFrame {
+  const vofs = VICTORY_MAP_Y + Math.max(0, -yTop);
+  return sceneFrame(sceneGfx(a, 'victory'), victoryMaps(a), {
+    oam: victoryOam().map(o => ({ ...o, y: o.y + Math.min(0, yTop) })), bg2: [0, vofs],
+  });
+}
 
 /** Placar final (descida) e VITÓRIA [§6.12, §7.4, §7.5, R9]. */
 export function victoryScreen(app: App, ms: MatchSession, startS: number): Screen & {
@@ -111,11 +126,7 @@ export function victoryScreen(app: App, ms: MatchSession, startS: number): Scree
         // T22: placar e vitória são um só mapa de BG2 (32×32 casas de 16 px): o placar nas linhas 0–13 e a vitória
         // (torcida, faixa das bombas, chão) a partir da linha 14 (y = 224). A cena local começa em y = 224 do mapa;
         // quando ela passa do topo da tela (descida de 256 px), o scroll continua pelo próprio mapa.
-        const vofs = VICTORY_MAP_Y + Math.max(0, -yTop);
-        const f = sceneFrame(sceneGfx(a, 'victory'), victoryMaps(a), {
-          oam: victoryOam().map(o => ({ ...o, y: o.y + Math.min(0, yTop) })), bg2: [0, vofs],
-        });
-        ppu.draw(ctx, f, Math.max(0, yTop));
+        ppu.draw(ctx, victorySceneFrame(a, yTop), Math.max(0, yTop));
       }
       ctx.save();
       ctx.translate(0, yTop);

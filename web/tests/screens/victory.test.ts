@@ -1,11 +1,14 @@
-import { victoryScreen } from '../../src/screens/victory';
+import { victoryScreen, victorySceneFrame } from '../../src/screens/victory';
 import { createMatchSession, beginRound, endRound, carry, resetCarry } from '../../src/game/match-session';
 import { parseConfig } from '../../src/game/config';
 import { BTN, matchRngState } from '../../src/game/core-api';
 import { forceWin, runUntil, skipIntro } from './core-helpers';
 import { mkApp, tap, idle, settle } from './helpers';
 import { championDrawOrder, victoryGeometry, victoryMaps } from '../../src/render/screens-rom/victory';
+import { scoreboardFrame } from '../../src/render/screens-rom/scoreboard';
+import { createImage, renderPpu } from '../../src/render/ppu';
 import { loadCapture, capturedMap, mapMatch, type Rect } from './captures';
+import { loadCapturePng, pixelMatch } from './capture-png';
 import { ASSETS } from './rom';
 import type { SpriteBank } from '../../src/render/sprite-bank';
 
@@ -127,5 +130,52 @@ describe('geometria da cena victory (captura, A14)', () => {
       const withEnglishTitle = maps.bg1 ? Array.from(maps.bg1).some(w => w !== 0 && ((w >> 10) & 7) === 6) : false;
       expect(withEnglishTitle).toBe(false);
     });
+  });
+});
+
+// Correção final do plano 10, R1: a descida placar → vitória repetia uma faixa de 7 linhas do mapa (placar e
+// vitória são um só BG2, T22) e a vitória parada ficava 7 px abaixo da ROM. Causa: `VICTORY_MAP_Y` (linha 63 de
+// `screens/victory.ts`) não continuava o VOFS do placar (`SCOREBOARD_SCROLL.bg2[1]` = 7). Corrigido para
+// `224 + SCOREBOARD_SCROLL.bg2[1]` = 231; `victorySceneFrame` (exportada) monta o quadro de BG2/OAM da cena para
+// os testes, do mesmo jeito que `draw()` usa internamente.
+describe.skipIf(!ASSETS)('emenda placar → vitória (correção final, R1)', () => {
+  const sbPng = loadCapturePng('scoreboard');
+  const vPng = loadCapturePng('victory');
+  const avPng = loadCapturePng('after_victory');
+  const cfg = () => createMatchSession(parseConfig('?players=5&humans=1&matches=5'));
+
+  it.skipIf(!sbPng)('placar sozinho: linhas 214–223 (borda branco/verde/preto) batem scoreboard.png', () => {
+    const img = createImage(256, 224);
+    renderPpu(scoreboardFrame(ASSETS!, cfg(), 10), img);
+    expect(pixelMatch(img.data, sbPng!, [], { x0: 0, y0: 214, x1: 255, y1: 223 })).toBeGreaterThanOrEqual(0.97);
+  });
+
+  // `victory.png` foi capturada 2 px antes do fim da descida (câmera = 222, yTop = 2): as suas 2 primeiras linhas
+  // ainda são a cauda preta do placar (linhas 222–223 da tela do placar) e só da linha 2 em diante começa a
+  // própria cena da vitória (linha 0 de `victorySceneFrame`, VOFS fixo em `VICTORY_MAP_Y + 1` enquanto a câmera
+  // não passa dos 224 px). Reconstituímos a mesma composição (placar deslocado −222 + vitória) e comparamos com a
+  // captura inteira, linha a linha: sem o fix, as linhas 225–231 do mapa saem repetidas (o preto emenda direto
+  // num pedaço do xadrez, não na faixa azul) e o teste falha bem abaixo de 97 %.
+  it.skipIf(!sbPng || !vPng)('sem repetir/pular linha: placar (câmera 222) + vitória batem victory.png linhas 0–13 (preto → azul → preto → dourado)', () => {
+    const camY = 222;
+    const sbImg = createImage(256, 224); renderPpu(scoreboardFrame(ASSETS!, cfg(), 10), sbImg);
+    const vImg = createImage(256, 224); renderPpu(victorySceneFrame(ASSETS!, 0), vImg);
+    const composite = createImage(256, 224);
+    for (let r = 0; r <= 13; r++) {
+      const [src, srcRow] = r < 2 ? [sbImg, r + camY] : [vImg, r - 2];
+      composite.data.set(src.data.subarray(srcRow * 256 * 4, srcRow * 256 * 4 + 256 * 4), r * 256 * 4);
+    }
+    expect(pixelMatch(composite.data, vPng!, [], { x0: 0, y0: 0, x1: 255, y1: 13 })).toBeGreaterThanOrEqual(0.97);
+  });
+
+  // Vitória parada (câmera = 256, yTop = −32): o BG2 continua rolando os 32 px extras (VOFS 263) e o troféu sobe
+  // para y = 168, como em `after_victory.oam`. O miolo do xadrez (mesma animação de cor/tile periódica da
+  // descrição de `victoryMaps` acima) e o texto/personagens/troféu ficam fora da comparação; sobra a moldura de
+  // baixo (faixa azul e chão), sensível a qualquer deslocamento vertical — inclusive o de 7 px do R1.
+  it.skipIf(!avPng)('vitória parada: fundo bate after_victory.png ≥ 97 % fora do xadrez animado, do texto e dos personagens/troféu', () => {
+    const img = createImage(256, 224);
+    renderPpu(victorySceneFrame(ASSETS!, -32), img);
+    expect(pixelMatch(img.data, avPng!, [{ x0: 55, y0: 136, x1: 195, y1: 223 }], { x0: 0, y0: 136, x1: 255, y1: 223 }))
+      .toBeGreaterThanOrEqual(0.97);
   });
 });
