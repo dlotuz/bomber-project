@@ -16,7 +16,8 @@ import { S } from '../render/text/strings';
 export type { CrownCell } from '../render/screens-rom/scoreboard';
 
 /** Placar (§6.10, §6.12, §7.5, R7–R10, A15): 5 casas de coroa por linha ativa (só as coroas ativas dão fileira,
- *  na posição do slot); a coroa nova gira pela animação da ROM (`C3:DA94`) e para no último quadro dela (R10).
+ *  na posição do slot); a coroa nova gira pela animação da ROM (`C3:DA94`) e para de frente, no quadro 0 (tile
+ *  `$106`, §6.10 — a revisão final do plano 10 derrubou o "último quadro" do R10).
  *  Normal: pula com A/B/START a partir de `s = 18`, ou sai sozinho em `s = 511`, para a próxima rodada
  *  (`NEXT_ROUND`). Final (`ms.over`): nenhum botão faz nada; música da vitória em `s = 511` e a vitória assume
  *  em `s = 557`, sem fade. */

@@ -3,8 +3,8 @@ import type { App, Screen } from '../app/app';
 import { SFX } from '../app/audio';
 import { FADE_MENU } from '../app/fade';
 import { romState, type RomAssets } from '../app/rom-api';
-import { PpuCanvas, sceneFrame, sceneGfx, sceneMaps } from '../render/screens-rom/scene';
-import { charselMaps, drawCharselTitle } from '../render/screens-rom/charsel';
+import { PpuCanvas } from '../render/screens-rom/scene';
+import { CHARSEL_BG1_SHIFT, charselFrame, drawCharselTitle } from '../render/screens-rom/charsel';
 import { TEAMSEL_MARKER_X, TEAMSEL_PORTRAIT, TEAMSEL_VS } from '../render/screens-rom/teams';
 import { COLORS, PLAYER_COLORS, drawFallbackFrame, drawStaticBackground } from './ui';
 import { drawText } from '../render/text/text';
@@ -68,30 +68,32 @@ export function teamsScreen(app: App): Screen & {
       }
     },
     draw(ctx, bank, frame) {
-      // A1 (brief T10): equipes não tem captura própria — reaproveita a mesma cena `charsel` (corda + quebra-
-      // cabeça); sem grade nem bonecos parados (aqui só o marcador de lado e "VS", conteúdo nosso por cima).
+      // A1 (brief T10): equipes não tem captura própria — reaproveita a mesma cena `charsel` (corda, quebra-cabeça e
+      // a coluna de retratos da ROM no BG1, com o HOFS −8), sem grade nem bonecos parados; o marcador de lado e o
+      // "VS" são conteúdo nosso por cima.
       const a: RomAssets | null = romState.assets;
       if (a) {
-        const g = sceneGfx(a, 'charsel');
-        const maps = sceneMaps(a, 'charsel', charselMaps);
-        ppu.draw(ctx, sceneFrame(g, maps));
+        ppu.draw(ctx, charselFrame(a, [0, 1, 2, 3, 4].map(i => (setup.slots[i] !== 'off' ? setup.chars[i] : null))));
+        drawCharselTitle(ctx, bank, S.teams.title, COLORS.title, CHARSEL_BG1_SHIFT);
       } else {
         drawStaticBackground(ctx);
         drawFallbackFrame(ctx, FRAME);
+        drawCharselTitle(ctx, bank, S.teams.title, COLORS.title);
       }
-      drawCharselTitle(ctx, bank, S.teams.title, COLORS.title);
+      // Com ROM a moldura inteira anda +8 em x junto com o BG1 (I8): marcadores e "VS" acompanham.
+      const dx = a ? CHARSEL_BG1_SHIFT.x : 0;
       const ctrl = scheme.controllingSlot();
       for (const i of scheme.activeIdx) {
         const y = TEAMSEL_PORTRAIT.y0 + TEAMSEL_PORTRAIT.dy * i;
-        ctx.drawImage(bank.head(setup.chars[i]), TEAMSEL_PORTRAIT.x, y, TEAMSEL_PORTRAIT.w, TEAMSEL_PORTRAIT.w);
+        if (!a) ctx.drawImage(bank.head(setup.chars[i]), TEAMSEL_PORTRAIT.x, y, TEAMSEL_PORTRAIT.w, TEAMSEL_PORTRAIT.w);
         const side = setup.teams[i];
-        const mx = TEAMSEL_MARKER_X[side];
+        const mx = TEAMSEL_MARKER_X[side] + dx;
         const driver = !scheme.confirmed[i] ? (scheme.selfPicking(i) ? i : i === ctrl ? scheme.controller : null) : null;
         ctx.fillStyle = driver !== null ? PLAYER_COLORS[driver] : TEAM_COLOR[side];
         ctx.fillRect(mx, y + 8, 16, 16);
         drawText(ctx, bank, 'ascii8', S.chars.tags[i], mx, y - 4, { color: PLAYER_COLORS[i] });
       }
-      drawText(ctx, bank, 'menuItem', S.teams.vs, 128, TEAMSEL_VS.y, { align: 'center' });
+      drawText(ctx, bank, 'menuItem', S.teams.vs, TEAMSEL_VS.x + dx, TEAMSEL_VS.y, { align: 'center' });
       drawText(ctx, bank, 'ascii8', S.teams.help, 128, SCREEN_H - 16, { align: 'center', tone: 'gray' });
     },
   };
