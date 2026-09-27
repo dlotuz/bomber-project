@@ -1114,7 +1114,7 @@ Cada fase é um `StageModule` em `core/stages/stageN.ts`, com camadas de render 
   1. fade-out 15 f;
   2. **48 f de preto**, com a coroa +1 aplicada no início do preto, FADE do áudio, banco `$30` e música `$15`;
   3. fade-in do **placar** 15 f.
-- **Todos mortos:** fade-out 15 f, 48 f de preto (🟡) e **EMPATE** (§6.11).
+- **Todos mortos:** fade-out 15 f, **104 f de preto** e **EMPATE** (§6.11); FADE do áudio no `over`, banco `$30` em +57 e música `$18` em +68. Medido no emulador pelo plano 11 (M1, `analise/investigacao/audio/empates.py`); o "48 f 🟡" anterior estava errado. O EMPATE por TIME UP tem o mesmo preto de 104 f.
 
 **Placar:**
 - Céu com nuvens; painel verde de x = 8 a 248.
@@ -1128,7 +1128,7 @@ Cada fase é um `StageModule` em `core/stages/stageN.ts`, com camadas de render 
 - **Cena:** fundo azul-escuro; os 5 personagens de pé sobre um disco com holofotes (quadros por DMA do CAT `draw1/draw2`).
 - **Letras** "EMPATE" crescem do centro (Modo 7) entre ~f360 e f474 e depois alternam vermelho, amarelo e verde.
 - A textura Modo 7 é recomposta com as letras E, M, A recortadas da "DRAW GAME" original e P, T desenhadas por nós no mesmo estilo.
-- **Som:** música `$18` e voz `$0E`.
+- **Som:** música `$18` e voz `$0E` em S = 147 (a partir do 1º frame do fade-in, quando as letras acabam de crescer; medido, plano 11 M1).
 - **Sem coroa.**
 - **Pular:** **só A ou B** (START não), a partir de 4 f depois do fim do fade-in. Sem botão, espera sem limite.
 - **Depois:** fade 15 f, 385 f de preto e a próxima rodada.
@@ -1499,6 +1499,6 @@ Cada item traz o **comportamento provisório** e **como verificar** (ferramentas
 | A14 | **Telas:**<br>origem na ROM dos mapas de BG (título, menus, placar, vitória, empate);<br>metasprites do menu (mão, etiquetas nP, títulos em sprite);<br>animação do logo do título;<br>coordenadas dos glifos | Montar pela geometria medida (MNT §B), com os números de tile no nosso código | `scenes.py` com log de DMA para VRAM `$4000`/`$4400` e do "último escritor" de `$7E:5000`; testar o formato de mapa da ARN §2.3 |
 | A15 | Placar com menos de 5 jogadores (linhas de slots Off); A na tela de jogadores com menos de 2 ativos | Só linhas dos slots ativos, na posição do slot; A toca `$03` e não avança | Savestates com 2 e 3 jogadores |
 | A16 | Áudio:<br>regra exata do orçamento de stream (`$ED`, `$016A/$0166`);<br>SFX `$28`, `$1C`, contexto de `$0E`/`$12`;<br>áudio com Morte Súbita, Bad Bomber e Racer;<br>licença do `snes_spc` inteiro | 1 pedaço de 64 B por tick (+4 a cada 4º); `$0E` quique, `$12` atingido na cabeça; `$1C`/`$28` sem uso | `trace_match.py` com as regras ligadas; conferir o LICENSE do pacote |
-| A17 | Tick exato do SFX `$17` (`$C2:0D6A`) em relação ao golpe; preto entre o fim da rodada e o EMPATE | 31 ticks depois do início da comemoração; 48 f de preto | Gancho em `$C2:0D6A` e `run_exp.py vitoria` |
+| A17 | Tick exato do SFX `$17` (`$C2:0D6A`) em relação ao golpe; preto entre o fim da rodada e o EMPATE | 31 ticks depois do início da comemoração; preto medido depois: **104 f** (plano 11, M1) | Gancho em `$C2:0D6A` e `run_exp.py vitoria` |
 | A18 | Relógio ∞ no HUD (30:01 parado ou símbolo próprio) | Mostrar os dígitos do valor (30:01) | Captura com Tempo ∞ |
 | A19 | ROMs diferentes (SB4 japonesa sem patch, outras traduções) | Rejeitar com mensagem clara | Comparar ponteiros das tabelas usadas pelo `rom/` numa ROM japonesa limpa; possível suporte depois |

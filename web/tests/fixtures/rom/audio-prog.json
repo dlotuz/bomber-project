@@ -1,0 +1,37 @@
+{
+ "script": "web/scripts/audio-golden/make-fixtures.ts",
+ "tool": "analise/investigacao/audio/spctrace.cpp",
+ "steps": 200,
+ "progs": {
+  "timers": {
+   "mmioCount": 42059,
+   "mmioSha1": "da8f9776e3e830c926416d6e355d85285b603447",
+   "ramSha1": "e872ce559c0339a6a6a9164bea7435a41d1e8d7d",
+   "pcmSha1": "76f75941f2fa688377627bcdcc56e5e6d89d8839",
+   "regs": {
+    "pc": 553,
+    "a": 0,
+    "x": 0,
+    "y": 0,
+    "sp": 239,
+    "psw": 2,
+    "cycles": 200000
+   }
+  },
+  "dsp": {
+   "mmioCount": 47294,
+   "mmioSha1": "108cb4cc104e04623e26a6aa00d011b6aa937f86",
+   "ramSha1": "7f91f1b8073c3f361416ba6bd8265d5dd58a6fc2",
+   "pcmSha1": "9b289c40b28f8364e8b3bad11f3690bc6a890c0a",
+   "regs": {
+    "pc": 593,
+    "a": 127,
+    "x": 239,
+    "y": 0,
+    "sp": 239,
+    "psw": 0,
+    "cycles": 200004
+   }
+  }
+ }
+}

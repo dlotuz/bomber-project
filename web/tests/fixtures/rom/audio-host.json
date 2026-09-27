@@ -1,0 +1,205 @@
+{
+ "script": "web/scripts/audio-golden/make-fixtures.ts",
+ "tool": "analise/investigacao/audio/spctrace.cpp",
+ "romSha1": "38f4394986bd39fcbe32a722a3fe103ee6177d9b",
+ "hosts": {
+  "batalha": {
+   "script": "init; blk 2F; mus 14; frames 2; rec; frames 60",
+   "ops": [
+    [
+     "init",
+     0,
+     585899
+    ],
+    [
+     "blk",
+     47,
+     154129
+    ],
+    [
+     "mus",
+     20,
+     1154429
+    ],
+    [
+     "frames",
+     2,
+     34134
+    ],
+    [
+     "rec",
+     0,
+     0
+    ],
+    [
+     "frames",
+     96,
+     1024026
+    ]
+   ],
+   "pcmFrames": 32001,
+   "pcmSha1PerSecond": [
+    "26d26780f5dd5cc3570322db3c894598f17fc93d",
+    "21c86a4d348896047724ec094b3b411667f62ca8"
+   ],
+   "apuramSha1": "cdab101718a5d5b6830bbaa6e51769f4c8e55fe0",
+   "mmioCount": 279067,
+   "mmioSha1": "603b0d4366d4066bcc3a4aa8883b8c04f6a6aa5e",
+   "mmioWindows": [
+    "8d9515a1694aa22130645c3e4a080137dce4fce4",
+    "30b9c4d459b5ae51dc4d5998dfbe954f1c626267",
+    "bb31d445aa594e3e18ba39769d1689dcd96f6c19",
+    "6b31660a052395b84e75f73317280bc6d1b374fc",
+    "54a22be2638b20a821edbaf9c6bcca59563e52b2"
+   ]
+  },
+  "fluxo": {
+   "script": "init; blk 30; mus 12; frames 30; rec; sfx 1; frames 5; sfx 2; frames 5; stream 7; frames 120; fade; frames 30; blk 2F; mus 14; stream 10; sfx 7; frames 20; stream 6; frames 60; sfx c; frames 10; stop; frames 10",
+   "ops": [
+    [
+     "init",
+     0,
+     585899
+    ],
+    [
+     "blk",
+     48,
+     139200
+    ],
+    [
+     "mus",
+     18,
+     919239
+    ],
+    [
+     "frames",
+     48,
+     512013
+    ],
+    [
+     "rec",
+     0,
+     0
+    ],
+    [
+     "sfx",
+     1,
+     0
+    ],
+    [
+     "frames",
+     5,
+     85524
+    ],
+    [
+     "sfx",
+     2,
+     0
+    ],
+    [
+     "frames",
+     5,
+     85558
+    ],
+    [
+     "stream",
+     7,
+     0
+    ],
+    [
+     "frames",
+     288,
+     2149716
+    ],
+    [
+     "fade",
+     0,
+     245
+    ],
+    [
+     "frames",
+     48,
+     512009
+    ],
+    [
+     "blk",
+     47,
+     151922
+    ],
+    [
+     "mus",
+     20,
+     1154350
+    ],
+    [
+     "stream",
+     16,
+     0
+    ],
+    [
+     "sfx",
+     7,
+     0
+    ],
+    [
+     "frames",
+     32,
+     424503
+    ],
+    [
+     "stream",
+     6,
+     0
+    ],
+    [
+     "frames",
+     96,
+     1071416
+    ],
+    [
+     "sfx",
+     12,
+     0
+    ],
+    [
+     "frames",
+     16,
+     178742
+    ],
+    [
+     "stop",
+     0,
+     4057
+    ],
+    [
+     "frames",
+     16,
+     170670
+    ]
+   ],
+   "pcmFrames": 187147,
+   "pcmSha1PerSecond": [
+    "c6c8e4651c21f5c00b2042e96a2a5d540e37bd28",
+    "0bd543f2ef7269668b7dac106127296892b14151",
+    "422234fbae12ebcb79cb1e8ecc12fbe4e978f8f9",
+    "6f7859eff1c218bb99b8f5f3afff7deab1c306e9",
+    "565298d48c0fc96e8a1f2f07e87eb81c03407c10",
+    "ca5c60393f260d85701fc7878a09336049b4524e"
+   ],
+   "apuramSha1": "3d2cc8cd523444dba1aaa5d58a46b5981df72615",
+   "mmioCount": 561180,
+   "mmioSha1": "2840f52cce964ef6027611e45a11fd5e52fcfa6b",
+   "mmioWindows": [
+    "8d9515a1694aa22130645c3e4a080137dce4fce4",
+    "7cde1166960756d42216f84a5a720763af3f71ee",
+    "8bbabe32ccf5252448a8d28411def94be1f420cd",
+    "be3a7f210f6c97ba9f8ab473afcb4edf9b3b28fc",
+    "6e79275c950c12d125be114d2dbf3c4668a15322",
+    "61fe05882380cfb3851702d01d7df0bade1885fd",
+    "03052a5340d71db8af7afe17fa435a6e890f82e9",
+    "990b42c33c43ae8ec22b845d44717d9abdc099b1",
+    "e1053525799c7135f13d99c989c78501fa47e16d"
+   ]
+  }
+ }
+}

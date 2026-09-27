@@ -26,8 +26,8 @@ describe('tempos da spec §6 e decisões R4–R11, R20–R21, R28', () => {
   });
   it('fim de rodada (R4–R6) e próxima rodada (R8)', () => {
     expect(T.WIN_END).toEqual({ black: 48, audioFadeAt: 0, crownAt: 15, bankAt: 16, musicAt: 57 });
-    expect(T.DRAW_TIME_END).toEqual({ black: 151, audioFadeAt: 1, crownAt: 15, bankAt: 58, musicAt: 68 });
-    expect(T.DRAW_DEAD_END).toEqual({ black: 48, audioFadeAt: 0, crownAt: 15, bankAt: 16, musicAt: 26 });
+    expect(T.DRAW_TIME_END).toEqual({ black: 104, audioFadeAt: 1, crownAt: 15, bankAt: 58, musicAt: 68 });
+    expect(T.DRAW_DEAD_END).toEqual({ black: 104, audioFadeAt: 0, crownAt: 15, bankAt: 57, musicAt: 68 });
     expect(T.NEXT_ROUND).toEqual({ afterScore: 288, afterDraw: 385, bankAt: 31, musicAt: 43 });
   });
   it('placar (R7, R9) e giro da coroa: 32 quadros, 104 f', () => {
@@ -37,7 +37,7 @@ describe('tempos da spec §6 e decisões R4–R11, R20–R21, R28', () => {
     expect([0, 9, 10, 27, 103, 104, 500].map(T.crownSpinFrame)).toEqual([0, 9, 10, 18, 31, 31, 31]);
   });
   it('EMPATE (R21) e VITÓRIA', () => {
-    expect(T.DRAW_SCENE).toEqual({ skipFrom: 18, growFrom: 34, growTo: 148, colorEvery: 8, voiceAt: 100 });
+    expect(T.DRAW_SCENE).toEqual({ skipFrom: 18, growFrom: 34, growTo: 148, colorEvery: 8, voiceAt: 147 });
     expect([33, 34, 91, 148, 200].map(T.drawScale)).toEqual([0, 0, 0.5, 1, 1]);
     expect([148, 155, 156, 164, 172].map(T.drawColor)).toEqual([0, 0, 1, 2, 0]);
     expect(T.VICTORY).toEqual({ buttonsFrom: 557, textFrom: 693, textTo: 703, runFrom: 723, runTo: 763, confettiFrom: 763, jumpAt: 783, voiceAt: 795, outBlack: 123 });

@@ -4109,13 +4109,13 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | D7 | Sons das arenas e montarias (§3.15 "ver lá") | Tabelas `STAGE_SFX` (plano 8) e `MOUNT_SFX` (plano 9) injetadas no `BattleAudio`; também vale um campo numérico `sfx`/`voice` no evento |
 | D8 | Flag `$CA` ("descarta tudo menos `$13`") | Implementado no `RomAudioSink.dropAllButSfx13` e testado. Não é ligado (quando o jogo o liga não foi medido; `$13` não é usado no Battle) |
 | D9 | Estouro da fila de 64 | Descarta o novo (🟡) |
-| D10 | STOP durante uma voz em stream | Mantém o comportamento do `spchost`: STOP zera pendentes, e o stream já iniciado termina de ser enviado |
+| D10 | STOP durante uma voz em stream | **Revisto (I1):** o motor só começa banco/música/STOP/fade depois que o stream termina (os NMIs continuam), e o STOP do host também zera o estado do stream |
 | D11 | `AudioRomSlices` do plano 5 × fatias do plano 11 | O plano 11 lê as fatias pelo `RomView.bytes`. Mesmos intervalos, sem depender do formato `{cpu, data}` |
 | D12 | Reamostragem | Primeiro `AudioContext({ sampleRate: 32000 })` (o navegador reamostra); senão, Hermite no worklet |
 | D13 | "PCM determinístico" (§11) | Mais forte que determinismo: hash **igual ao da referência** (bit a bit) por segundo, nos roteiros `batalha` e `fluxo` |
-| D14 | Intervalos de `nextRound`/`allDeadDraw` | Provisórios: 12 f entre banco e música, e os mesmos intervalos do TIME UP (🟡) |
+| D14 | Intervalos de `nextRound`/`allDeadDraw` | `nextRound`: 12 f entre banco e música (🟡). `allDeadDraw`: **medido (M1)** — FADE, banco `$30` +57, `$18` +68, voz `$0E` +266 |
 | D15 | Orçamento do stream (A16) | O do `spchost`, 4 pedaços no 1º de cada 4 NMIs e 1 nos outros (🟡); só muda com medição nova |
-| D16 | Volume separado de música e efeitos (R25 do plano 10) | O DSP entrega um sinal só. Ganho geral = `max(música, efeitos)` num `GainNode` |
+| D16 | Volume separado de música e efeitos (R25 do plano 10) | **Revisto (M5):** ganho por voz do DSP. `$00C7+v` (bit 7, v = 0..2) marca a voz com SFX/voz digitalizada (medido); as outras são música |
 | D17 | Ovos (`$30–$3F`) em `item_picked` | SFX `$08` |
 
 ## Aceite do plano (§11, linha 11)
@@ -4144,3 +4144,79 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - **Corridas do host em outras telas.** As regras (a) e (b) foram validadas nos roteiros `batalha` e `fluxo` (todas as operações: boot, bancos `$2F`/`$30`, músicas `$01`, `$12`–`$16`, `$18`, SFX, vozes, fade e STOP). Um `HostTimeout` em uso real deixa o motor mudo (`broken`), sem travar o jogo, e aparece nas estatísticas em dev.
 - **Licença.** O jogo passa a distribuir código LGPL (o DSP portado), no *chunk* do worklet. Cumprir o `NOTICE.txt` (fonte no repositório, módulo substituível) antes de publicar.
 - **Nomes dos outros planos.** `registerAudioFactory`, `setGameEventAudio`, `romState.assets.rom`, `STAGE_SFX` e `MOUNT_SFX` foram lidos dos planos 5, 8, 9 e 10 escritos em paralelo. Se mudarem no merge, só os imports do `register.ts` mudam; a lógica testada (`factory.ts`, `events.ts`) é injetada.
+
+## Resultado da execução (2026-09-26)
+
+11 tarefas em 5 ondas (T1–T11) e uma onda de correção depois da revisão final. Branch `feat/p11` (inclui os planos 5–10).
+
+### Testes
+- `npx tsc --noEmit` limpo.
+- `npx vitest run` sem ROM: 133 arquivos e 1.121 testes passando (14 arquivos e 297 testes pulados, os que pedem a ROM).
+- `SB4_ROM=… npx vitest run`: 146 arquivos e 1.369 testes passando (1 arquivo e 49 testes pulados, que dependem de outras variáveis).
+- `SB4_ROM=… npx vitest run tests/audio`: 19 arquivos e 127 testes.
+- `npm run build`: `assets/worklet-*.js` (ES module) importa `assets/spc-dsp-*.js`, que traz o aviso LGPL; a pasta `licenses/` traz LICENSE, NOTICE.txt, a página de licenças e `fonte/`.
+
+### Fidelidade
+- **Goldens bit a bit iguais à referência** (`spctrace`): PCM por segundo, janelas de MMIO, RAM do APU e contagens da §10.2. Nenhum fixture `audio-*.json` mudou desde a T1.
+- O 1º segundo da `$14` a partir do boot tem o hash `26d26780…`.
+- O ganho por voz (M5) só age com volume < 1. Com 256/256 o PCM é o mesmo, e o teste confere as 6 cenas do DSP.
+
+### Decisões
+- **D10 revista:** operações longas esperam o fim do stream da voz. Com isso o host continua igual ao `spctrace`.
+- **D14 resolvida para `allDeadDraw`:** o tempo foi medido.
+- **D16 revista:** volumes separados por voz do DSP.
+- **LIMIT de handshake ≈ 1 s de APU** (128.000 × 8 ciclos). O maior valor medido com a ROM é ≈ 1.200 iterações, no fade.
+- **Recuperação:** em erro do host, `power` + boot + último banco/música, até 3 vezes seguidas (`MAX_RECOVERIES`). Depois disso fica mudo.
+
+### O que a onda de correção fez
+- **I1:** banco, música ou STOP durante o stream de uma voz não deixa mais o som mudo.
+  - O motor espera o stream terminar, e o STOP zera o estado do stream.
+  - Em erro do host, o motor se recupera.
+  - Há regressão com o `WorkletCore` + `Apu` + ROM: voz `$0E` e banco `$2F` 20, 28 ou 30 frames depois. Nos 3 casos o som volta, sem erros, e a voz seguinte toca.
+  - No Chrome, o mesmo cenário (20/28/30 f) dá som em 100 % das janelas e `errors` 0.
+- **I2 (LGPL):**
+  - Cabeçalho `/*! … @license LGPL-2.1-or-later */` nos 2 arquivos do DSP, preservado no build.
+  - O DSP sai num arquivo próprio, substituível.
+  - `public/licenses/` traz LICENSE, NOTICE.txt (corrigido) e `index.html`. O plugin do Vite publica a fonte do som em `licenses/fonte/`.
+  - Link visível no rodapé: "Som: S-DSP do snes_spc (LGPL) · licenças e fonte".
+- **I3:**
+  - `AudioClient.create` fecha o `AudioContext` se falhar e não espera o `resume()`.
+  - `resume()` é pedido de novo a cada gesto, pela fábrica.
+  - Testes: `create` falhando e um `resume()` que nunca resolve.
+- **M1:** o EMPATE foi medido no emulador (`analise/investigacao/audio/empates.py`). A vitória serve de calibração: preto de 48 f, `$30` em +16 e `$15` em +57 conferem.
+  - Todos mortos: FADE no `over`, `$30` em +57, `$18` em +68, fade-in do EMPATE em `over`+119 (preto de **104 f**, não 48) e voz `$0E` em +266.
+  - TIME UP: o mesmo preto de 104 f (não 151) e a voz no S = 147 da tela (não 100). A soma já batia.
+  - Mudaram `DRAW_DEAD_END`, `DRAW_TIME_END.black` e `DRAW_SCENE.voiceAt` (plano 10), além de `CUES.allDeadDraw`.
+  - O teste `cues-timeline` confere todos os roteiros contra `game/timeline.ts`. Há errata na spec §6.10/§6.11/A17.
+- **M2:** o `BattleAudio` zera os atrasos quando chega o sink real (`onSink`).
+- **M5:** os volumes de música e de efeitos são separados. Música em 0 cala a música, mas não os SFX e as vozes (teste com a ROM).
+- **M6:**
+  - Botão do controle também conta como gesto, e `pointerup`/`click` também (toque).
+  - Uma troca de ROM durante a criação do som roda de novo no fim (`createAudioStarter`).
+- **M4 (parte trivial):** a closure da reamostragem foi içada.
+
+### Aceite no navegador (Chrome, playwright-core, fora do repositório)
+- **Dev:**
+  - contexto a 32 kHz;
+  - música do título com som em 87 % das janelas;
+  - silêncio depois do STOP;
+  - SFX do cursor;
+  - `$12` nos menus;
+  - partida com som em 100 % das janelas;
+  - cenário I1 ok;
+  - `errors` 0.
+- **Build (`vite preview`):** música do título com som, `errors` 0, e `licenses/*` servidos.
+- O único 404 é o `favicon.ico`, que já existia.
+
+### Pendências
+- **Verificação auditiva manual contra o jogo (§11, M7):** o usuário ainda precisa fazer. O agente não ouve áudio; o que existe são os goldens bit a bit e as medições de RMS.
+- **M3:**
+  - os atrasos do `BattleAudio` (voz `$06`/SFX `$10` do acerto) ainda correm com a partida pausada;
+  - SFX de menu pedidos durante o upload de uma música (≈ 1,1 s) saem em rajada depois.
+  - Precisa do estado `frozen` do app no `onTick` e de um descarte por idade no worklet.
+- **M4 (resto):** os geradores do host e a tupla do `memBit` ainda alocam no thread de áudio. O risco medido é baixo (p99 0,3 ms por quantum).
+- **Controle:**
+  - pelo HTML, botão de controle não é "ativação do usuário";
+  - se o contexto nascer suspenso por um gesto só de controle, o som começa na 1ª tecla, clique ou toque (o `resume()` é pedido de novo a cada gesto).
+- **`nextRound`:** os 12 f entre banco e música continuam 🟡.
+- **Merge com `feat/p10`:** `game/timeline.ts` e 3 testes de telas mudaram aqui (M1). A regra do controlador de alinhar o `DRAW_DEAD_END` a +57/+67 fica substituída pela medição (+57/+68, preto 104 e voz S = 147).

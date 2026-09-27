@@ -1,0 +1,23 @@
+Crown Blast — módulo S-DSP (web/src/audio/apu/dsp/)
+
+Os arquivos web/src/audio/apu/dsp/spc-dsp.ts e tables.ts são um porte para TypeScript do SPC_DSP do
+snes_spc 0.9.0 (Copyright (C) 2007 Shay Green, http://www.slack.net/~ant/), na versão incluída no
+snes9x (apu/bapu/dsp/SPC_DSP.cpp e SPC_DSP.h, copiados em web/vendor/snes_spc/ como fonte original).
+Licença: GNU Lesser General Public License 2.1 ou (a seu critério) posterior — texto no arquivo LICENSE.
+Modificação do Crown Blast além do porte: ganho por voz (`voiceGain`, 256 = sem efeito), usado para
+separar o volume da música do volume dos efeitos.
+
+Como o módulo é distribuído no jogo publicado:
+- o DSP fica num arquivo próprio, assets/spc-dsp-*.js (com este aviso no topo), carregado pelo
+  processador do AudioWorklet (assets/worklet-*.js) por um `import` estático. O worklet contém também
+  código do Crown Blast (SPC700, lado CPU do som, motor em tempo real e reamostragem), que usa o DSP só
+  pela interface `SpcDsp` (reset, run, read, write, voiceGain) e `SampleSink.push(l, r)`;
+- a fonte correspondente de tudo o que vai no worklet (web/src/audio/**, web/vendor/snes_spc/** e os
+  arquivos de build) acompanha o jogo publicado em licenses/fonte/ (lista em licenses/fonte/ARQUIVOS.txt)
+  e está no repositório https://github.com/dlotuz/bomber-project.
+
+Para usar uma versão modificada do DSP: substitua assets/spc-dsp-*.js por outra com a mesma interface, ou
+altere web/src/audio/apu/dsp/ e recompile com `npm run build` (pasta web/).
+
+Nada mais do snes_spc nem do snes9x é usado pelo jogo. O snes9x (licença não comercial) só é usado fora do
+jogo, pela ferramenta de testes analise/investigacao/audio/spctrace.cpp, que não é distribuída com ele.
