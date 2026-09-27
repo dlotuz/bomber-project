@@ -18,7 +18,8 @@ export type HostOp = Generator<number, void, void>;
 export const CPU_SLACK = 64;
 export const POLL = 8;
 export const FRAME_CYCLES = 17067;          // 1.024.000 / 60
-const LIMIT = 4_000_000;
+/** Espera máxima de um handshake: 128.000 × 8 ciclos ≈ 1 s de APU (o maior medido com a ROM é ≈ 1.200). */
+export const LIMIT = 128_000;
 
 export class HostTimeout extends Error {}
 
@@ -124,6 +125,7 @@ export class SpcHost {
     yield* this.wait(2, 0xaa); this.w(1, 0x13); yield* this.wait(1, 0x93); yield* this.wait(2, 0xaa);
     this.w(1, 0x93); yield* this.wait(1, 0x13); yield* this.wait(2, 0xaa);
     this.e2 = this.e3 = this.e9 = this.ea = 0;
+    this.streaming = false; this.strmLeft = 0;           // I1: um STOP cancela também o stream da voz
     yield CPU_SLACK;
   }
 

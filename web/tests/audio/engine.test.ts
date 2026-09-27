@@ -1,4 +1,4 @@
-import { AudioEngine, SFX_FIFO } from '../../src/audio/engine/engine';
+import { AudioEngine, MAX_RECOVERIES, SFX_FIFO } from '../../src/audio/engine/engine';
 import { SampleRing } from '../../src/audio/engine/ring';
 import { AudioImage } from '../../src/audio/host/image';
 import { FRAME_CYCLES } from '../../src/audio/host/host';
@@ -76,7 +76,7 @@ describe('AudioEngine (tempo real)', () => {
     expect(apu.drv.cmds).toEqual([0x32, 0x73]);
   });
 
-  it('erro do host deixa o motor mudo, sem exceção para fora', () => {
+  it('host morto de vez: tenta religar MAX_RECOVERIES vezes e só então fica mudo, sem exceção para fora', () => {
     const ring = new SampleRing(4096);
     let acc = 0;
     const dead = { readPort: () => 0, writePort: () => {}, run: (c: number) => { acc += c; while (acc >= 32) { acc -= 32; ring.push(1, 1); } } };
@@ -85,8 +85,49 @@ describe('AudioEngine (tempo real)', () => {
     const L = new Float32Array(128), R = new Float32Array(128);
     expect(() => { for (let i = 0; i < 20000 && !eng.broken; i++) eng.render(L, R, 128); }).not.toThrow();
     expect(eng.broken).toBe(true);
-    expect(eng.stats.errors).toBe(1);
+    expect(eng.stats.errors).toBe(MAX_RECOVERIES + 1);
     eng.render(L, R, 128);
     expect(L.every(v => v === 0)).toBe(true);
+  });
+
+  it('erro do host: religa o APU, refaz o boot e repete o último banco e a última música', () => {
+    const { apu, eng, render } = setup();
+    eng.post({ t: 'boot' }); eng.post({ t: 'bank', id: 0x30 });
+    render(50);
+    apu.deaf = true;                                   // o driver para de responder
+    eng.post({ t: 'music', id: 0x14 });
+    render(500);                                       // ≈ 2 s: estoura (~1 s) e recupera
+    expect(eng.stats.errors).toBe(1);
+    expect(eng.broken).toBe(false);
+    expect(apu.powers).toBe(1);
+    expect(apu.drv.uploads.some(u => u.dest === 0x3100 && u.len === 33)).toBe(true);   // banco $30 de novo
+    expect(apu.drv.cmds).toEqual([0x01]);             // música $14 de novo
+    eng.post({ t: 'sfx', id: 7 });
+    render(20);
+    expect(apu.drv.cmds).toEqual([0x01, 0x39]);
+  });
+
+  it('banco pedido durante o stream de uma voz espera o stream acabar (I1)', () => {
+    const { apu, eng, render } = setup();
+    eng.post({ t: 'boot' });
+    render(50);
+    eng.post({ t: 'voice', id: 0x10 });
+    while (!eng.host.streaming) render(1);             // o stream sintético dura 2 frames: o banco chega no meio
+    expect(eng.host.streaming).toBe(true);
+    const n = apu.drv.port1.length;
+    eng.post({ t: 'bank', id: 0x2f });
+    let stopWhileStreaming = false;
+    for (let i = 0; i < 400; i++) {
+      render(1);
+      if (eng.host.streaming && apu.drv.port1.slice(n).includes(0x13)) stopWhileStreaming = true;
+    }
+    expect(stopWhileStreaming).toBe(false);
+    expect(apu.drv.port1.slice(n)).toContain(0x13);    // o STOP do banco saiu depois do stream
+    expect(eng.stats.errors).toBe(0);
+    expect(apu.drv.cmds).toEqual([0x32, 0x73]);        // o stream terminou e a voz tocou
+    eng.post({ t: 'voice', id: 0x06 });                // a voz seguinte é aceita e toca
+    render(200);
+    expect(eng.stats.ignoredVoices).toBe(0);
+    expect(apu.drv.cmds).toEqual([0x32, 0x73, 0x32, 0x69]);
   });
 });

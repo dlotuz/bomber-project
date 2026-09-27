@@ -93,6 +93,23 @@ describe('SpcHost contra o driver falso', () => {
     expect(drv.cpuIn[2]).toBe(0x7f);
   });
 
+  it('STOP no meio do stream de uma voz cancela o stream: a voz seguinte começa do zero (I1)', () => {
+    const { drv, host } = setup();
+    runSync(drv, host.boot());
+    host.voice(0x10);
+    runSync(drv, host.nmi());                          // 4 dos 7 pedaços
+    expect(host.streaming).toBe(true);
+    runSync(drv, host.stop());
+    expect(host.streaming).toBe(false);
+    const c = drv.streamChunks;
+    for (let f = 0; f < 4; f++) runSync(drv, host.nmi());
+    expect(drv.streamChunks).toBe(c);                  // o stream velho não continua
+    expect(drv.cmds).toEqual([0x32]);                  // e a voz cancelada não toca
+    expect(host.voice(0x06)).toBe(true);
+    for (let f = 0; f < 4; f++) runSync(drv, host.nmi());
+    expect(drv.cmds).toEqual([0x32, 0x32, 0x69]);
+  });
+
   it('regras de robustez: espera $AA/$AA antes do loader e folga depois do kick', () => {
     const { drv, host } = setup();
     runSync(drv, host.boot());
