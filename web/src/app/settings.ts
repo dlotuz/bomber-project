@@ -1,4 +1,4 @@
-import { defaultRules } from '../core';
+import { defaultRules } from '../game/core-api';
 import {
   DEFAULT_KEYMAPS, DEFAULT_PADMAP, DEVICE_IDS, KEY_FIELDS, PAD_FIELDS,
   type DeviceId, type KeyMap, type PadMap,

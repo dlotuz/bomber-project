@@ -49,4 +49,13 @@ describe('Corrida Bônus (R20)', () => {
     idle(b.app, 900); tap(b.app, BTN.A);
     expect(b.app.inTransition).toBe(true);
   });
+  it('saída para a fase como a da VITÓRIA (I11): fade 15, preto 123 e a música $12 no f138', () => {
+    const { app, sink } = race();
+    idle(app, 900); sink.clear();
+    tap(app, BTN.A);
+    const t0 = app.tick;
+    settle(app);
+    expect(app.screen.id).toBe('stage');
+    expect(sink.since(t0).filter(c => c.op === 'music').map(c => [c.t, c.id])).toEqual([[138, 0x12]]);
+  });
 });

@@ -17,122 +17,49 @@
 //   demanda pela rolagem (não uma função pura de (fase, hofs) sem também reconstruir esse histórico).
 // - `$7F:202B` é o índice da fase atual (0–9) e `$7F:202D` = 10 (contagem de fases) — confirmado lendo a
 //   WRAM dos savestates `analise/estados/st_stage00..09.bin`.
-//
-// `STAGE_ICONS` abaixo foi extraído das 10 capturas de VRAM (uma por savestate `st_stageNN`, uma por fase
-// já centralizada), pegando o bloco de 7×7 que bate (comparação de pixels, ≥ 1 casa de vantagem clara sobre
-// as outras 3 posições do buffer giratório) com a imagem de fato mostrada na tela naquele savestate. A fase
-// 1 foi conferida contra a captura oficial já existente (`analise/extraido/graficos-formato/cenas/
-// stagesel.*`); as fases 2–10 foram conferidas contra capturas próprias desta tarefa
-// (`analise/extraido/graficos-formato/cenas/stagesel-faseNN.*`, geradas a partir dos mesmos savestates —
-// não versionadas, `analise/extraido/` está no `.gitignore`). O teste com captura cobre as 10.
+// - Correção I2 da revisão final: as linhas 0–3 da CGRAM são um buffer giratório de paletas. Ao entrar na tela
+//   (`$C1:A2D6…$C1:A3B4`), a fase anterior/atual/seguinte vai para o slot 0/1/2: o mapa 7×7 vem da tabela de
+//   ponteiros longos `$C1:A8D1` (via `$C4:44FD`) e é gravado por `$C1:A209` com a paleta = slot; a paleta de 16
+//   cores vem da tabela `$C1:A92B` (via `$C4:44E4`) e `$C4:1986` a copia para `$7E:8E00 + 32·slot` (o espelho da
+//   CGRAM que `$C4:19DE` manda para o PPU todo quadro). Ao começar cada rolagem (`$C1:A605…$C1:A6BF`), a fase
+//   atual ± 2 entra no 4º slot (paleta 3) do mesmo jeito. Reproduzimos isso com um arranjo fixo (anterior/atual/
+//   seguinte nas colunas 0/8/16 e paletas 0/1/2; a que entra na rolagem na coluna 24, paleta 3): como mapa e
+//   paleta de cada slot andam juntos, as cores ficam iguais às do jogo sem reconstruir o histórico do buffer.
+//   Conferido contra as 10 capturas `stagesel*` (mapas iguais fora dos bits de paleta; cores por pixel).
 import type { RomAssets } from '../../app/rom-api';
-import { newMap, put, pattern, MENU_GEO, type SceneMaps } from './scene';
-
-/** Bloco de 7×7 casas (tile16, `vhopppcc cccccccc`) de cada fase, na ordem em que aparece centralizado. */
-export const STAGE_ICONS: Record<number, readonly (readonly number[])[]> = {
-  1: [   // captura oficial `stagesel` ($4000, col 8-14, lin 2-8)
-    [0x0404, 0x0404, 0x0404, 0x0404, 0x0404, 0x0404, 0x0404],
-    [0x0404, 0x0408, 0x0408, 0x0408, 0x0408, 0x0408, 0x0404],
-    [0x0404, 0x0406, 0x0402, 0x0406, 0x0402, 0x0406, 0x0404],
-    [0x0404, 0x0406, 0x0408, 0x0406, 0x0408, 0x0406, 0x0404],
-    [0x0404, 0x0406, 0x0402, 0x0406, 0x0402, 0x0406, 0x0404],
-    [0x0404, 0x0406, 0x0406, 0x0406, 0x0406, 0x0406, 0x0404],
-    [0x0404, 0x0404, 0x0404, 0x0404, 0x0404, 0x0404, 0x0404],
-  ],
-  2: [   // stagesel-fase02, coluna 16
-    [0x0828, 0x082a, 0x082c, 0x0828, 0x082a, 0x082c, 0x0828],
-    [0x4844, 0x0826, 0x0826, 0x0826, 0x0826, 0x0826, 0x0844],
-    [0x4846, 0x0822, 0x0820, 0x0822, 0x0820, 0x0822, 0x0846],
-    [0x4848, 0x0822, 0x0824, 0x0822, 0x0824, 0x0822, 0x0848],
-    [0x484a, 0x0822, 0x0820, 0x0822, 0x0820, 0x0822, 0x084a],
-    [0x484c, 0x0822, 0x0824, 0x0822, 0x0824, 0x0822, 0x084c],
-    [0x082e, 0x0840, 0x0842, 0x082e, 0x0840, 0x0842, 0x082e],
-  ],
-  3: [   // stagesel-fase03, coluna 24
-    [0x0c66, 0x0c8e, 0x0c8e, 0x0c8e, 0x0c8e, 0x0c8e, 0x4c66],
-    [0x0c68, 0x0c62, 0x0c62, 0x0c62, 0x0c62, 0x0c62, 0x4c68],
-    [0x0c6a, 0x0c60, 0x0c64, 0x0c60, 0x0c64, 0x0c60, 0x4c6a],
-    [0x0c6c, 0x0c60, 0x0c62, 0x0c60, 0x0c62, 0x0c60, 0x4c6c],
-    [0x0c6e, 0x0c60, 0x0c64, 0x0c60, 0x0c64, 0x0c60, 0x4c6e],
-    [0x0c80, 0x0c60, 0x0c62, 0x0c60, 0x0c62, 0x0c60, 0x4c80],
-    [0x0c82, 0x0c84, 0x0c86, 0x0c88, 0x0c8a, 0x0c8c, 0x4c82],
-  ],
-  4: [   // stagesel-fase04, coluna 0
-    [0x0124, 0x0126, 0x0126, 0x0126, 0x0126, 0x0126, 0x4124],
-    [0x0128, 0x0104, 0x0104, 0x0104, 0x0104, 0x0104, 0x4128],
-    [0x0128, 0x0104, 0x0102, 0x0104, 0x0102, 0x0104, 0x4128],
-    [0x0128, 0x0104, 0x0104, 0x0104, 0x0104, 0x0104, 0x4128],
-    [0x0128, 0x0104, 0x0102, 0x0104, 0x0102, 0x0104, 0x4128],
-    [0x0128, 0x0104, 0x0104, 0x0104, 0x0104, 0x0104, 0x4128],
-    [0x012a, 0x012e, 0x012e, 0x012e, 0x012e, 0x012e, 0x412a],
-  ],
-  5: [   // stagesel-fase05, coluna 8
-    [0x0544, 0x054a, 0x0548, 0x0546, 0x0548, 0x054a, 0x4544],
-    [0x054c, 0x0542, 0x0542, 0x0542, 0x0542, 0x0542, 0x454c],
-    [0x054e, 0x0542, 0x0540, 0x0542, 0x0540, 0x0542, 0x454e],
-    [0x0560, 0x0542, 0x0542, 0x0542, 0x0542, 0x0542, 0x4560],
-    [0x054e, 0x0542, 0x0540, 0x0542, 0x0540, 0x0542, 0x454e],
-    [0x054c, 0x0542, 0x0542, 0x0542, 0x0542, 0x0542, 0x454c],
-    [0x8544, 0x854a, 0x8548, 0x8546, 0x8548, 0x854a, 0xc544],
-  ],
-  6: [   // stagesel-fase06, coluna 16
-    [0x49a2, 0x09a0, 0x09a0, 0x09a0, 0x09a0, 0x09a0, 0x09a2],
-    [0x49a4, 0x0988, 0x0988, 0x0984, 0x0984, 0x098c, 0x09a4],
-    [0x49a6, 0x0986, 0x0980, 0x0982, 0x0980, 0x098a, 0x09a6],
-    [0x49a8, 0x0986, 0x0988, 0x098a, 0x098c, 0x098a, 0x09a8],
-    [0x49aa, 0x098a, 0x0980, 0x0982, 0x0980, 0x0982, 0x09aa],
-    [0x49ac, 0x098a, 0x098c, 0x0982, 0x0984, 0x0982, 0x09ac],
-    [0x09ae, 0x09ae, 0x09ae, 0x09ae, 0x09ae, 0x09ae, 0x09ae],
-  ],
-  7: [   // stagesel-fase07, coluna 24
-    [0x0de4, 0x0de6, 0x0de4, 0x0de6, 0x0de4, 0x0de6, 0x0de4],
-    [0x4dc8, 0x0dc2, 0x0dc2, 0x0dc2, 0x0dc2, 0x0dc2, 0x0dc8],
-    [0x4dca, 0x0dc0, 0x0dc6, 0x0dc0, 0x0dc6, 0x0dc0, 0x0dca],
-    [0x4dcc, 0x0dc0, 0x0dc2, 0x0dc0, 0x0dc2, 0x0dc0, 0x0dcc],
-    [0x4dce, 0x0dc0, 0x0dc6, 0x0dc0, 0x0dc6, 0x0dc0, 0x0dce],
-    [0x4dc8, 0x0dc0, 0x0dc2, 0x0dc0, 0x0dc2, 0x0dc0, 0x0dc8],
-    [0x0de8, 0x0dea, 0x0de8, 0x0dea, 0x0de8, 0x0dea, 0x0de8],
-  ],
-  8: [   // stagesel-fase08, coluna 0
-    [0x4208, 0x0206, 0x0200, 0x0202, 0x0204, 0x0206, 0x0208],
-    [0x422c, 0x022e, 0x022e, 0x022e, 0x022e, 0x022e, 0x022c],
-    [0x420a, 0x022e, 0x020e, 0x022e, 0x020e, 0x022e, 0x020a],
-    [0x422a, 0x022e, 0x022e, 0x022e, 0x022e, 0x022e, 0x022a],
-    [0x420c, 0x022e, 0x020e, 0x022e, 0x020e, 0x022e, 0x020c],
-    [0x422c, 0x022e, 0x022e, 0x022e, 0x022e, 0x022e, 0x022c],
-    [0x4228, 0x0226, 0x0220, 0x0222, 0x0224, 0x0226, 0x0228],
-  ],
-  9: [   // stagesel-fase09, coluna 8
-    [0x0708, 0x0700, 0x0702, 0x0700, 0x0702, 0x0700, 0x4708],
-    [0x070a, 0x0722, 0x0722, 0x0722, 0x0722, 0x0722, 0x470a],
-    [0x070c, 0x0722, 0x0720, 0x0722, 0x0720, 0x0722, 0x470c],
-    [0x070e, 0x0722, 0x0726, 0x0728, 0x072a, 0x0722, 0x470e],
-    [0x0708, 0x0722, 0x0720, 0x0722, 0x0720, 0x0722, 0x4708],
-    [0x070a, 0x0722, 0x0724, 0x0722, 0x0724, 0x0722, 0x470a],
-    [0x070c, 0x0704, 0x0706, 0x0704, 0x0706, 0x0704, 0x470c],
-  ],
-  10: [   // stagesel-fase10, coluna 16
-    [0x4b44, 0x0b4e, 0x0b4c, 0x0b60, 0x0b4c, 0x0b4e, 0x0b44],
-    [0x4b46, 0x0b40, 0x0b40, 0x0b40, 0x0b40, 0x0b40, 0x0b46],
-    [0x4b48, 0x0b40, 0x0b42, 0x0b40, 0x0b42, 0x0b40, 0x0b48],
-    [0x4b4a, 0x0b40, 0x0b40, 0x0b40, 0x0b40, 0x0b40, 0x0b4a],
-    [0x4b48, 0x0b40, 0x0b42, 0x0b40, 0x0b42, 0x0b40, 0x0b48],
-    [0x4b46, 0x0b40, 0x0b40, 0x0b40, 0x0b40, 0x0b40, 0x0b46],
-    [0xcb44, 0x8b4e, 0x8b4c, 0x8b60, 0x8b4c, 0x8b4e, 0x8b44],
-  ],
-};
+import { newMap, put, pattern, sceneGfx, MENU_GEO, type SceneGfx, type SceneMaps } from './scene';
 
 /** Coluna/linha do slot central (128 px de passo, igual a `STAGE.scrollPx * STAGE.scrollFrames`). */
 export const STAGE_ICON_COL = 8, STAGE_ICON_ROW = 2;
 /** Registrador de HOFS do BG1 que deixa o slot central em x = 72; `stageScreen.scroll()` soma-se a isto. */
 export const STAGE_ICON_HOFS_BASE = 56;
 
-const wrapStage10 = (n: number): number => ((n - 1 + 10) % 10) + 1;
-/** Ícone de `stage` (com volta 1↔10, para poder pedir "fase 0" = a fase 10, etc.). */
-export const iconFor = (stage: number): readonly (readonly number[])[] => STAGE_ICONS[wrapStage10(stage)];
+/** Tabelas de ponteiros longos (3 bytes) por fase 0–9: mapa 7×7 da prévia (`vhopppcc cccccccc`) e paleta de 16 cores. */
+export const STAGE_PREVIEW_MAPS = 0xc1a8d1, STAGE_PREVIEW_PALS = 0xc1a92b;
+/** Contagem de fases (`$7F:202D`). */
+const STAGES = 10;
+const ICON = 7;
 
-function placeIcon(m: Uint16Array, col0: number, row0: number, icon: readonly (readonly number[])[]): void {
-  icon.forEach((row, gy) => row.forEach((w, gx) => put(m, col0 + gx, row0 + gy, w)));
+const wrapStage10 = (n: number): number => ((n - 1 + STAGES * 10) % STAGES) + 1;
+/** Mapa 7×7 da prévia de `stage` (com volta 1↔10), como está na ROM (os bits de paleta são trocados pelo slot). */
+export function stageIcon(a: RomAssets, stage: number): Uint16Array {
+  const p = a.rom.u24(STAGE_PREVIEW_MAPS + 3 * (wrapStage10(stage) - 1));
+  const out = new Uint16Array(ICON * ICON);
+  for (let i = 0; i < out.length; i++) out[i] = a.rom.u16(p + 2 * i);
+  return out;
+}
+/** As 16 cores da prévia de `stage` (com volta 1↔10). */
+export function stagePalette(a: RomAssets, stage: number): Uint16Array {
+  const p = a.rom.u24(STAGE_PREVIEW_PALS + 3 * (wrapStage10(stage) - 1));
+  const out = new Uint16Array(16);
+  for (let i = 0; i < 16; i++) out[i] = a.rom.u16(p + 2 * i);
+  return out;
+}
+
+/** `$C1:A209`: copia o bloco 7×7 limpando os bits 10–12 (`AND #$E3FF`) e pondo a paleta do slot (`ORA`). */
+function placeIcon(m: Uint16Array, col0: number, row0: number, icon: Uint16Array, pal: number): void {
+  for (let gy = 0; gy < ICON; gy++) for (let gx = 0; gx < ICON; gx++)
+    put(m, col0 + gx, row0 + gy, (icon[gy * ICON + gx] & 0xe3ff) | (pal << 10));
 }
 function puzzleBg(): Uint16Array {
   const bg2 = newMap();
@@ -140,20 +67,49 @@ function puzzleBg(): Uint16Array {
   return bg2;
 }
 
-/** Reconstrói os mapas de `stagesel` com `stage` sozinho no slot central (usado pelo teste com captura). */
-export function buildStageScene(_a: RomAssets, stage: number, hofs = 0): SceneMaps {
-  void hofs;
+/** Slots do BG1: [coluna, paleta] do anterior, atual, seguinte e do que entra na rolagem. */
+const SLOT = { prev: [STAGE_ICON_COL - 8, 0], cur: [STAGE_ICON_COL, 1], next: [STAGE_ICON_COL + 8, 2], extra: [STAGE_ICON_COL + 16, 3] } as const;
+
+/** Reconstrói os mapas de `stagesel` com `stage` sozinho no slot central (paleta 1). */
+export function buildStageScene(a: RomAssets, stage: number): SceneMaps {
   const bg1 = newMap();
-  placeIcon(bg1, STAGE_ICON_COL, STAGE_ICON_ROW, iconFor(stage));
+  placeIcon(bg1, SLOT.cur[0], STAGE_ICON_ROW, stageIcon(a, stage), SLOT.cur[1]);
   return { bg1, bg2: puzzleBg() };
 }
 
-/** Os 3 ícones visíveis ao vivo (anterior/atual/seguinte), lado a lado como no jogo, prontos para o BG1
- *  rolar por baixo (`hofs = STAGE_ICON_HOFS_BASE - stageScreen.scroll()`). */
-export function buildStagePreviewStrip(_a: RomAssets, stage: number): SceneMaps {
+/** Faixa ao vivo: anterior/atual/seguinte lado a lado como no jogo, prontos para o BG1 rolar por baixo
+ *  (`hofs = STAGE_ICON_HOFS_BASE - stageScreen.scroll()`). Com `dir` ≠ 0 (rolando), a fase atual + 2·dir entra no
+ *  4º slot (coluna 24, que o mapa de 512 px mostra à direita ao rolar para → e à esquerda ao rolar para ←). */
+export function buildStagePreviewStrip(a: RomAssets, stage: number, dir: -1 | 0 | 1 = 0): SceneMaps {
   const bg1 = newMap();
-  placeIcon(bg1, STAGE_ICON_COL - 8, STAGE_ICON_ROW, iconFor(stage - 1));
-  placeIcon(bg1, STAGE_ICON_COL, STAGE_ICON_ROW, iconFor(stage));
-  placeIcon(bg1, STAGE_ICON_COL + 8, STAGE_ICON_ROW, iconFor(stage + 1));
+  placeIcon(bg1, SLOT.prev[0], STAGE_ICON_ROW, stageIcon(a, stage - 1), SLOT.prev[1]);
+  placeIcon(bg1, SLOT.cur[0], STAGE_ICON_ROW, stageIcon(a, stage), SLOT.cur[1]);
+  placeIcon(bg1, SLOT.next[0], STAGE_ICON_ROW, stageIcon(a, stage + 1), SLOT.next[1]);
+  if (dir !== 0) placeIcon(bg1, SLOT.extra[0], STAGE_ICON_ROW, stageIcon(a, stage + 2 * dir), SLOT.extra[1]);
   return { bg1, bg2: puzzleBg() };
+}
+
+/** Cópia de `base` com as paletas das prévias nas linhas 0–3 (`$C4:1986`: 16 cores em `$7E:8E00 + 32·slot`). */
+export function stagePreviewCgram(a: RomAssets, base: Uint16Array, stage: number, dir: -1 | 0 | 1 = 0): Uint16Array {
+  const cg = base.slice();
+  cg.set(stagePalette(a, stage - 1), SLOT.prev[1] * 16);
+  cg.set(stagePalette(a, stage), SLOT.cur[1] * 16);
+  cg.set(stagePalette(a, stage + 1), SLOT.next[1] * 16);
+  if (dir !== 0) cg.set(stagePalette(a, stage + 2 * dir), SLOT.extra[1] * 16);
+  return cg;
+}
+
+export interface StagePreview { g: SceneGfx; maps: SceneMaps }
+const previewCache = new WeakMap<RomAssets, Map<string, StagePreview>>();
+/** Gráficos (CGRAM com as paletas dos slots) e mapas da faixa, memorizados por (ROM, fase, direção). */
+export function stagePreview(a: RomAssets, stage: number, dir: -1 | 0 | 1 = 0): StagePreview {
+  let m = previewCache.get(a); if (!m) { m = new Map(); previewCache.set(a, m); }
+  const key = `${wrapStage10(stage)}:${dir}`;
+  let p = m.get(key);
+  if (!p) {
+    const g = sceneGfx(a, 'stagesel');
+    p = { g: { ...g, cgram: stagePreviewCgram(a, g.cgram, stage, dir) }, maps: buildStagePreviewStrip(a, stage, dir) };
+    m.set(key, p);
+  }
+  return p;
 }

@@ -3,8 +3,8 @@
 // traz os mascotes ao lado do menu (medidos na captura `title.oam`). As casas dos itens e de "PUSH START
 // BUTTON!" (nosso texto) saem zeradas do BG1 da ROM, para não duplicar texto por baixo do nosso — igual ao que a
 // T19 já faz para os menus (`keepPalette`/áreas dinâmicas).
-import type { RomAssets, ObjEntry } from '../../app/rom-api';
-import { obj, sceneMaps, type SceneMaps, type MenuRect } from './scene';
+import type { RomAssets, ObjEntry, PpuFrame } from '../../app/rom-api';
+import { obj, sceneMaps, sceneGfx, sceneFrame, handCursor, type SceneMaps, type MenuRect } from './scene';
 
 /** Áreas com texto nosso (não o da ROM), ignoradas na comparação de fidelidade (spec §6.2) e zeradas no BG1
  *  vindo da ROM: itens do menu (x 64–200, y 144–196, ao redor de `TITLE.rowsY`) e "PUSH START BUTTON!"
@@ -145,4 +145,20 @@ export function buildTitleScene(a: RomAssets): TitleScene {
     scroll: { bg1: [0, 0], bg2: [0, 0] },
     logo: TITLE_LOGO.map(([x, y, tile, pal, big, h, v]) => obj(x, y, tile, pal, { big, h, v, prio: 2 })),
   };
+}
+
+const sceneCache = new WeakMap<RomAssets, TitleScene>();
+/** `buildTitleScene` memorizado por ROM (M5: o título redecodificava os dois mapas e copiava três vezes por quadro). */
+export function titleScene(a: RomAssets): TitleScene {
+  let sc = sceneCache.get(a);
+  if (!sc) { sc = buildTitleScene(a); sceneCache.set(a, sc); }
+  return sc;
+}
+
+/** Quadro da tela-título com a mão em (x, y). A mão entra **antes** do logo no OAM (I1): no SNES o índice menor fica
+ *  na frente, e os OBJ do mascote (x 24–88, y 120–232) cobrem as três linhas do menu — com a mão no fim do OAM ela
+ *  sumia atrás deles (a captura `title.png` mostra a mão por cima do mascote). */
+export function titleFrame(a: RomAssets, handX: number, handY: number): PpuFrame {
+  const sc = titleScene(a);
+  return sceneFrame(sceneGfx(a, 'title'), sc.maps, { bg1: sc.scroll.bg1, bg2: sc.scroll.bg2, oam: [handCursor(handX, handY, true), ...sc.logo] });
 }

@@ -33,6 +33,18 @@ describe('opções (§6.13)', () => {
     expect([app.settings.devices[0], o.value('p1')]).toEqual(['none', 'NENHUM']);
     expect(saves()).toBeGreaterThanOrEqual(3);
   });
+  it('dois jogadores nunca no mesmo dispositivo: escolher o de outro troca os dois (M4)', () => {
+    const { app } = mkApp();
+    const o = optionsScreen(app); app.go(o); goRow(o, 'p1');
+    press(app, BTN.RIGHT);                                   // P1 pega o teclado 2, que era do P2
+    expect(app.settings.devices.slice(0, 2)).toEqual(['kb1', 'kb0']);
+    goRow(o, 'p3'); press(app, BTN.RIGHT);                   // gp0 → gp1 (do P4): trocam
+    expect(app.settings.devices).toEqual(['kb1', 'kb0', 'gp1', 'gp0', 'gp2']);
+    const real = app.settings.devices.filter(d => d !== 'none');
+    expect(new Set(real).size).toBe(real.length);
+    goRow(o, 'p5'); press(app, BTN.RIGHT); press(app, BTN.RIGHT);   // gp2 → gp3 → nenhum; 'none' não troca
+    expect(app.settings.devices).toEqual(['kb1', 'kb0', 'gp1', 'gp0', 'none']);
+  });
   it('spawns aleatórios: NÃO → SIM', () => {
     const { app } = mkApp();
     const o = optionsScreen(app); app.go(o); goRow(o, 'spawns');
@@ -123,6 +135,25 @@ describe('remapeamento', () => {
     press(app, BTN.A);
     app.update(inputOf(0, 0, undefined, { key: 'Escape' }));
     expect([r.capturing, app.settings.keymaps[0].b]).toEqual([null, 'KeyK']);
+  });
+  it('teclado: tecla já usada em outra ação troca as duas; F5/Tab são ignoradas (M3)', () => {
+    const { app } = mkApp();
+    const r = remapScreen(app, 'kb0'); app.go(r);
+    r.menu.cursor = KEY_FIELDS.indexOf('a');
+    press(app, BTN.A);
+    app.update(inputOf(0, 0, undefined, { key: 'F5' }));
+    app.update(inputOf(0, 0, undefined, { key: 'Tab' }));
+    expect([r.capturing, app.settings.keymaps[0].a]).toEqual(['a', 'KeyJ']);
+    app.update(inputOf(0, 0, undefined, { key: 'KeyW' }));
+    expect([r.capturing, app.settings.keymaps[0].a, app.settings.keymaps[0].up]).toEqual([null, 'KeyW', 'KeyJ']);
+  });
+  it('gamepad: botão já usado em outra ação troca as duas', () => {
+    const { app } = mkApp();
+    const r = remapScreen(app, 'gp0'); app.go(r);
+    r.menu.cursor = KEY_FIELDS.indexOf('a');
+    press(app, BTN.A);
+    app.update(inputOf(0, 0, undefined, { padButton: { pad: 0, button: 9 } }));   // 9 era START
+    expect([app.settings.padmaps[0].a, app.settings.padmaps[0].start]).toEqual([9, DEFAULT_PADMAP.a]);
   });
   it('gamepad: só aceita botão do próprio controle', () => {
     const { app } = mkApp();

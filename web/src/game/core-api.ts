@@ -2,7 +2,7 @@
 import * as core from '../core';
 import type { MatchState, RoundState, RoundResult, GameEvent, Rules } from '../core';
 
-export { BTN, startRound, step, finishRound, createAi, aiInputs, defaultRules, rnd, drawRacerPrize } from '../core';
+export { BTN, startRound, step, finishRound, createAi, aiInputs, defaultRules, rnd, drawRacerPrize, LAYOUTS } from '../core';
 export type { MatchState, RoundState, GameEvent, Rules, RoundResult, Rng16, AiState, Phase } from '../core';
 
 export interface RacerPrize { slot: number; prize: number }          // prize = índice na tabela $C2:08F4 (0..16)

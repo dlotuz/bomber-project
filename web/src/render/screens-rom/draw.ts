@@ -1,10 +1,11 @@
 // Textura Modo 7 e desenho da tela EMPATE (spec §6.11, §7.5; T14 do plano 10).
-import { bgr555ToRgba, sceneVramCgram, tilesFrom, type Mode7Layer, type ObjEntry, type RomAssets } from '../../app/rom-api';
+import { bgr555ToRgba, renderPpu, sceneVramCgram, tilesFrom, type Mode7Layer, type ObjEntry, type PpuFrame, type RomAssets } from '../../app/rom-api';
+import { DRAW_SCENE } from '../../game/timeline';
 import { buildRomFont, drawText, layoutText } from '../text/text';
 import type { IndexedImage } from '../text/types';
 import { S } from '../text/strings';
-import { pixToCanvas, type Img, type SpriteBank } from '../sprite-bank';
-import { PpuCanvas, sceneFrame, sceneGfx, sceneMaps, type SceneGfx, type SceneMaps } from './scene';
+import type { SpriteBank } from '../sprite-bank';
+import { sceneFrame, sceneGfx, sceneMaps, type SceneGfx, type SceneMaps } from './scene';
 
 export interface DrawTexture { chr: Uint8Array; map: Uint8Array }
 
@@ -72,8 +73,6 @@ const CYCLE_TONE = ['red', 'yellow', 'green'] as const;
 export interface Letters { scale: number; color: 0 | 1 | 2 }
 export interface DrawSceneInput { chars: readonly number[]; active: readonly boolean[] }
 
-const rgbCss = ([r, g, b]: readonly [number, number, number]): string => `rgb(${r},${g},${b})`;
-
 /** Cada letra do Modo 7 original usa uma rampa de índices (a T18 documenta 3: `5–15`, `21–31`, `37–47`, uma por
  *  letra/grupo — E, M, A da ROM e P, T próprios reaproveitam essas mesmas 3). Em vez de fixar essas faixas (o que
  *  dependeria de como a T18 desenhou P e T), agrupamos aqui os índices não nulos realmente usados na textura
@@ -120,69 +119,30 @@ function mode7Layer(tex: DrawTexture, scale: number): Mode7Layer | null {
   return { chr: tex.chr, map: tex.map, a: k, b: 0, c: 0, d: k, cx: 512, cy: 512, hofs: 512 - 128, vofs: 512 - 112, outside: 'transparent' };
 }
 
-/** Rasteriza `m` num ImageData 256×224 com alfa real (0 fora do plano/tile 0), pra poder compor por cima do resto da
- *  cena com `drawImage` — o `renderPpu` compartilhado (plano 5) preenche tudo com o fundo, sem alfa, então não serve
- *  aqui: essa tela precisa do BG2 (disco) e do OBJ (bomberitas) visíveis POR BAIXO das letras do Modo 7. */
-function rasterMode7(m: Mode7Layer, colorAt: (i: number) => readonly [number, number, number]): ImageData {
-  const W = 256, H = 224;
-  const img = new ImageData(W, H);
-  const data = img.data;
+/** Rasteriza `m` direto em `out` (256×224), por cima do que o `renderPpu` já pôs lá: só os pixels não nulos do plano
+ *  são escritos (tile 0 e fora do plano ficam como estão), então o fundo, o disco e os bomberitas continuam visíveis
+ *  POR BAIXO das letras. `lut` = RGB (3 bytes) por índice. Não aloca nada por quadro. */
+function rasterMode7Into(out: ImageData, m: Mode7Layer, lut: Uint8Array): void {
+  const W = 256, H = 224, data = out.data;
+  const tex: DrawTexture = { chr: m.chr, map: m.map };
   for (let y = 0; y < H; y++) {
     const sy = y + m.vofs - m.cy;
     for (let x = 0; x < W; x++) {
       const sx = x + m.hofs - m.cx;
       const u = ((m.a * sx + m.b * sy) >> 8) + m.cx, v = ((m.c * sx + m.d * sy) >> 8) + m.cy;
       if (u < 0 || u >= 1024 || v < 0 || v >= 1024) continue;
-      const idx = m7Pixel({ chr: m.chr, map: m.map }, u, v);
+      const idx = m7Pixel(tex, u, v);
       if (!idx) continue;
-      const [r, g, b] = colorAt(idx);
-      const o = (y * W + x) * 4;
-      data[o] = r; data[o + 1] = g; data[o + 2] = b; data[o + 3] = 255;
+      const o = (y * W + x) * 4, l = idx * 3;
+      data[o] = lut[l]; data[o + 1] = lut[l + 1]; data[o + 2] = lut[l + 2]; data[o + 3] = 255;
     }
   }
-  return img;
 }
-
-let m7Canvas: HTMLCanvasElement | null = null;
 
 /** "EMPATE" achatado (fallback e ROM sem a fonte `bigDraw` ainda): mesma chamada nos dois casos — o `drawText` da T4
  *  já cai para o canvas quando o estilo não tem mapa (§6.14). */
 export function drawTitleFlat(ctx: CanvasRenderingContext2D, bank: SpriteBank, letters: Letters): void {
   drawText(ctx, bank, 'bigDraw', S.draw.title, 128, 78, { align: 'center', scale: 2 * letters.scale, tone: CYCLE_TONE[letters.color] });
-}
-
-const charCache = new WeakMap<RomAssets, Map<string, Img>>();
-/** Quadro `g` (54 = fase Modo 7, 52 = depois de S=148) do personagem `char`, com a paleta do slot `slot` (0..4). */
-function charFrameImg(a: RomAssets, char: number, slot: number, g: number): Img {
-  let m = charCache.get(a); if (!m) { m = new Map(); charCache.set(a, m); }
-  const key = `${char}:${slot}:${g}`;
-  let img = m.get(key);
-  if (!img) {
-    const px = a.character(char).frame(g);
-    const pal = a.character(char).palettes[slot % 5];
-    const data = new Uint8ClampedArray(32 * 32 * 4);
-    for (let i = 0; i < 1024; i++) {
-      const v = px[i];
-      if (!v) continue;
-      const [r, g2, b] = bgr555ToRgba(pal[v] ?? 0);
-      data.set([r, g2, b, 255], i * 4);
-    }
-    img = pixToCanvas({ w: 32, h: 32, data });
-    m.set(key, img);
-  }
-  return img;
-}
-
-/** Fundo + disco aproximados no canvas com as cores reais da CGRAM de `draw2`, usados só enquanto não há um mapa de
- *  BG2 de verdade (ver `drawEmpateRom`). */
-function drawSkyAndDiscFallback(ctx: CanvasRenderingContext2D, cgram: Uint16Array): void {
-  ctx.fillStyle = rgbCss(bgr555ToRgba(cgram[0] ?? 0));
-  ctx.fillRect(0, 0, 256, 224);
-  const edge = rgbCss(bgr555ToRgba(cgram[48] ?? 0)), mid = rgbCss(bgr555ToRgba(cgram[56] ?? 0)), hi = rgbCss(bgr555ToRgba(cgram[63] ?? 0));
-  const grad = ctx.createRadialGradient(128, 160, 4, 128, 160, 112);
-  grad.addColorStop(0, hi); grad.addColorStop(0.55, mid); grad.addColorStop(1, edge);
-  ctx.fillStyle = grad;
-  ctx.beginPath(); ctx.ellipse(128, 160, 110, 40, 0, 0, Math.PI * 2); ctx.fill();
 }
 
 function forEachActive(input: DrawSceneInput, f: (slot: number, char: number) => void): void {
@@ -203,58 +163,100 @@ function buildCharOam(a: RomAssets, input: DrawSceneInput, g: 52 | 54, cgram: Ui
   return entries;
 }
 
-const ppuCanvas = new PpuCanvas();
-const emptyGeometry = (): SceneMaps => ({});
+// ---------------------------------------------------------------------------------------------------------------------
+// BG2 de draw2: só o palco (disco + feixes), 14 px acima, e só depois do crescimento das letras.
 
 /** `draw2` não segue o layout padrão de VRAM das outras cenas (T19): `BG12NBA = $44` põe os tiles do BG2 em
  *  $8000–$B7FF (448 tiles), não em $0000 como `sceneGfx`/`gfxFromVram` assumem — conferido: nada é escrito em
  *  $0000–$7FFF nesta cena. `bg3Tiles`/`objTiles` não importam aqui (o BG3 não é usado e os OBJ são montados à parte
  *  por `buildCharOam`), então só troca `bgTiles`. */
 const DRAW2_BG2_TILE_ADDR = 0x8000, DRAW2_BG2_TILE_COUNT = 448;
-function draw2Gfx(a: RomAssets): SceneGfx {
-  const base = sceneGfx(a, 'draw2');
-  const { vram } = sceneVramCgram(a, 'draw2');
-  return { ...base, bgTiles: tilesFrom(vram, DRAW2_BG2_TILE_ADDR, DRAW2_BG2_TILE_COUNT, 4) };
+/** Casa vazia do BG2 de `draw2` (tile $084, paleta 0): é a palavra de todo o fundo em volta das letras e do palco,
+ *  na ROM e na captura (`draw2.vram`, mapa em $5C00). */
+export const DRAW2_BG2_EMPTY = 0x0084;
+/** Paleta do palco no BG2 de `draw2`: disco e feixes (linhas 9–14 do mapa) são todos paleta 3. As letras em inglês
+ *  "DRAW GAME" usam as paletas 0/1/2 (linhas 2–8 e o pé do "E" em (lin 9, col 12–13), tiles $0EC/$0EE) e saem. */
+export const DRAW2_STAGE_PAL = 3;
+/** VOFS do BG2 de `draw2`: o NMI (`$C3:4CC5`) grava `$2110` com `$48 = $017E + 7 + $018E`; na captura
+ *  (`draw2.wram`) `$017E = $FFF8` e `$018E = $000F` → −8 + 7 + 15 = 14 (e `$48 = $000E`). O HOFS dá 0
+ *  (`$017C = $FFF8`, +8, `$018C = 0`; o `$46` do dump não serve, é rascunho da página direta) e os pixels confirmam:
+ *  com [0, 14] o palco bate 100 % com `draw2.png` fora dos bomberitas (y ≥ 140), e cai para 88 % com 1 px de erro. */
+export const DRAW2_BG2_SCROLL: readonly [number, number] = [0, 14];
+
+/** O BG2 de `MAP_SOURCES.draw2` sem as letras em inglês: toda casa que não é do palco (paleta ≠ 3) vira `$0084`. */
+export function stageOnlyBg2(bg2: Uint16Array): Uint16Array {
+  return bg2.map(w => (((w >> 10) & 7) === DRAW2_STAGE_PAL ? w : DRAW2_BG2_EMPTY));
 }
 
-/** Desenho da cena com ROM: fundo/disco/personagens pelo `sceneFrame`/`renderPpu` da T5 (mapa de `MAP_SOURCES.draw2`,
- *  T19, com os tiles corrigidos de `draw2Gfx`); sem `MAP_SOURCES.draw2` (por exemplo, testes com uma geometria
- *  própria), cai num fallback de canvas com as cores e as posições reais dos 5 ativos. Por cima, o Modo 7 de
- *  "EMPATE" (ou o texto achatado, enquanto a fonte `bigDraw` não estiver pronta). */
-export function drawEmpateRom(ctx: CanvasRenderingContext2D, bank: SpriteBank, a: RomAssets, input: DrawSceneInput, letters: Letters, g: 52 | 54): void {
-  const gfx = draw2Gfx(a);
-  const cgram = Uint16Array.from(gfx.cgram);   // cópia: não mexe no cache memoizado de sceneGfx
-  const oam = buildCharOam(a, input, g, cgram);
-  const maps = sceneMaps(a, 'draw2', emptyGeometry);
-  if (maps.bg2) ppuCanvas.draw(ctx, sceneFrame({ ...gfx, cgram }, maps, { oam, backdrop: cgram[0] }));
-  else {
-    drawSkyAndDiscFallback(ctx, cgram);
-    forEachActive(input, (slot, char) => ctx.drawImage(charFrameImg(a, char, slot, g), CHAR_X[slot], CHAR_Y));
+interface EmpateStatic { gfx: SceneGfx; bg2: Uint16Array | undefined }
+const staticCache = new WeakMap<RomAssets, EmpateStatic>();
+const emptyGeometry = (): SceneMaps => ({});
+/** Tiles do BG2 (448, de $8000) e mapa do palco, decodificados uma vez por ROM. */
+function empateStatic(a: RomAssets): EmpateStatic {
+  let st = staticCache.get(a);
+  if (!st) {
+    const { vram } = sceneVramCgram(a, 'draw2');
+    const gfx: SceneGfx = { ...sceneGfx(a, 'draw2'), bgTiles: tilesFrom(vram, DRAW2_BG2_TILE_ADDR, DRAW2_BG2_TILE_COUNT, 4) };
+    const bg2 = sceneMaps(a, 'draw2', emptyGeometry).bg2;
+    st = { gfx, bg2: bg2 && stageOnlyBg2(bg2) };
+    staticCache.set(a, st);
   }
+  return st;
+}
+
+/** O palco (BG2: disco e feixes) só aparece quando as letras terminam de crescer: nas capturas `dr_0360…0480` a ROM
+ *  está em Modo 7 (só BG1 + OBJ) enquanto a palavra cresce, e o disco surge com ela já no tamanho final (`dr_0480`,
+ *  `dr_0510`, `draw2`). Antes disso: fundo ($00 da CGRAM), bomberitas e as letras. */
+export const stageVisible = (s: number): boolean => s >= DRAW_SCENE.growTo;
+
+/** Quadro PPU do EMPATE com ROM no quadro `s` (sem as letras do Modo 7, que vão por cima em `renderEmpate`):
+ *  fundo, BG2 do palco com VOFS 14 a partir de `growTo` e os 5 bomberitas (quadro 54 durante o crescimento, 52
+ *  depois). `cgram` sai com as paletas OBJ dos ativos. */
+export function empateFrame(a: RomAssets, input: DrawSceneInput, s: number): PpuFrame {
+  const st = empateStatic(a);
+  const stage = stageVisible(s);
+  const cgram = Uint16Array.from(st.gfx.cgram);   // cópia: não mexe no cache memoizado de sceneGfx
+  const oam = buildCharOam(a, input, stage ? 52 : 54, cgram);
+  const maps: SceneMaps = stage && st.bg2 ? { bg2: st.bg2 } : {};
+  return sceneFrame({ ...st.gfx, cgram }, maps, { bg2: [DRAW2_BG2_SCROLL[0], DRAW2_BG2_SCROLL[1]], oam, backdrop: cgram[0] });
+}
+
+const lut = new Uint8Array(256 * 3);
+/** Desenha a cena inteira em `out` (256×224): `empateFrame` pelo `renderPpu` e, por cima, o Modo 7 de "EMPATE".
+ *  Devolve `false` quando a fonte `bigDraw` não está pronta (quem chama desenha o título achatado). */
+export function renderEmpate(out: ImageData, a: RomAssets, input: DrawSceneInput, letters: Letters, s: number): boolean {
+  const f = empateFrame(a, input, s);
+  renderPpu(f, out);
   const info = empateTexture(a);
-  if (!info) { drawTitleFlat(ctx, bank, letters); return; }
+  if (!info) return false;
   const m7 = mode7Layer(info.tex, letters.scale);
-  if (!m7) return;
+  if (!m7) return true;
   // Cada grupo (letra/rampa) troca de cor com uma fase própria (grupo k mostra CYCLE_RGB[(color + k) % 3]), como no
   // original (§6.11: "os índices da cor principal das letras", no plural — cada letra tem o seu).
-  const phase = new Map(info.groups.map((idx, k) => [idx, k]));
-  const colorAt = (i: number): readonly [number, number, number] => {
-    const k = phase.get(i);
-    return k === undefined ? bgr555ToRgba(cgram[i] ?? 0) : CYCLE_RGB[(letters.color + k) % 3];
-  };
-  m7Canvas ??= document.createElement('canvas');
-  m7Canvas.width = 256; m7Canvas.height = 224;
-  m7Canvas.getContext('2d')!.putImageData(rasterMode7(m7, colorAt), 0, 0);
-  ctx.drawImage(m7Canvas, 0, 0);
+  for (let i = 0; i < 256; i++) lut.set(bgr555ToRgba(f.cgram[i] ?? 0), i * 3);
+  info.groups.forEach((idx, k) => lut.set(CYCLE_RGB[(letters.color + k) % 3], idx * 3));
+  rasterMode7Into(out, m7, lut);
+  return true;
 }
 
-/** Fallback sem ROM (§6.14): fundo `#0a0f3a`, disco (elipse clara em y ≈ 160), `bank.bomber(char, 2, 0)` dos 5 ativos
- *  e "EMPATE" achatado. */
-export function drawEmpateFallback(ctx: CanvasRenderingContext2D, bank: SpriteBank, input: DrawSceneInput, letters: Letters): void {
+let frameImg: ImageData | null = null;
+/** Desenho com ROM (§7.5, R21): um único `ImageData` reaproveitado entre quadros (nada de canvas auxiliar). */
+export function drawEmpateRom(ctx: CanvasRenderingContext2D, bank: SpriteBank, a: RomAssets, input: DrawSceneInput, letters: Letters, s: number): void {
+  frameImg ??= new ImageData(256, 224);
+  const ok = renderEmpate(frameImg, a, input, letters, s);
+  ctx.putImageData(frameImg, 0, 0);
+  if (!ok) drawTitleFlat(ctx, bank, letters);
+}
+
+/** Fallback sem ROM (§6.14): fundo `#0a0f3a`, disco (elipse clara em y ≈ 160) só a partir de `growTo` (como na ROM),
+ *  `bank.bomber(char, 2, 0)` dos 5 ativos e "EMPATE" achatado. */
+export function drawEmpateFallback(ctx: CanvasRenderingContext2D, bank: SpriteBank, input: DrawSceneInput, letters: Letters, s: number): void {
   ctx.fillStyle = '#0a0f3a';
   ctx.fillRect(0, 0, 256, 224);
-  ctx.fillStyle = '#4a5a99';
-  ctx.beginPath(); ctx.ellipse(128, 160, 110, 40, 0, 0, Math.PI * 2); ctx.fill();
+  if (stageVisible(s)) {
+    ctx.fillStyle = '#4a5a99';
+    ctx.beginPath(); ctx.ellipse(128, 160, 110, 40, 0, 0, Math.PI * 2); ctx.fill();
+  }
   forEachActive(input, (slot, char) => ctx.drawImage(bank.bomber(char, 2, 0), CHAR_X[slot] + 8, CHAR_Y + 6));
   drawTitleFlat(ctx, bank, letters);
 }
