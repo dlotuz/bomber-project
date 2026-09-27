@@ -1,9 +1,12 @@
 import { App } from './app/app';
 import { browserStorage, defaultSettings, loadSettings, saveSettings } from './app/settings';
 import { startLoop } from './app/loop';
+import { FADE_IN_1 } from './app/fade';
+import { startRealAudio } from './app/audio';
+import { onRomChange, romState } from './app/rom-api';
 import { parseConfig } from './game/config';
-import type { Session } from './game/session';
-import { InputManager, buildInput, emptyDevices, withEscapeAsBack } from './input/input';
+import { createMatchSession, carry, type MatchSession } from './game/match-session';
+import { InputManager, buildInput, emptyDevices, idleInput, withEscapeAsBack } from './input/input';
 import { createDisplay } from './render/display';
 import { SpriteBank } from './render/sprite-bank';
 import { titleScreen } from './screens/title';
@@ -11,37 +14,72 @@ import { battleScreen } from './screens/battle';
 import { startRomUi } from './rom/ui';
 
 const store = browserStorage();
-const search = window.location.search;
-const params = new URLSearchParams(search);
+const params = new URLSearchParams(window.location.search);
 // ?reset: descarta as configurações salvas (recuperação de um estado ruim, ex.: teclas remapeadas
 // para algo inutilizável) e já grava o padrão de volta.
 const settings = params.has('reset') ? defaultSettings() : loadSettings(store);
 if (params.has('reset')) saveSettings(store, settings);
+// R23: a sessão começa com a semente do boot ($0012); ?seed=N troca.
+if (params.has('seed')) carry.seed = Number.parseInt(params.get('seed')!, 10) & 0xffff;
+
 const input = new InputManager(window, settings.keymaps);
+input.setPadmaps(settings.padmaps);
 const app = new App(settings, {
   save: s => saveSettings(store, s),
-  setKeymaps: maps => input.setKeymaps(maps),
-  seed: () => Date.now() >>> 0,
+  setKeymaps: m => input.setKeymaps(m),
+  applyInput: s => { input.setKeymaps(s.keymaps); input.setPadmaps(s.padmaps); },
+  seed: () => 0x0012,
 });
+app.audio.setVolume(settings.options.musicVol / 10, settings.options.sfxVol / 10);
+
 // Painel da ROM (plano 5): usa a ROM guardada ou, sem ela, pede o arquivo (não abre sozinho em ?debug/?quick).
 void startRomUi(document, { autoShow: !params.has('debug') && !params.has('quick') });
+
+// Áudio só depois do 1º gesto (§6.1); trocar de ROM recria o sink (os samples vêm da ROM).
+let audioOn = false, audioPending = false;
+const startAudio = (): void => {
+  if (audioPending) return;
+  audioPending = true;
+  startRealAudio(app.audio)
+    .then(ok => { audioOn = ok; }, e => { console.warn('Crown Blast: áudio indisponível.', e); })
+    .finally(() => { audioPending = false; });
+};
+const gesture = (): void => { if (!audioOn) startAudio(); };
+window.addEventListener('keydown', gesture);
+window.addEventListener('pointerdown', gesture);
+onRomChange(() => { if (audioOn) startAudio(); });
+
 const ctx = createDisplay(document.getElementById('screen') as HTMLCanvasElement);
 const bank = new SpriteBank();
-
 // ?quick abre direto numa partida com as regras da URL (ver parseConfig); sem ele, começa no título.
-app.go(params.has('quick') ? battleScreen(app, parseConfig(search), [0, 0, 0, 0, 0]) : titleScreen(app));
+if (params.has('quick')) app.go(battleScreen(app, createMatchSession(parseConfig(window.location.search))));
+else app.transition(() => titleScreen(app), { out: [], black: 0, in: FADE_IN_1 });
 
 // Gancho para as screenshots automáticas (web/scripts/snapshots.mjs); só existe em dev com ?debug.
+// `hold(true)` para o relógio do loop e `step(n, btn, slot)` avança n ticks à mão (o 1º com `btn` recém-apertado
+// em qualquer controle e no do jogador `slot`), para fotografar um frame exato.
+let held = false;
 if (import.meta.env.DEV && params.has('debug')) {
   (window as unknown as { __crown: unknown }).__crown = {
-    app,
-    get session(): Session | null { return (app.screen as Partial<{ session: Session }>).session ?? null; },
+    app, rom: romState,
+    get ms(): MatchSession | null { return (app.screen as Partial<{ ms: MatchSession }>).ms ?? null; },
+    hold(on: boolean): void { held = on; },
+    step(n = 1, btn = 0, slot = 0): void {
+      for (let k = 0; k < n; k++) {
+        const inp = idleInput();
+        if (k === 0 && btn) { inp.any = inp.pressedAny = btn; inp.pads[slot] = inp.pressed[slot] = btn; }
+        app.update(inp);
+      }
+      app.draw(ctx, bank);
+    },
   };
 }
 
 let prev = emptyDevices();
 startLoop(() => {
+  if (held) return;
   const cur = input.poll();
-  app.update(withEscapeAsBack(buildInput(cur, prev, app.settings.devices, input.takeLastKey())));
+  app.update(withEscapeAsBack(buildInput(cur, prev, app.settings.devices, input.takeLastKey(),
+    { connected: input.connected(), esc: input.escHeld(), padButton: input.takePadButton() })));
   prev = cur;
 }, () => app.draw(ctx, bank));

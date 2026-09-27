@@ -178,7 +178,7 @@ describe('PPU: color math por faixa', () => {
   const cg = palette({ 17: C(20, 10, 4), 33: C(10, 31, 0), 193: C(2, 2, 2), 177: C(2, 2, 2) });
   const t = mk(4, 2, { 1: 1 });
   // (0,0): BG1 sobre BG2; (8,0): só BG1; (16,0): só BG2
-  const f = (math: 'half' | 'add', extra: Partial<ScanBand> = {}, oam: ObjEntry[] = []): ImageData => draw({
+  const f = (math: ScanBand['math'], extra: Partial<ScanBand> = {}, oam: ObjEntry[] = []): ImageData => draw({
     cgram: cg, oam,
     bg1: layer(t, { '0,0': 1 | (1 << 10), '1,0': 1 | (1 << 10) }),
     bg2: layer(t, { '0,0': 1 | (2 << 10), '2,0': 1 | (2 << 10) }),
@@ -198,6 +198,26 @@ describe('PPU: color math por faixa', () => {
     expect(at(f('add', {}, [spr(4)]), 0, 0)).toEqual(rgbOf(C(2, 2, 2)));
     expect(at(f('add', { mathLayers: 16 }, [spr(4)]), 0, 0)).toEqual(rgbOf(C(12, 31, 2)));
     expect(at(f('add', { mathLayers: 16 }, [spr(3)]), 0, 0)).toEqual(rgbOf(C(2, 2, 2)));
+  });
+  it("'sub' = principal − sub-tela com piso 0 (CGADSUB bit 7); sem sub-tela, não muda", () => {
+    const img = f('sub');
+    expect(at(img, 0, 0)).toEqual(rgbOf(C(10, 0, 4)));          // (20−10, 10−31→0, 4−0)
+    expect(at(img, 8, 0)).toEqual(rgbOf(C(20, 10, 4)));
+    expect(at(img, 16, 0)).toEqual(rgbOf(C(10, 31, 0)));        // BG2 na principal, fora de mathLayers
+  });
+  it("'subHalf' = subtração com piso 0 e depois ÷2 (CGADSUB bits 7 e 6)", () => {
+    expect(at(f('subHalf'), 0, 0)).toEqual(rgbOf(C(5, 0, 2)));
+  });
+  it("'sub' com a sub-tela em outra camada (BG3 na sub, BG2 no mathLayers): miolo dos menus", () => {
+    const t2 = mk(2, 5, { 4: 3 });
+    const img = draw({
+      cgram: palette({ 33: C(20, 12, 9), 19: C(8, 8, 8) }),
+      bg2: layer(t, { '0,0': 1 | (2 << 10), '1,0': 1 | (2 << 10) }),
+      bg3: layer(t2, { '0,0': 0x1004 }),
+      bands: [band({ main: 2 | 4 | 16, sub: 4, math: 'sub', mathLayers: 2 })],
+    });
+    expect(at(img, 0, 0)).toEqual(rgbOf(C(12, 4, 1)));
+    expect(at(img, 8, 0)).toEqual(rgbOf(C(20, 12, 9)));         // sem BG3 → cor fixa 0 → igual
   });
 });
 

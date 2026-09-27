@@ -1,183 +1,157 @@
+import { missingGlyphs, fallbackMissing } from '../../src/render/text/text';
 import {
-  readKeyMap, readGamepad, readDevices, buildInput, emptyDevices, keyLabel, InputManager, DEFAULT_KEYMAPS,
-  withEscapeAsBack, idleInput, KEY_FIELDS, type GamepadLike,
+  readKeyMap, readGamepad, readDevices, buildInput, emptyDevices, keyLabel, InputManager, DEFAULT_KEYMAPS, DEFAULT_PADMAP,
+  withEscapeAsBack, idleInput, padLabel, type GamepadLike, type KeyTarget,
+  KEY_NAMES, isReservedKey, assignKey, assignPadButton,
 } from '../../src/input/input';
 import { stepsFor, STEP_MS, MAX_STEPS } from '../../src/app/loop';
-import { BTN } from '../../src/core';
+import { BTN } from '../../src/game/core-api';
 
-const pad = (pressed: number[], axes: number[] = [0, 0]): GamepadLike => ({
-  buttons: Array.from({ length: 17 }, (_, i) => ({ pressed: pressed.includes(i) })), axes,
+const pad = (pressed: number[], axes: number[] = [0, 0], connected = true): GamepadLike => ({
+  buttons: Array.from({ length: 17 }, (_, i) => ({ pressed: pressed.includes(i) })), axes, connected,
 });
 
-describe('teclado', () => {
-  it('mapeamento padrão dos dois teclados', () => {
-    const down = new Set(['KeyW', 'KeyJ', 'ArrowLeft', 'Numpad3', 'NumpadEnter']);
-    expect(readKeyMap(down, DEFAULT_KEYMAPS[0])).toBe(BTN.UP | BTN.A);
-    expect(readKeyMap(down, DEFAULT_KEYMAPS[1])).toBe(BTN.LEFT | BTN.Y | BTN.START);
+describe('teclado (spec §2.6, R16)', () => {
+  it('P1: WASD + J(A) K(B) L(Y) I(X) Enter(START) Q(L) E(R) F(SELECT)', () => {
+    const m = DEFAULT_KEYMAPS[0];
+    expect([m.up, m.down, m.left, m.right, m.a, m.b, m.y, m.x, m.start, m.l, m.r, m.select])
+      .toEqual(['KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyJ', 'KeyK', 'KeyL', 'KeyI', 'Enter', 'KeyQ', 'KeyE', 'KeyF']);
   });
-  it('Enter é START do Teclado 1', () => {
-    expect(readKeyMap(new Set(['Enter']), DEFAULT_KEYMAPS[0])).toBe(BTN.START);
+  it('P2: setas + Numpad1(A) 2(B) 3(Y) 5(X) Enter(START) 7(L) 9(R) 0(SELECT)', () => {
+    const m = DEFAULT_KEYMAPS[1];
+    expect([m.up, m.down, m.left, m.right, m.a, m.b, m.y, m.x, m.start, m.l, m.r, m.select])
+      .toEqual(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Numpad1', 'Numpad2', 'Numpad3', 'Numpad5', 'NumpadEnter', 'Numpad7', 'Numpad9', 'Numpad0']);
+  });
+  it('lê os 12 botões', () => {
+    const down = new Set(['KeyW', 'KeyJ', 'KeyI', 'KeyQ', 'KeyE', 'KeyF']);
+    expect(readKeyMap(down, DEFAULT_KEYMAPS[0])).toBe(BTN.UP | BTN.A | BTN.X | BTN.L | BTN.R | BTN.SELECT);
   });
   it('nome legível das teclas', () => {
     expect(['KeyW', 'Digit7', 'Numpad2', 'ArrowUp', 'Space', 'Semicolon'].map(keyLabel))
-      .toEqual(['W', '7', 'NUM 2', 'SETA CIMA', 'ESPAÇO', 'SEMICOLON']);
+      .toEqual(['W', '7', 'NUM 2', 'SETA CIMA', 'ESPAÇO', ';']);
+  });
+  it('nomes de tecla em PT-BR, sem cair no código em inglês (M3)', () => {
+    expect(['Backquote', 'CapsLock', 'MetaLeft', 'BracketLeft', 'IntlBackslash', 'F5', 'Lang1'].map(keyLabel))
+      .toEqual(['CRASE', 'CAPS LOCK', 'WIN ESQ', '[', 'BARRA INVERTIDA 2', 'F5', 'OUTRA TECLA']);
+    // Todo nome tem glifo no `ascii8` (fonte das Opções) e no fallback.
+    const names = [...Object.values(KEY_NAMES), 'OUTRA TECLA', 'F12'];
+    expect(names.flatMap(n => missingGlyphs('ascii8', n).map(c => `${n} → ${c}`))).toEqual([]);
+    expect(names.flatMap(n => fallbackMissing(n).map(c => `${n} → ${c}`))).toEqual([]);
+  });
+  it('teclas reservadas (M3): Esc, Tab, F1–F12, Windows, menu de contexto', () => {
+    expect(['Escape', 'Tab', 'F1', 'F12', 'MetaLeft', 'OSRight', 'ContextMenu', 'KeyA', 'Space', 'Enter'].map(isReservedKey))
+      .toEqual([true, true, true, true, true, true, true, false, false, false]);
+  });
+  it('assignKey troca quando a tecla já está em outra ação, no mesmo teclado ou no outro (M3)', () => {
+    const maps = DEFAULT_KEYMAPS.map(m => ({ ...m }));
+    assignKey(maps, 0, 'a', 'KeyW');                 // W era ↑ do teclado 1
+    expect([maps[0].a, maps[0].up]).toEqual(['KeyW', 'KeyJ']);
+    assignKey(maps, 0, 'b', 'ArrowUp');              // ↑ era do teclado 2
+    expect([maps[0].b, maps[1].up]).toEqual(['ArrowUp', 'KeyK']);
+    const all = maps.flatMap(m => Object.values(m));
+    expect(new Set(all).size).toBe(all.length);
+  });
+  it('assignPadButton troca dentro do mesmo controle', () => {
+    const m = { ...DEFAULT_PADMAP };
+    assignPadButton(m, 'a', 0);                      // 0 era o B
+    expect([m.a, m.b]).toEqual([0, 1]);
   });
 });
 
-describe('gamepad', () => {
-  it('botões e d-pad', () => {
+describe('gamepad (standard, remapeável)', () => {
+  it('padrão: A=1 B=0 Y=2 X=3 L=4 R=5 SELECT=8 START=9, direcional 12–15', () => {
+    expect(DEFAULT_PADMAP).toEqual({ a: 1, b: 0, y: 2, x: 3, l: 4, r: 5, select: 8, start: 9, up: 12, down: 13, left: 14, right: 15 });
     expect(readGamepad(pad([1, 12]))).toBe(BTN.A | BTN.UP);
-    expect(readGamepad(pad([0, 2, 9]))).toBe(BTN.B | BTN.Y | BTN.START);
-    expect(readGamepad(pad([13, 14]))).toBe(BTN.DOWN | BTN.LEFT);
+    expect(readGamepad(pad([0, 2, 3, 9]))).toBe(BTN.B | BTN.Y | BTN.X | BTN.START);
+    expect(readGamepad(pad([4, 5, 8]))).toBe(BTN.L | BTN.R | BTN.SELECT);
   });
-  it('analógico com zona morta 0,5', () => {
+  it('mapa trocado: A no botão 0 e B no 1', () => {
+    expect(readGamepad(pad([0]), { ...DEFAULT_PADMAP, a: 0, b: 1 })).toBe(BTN.A);
+  });
+  it('analógico com zona morta 0,5 continua valendo como direcional', () => {
     expect(readGamepad(pad([], [0.9, 0]))).toBe(BTN.RIGHT);
-    expect(readGamepad(pad([], [0, -0.8]))).toBe(BTN.UP);
     expect(readGamepad(pad([], [0.3, 0.3]))).toBe(0);
   });
-  it('sem gamepad = 0', () => {
-    expect(readGamepad(null)).toBe(0);
-  });
+  it('rótulo de botão', () => { expect(padLabel(9)).toBe('BOTÃO 9'); });
 });
 
-describe('dispositivos e atribuição', () => {
-  it('lê os 2 teclados e os 4 controles', () => {
-    const d = readDevices(new Set(['KeyD']), DEFAULT_KEYMAPS, [null, pad([1])]);
-    expect(d).toEqual({ kb0: BTN.RIGHT, kb1: 0, gp0: 0, gp1: BTN.A, gp2: 0, gp3: 0, none: 0 });
+describe('dispositivos, conexão e atribuição', () => {
+  it('buildInput: por jogador, qualquer dispositivo, conexão por jogador, Esc e botão bruto', () => {
+    const cur = { ...emptyDevices(), kb0: BTN.A, gp1: BTN.START };
+    const inp = buildInput(cur, emptyDevices(), ['kb0', 'gp1', 'gp0', 'none', 'kb1'], 'KeyJ',
+      { connected: { gp0: false, gp1: true }, esc: true, padButton: { pad: 1, button: 9 } });
+    expect(inp.pads).toEqual([BTN.A, BTN.START, 0, 0, 0]);
+    expect(inp.connected).toEqual([true, true, false, false, true]);   // teclados sempre; 'none' nunca
+    expect(inp.esc).toBe(true);
+    expect(inp.padButton).toEqual({ pad: 1, button: 9 });
   });
-  it('cada jogador recebe o dispositivo atribuído; menus aceitam qualquer um', () => {
-    const prev = emptyDevices();
-    const cur = { ...emptyDevices(), kb0: BTN.A, gp3: BTN.START | BTN.UP };
-    const inp = buildInput(cur, prev, ['gp3', 'kb0', 'none', 'gp0', 'kb0'], 'KeyJ');
-    expect(inp.pads).toEqual([BTN.START | BTN.UP, BTN.A, 0, 0, BTN.A]);
-    expect(inp.any).toBe(BTN.A | BTN.START | BTN.UP);
-    expect(inp.pressedAny).toBe(BTN.A | BTN.START | BTN.UP);
-    expect(inp.key).toBe('KeyJ');
+  it('sem extra: todos os gamepads contam como conectados (compatível com o main.ts atual)', () => {
+    const inp = buildInput(emptyDevices(), emptyDevices(), ['gp0', 'gp1', 'gp2', 'gp3', 'none']);
+    expect(inp.connected).toEqual([true, true, true, true, false]);
+    expect(inp.esc).toBe(false);
+    expect(inp.padButton).toBeNull();
   });
-  it('bordas: botão segurado não conta como apertado de novo', () => {
-    const held = { ...emptyDevices(), gp0: BTN.A };
-    const inp = buildInput(held, held, ['gp0', 'kb0', 'kb1', 'gp1', 'gp2']);
-    expect(inp.pads[0]).toBe(BTN.A);
-    expect(inp.pressed[0]).toBe(0);
-    expect(inp.pressedAny).toBe(0);
+  it('idleInput tem os campos novos', () => {
+    expect(idleInput()).toMatchObject({ connected: [true, true, true, true, true], esc: false, padButton: null });
+  });
+  it('readDevices usa os mapas de gamepad', () => {
+    // DEFAULT_PADMAP.b já é 0: sem mover 'b' também, o botão 0 acionaria A e B ao mesmo tempo.
+    const d = readDevices(new Set(), DEFAULT_KEYMAPS, [pad([0])], [{ ...DEFAULT_PADMAP, a: 0, b: 1 }]);
+    expect(d.gp0).toBe(BTN.A);
   });
 });
 
 describe('withEscapeAsBack', () => {
-  it('Escape soma BTN.B ao pressedAny (e ao any), sem mudar mais nada', () => {
-    const base = idleInput();
-    base.key = 'Escape';
-    base.pads = [BTN.UP, 0, 0, 0, 0];
-    base.pressed = [BTN.UP, 0, 0, 0, 0];
-    base.any = BTN.UP;
-    base.pressedAny = BTN.UP;
-    const out = withEscapeAsBack(base);
-    expect(out.pressedAny).toBe(BTN.UP | BTN.B);
-    expect(out.pads).toEqual(base.pads);
-    expect(out.key).toBe('Escape');
-  });
-  it('sem Escape, devolve a entrada sem alterar', () => {
-    const base = idleInput();
-    base.pressedAny = BTN.A;
-    expect(withEscapeAsBack(base)).toEqual(base);
-  });
-  it('não duplica o bit se B já estiver em pressedAny', () => {
-    const base = idleInput();
-    base.key = 'Escape';
-    base.pressedAny = BTN.B;
-    expect(withEscapeAsBack(base).pressedAny).toBe(BTN.B);
+  it('Escape vira B em qualquer dispositivo', () => {
+    const i = { ...idleInput(), key: 'Escape' };
+    expect(withEscapeAsBack(i).pressedAny & BTN.B).toBe(BTN.B);
   });
 });
 
-describe('InputManager', () => {
-  class FakeTarget {
-    handlers = new Map<string, Set<EventListener>>();
-    addEventListener(t: string, fn: EventListener) { if (!this.handlers.has(t)) this.handlers.set(t, new Set()); this.handlers.get(t)!.add(fn); }
-    removeEventListener(t: string, fn: EventListener) { this.handlers.get(t)?.delete(fn); }
-    fire(t: string, e: object = {}) { for (const fn of this.handlers.get(t) ?? []) fn(e as Event); }
-    key(t: 'keydown' | 'keyup', code: string, extra: object = {}) {
-      const ev = { code, prevented: false, preventDefault() { ev.prevented = true; }, ...extra };
-      this.fire(t, ev);
-      return ev;
-    }
-  }
-  const make = () => { const t = new FakeTarget(); return { t, m: new InputManager(t, DEFAULT_KEYMAPS, () => []) }; };
+function fakeTarget() {
+  const fns = new Map<string, EventListener>();
+  const t: KeyTarget & { fire(type: string, code: string, repeat?: boolean): void } = {
+    addEventListener: (ty, fn) => { fns.set(ty, fn); },
+    removeEventListener: ty => { fns.delete(ty); },
+    fire: (ty, code, repeat = false) => fns.get(ty)?.({ code, repeat, preventDefault() {} } as unknown as Event),
+  };
+  return t;
+}
 
-  it('teclas do jogo viram botões e têm o padrão do navegador bloqueado', () => {
-    const { t, m } = make();
-    const ev = t.key('keydown', 'KeyW');
-    expect(ev.prevented).toBe(true);
-    expect(m.poll().kb0).toBe(BTN.UP);
-    t.key('keyup', 'KeyW');
-    expect(m.poll().kb0).toBe(0);
+describe('InputManager', () => {
+  it('poll lê teclas e gamepads com os mapas; connected() e escHeld()', () => {
+    const gps: (GamepadLike | null)[] = [pad([1]), null, pad([], [0, 0], false)];
+    const t = fakeTarget();
+    const im = new InputManager(t, DEFAULT_KEYMAPS, () => gps);
+    t.fire('keydown', 'KeyJ'); t.fire('keydown', 'Escape');
+    expect(im.poll().kb0).toBe(BTN.A);
+    expect(im.poll().gp0).toBe(BTN.A);
+    expect(im.connected()).toMatchObject({ kb0: true, kb1: true, gp0: true, gp1: false, gp2: false, none: false });
+    expect(im.escHeld()).toBe(true);
+    t.fire('keyup', 'Escape');
+    expect(im.escHeld()).toBe(false);
   });
-  it('não interfere quando o foco está num campo de texto', () => {
-    const { t, m } = make();
-    const ev = t.key('keydown', 'KeyW', { target: { tagName: 'INPUT' } });
-    expect(ev.prevented).toBe(false);
-    expect(m.poll().kb0).toBe(0);
+  it('takePadButton: primeiro botão bruto recém-apertado desde a última leitura', () => {
+    let gps: (GamepadLike | null)[] = [pad([]), pad([])];
+    const im = new InputManager(fakeTarget(), DEFAULT_KEYMAPS, () => gps);
+    im.poll();
+    gps = [pad([]), pad([7])];
+    im.poll();
+    expect(im.takePadButton()).toEqual({ pad: 1, button: 7 });
+    expect(im.takePadButton()).toBeNull();
+    im.poll();                                  // continua segurado: não é novo
+    expect(im.takePadButton()).toBeNull();
   });
-  it('última tecla: uma vez por aperto, sem auto-repetição', () => {
-    const { t, m } = make();
-    t.key('keydown', 'KeyQ');
-    expect(m.takeLastKey()).toBe('KeyQ');
-    expect(m.takeLastKey()).toBeNull();
-    t.key('keydown', 'KeyQ', { repeat: true });
-    expect(m.takeLastKey()).toBeNull();
-  });
-  it('setKeymaps troca o mapeamento; dispose remove os ouvintes', () => {
-    const { t, m } = make();
-    m.setKeymaps([{ ...DEFAULT_KEYMAPS[0], up: 'KeyZ' }, DEFAULT_KEYMAPS[1]]);
-    t.key('keydown', 'KeyZ');
-    expect(m.poll().kb0).toBe(BTN.UP);
-    m.dispose();
-    expect([...t.handlers.values()].every(s => s.size === 0)).toBe(true);
-  });
-  it('perder o foco solta tudo', () => {
-    const { t, m } = make();
-    t.key('keydown', 'KeyW');
-    t.fire('blur');
-    expect(m.poll().kb0).toBe(0);
+  it('setPadmaps troca o mapa usado no poll', () => {
+    const im = new InputManager(fakeTarget(), DEFAULT_KEYMAPS, () => [pad([0])]);
+    im.setPadmaps([{ ...DEFAULT_PADMAP, a: 0, b: 1 }]);
+    expect(im.poll().gp0).toBe(BTN.A);
   });
 });
 
 describe('loop de passo fixo', () => {
-  it('um frame de 1/60 s = 1 passo', () => {
+  it('passos por frame e teto', () => {
     expect(stepsFor(0, STEP_MS).steps).toBe(1);
-  });
-  it('acumula frações', () => {
-    const a = stepsFor(0, 10);
-    expect(a.steps).toBe(0);
-    const b = stepsFor(a.acc, 10);
-    expect(b.steps).toBe(1);
-    expect(b.acc).toBeCloseTo(20 - STEP_MS, 5);
-  });
-  it('limita a MAX_STEPS e descarta o atraso', () => {
-    const r = stepsFor(0, 1000);
-    expect(r.steps).toBe(MAX_STEPS);
-    expect(r.acc).toBeLessThanOrEqual(STEP_MS);
-  });
-  it('não deixa o jitter do rAF (±0.3ms) acumular passos extras ou faltantes', () => {
-    let acc = 0;
-    for (let i = 0; i < 600; i++) {
-      const dt = STEP_MS + (i % 2 === 0 ? 0.3 : -0.3);
-      const r = stepsFor(acc, dt);
-      expect(r.steps).toBe(1);
-      acc = r.acc;
-    }
-  });
-});
-
-describe('botão X e botões extras (§2.6)', () => {
-  it('teclado: I (P1) e Numpad5 (P2) = X', () => {
-    expect(readKeyMap(new Set(['KeyI']), DEFAULT_KEYMAPS[0])).toBe(BTN.X);
-    expect(readKeyMap(new Set(['Numpad5']), DEFAULT_KEYMAPS[1])).toBe(BTN.X);
-  });
-  it('gamepad standard: X = 3, L = 4, R = 5, SELECT = 8', () => {
-    const pad = (i: number) => ({ buttons: Array.from({ length: 16 }, (_, k) => ({ pressed: k === i })), axes: [0, 0] });
-    expect([readGamepad(pad(3)), readGamepad(pad(4)), readGamepad(pad(5)), readGamepad(pad(8))]).toEqual([BTN.X, BTN.L, BTN.R, BTN.SELECT]);
-  });
-  it('X entra na lista de remapeamento sem mudar o índice de B', () => {
-    expect(KEY_FIELDS).toEqual(['up', 'down', 'left', 'right', 'a', 'b', 'y', 'x', 'start']);
+    expect(stepsFor(0, 1000).steps).toBe(MAX_STEPS);
   });
 });

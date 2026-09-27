@@ -1,71 +1,50 @@
-import { defaultRules, type Rules } from '../core';
-import { CHARACTERS } from '../render/art/bomber';
-import type { Setup, SlotKind } from '../app/settings';
+import { defaultRules, type Rules } from './core-api';
+import type { DeviceId } from '../input/input';
 
+export type SlotKind = 'human' | 'cpu' | 'off';
+/** Formato estrutural de `Setup` (app/settings.ts), para não depender da ordem de merge. */
+export interface SetupLike {
+  mode: 'ffa' | 'team'; slots: readonly SlotKind[]; teams: readonly number[];
+  rules: { cpuLevel: 0 | 1 | 2; matches: number; timeIdx: number; suddenDeath: boolean; badBomber: boolean; racer: boolean };
+  chars: readonly number[]; stage: number;
+}
 export interface GameConfig {
-  rules: Rules; stage: number; chars: number[]; seed: number | null;
-  humans: boolean[];   // slots controlados por gente (CPU = false)
-  names: string[];     // nomes dos jogadores ('' = usar P1..P5)
+  rules: Rules; stage: number; chars: number[]; humans: boolean[]; devices: DeviceId[]; seed: number | null;
+}
+const DEFAULT_DEVICES: DeviceId[] = ['kb0', 'kb1', 'gp0', 'gp1', 'gp2'];
+
+export const activeCount = (slots: readonly SlotKind[]): number => slots.filter(k => k !== 'off').length;
+export const canStart = (slots: readonly SlotKind[]): boolean => activeCount(slots) >= 2;
+
+export function configFromSetup(setup: SetupLike, randomSpawns: boolean, devices: readonly DeviceId[], seed: number | null = null): GameConfig {
+  const r = setup.rules;
+  const rules: Rules = {
+    ...defaultRules(), cpuLevel: r.cpuLevel, matches: r.matches, timeIdx: r.timeIdx, suddenDeath: r.suddenDeath,
+    badBomber: r.badBomber, racer: r.racer, randomSpawns, mode: setup.mode, teams: [...setup.teams],
+    active: setup.slots.map(k => k !== 'off'),
+  };
+  return { rules, stage: setup.stage, chars: [...setup.chars], humans: setup.slots.map(k => k === 'human'),
+    devices: [...devices], seed };
 }
 
-function int(v: string | null, def: number, min: number, max: number): number {
+const int = (v: string | null, def: number, min: number, max: number): number => {
   const n = v === null ? NaN : Number.parseInt(v, 10);
   return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : def;
-}
-
-/** Nome para exibir: o nome configurado ou P1..P5. */
-export function displayName(names: readonly string[], slot: number): string {
-  const n = names[slot]?.trim();
-  return n ? n : `P${slot + 1}`;
-}
-
-/**
- * Partida rápida pela URL (usada com ?quick e pelas screenshots):
- * ?stage=1..10&players=2..5&matches=1..5&time=0..4&mode=ffa|team&sd=1&racer=1&spawns=1&chars=0,1,2,3,4&seed=N
- *  &humans=0..5 (quantos dos primeiros jogadores são humanos; o resto é CPU — padrão: todos)
- *  &level=0..2 (nível da CPU: fraco, normal, forte — padrão: normal)
- */
+};
+/** Partida rápida pela URL (?quick): stage, players, matches, time, level, mode, sd, bad, racer, spawns, chars, seed, humans. */
 export function parseConfig(search: string): GameConfig {
   const q = new URLSearchParams(search);
   const players = int(q.get('players'), 5, 2, 5);
-  const active = [0, 1, 2, 3, 4].map(i => i < players);
-  const rules: Rules = {
-    ...defaultRules(),
-    matches: int(q.get('matches'), 3, 1, 5),
-    timeIdx: int(q.get('time'), 2, 0, 4),
-    cpuLevel: int(q.get('level'), 1, 0, 2) as 0 | 1 | 2,
-    suddenDeath: q.get('sd') === '1',
-    racer: q.get('racer') === '1',
-    randomSpawns: q.get('spawns') === '1',
-    mode: q.get('mode') === 'team' ? 'team' : 'ffa',
-    teams: [0, 1, 0, 1, 0],
-    active,
-  };
+  const humansN = int(q.get('humans'), 5, 0, 5);
   const raw = (q.get('chars') ?? '').split(',').map(s => Number.parseInt(s, 10));
-  const chars = [0, 1, 2, 3, 4].map(i => (Number.isInteger(raw[i]) && raw[i] >= 0 && raw[i] < CHARACTERS.length ? raw[i] : i));
-  return {
-    rules, stage: int(q.get('stage'), 1, 1, 10), chars,
-    seed: q.has('seed') ? int(q.get('seed'), 0, 0, 2 ** 31 - 1) : null,
-    humans: active.map((a, i) => a && i < int(q.get('humans'), 5, 0, 5)), names: ['', '', '', '', ''],
+  const setup: SetupLike = {
+    mode: q.get('mode') === 'team' ? 'team' : 'ffa',
+    slots: [0, 1, 2, 3, 4].map(i => (i >= players ? 'off' : i < humansN ? 'human' : 'cpu')),
+    teams: [0, 1, 0, 1, 0],
+    rules: { cpuLevel: int(q.get('level'), 1, 0, 2) as 0 | 1 | 2, matches: int(q.get('matches'), 3, 1, 5), timeIdx: int(q.get('time'), 2, 0, 4),
+      suddenDeath: q.get('sd') === '1', badBomber: q.get('bad') === '1', racer: q.get('racer') === '1' },
+    chars: [0, 1, 2, 3, 4].map(i => (Number.isInteger(raw[i]) && raw[i] >= 0 && raw[i] <= 5 ? raw[i] : i)),
+    stage: int(q.get('stage'), 1, 1, 10),
   };
-}
-
-/** Regras da partida a partir das escolhas dos menus. */
-export function configFromSetup(setup: Setup, names: readonly string[], seed: number | null = null): GameConfig {
-  const rules: Rules = {
-    ...defaultRules(), ...setup.rules,
-    mode: setup.mode, teams: [...setup.teams], active: setup.slots.map(k => k !== 'off'),
-  };
-  return {
-    rules, stage: setup.stage, chars: [...setup.chars], seed,
-    humans: setup.slots.map(k => k === 'human'), names: [...names],
-  };
-}
-
-/** Mensagem de erro se a formação não permite jogar; null se está tudo certo. */
-export function validateSetup(mode: 'ffa' | 'team', slots: readonly SlotKind[], teams: readonly number[]): string | null {
-  const on = [0, 1, 2, 3, 4].filter(i => slots[i] !== 'off');
-  if (on.length < 2) return 'PRECISA DE 2 JOGADORES';
-  if (mode === 'team' && new Set(on.map(i => teams[i])).size < 2) return 'CADA TIME PRECISA DE 1 JOGADOR';
-  return null;
+  return configFromSetup(setup, q.get('spawns') === '1', DEFAULT_DEVICES, q.has('seed') ? int(q.get('seed'), 0, 0, 0xffff) : null);
 }

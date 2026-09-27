@@ -1,67 +1,78 @@
 import type { App, Screen } from '../app/app';
 import type { SlotKind } from '../app/settings';
-import { validateSetup } from '../game/config';
-import { MenuList, type MenuItem } from './menu';
-import { COLORS, drawFooter, drawMenuPage } from './ui';
+import { canStart } from '../game/config';
+import { FADE_MENU } from '../app/fade';
+import { MUSIC } from '../app/audio';
+import { romState } from '../app/rom-api';
+import { S } from '../render/text/strings';
+import { drawText } from '../render/text/text';
+import type { Tone } from '../render/text/types';
+import { PpuCanvas } from '../render/screens-rom/scene';
+import { buildPlayersScene, PLAYERS_FRAME } from '../render/screens-rom/players';
+import { Menu, type MenuRow } from './menu';
+import { drawFallbackFrame, drawStaticBackground, drawStaticCursor } from './ui';
 import { modeScreen } from './vs';
 import { rulesScreen } from './rules';
 
-interface SlotOption { kind: SlotKind; team: number }
+/** Ordem do cursor de valor [A15]: ← avança (Humano→CPU→Nenhum), → recua; os dois param no limite. */
+/** Âncora (centro, topo) do título, presa à faixa de texto da captura em `tests/screens/menu-title.test.ts`. */
+export const PLAYERS_TITLE = { x: 127, y: 13 } as const;
+const KINDS: readonly SlotKind[] = ['human', 'cpu', 'off'];
+const LABEL: Record<SlotKind, string> = { human: S.players.human, cpu: S.players.cpu, off: S.players.off };
+const TONE: Record<SlotKind, Tone> = { human: 'green', cpu: 'red', off: 'blue' };
 
-const FFA_OPTIONS: SlotOption[] = [{ kind: 'human', team: -1 }, { kind: 'cpu', team: -1 }, { kind: 'off', team: -1 }];
-const TEAM_OPTIONS: SlotOption[] = [
-  { kind: 'human', team: 0 }, { kind: 'human', team: 1 }, { kind: 'cpu', team: 0 }, { kind: 'cpu', team: 1 }, { kind: 'off', team: -1 },
-];
-const KIND_LABEL: Record<SlotKind, string> = { human: 'HUMANO', cpu: 'CPU', off: 'DESLIGADO' };
-export const TEAM_LABEL = ['VERMELHO', 'BRANCO'];
-export const TEAM_COLOR = ['#ff5f5f', '#ffffff'];
-export const ERROR_FRAMES = 150;
-
-/** "Defina os jogadores": Humano / CPU / Desligado (e o time, na batalha em times). */
-export function playersScreen(app: App): Screen {
+/** "Defina os jogadores": Humano / CPU / Nenhum por linha, sem time (a T10 cuida disso em `teamsScreen`). */
+export function playersScreen(app: App): Screen & { readonly cursor: number; value(i: number): { text: string; tone: Tone } } {
   const setup = app.settings.setup;
-  let error = '';
-  let errorTimer = 0;
-  const options = () => (setup.mode === 'team' ? TEAM_OPTIONS : FFA_OPTIONS);
-  const current = (i: number) => Math.max(0, options().findIndex(o =>
-    o.kind === setup.slots[i] && (setup.mode !== 'team' || o.kind === 'off' || o.team === setup.teams[i])));
-  const change = (i: number, d: number) => {
-    const opts = options();
-    const o = opts[(current(i) + d + opts.length) % opts.length];
-    setup.slots[i] = o.kind;
-    if (o.team >= 0) setup.teams[i] = o.team;
-    app.save();
-  };
-  const label = (i: number) => {
+  app.audio.ensureMenus(MUSIC.menus);
+
+  const value = (i: number): { text: string; tone: Tone } => {
     const k = setup.slots[i];
-    return setup.mode === 'team' && k !== 'off' ? `${KIND_LABEL[k]} ${TEAM_LABEL[setup.teams[i]]}` : KIND_LABEL[k];
+    return { text: LABEL[k], tone: TONE[k] };
   };
-  const color = (i: number) => {
-    if (setup.slots[i] === 'off') return COLORS.dim;
-    return setup.mode === 'team' ? TEAM_COLOR[setup.teams[i]] : setup.slots[i] === 'human' ? COLORS.ok : COLORS.value;
+  const shift = (i: number, d: 1 | -1): boolean => {
+    const idx = KINDS.indexOf(setup.slots[i]);
+    const next = idx + d;
+    if (next < 0 || next >= KINDS.length) return false;
+    setup.slots[i] = KINDS[next];
+    app.save();
+    return true;
   };
-  const confirm = () => {
-    const err = validateSetup(setup.mode, setup.slots, setup.teams);
-    if (err) { error = err; errorTimer = ERROR_FRAMES; return; }
-    app.go(rulesScreen(app));
-  };
-  const items: MenuItem[] = [0, 1, 2, 3, 4].map(i => ({
-    label: `${i + 1}º JOGADOR`, value: () => label(i), valueColor: () => color(i),
-    left: () => change(i, -1), right: () => change(i, 1), select: confirm,
+  const rows: MenuRow[] = [0, 1, 2, 3, 4].map(i => ({
+    id: `p${i}`,
+    left: () => shift(i, 1),
+    right: () => shift(i, -1),
+    select: () => {
+      if (!canStart(setup.slots)) return false;
+      app.transition(() => rulesScreen(app), FADE_MENU);
+      return true;
+    },
   }));
-  items.push({ label: 'CONTINUAR', select: confirm });
-  const list = new MenuList(items);
+  const menu = new Menu(rows);
+  const canvas = new PpuCanvas();
+
   return {
     id: 'players',
+    get cursor() { return menu.cursor; },
+    value,
     update(inp) {
-      if (errorTimer > 0) errorTimer--;
-      if (list.handle(inp.pressedAny) === 'back') app.go(modeScreen(app));
+      if (menu.update(inp.any, inp.pressedAny, app.audio) === 'back') app.transition(() => modeScreen(app), FADE_MENU);
     },
-    draw(ctx, bank, frame) {
-      drawMenuPage(ctx, bank, frame, 'DEFINA OS JOGADORES', list, 224);
-      if (errorTimer > 0) drawFooter(ctx, bank, error, COLORS.error);
-      else drawFooter(ctx, bank, 'ESQ/DIR: MUDAR   A: CONTINUAR');
+    draw(ctx, bank) {
+      const a = romState.assets;
+      if (a) canvas.draw(ctx, buildPlayersScene(a, { cursor: menu.cursor }));
+      else {
+        drawStaticBackground(ctx);
+        drawFallbackFrame(ctx, PLAYERS_FRAME);
+        drawStaticCursor(ctx, 24, 48 + 32 * menu.cursor);
+      }
+      drawText(ctx, bank, 'menuTitle', S.players.title, PLAYERS_TITLE.x, PLAYERS_TITLE.y, { align: 'center' });
+      for (let i = 0; i < 5; i++) {
+        const y = 47 + 32 * i;
+        drawText(ctx, bank, 'menuItem', S.players.row[i], 48, y);
+        const v = value(i);
+        drawText(ctx, bank, 'menuItem', v.text, 160, y, { tone: v.tone });
+      }
     },
-    get error() { return errorTimer > 0 ? error : ''; },
-  } as Screen & { readonly error: string };
+  };
 }

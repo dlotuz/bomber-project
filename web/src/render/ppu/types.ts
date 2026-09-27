@@ -8,11 +8,14 @@ export interface BgLayer { map: Uint16Array; mapW: 32 | 64; tiles: Tiles; tile16
 
 /** Faixa de linhas [y0, y1) com registradores próprios (HDMA). Máscaras: BG1=1 BG2=2 BG3=4 OBJ=16 (fundo=32 só em mathLayers).
  *  `bg1Tile16` vale para o BG1 nesta faixa (o `tile16` do BgLayer vale para BG2/BG3). `bg1`/`bg2` = [hofs, vofs] da faixa.
- *  `mathLayers` (extensão do plano 5; padrão 1 = só BG1): camadas da tela principal que recebem o color math. */
+ *  `mathLayers` (extensão do plano 5; padrão 1 = só BG1): camadas da tela principal que recebem o color math.
+ *  `math` = CGADSUB bits 7/6 com CGWSEL bit 1 ligado (a sub-tela entra na conta): 'add' soma, 'half' soma e divide
+ *  por 2, 'sub' subtrai com piso 0 (extensão do plano 10: miolo escurecido dos menus, CGADSUB = $82) e 'subHalf'
+ *  subtrai e divide por 2. Onde a sub-tela é transparente entra a cor fixa (COLDATA = 0 nas cenas) sem a divisão. */
 export interface ScanBand {
   y0: number; y1: number;
   bg1Tile16: boolean; bg1?: [number, number]; bg2?: [number, number];
-  main: number; sub: number; math: 'none' | 'half' | 'add'; mathLayers?: number;
+  main: number; sub: number; math: 'none' | 'half' | 'add' | 'sub' | 'subHalf'; mathLayers?: number;
 }
 
 /** Sprite. `x`, `y` = canto superior esquerdo na imagem (y = valor da OAM). `pal` 0..7 → CGRAM 128+16·pal.
