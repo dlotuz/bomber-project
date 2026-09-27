@@ -12,6 +12,11 @@
       position: absolute; width: 1px; height: 1px; margin: -1px; border: 0; padding: 0;
       overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap;
     }
+    .credits {
+      position: fixed; right: 6px; bottom: 4px; font: 11px/1.2 system-ui, sans-serif;
+      color: #666; text-decoration: none;
+    }
+    .credits:hover, .credits:focus { color: #aaa; text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -23,6 +28,7 @@
     Jogador 2 usa as setas para mover, Numpad 1/2/3 para ações e Numpad Enter para START.
     Controles também são lidos de gamepads conectados.
   </p>
+  <a class="credits" href="licenses/index.html" target="_blank" rel="noopener">Som: S-DSP do snes_spc (LGPL) · licenças e fonte</a>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

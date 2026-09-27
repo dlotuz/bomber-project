@@ -1,3 +1,7 @@
+/*!
+ * Crown Blast — processador de áudio. Usa o módulo S-DSP (porte do SPC_DSP do snes_spc, Shay Green),
+ * @license LGPL-2.1-or-later, carregado do arquivo separado ./spc-dsp-*.js. Licenças e fonte: licenses/.
+ */
 /** Processador do AudioWorklet ('crown-apu'). Só a casca; a lógica está em worklet-core.ts. */
 import { WorkletCore } from './worklet-core';
 import { Apu } from './apu/apu';

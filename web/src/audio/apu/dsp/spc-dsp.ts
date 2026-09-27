@@ -1,9 +1,11 @@
-/*
- * Porte para TypeScript do SPC_DSP (snes_spc 0.9.0, http://www.slack.net/~ant/), na versão
- * modificada pelo snes9x (apu/bapu/dsp). Copyright (C) 2007 Shay Green; modificações do snes9x;
- * porte (C) 2026 Crown Blast. Este módulo é software livre: você pode redistribuí-lo e/ou modificá-lo
- * sob os termos da GNU Lesser General Public License, versão 2.1 ou (a seu critério) posterior.
- * Distribuído SEM NENHUMA GARANTIA. Veja web/vendor/snes_spc/LICENSE e NOTICE.txt.
+/*!
+ * Crown Blast — módulo S-DSP. Porte para TypeScript do SPC_DSP (snes_spc 0.9.0, http://www.slack.net/~ant/),
+ * na versão modificada pelo snes9x (apu/bapu/dsp). Copyright (C) 2007 Shay Green; modificações do snes9x;
+ * porte e modificações (C) 2026 Crown Blast. Este módulo é software livre: você pode redistribuí-lo e/ou
+ * modificá-lo sob os termos da GNU Lesser General Public License, versão 2.1 ou (a seu critério) posterior.
+ * Distribuído SEM NENHUMA GARANTIA. Licença e fonte correspondente: licenses/ (junto do jogo publicado),
+ * web/vendor/snes_spc/ e https://github.com/dlotuz/bomber-project.
+ * @license LGPL-2.1-or-later
  */
 
 /**
