@@ -91,10 +91,11 @@ export function teamsScreen(app: App): Screen & {
         const driver = !scheme.confirmed[i] ? (scheme.selfPicking(i) ? i : i === ctrl ? scheme.controller : null) : null;
         ctx.fillStyle = driver !== null ? PLAYER_COLORS[driver] : TEAM_COLOR[side];
         ctx.fillRect(mx, y + 8, 16, 16);
-        drawText(ctx, bank, 'ascii8', S.chars.tags[i], mx, y - 4, { color: PLAYER_COLORS[i] });
+        drawText(ctx, bank, 'ascii8', S.chars.tags[i], mx, y - 4, { color: PLAYER_COLORS[i], bare: true });
       }
       drawText(ctx, bank, 'menuItem', S.teams.vs, TEAMSEL_VS.x + dx, TEAMSEL_VS.y, { align: 'center' });
-      drawText(ctx, bank, 'ascii8', S.teams.help, 128, SCREEN_H - 16, { align: 'center', tone: 'gray' });
+      // `bare` (M1, revisão final): igual a Opções/Remapeamento — sem o campo opaco do `ascii8`, como na ROM.
+      drawText(ctx, bank, 'ascii8', S.teams.help, 128, SCREEN_H - 16, { align: 'center', tone: 'gray', bare: true });
     },
   };
 }

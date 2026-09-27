@@ -122,10 +122,11 @@ export function charactersScreen(app: App): Screen & {
         const x = CHARSEL_GRID.x[k % COLS], y = CHARSEL_GRID.y[Math.floor(k / COLS)];
         const color = PLAYER_COLORS[driver];
         drawCornerCursor(ctx, x - 2, y - 2, CHARSEL_GRID.cellW - 12, CHARSEL_GRID.cellH - 4, color);
-        drawText(ctx, bank, 'ascii8', S.chars.tags[driver], x - 3, y - 10, { color });
+        drawText(ctx, bank, 'ascii8', S.chars.tags[driver], x - 3, y - 10, { color, bare: true });
       }
+      // `bare` (M1, revisão final): igual a Opções/Remapeamento — sem o campo opaco do `ascii8`, como na ROM.
       drawText(ctx, bank, 'ascii8', scheme.activeIdx.every(i => scheme.confirmed[i]) ? S.chars.allReady : S.chars.help,
-        128, SCREEN_H - 16, { align: 'center', tone: 'gray' });
+        128, SCREEN_H - 16, { align: 'center', tone: 'gray', bare: true });
     },
   };
 }
