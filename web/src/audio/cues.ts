@@ -26,7 +26,8 @@ export const CUES = {
   roundWin: { startBank: 0x2f, cues: [
     { at: 0, kind: 'sfx', id: 0x17 }, { at: 97, kind: 'fade' }, { at: 113, kind: 'bank', id: 0x30 }, { at: 154, kind: 'music', id: 0x15 },
   ] },
-  /** Próxima rodada, sem repetir o $13 (os +12 f entre banco e música são 🟡, iguais aos 511→523). */
+  /** Próxima rodada, sem repetir o $13 (os +12 f entre banco e música são 🟡, iguais aos 511→523). O teste
+   *  `cues-timeline` confere todos os roteiros contra `game/timeline.ts` (plano 10). */
   nextRound: { startBank: 0x30, cues: [{ at: 0, kind: 'bank', id: 0x2f }, { at: 12, kind: 'music', id: 0x14 }] },
   /** Última coroa (§6.12): como roundWin + música $16 (+671) e voz $0A (+955). */
   matchVictory: { startBank: 0x2f, cues: [
@@ -38,9 +39,9 @@ export const CUES = {
     { at: 0, kind: 'stop' }, { at: 161, kind: 'fade' }, { at: 218, kind: 'bank', id: 0x30 },
     { at: 228, kind: 'music', id: 0x18 }, { at: 426, kind: 'voice', id: 0x0e },
   ] },
-  /** Todos mortos → EMPATE: FADE, banco $30, música $18 (mesmos intervalos do TIME UP, 🟡). */
+  /** Todos mortos → EMPATE, a partir do FADE (medido: analise/investigacao/audio/empates.py): banco $30 +57, música $18 +68, voz $0E +266. */
   allDeadDraw: { startBank: 0x2f, cues: [
-    { at: 0, kind: 'fade' }, { at: 57, kind: 'bank', id: 0x30 }, { at: 67, kind: 'music', id: 0x18 }, { at: 265, kind: 'voice', id: 0x0e },
+    { at: 0, kind: 'fade' }, { at: 57, kind: 'bank', id: 0x30 }, { at: 68, kind: 'music', id: 0x18 }, { at: 266, kind: 'voice', id: 0x0e },
   ] },
 } satisfies Record<string, CueScript>;
 

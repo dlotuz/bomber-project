@@ -20,9 +20,9 @@ function drawEnv() {
 }
 
 describe('EMPATE (§6.11, R21)', () => {
-  it('voz $0E em S=100 e nenhuma coroa', () => {
+  it('voz $0E em S=147 e nenhuma coroa', () => {
     const { app, sink, ms } = drawEnv();
-    idle(app, 100); expect(sink.of('voice')).toEqual([]);
+    idle(app, 147); expect(sink.of('voice')).toEqual([]);
     idle(app, 1); expect(sink.of('voice').map(c => c.id)).toEqual([0x0e]);
     expect(crownsOf(ms.match)).toEqual([0, 0, 0, 0, 0]);
   });

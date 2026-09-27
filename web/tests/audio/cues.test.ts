@@ -13,11 +13,12 @@ describe('roteiros de transição', () => {
       }
     });
   }
-  it('fase → partida e TIME UP com os frames medidos [AUD §2]', () => {
+  it('fase → partida, TIME UP e todos mortos com os frames medidos [AUD §2, empates.py]', () => {
     const f = (sc: CueScript) => sc.cues.map(c => `${c.at}:${c.kind}${'id' in c ? ' ' + c.id.toString(16) : ''}`);
     expect(f(CUES.stageToBattle)).toEqual(['0:sfx 2', '48:music 13', '208:voice 7', '310:fade', '511:bank 2f', '523:music 14']);
     expect(f(CUES.timeUpDraw)).toEqual(['0:stop', '161:fade', '218:bank 30', '228:music 18', '426:voice e']);
     expect(f(CUES.roundWin)).toEqual(['0:sfx 17', '97:fade', '113:bank 30', '154:music 15']);
+    expect(f(CUES.allDeadDraw)).toEqual(['0:fade', '57:bank 30', '68:music 18', '266:voice e']);
   });
   it('CuePlayer emite cada item no frame certo', () => {
     const got: string[] = [];

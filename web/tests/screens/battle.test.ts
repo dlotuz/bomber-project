@@ -158,19 +158,19 @@ describe('fim de rodada (§6.10, §6.11, R4–R6)', () => {
     expect(untilScreen(app, 'scoreboard') - t0).toBe(63);
     expect(calls(sink, t0)).toEqual([[0, 'fade', undefined], [16, 'bank', 0x30], [57, 'music', 0x15]]);
   });
-  it('EMPATE por tempo: FADE +1, $30 +58, $18 +68 e a tela EMPATE em +166', () => {
+  it('EMPATE por tempo: FADE +1, $30 +58, $18 +68 e a tela EMPATE em +119', () => {
     const { app, sink, b } = start();
     toPlay(app, b); forceClock(b.round, 1); sink.clear();
     const t0 = untilTransition(app);
-    expect(untilScreen(app, 'draw') - t0).toBe(166);
+    expect(untilScreen(app, 'draw') - t0).toBe(119);
     expect(calls(sink, t0)).toEqual([[1, 'fade', undefined], [58, 'bank', 0x30], [68, 'music', 0x18]]);
   });
-  it('EMPATE com todos mortos: FADE +0, $30 +16, $18 +26 e EMPATE em +63', () => {
+  it('EMPATE com todos mortos: FADE +0, $30 +57, $18 +68 e EMPATE em +119', () => {
     const { app, sink, b } = start();
     toPlay(app, b); forceAllDead(b.round); sink.clear();
     const t0 = untilTransition(app);
-    expect(untilScreen(app, 'draw') - t0).toBe(63);
-    expect(calls(sink, t0)).toEqual([[0, 'fade', undefined], [16, 'bank', 0x30], [26, 'music', 0x18]]);
+    expect(untilScreen(app, 'draw') - t0).toBe(119);
+    expect(calls(sink, t0)).toEqual([[0, 'fade', undefined], [57, 'bank', 0x30], [68, 'music', 0x18]]);
   });
 });
 
