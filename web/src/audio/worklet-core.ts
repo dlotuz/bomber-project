@@ -21,6 +21,8 @@ export class WorkletCore {
   private readonly resampler: Resampler | null;
   private readonly early: AudioCmd[] = [];
   private sinceStats = 0;
+  /** içado para não criar uma closure por process() (M4) */
+  private readonly renderEngine = (l: Float32Array, r: Float32Array, m: number): void => { this.engine!.render(l, r, m); };
 
   constructor(rate: number, makeBus: BusFactory, post: (m: WorkletOut) => void) {
     this.rate = rate; this.makeBus = makeBus; this.post = post;
@@ -41,7 +43,7 @@ export class WorkletCore {
   process(outL: Float32Array, outR: Float32Array, n: number): void {
     const e = this.engine;
     if (!e) { outL.fill(0, 0, n); outR.fill(0, 0, n); return; }
-    if (this.resampler) this.resampler.process(outL, outR, n, (l, r, m) => e.render(l, r, m));
+    if (this.resampler) this.resampler.process(outL, outR, n, this.renderEngine);
     else e.render(outL, outR, n);
     this.sinceStats += n;
     if (this.sinceStats >= this.rate) { this.sinceStats = 0; this.post({ t: 'stats', ...e.stats }); }
