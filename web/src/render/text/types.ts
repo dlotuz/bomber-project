@@ -56,6 +56,14 @@ export interface StyleRomDef {
   /** Índices de contorno que, na montagem da frase, não cobrem um pixel já desenhado por outra letra (o miolo da
    *  vizinha vence o contorno desta onde as letras se encostam, como na arte original). */
   under?: readonly number[];
+  /** Tom feito por troca de índices (não por linha de paleta): a frase montada troca os índices do mapa antes de
+   *  pintar (ex.: `titleMenu` amarelo = família 5–9 da mesma linha, a de "PUSH START BUTTON!"). Aditivo (plano 10, M2). */
+  toneRemap?: Partial<Record<Tone, Readonly<Record<number, number>>>>;
+  /** Índice do "campo" opaco da casa (fonte de HUD em BG3, ex.: `ascii8` índice 1). Com `TextOpts.bare`, esse índice
+   *  vira transparente e, se `fieldOutline` existir, a letra ganha 1 px de contorno nesse índice (legível sobre
+   *  gráficos). Aditivo (plano 10, M1): sem `bare`, nada muda. */
+  field?: number;
+  fieldOutline?: number;
 }
 /** '.' = 0; padrão: hex. Com `base`, o glifo é o glifo `base` já recortado da ROM (montado em tempo de execução) com os
  *  pixels não-'.' deste desenho por cima (acentos sobre letras da ROM, sem guardar os pixels dela). `shrinkTop`

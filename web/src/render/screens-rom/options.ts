@@ -8,7 +8,7 @@ import type { TextStyleId } from '../text/types';
 import { drawText, textWidth } from '../text/text';
 import { romState } from '../../app/rom-api';
 import { drawFallbackFrame, drawStaticBackground, drawStaticCursor } from '../../screens/ui';
-import { sceneGfx, sceneFrame, menuMaps, menuBg1Vofs, handCursor, MENU_GEO, PpuCanvas, type SceneMaps } from './scene';
+import { sceneGfx, sceneFrame, menuMaps, menuBg1Vofs, shadeBand, handCursor, MENU_GEO, PpuCanvas, type SceneMaps } from './scene';
 
 export { PpuCanvas };
 
@@ -21,11 +21,11 @@ export interface OptionsRow { label: string; value: string; disabled?: boolean }
 
 /** Uma banda por trecho de `MENU_GEO.rulesBg1Bands`, cada uma com o VOFS do BG1 daquele trecho (via `menuBg1Vofs`). */
 function optionsBands(maps: SceneMaps): ScanBand[] {
-  const main = (maps.bg1 ? 1 : 0) | (maps.bg2 ? 2 : 0) | (maps.bg3 ? 4 : 0) | 16;
+  const main = (maps.bg1 ? 1 : 0) | (maps.bg2 ? 2 : 0) | (maps.bg3 || maps.shade ? 4 : 0) | 16;
   const starts = MENU_GEO.rulesBg1Bands.map(b => b[0]);
   return starts.map((y0, i) => ({
     y0, y1: starts[i + 1] ?? 224, bg1Tile16: true, bg1: [0, menuBg1Vofs('rules', y0)] as [number, number],
-    main, sub: 0, math: 'none' as const,
+    main, ...shadeBand(maps),
   }));
 }
 
@@ -59,12 +59,13 @@ export function drawOptionsPage(
     drawFallbackFrame(ctx, OPTIONS_FRAME);
     drawStaticCursor(ctx, HAND_X, handY);
   }
-  drawText(ctx, bank, titleStyle, title, TITLE_X, TITLE_Y, { align: 'center' });
+  // `bare` (M1): o `ascii8` é a fonte do HUD, com o campo da casa opaco — aqui ele fica por cima do quebra-cabeça.
+  drawText(ctx, bank, titleStyle, title, TITLE_X, TITLE_Y, { align: 'center', bare: true });
   rows.forEach((r, i) => {
     const y = ROW_Y0 + i * ROW_STEP;
     const tone = r.disabled ? 'gray' : undefined;
-    drawText(ctx, bank, 'ascii8', r.label, ROW_X, y, { tone });
-    if (r.value) drawText(ctx, bank, 'ascii8', r.value, VALUE_X, y, { align: 'right', tone });
+    drawText(ctx, bank, 'ascii8', r.label, ROW_X, y, { tone, bare: true });
+    if (r.value) drawText(ctx, bank, 'ascii8', r.value, VALUE_X, y, { align: 'right', tone, bare: true });
   });
-  if (footer) drawText(ctx, bank, 'ascii8', footer, TITLE_X, FOOTER_Y, { align: 'center' });
+  if (footer) drawText(ctx, bank, 'ascii8', footer, TITLE_X, FOOTER_Y, { align: 'center', bare: true });
 }

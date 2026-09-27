@@ -10,8 +10,8 @@ import { TITLE, pressStartVisible } from '../game/timeline';
 import { FADE_FROM_TITLE } from '../app/fade';
 import { MUSIC } from '../app/audio';
 import { romState } from '../app/rom-api';
-import { PpuCanvas, sceneGfx, sceneFrame, handCursor } from '../render/screens-rom/scene';
-import { buildTitleScene } from '../render/screens-rom/title';
+import { PpuCanvas } from '../render/screens-rom/scene';
+import { titleFrame } from '../render/screens-rom/title';
 import { vsModeScreen } from './vs';
 import { optionsScreen } from './options';
 
@@ -35,22 +35,22 @@ export function titleScreen(app: App, o: { cursor?: 0 | 1 | 2 } = {}): TitleScre
   const menu = new Menu(rows, { cursor: o.cursor ?? 1 });
   const canvas = new PpuCanvas();
   const items = [S.title.normal, S.title.battle, S.title.options] as const;
-  const visible = (): boolean => pressStartVisible(app.frame);
+  // M12: o pisca conta a partir da entrada no título (não do `app.frame` global), aceso no 1º quadro.
+  let t = 0;
+  const visible = (): boolean => pressStartVisible(t);
 
   return {
     id: 'title',
     get cursor() { return menu.cursor; },
     pressStartVisible: visible,
     update(inp: MenuInput) {
+      t++;
       menu.update(inp.any, inp.pressedAny & ~BTN.B, app.audio);
     },
     draw(ctx, bank) {
       const a = romState.assets;
       if (a) {
-        const sc = buildTitleScene(a);
-        const g = sceneGfx(a, 'title');
-        const oam = [...sc.logo, handCursor(TITLE.cursorX, TITLE.rowsY[menu.cursor], true)];
-        canvas.draw(ctx, sceneFrame(g, sc.maps, { bg1: sc.scroll.bg1, bg2: sc.scroll.bg2, oam }));
+        canvas.draw(ctx, titleFrame(a, TITLE.cursorX, TITLE.rowsY[menu.cursor]));
       } else {
         drawStaticBackground(ctx);
         ctx.drawImage(bank.crown(), (SCREEN_W - 36) / 2, 22, 36, 24);
@@ -58,7 +58,8 @@ export function titleScreen(app: App, o: { cursor?: 0 | 1 | 2 } = {}): TitleScre
         drawStaticCursor(ctx, TITLE.cursorX, TITLE.rowsY[menu.cursor]);
       }
       items.forEach((t, i) => drawText(ctx, bank, 'titleMenu', t, TEXT_X, TITLE.rowsY[i], { tone: i === 0 ? 'gray' : 'default' }));
-      if (visible()) drawText(ctx, bank, 'titleMenu', S.title.pressStart, PRESS_START.x, PRESS_START.y, { align: 'center' });
+      // M2: amarelo como "PUSH START BUTTON!" do original (família de índices 5–9 da mesma linha de paleta).
+      if (visible()) drawText(ctx, bank, 'titleMenu', S.title.pressStart, PRESS_START.x, PRESS_START.y, { align: 'center', tone: 'yellow' });
     },
   };
 }

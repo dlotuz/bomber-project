@@ -54,4 +54,6 @@ export const DEF: StyleRomDef = {
   palette: { kind: 'scene', scene: 'title', row: 0, size: 16 },
   tones: { gray: 0 },
   grayscale: ['gray'],
+  // Amarelo (M2): a família de "PUSH START BUTTON!" na mesma linha — o inverso de `YELLOW` (11→5, 12–15→6–9).
+  toneRemap: { yellow: Object.fromEntries(Object.entries(YELLOW).map(([k, v]) => [v, Number(k)])) },
 };

@@ -1,6 +1,8 @@
+import { missingGlyphs, fallbackMissing } from '../../src/render/text/text';
 import {
   readKeyMap, readGamepad, readDevices, buildInput, emptyDevices, keyLabel, InputManager, DEFAULT_KEYMAPS, DEFAULT_PADMAP,
   withEscapeAsBack, idleInput, padLabel, type GamepadLike, type KeyTarget,
+  KEY_NAMES, isReservedKey, assignKey, assignPadButton,
 } from '../../src/input/input';
 import { stepsFor, STEP_MS, MAX_STEPS } from '../../src/app/loop';
 import { BTN } from '../../src/game/core-api';
@@ -26,7 +28,33 @@ describe('teclado (spec §2.6, R16)', () => {
   });
   it('nome legível das teclas', () => {
     expect(['KeyW', 'Digit7', 'Numpad2', 'ArrowUp', 'Space', 'Semicolon'].map(keyLabel))
-      .toEqual(['W', '7', 'NUM 2', 'SETA CIMA', 'ESPAÇO', 'SEMICOLON']);
+      .toEqual(['W', '7', 'NUM 2', 'SETA CIMA', 'ESPAÇO', ';']);
+  });
+  it('nomes de tecla em PT-BR, sem cair no código em inglês (M3)', () => {
+    expect(['Backquote', 'CapsLock', 'MetaLeft', 'BracketLeft', 'IntlBackslash', 'F5', 'Lang1'].map(keyLabel))
+      .toEqual(['CRASE', 'CAPS LOCK', 'WIN ESQ', '[', 'BARRA INVERTIDA 2', 'F5', 'OUTRA TECLA']);
+    // Todo nome tem glifo no `ascii8` (fonte das Opções) e no fallback.
+    const names = [...Object.values(KEY_NAMES), 'OUTRA TECLA', 'F12'];
+    expect(names.flatMap(n => missingGlyphs('ascii8', n).map(c => `${n} → ${c}`))).toEqual([]);
+    expect(names.flatMap(n => fallbackMissing(n).map(c => `${n} → ${c}`))).toEqual([]);
+  });
+  it('teclas reservadas (M3): Esc, Tab, F1–F12, Windows, menu de contexto', () => {
+    expect(['Escape', 'Tab', 'F1', 'F12', 'MetaLeft', 'OSRight', 'ContextMenu', 'KeyA', 'Space', 'Enter'].map(isReservedKey))
+      .toEqual([true, true, true, true, true, true, true, false, false, false]);
+  });
+  it('assignKey troca quando a tecla já está em outra ação, no mesmo teclado ou no outro (M3)', () => {
+    const maps = DEFAULT_KEYMAPS.map(m => ({ ...m }));
+    assignKey(maps, 0, 'a', 'KeyW');                 // W era ↑ do teclado 1
+    expect([maps[0].a, maps[0].up]).toEqual(['KeyW', 'KeyJ']);
+    assignKey(maps, 0, 'b', 'ArrowUp');              // ↑ era do teclado 2
+    expect([maps[0].b, maps[1].up]).toEqual(['ArrowUp', 'KeyK']);
+    const all = maps.flatMap(m => Object.values(m));
+    expect(new Set(all).size).toBe(all.length);
+  });
+  it('assignPadButton troca dentro do mesmo controle', () => {
+    const m = { ...DEFAULT_PADMAP };
+    assignPadButton(m, 'a', 0);                      // 0 era o B
+    expect([m.a, m.b]).toEqual([0, 1]);
   });
 });
 
