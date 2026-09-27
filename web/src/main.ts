@@ -3,6 +3,7 @@ import { browserStorage, defaultSettings, loadSettings, saveSettings } from './a
 import { startLoop } from './app/loop';
 import { FADE_IN_1 } from './app/fade';
 import { startRealAudio } from './app/audio';
+import './audio/register';
 import { onRomChange, romState } from './app/rom-api';
 import { parseConfig } from './game/config';
 import { createMatchSession, carry, type MatchSession } from './game/match-session';
