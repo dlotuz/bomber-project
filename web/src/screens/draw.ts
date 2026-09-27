@@ -34,10 +34,10 @@ export function drawScreen(app: App, ms: MatchSession): Screen & { readonly s: n
       }
     },
     draw(ctx, bank) {
+      // Palco (disco e feixes) e quadro dos bomberitas dependem de `s` (só depois de `growTo`) — `stageVisible`.
       const a = romState.assets;
-      const g = s < DRAW_SCENE.growTo ? 54 : 52;
-      if (a) drawEmpateRom(ctx, bank, a, input(), letters(), g);
-      else drawEmpateFallback(ctx, bank, input(), letters());
+      if (a) drawEmpateRom(ctx, bank, a, input(), letters(), s);
+      else drawEmpateFallback(ctx, bank, input(), letters(), s);
     },
   };
 }
