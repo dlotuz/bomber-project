@@ -1,6 +1,6 @@
 import { BTN } from '../game/core-api';
 import type { App, Screen, Cue } from '../app/app';
-import { LAYOUTS } from '../core';
+import { LAYOUTS } from '../game/core-api';
 import { THEMES } from '../render/art/tiles';
 import { Repeater } from '../input/repeat';
 import { STAGE, STAGE_BLACK, stageScrollOffset, battleTextVisible, stageTitleDy } from '../game/timeline';
