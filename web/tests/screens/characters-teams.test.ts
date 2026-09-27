@@ -16,7 +16,7 @@ import { idleInput, type MenuInput } from '../../src/input/input';
 import { loadCapturePng, pixelMatch } from './capture-png';
 import { mkApp, press, hold, settle, inputOf } from './helpers';
 import { ASSETS } from './rom';
-import { loadCapture, capturedMap, mapMatch, type Rect } from './captures';
+import { loadCapture, capturedMap, mapMatch, parseOam, type Rect } from './captures';
 
 /** Bank falso (sem DOM): só precisa devolver algo com `width`/`height` para os `drawImage` não quebrarem. */
 const fakeBank = {
@@ -76,9 +76,10 @@ describe.skipIf(!ASSETS || !loadCapturePng('charsel'))('quadro da charsel × cha
   it('coluna de retratos (x 24–55, y 31–190) = a da captura, pixel a pixel (personagens 0..4 nos slots 0..4)', () => {
     expect(pixelMatch(render([0, 1, 2, 3, 4]), png, [], { x0: 24, y0: 31, x1: 55, y1: 190 })).toBe(1);
   });
-  it('fora do miolo da moldura (escurecido pela subtração de cor), do título e dos cursores: o quadro inteiro bate', () => {
-    const inner = { x0: 64, y0: 40, x1: 223, y1: 190 };   // miolo dentro da corda (e a metade de dentro dela), na tela
-    expect(pixelMatch(render([0, 1, 2, 3, 4]), png, [inner, shifted(CHARSEL_TITLE_PX)])).toBe(1);
+  it('fora do título e dos cursores (OBJ da captura), o quadro inteiro bate, com o miolo escurecido', () => {
+    const cursors = parseOam(loadCapture('charsel')!.oam).filter(r => r.tile >= 0xc0)
+      .map(r => ({ x0: r.x, y0: r.y, x1: r.x + (r.big ? 31 : 15), y1: r.y + (r.big ? 31 : 15) }));
+    expect(pixelMatch(render([0, 1, 2, 3, 4]), png, [...cursors, shifted(CHARSEL_TITLE_PX)])).toBe(1);
   });
   it('retratos por slot e personagem: palavras de BG1 da captura e "×" no slot desligado', () => {
     const words = charselPortraitWords([0, 1, 2, 3, 4]);

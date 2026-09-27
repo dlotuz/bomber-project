@@ -121,18 +121,22 @@ export function splitTitle(text: string): [string, string] {
   return best < 0 ? [text, ''] : [text.slice(0, best), text.slice(best + 1)];
 }
 
+/** Miolo escurecido (subtração de cor do plano 10, I7): casas 8×8 do BG3 com a palavra `$1004` na captura
+ *  `charsel` (360 casas = colunas 8–27, linhas 5–22; o BG3 não rola). */
+export const CHARSEL_SHADE = { c0: 8, l0: 5, c1: 27, l1: 22 };
+
 /** Deslocamento tela − mapa do BG1 com `CHARSEL_SCROLL` (o PPU soma 1 ao VOFS): +8 em x, −1 em y. */
 export const CHARSEL_BG1_SHIFT = { x: -CHARSEL_SCROLL.bg1[0], y: -CHARSEL_SCROLL.bg1[1] - 1 };
 
 /** Quadro PPU da cena `charsel` com ROM: corda/quebra-cabeça (`MAP_SOURCES.charsel`, T19), a coluna de retratos
  *  de `chars` (slot → personagem, `null` = desligado) no BG1, as cores de cada retrato nas linhas
- *  `CHARSEL_PORTRAIT_PAL` e os scrolls medidos. `oam` = bonecos/cursores da tela. */
+ *  `CHARSEL_PORTRAIT_PAL`, o miolo escurecido (`CHARSEL_SHADE`) e os scrolls medidos. `oam` = bonecos da tela. */
 export function charselFrame(a: RomAssets, chars: readonly (number | null)[], oam: ObjEntry[] = []): PpuFrame {
   const g = sceneGfx(a, 'charsel');
   const maps = sceneMaps(a, 'charsel', charselMaps);
   const bg1 = (maps.bg1 ?? newMap()).slice();
   for (const p of charselPortraitWords(chars)) put(bg1, p.col, p.row, p.w);
-  const frame = sceneFrame(g, { ...maps, bg1 }, { ...CHARSEL_SCROLL, oam });
+  const frame = sceneFrame(g, { ...maps, bg1, shade: CHARSEL_SHADE }, { ...CHARSEL_SCROLL, oam });
   return { ...frame, cgram: withPortraitPalettes(a, g.cgram, chars.map(c => c ?? NO_CHAR), CHARSEL_PORTRAIT_PAL) };
 }
 
