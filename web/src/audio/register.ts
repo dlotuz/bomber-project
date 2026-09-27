@@ -27,12 +27,16 @@ export function withDismountVoice(ev: readonly GameEvent[]): readonly GameEvent[
 
 const battle = new BattleAudio({ stage: STAGE_SFX, mount: MOUNT_SFX });
 
-registerAudioFactory(createAudioFactory({
+const factory = createAudioFactory({
   currentRom: () => romState.assets?.rom ?? null,
   createClient: s => AudioClient.create(s, m => {
     if (import.meta.env.DEV && m.t === 'stats' && (m.errors || m.droppedSfx)) console.warn('áudio:', m);
   }),
   onTick: () => battle.tick(),
+  onSink: () => battle.reset(),                    // M2: descarta os atrasos acumulados com o NoopSink
   onError: e => console.warn('Som original indisponível:', e),
-}));
+});
+registerAudioFactory(factory);
+/** Repassa um gesto do usuário ao AudioContext atual (pode ter nascido suspenso). */
+export const resumeAudio = (): void => factory.resume();
 setGameEventAudio((sink, ev) => battle.handle(sink, withDismountVoice(ev)));

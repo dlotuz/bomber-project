@@ -11,19 +11,21 @@ function fakeRom(): RomBytes {
 
 function setup() {
   let rom: RomBytes | null = null;
-  const clients: { sent: AudioCmd[]; closed: boolean; c0: number; data: number }[] = [];
+  const clients: { sent: AudioCmd[]; closed: boolean; c0: number; data: number; resumes: number }[] = [];
+  const sinks: unknown[] = [];
   let ticks = 0;
   const factory = createAudioFactory({
     currentRom: () => rom,
     createClient: async s => {
-      const c = { sent: [] as AudioCmd[], closed: false, c0: s.c0.length, data: s.data.length };
+      const c = { sent: [] as AudioCmd[], closed: false, c0: s.c0.length, data: s.data.length, resumes: 0 };
       clients.push(c);
-      const api: AudioClientLike = { send: cmd => { c.sent.push(cmd); }, setGain: () => {}, close: async () => { c.closed = true; } };
+      const api: AudioClientLike = { send: cmd => { c.sent.push(cmd); }, setGain: () => {}, resume: () => { c.resumes++; }, close: async () => { c.closed = true; } };
       return api;
     },
     onTick: () => { ticks++; },
+    onSink: sk => { sinks.push(sk); },
   });
-  return { factory, clients, setRom: (r: RomBytes | null) => { rom = r; }, ticks: () => ticks };
+  return { factory, clients, sinks, setRom: (r: RomBytes | null) => { rom = r; }, ticks: () => ticks };
 }
 
 describe('createAudioFactory (registerAudioFactory do plano 10)', () => {
@@ -59,6 +61,22 @@ describe('createAudioFactory (registerAudioFactory do plano 10)', () => {
     const [a, b] = await Promise.all([t.factory(), t.factory()]);
     expect(a).toBe(b);
     expect(t.clients).toHaveLength(1);
+  });
+  it('resume() repassa ao cliente atual (gesto do usuário, I3); sem cliente não faz nada', async () => {
+    const t = setup();
+    t.factory.resume();
+    t.setRom(fakeRom());
+    await t.factory();
+    t.factory.resume(); t.factory.resume();
+    expect(t.clients[0].resumes).toBe(2);
+  });
+  it('onSink avisa cada sink real novo (o BattleAudio zera os atrasos, M2)', async () => {
+    const t = setup();
+    t.setRom(fakeRom());
+    const a = await t.factory(); await t.factory();
+    t.setRom(fakeRom());
+    const b = await t.factory();
+    expect(t.sinks).toEqual([a, b]);
   });
   it('erro ao criar o cliente: NoopSink e onError', async () => {
     const errs: unknown[] = [];

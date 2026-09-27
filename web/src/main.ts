@@ -3,7 +3,8 @@ import { browserStorage, defaultSettings, loadSettings, saveSettings } from './a
 import { startLoop } from './app/loop';
 import { FADE_IN_1 } from './app/fade';
 import { startRealAudio } from './app/audio';
-import './audio/register';
+import { resumeAudio } from './audio/register';
+import { createAudioStarter } from './audio/starter';
 import { onRomChange, romState } from './app/rom-api';
 import { parseConfig } from './game/config';
 import { createMatchSession, carry, type MatchSession } from './game/match-session';
@@ -36,19 +37,15 @@ app.audio.setVolume(settings.options.musicVol / 10, settings.options.sfxVol / 10
 // Painel da ROM (plano 5): usa a ROM guardada ou, sem ela, pede o arquivo (não abre sozinho em ?debug/?quick).
 void startRomUi(document, { autoShow: !params.has('debug') && !params.has('quick') });
 
-// Áudio só depois do 1º gesto (§6.1); trocar de ROM recria o sink (os samples vêm da ROM).
-let audioOn = false, audioPending = false;
-const startAudio = (): void => {
-  if (audioPending) return;
-  audioPending = true;
-  startRealAudio(app.audio)
-    .then(ok => { audioOn = ok; }, e => { console.warn('Crown Blast: áudio indisponível.', e); })
-    .finally(() => { audioPending = false; });
-};
-const gesture = (): void => { if (!audioOn) startAudio(); };
-window.addEventListener('keydown', gesture);
-window.addEventListener('pointerdown', gesture);
-onRomChange(() => { if (audioOn) startAudio(); });
+// Áudio só depois do 1º gesto (§6.1); trocar de ROM recria o sink (os samples vêm da ROM). Cada gesto
+// (tecla, ponteiro, toque/clique ou botão do controle, no loop) também pede resume() ao AudioContext.
+const audioStart = createAudioStarter({
+  start: () => startRealAudio(app.audio),
+  resume: resumeAudio,
+  warn: e => console.warn('Crown Blast: áudio indisponível.', e),
+});
+for (const ev of ['keydown', 'pointerdown', 'pointerup', 'click'] as const) window.addEventListener(ev, () => audioStart.gesture());
+onRomChange(() => audioStart.romChanged());
 
 const ctx = createDisplay(document.getElementById('screen') as HTMLCanvasElement);
 const bank = new SpriteBank();
@@ -80,7 +77,9 @@ let prev = emptyDevices();
 startLoop(() => {
   if (held) return;
   const cur = input.poll();
-  app.update(withEscapeAsBack(buildInput(cur, prev, app.settings.devices, input.takeLastKey(),
-    { connected: input.connected(), esc: input.escHeld(), padButton: input.takePadButton() })));
+  const inp = withEscapeAsBack(buildInput(cur, prev, app.settings.devices, input.takeLastKey(),
+    { connected: input.connected(), esc: input.escHeld(), padButton: input.takePadButton() }));
+  if (inp.pressedAny) audioStart.gesture();        // botão do controle também conta como gesto (M6)
+  app.update(inp);
   prev = cur;
 }, () => app.draw(ctx, bank));
