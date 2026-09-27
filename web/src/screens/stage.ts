@@ -11,8 +11,8 @@ import { configFromSetup, canStart } from '../game/config';
 import { S } from '../render/text/strings';
 import { drawText } from '../render/text/text';
 import { romState } from '../app/rom-api';
-import { sceneGfx, sceneFrame, PpuCanvas } from '../render/screens-rom/scene';
-import { buildStagePreviewStrip, STAGE_ICON_HOFS_BASE } from '../render/screens-rom/stagesel';
+import { sceneFrame, PpuCanvas } from '../render/screens-rom/scene';
+import { stagePreview, STAGE_ICON_HOFS_BASE } from '../render/screens-rom/stagesel';
 import { drawBackground } from './ui';
 import { battleScreen } from './battle';
 import { charactersScreen } from './characters';
@@ -52,7 +52,7 @@ export function stageScreen(app: App): Screen & {
   const setup = app.settings.setup;
   const rep = new Repeater(STAGE.repeatFirst, STAGE.repeatEvery);
   const ppu = new PpuCanvas();
-  let dir = 0;          // 0 parado, ±1 rolando
+  let dir: -1 | 0 | 1 = 0;   // 0 parado, ±1 rolando
   let scrollT = 0;
   let seqF = -1;         // -1 = sequência "BATALHA!" não iniciada
 
@@ -115,11 +115,10 @@ export function stageScreen(app: App): Screen & {
       const s = currentScroll();
       const rom = romState.assets;
       if (rom) {
-        // ROM: fundo de quebra-cabeça igual aos outros menus (cena `stagesel`, T5) e as 3 prévias reais
-        // (anterior/atual/seguinte) reconstruídas de `$C1:A901`/`$C1:A209`, com o BG1 rolando por baixo
-        // delas (`render/screens-rom/stagesel.ts`).
-        const g = sceneGfx(rom, 'stagesel');
-        const maps = buildStagePreviewStrip(rom, setup.stage);
+        // ROM: fundo de quebra-cabeça igual aos outros menus (cena `stagesel`, T5) e as prévias reais
+        // (anterior/atual/seguinte e, rolando, a que entra) com mapas e paletas por slot lidos da ROM
+        // (`$C1:A8D1`/`$C1:A92B`), com o BG1 rolando por baixo delas (`render/screens-rom/stagesel.ts`).
+        const { g, maps } = stagePreview(rom, setup.stage, dir);
         ppu.draw(ctx, sceneFrame(g, maps, { bg1: [STAGE_ICON_HOFS_BASE - s, 0] }));
       } else {
         // Sem ROM: fallback com a arena reduzida (T-anterior), sem alpha, nas posições do R29.
