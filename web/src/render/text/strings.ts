@@ -11,7 +11,7 @@ export const RACER_PRIZE_NAMES = {
 } as const;
 
 const DEVICE_NAMES = { kb: 'TECLADO', gp0: 'CONTROLE 1', gp1: 'CONTROLE 2', gp2: 'CONTROLE 3', gp3: 'CONTROLE 4', none: 'NENHUM' } as const;
-const ACTIONS = { up: 'CIMA', down: 'BAIXO', left: 'ESQUERDA', right: 'DIREITA', a: 'A', b: 'B', x: 'X', y: 'Y', l: 'L', r: 'R', start: 'START', select: 'SELECT' } as const;
+const ACTIONS = { up: 'CIMA', down: 'BAIXO', left: 'ESQUERDA', right: 'DIREITA', a: 'A (BOMBA)', b: 'B (DETONAR)', x: 'X (PARA CHUTE)', y: 'Y (SOCO)', l: 'L', r: 'R', start: 'START', select: 'SELECT' } as const;
 
 export const S = {
   title: { normal: 'JOGO NORMAL', battle: 'JOGO DE BATALHA', options: 'OPÇÕES', pressStart: 'APERTE START!' },
