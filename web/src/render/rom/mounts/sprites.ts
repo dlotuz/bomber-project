@@ -6,12 +6,14 @@ import { rider, EGG_BURST_TICKS, type MountState } from '../../../core/mounts/ty
 import { isEggCode } from '../../../core/mounts/core-api';
 import { EGG_ANIMS, RESERVE_EGG_ANIMS, PROJ_ANIMS, REMOUNT_GLOW_ANIMS } from './facts';
 import { sampleSeq, piecePx, cellXY } from './gfx';
+import { follower } from '../../anim/follow';
 
 /** Míssil D por direção ↑ → ↓ ←: tabela de ponteiros em $C1:32D6, indexada por `$1D & 3` ($C1:32A0). A fixture só
  *  mediu a direita (`PROJ_ANIMS.d` = $D8:0EDB). */
 const PROJ_D_BY_DIR = [0xd80ec8, 0xd80edb, 0xd80eee, 0xd80f01] as const;
 
-const EGG_PAL = 7;   // paleta comum (bomba/itens/ovos), medida pal:7 em todas as peças de ovo/reserva/projétil
+const EGG_PAL = 7;
+const reserveFollow = follower();   // paleta comum (bomba/itens/ovos), medida pal:7 em todas as peças de ovo/reserva/projétil
 
 /** Leitura sem efeito colateral (mesma regra da camada de fallback, T5): nunca criar `s.mountState` ao desenhar. */
 const projectilesOf = (s: RoundState) => (s.mountState as MountState | null)?.projectiles ?? [];
@@ -51,10 +53,11 @@ export function mountRomSprites(s: RoundState, a: RomAssets, frame: number): Mou
     const ownCell = r.trail[0];
     const t = frame - r.t0;
     const { frame: fr } = sampleSeq(a, RESERVE_EGG_ANIMS, t);
+    const at = reserveFollow(r, p.x / 256, p.y / 256, frame);
     r.reserves.forEach((_type, i) => {
       const cell = r.trail[i + 1] ?? ownCell;
       if (cell === undefined) return;
-      const { X, Y } = cellXY(cell);
+      const c = cellXY(cell), { x: X, y: Y } = at(i, c.X, c.Y);
       out.push(...commonPieces(a, s.stage, X, Y, fr));
     });
   }

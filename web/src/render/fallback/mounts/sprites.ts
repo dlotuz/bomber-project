@@ -4,6 +4,7 @@ import type { Pix } from '../../art/pix';
 import { rider, type MountState } from '../../../core/mounts/types';
 import { cellAt, colOf, linOf } from '../../../core/mounts/core-api';
 import { mountPix, eggPix, shotPix } from './art';
+import { follower } from '../../anim/follow';
 
 /** Leitura sem efeito colateral: a camada de desenho nunca deve criar `s.mountState` (isso é papel do
  *  `step()`/`mstate()` da simulação). Uma rodada sem montarias ainda não tocadas fica com `mountState` null. */
@@ -19,6 +20,7 @@ export interface FbSprite { key: string; make: () => Pix; x: number; y: number; 
 export const playerHidden = (p: Player): boolean => p.state === 'alive' && (!invisibleVisible(p) || (p.inv & 2) !== 0);
 
 const cellXY = (cell: number) => ({ x: 16 * colOf(cell) - 8, y: 16 * linOf(cell) + 24 });
+const reserveFollow = follower();
 const faceOf = (d: number): 0 | 2 | 4 | 6 => ((d & 6) as 0 | 2 | 4 | 6);
 
 export function fallbackMountSprites(s: RoundState, frame: number): FbSprite[] {
@@ -37,7 +39,11 @@ export function fallbackMountSprites(s: RoundState, frame: number): FbSprite[] {
     if (r.phase === 'dismount') { if (r.remount && !hidden) egg(here, r.type, (frame >> 3) & 1); continue; }
     const st = p.moveDir !== 8 ? (frame >> 3) & 1 : 0, f = faceOf(p.face);
     if (!hidden) out.push({ key: `mount:${r.type}:${f}:${st}`, make: () => mountPix(r.type, f, st), x: Math.floor(p.x / 256) - 12, y: Math.floor(p.y / 256) - 12, front: true });
-    r.reserves.forEach((t, i) => egg(r.trail[i + 1] ?? here, t, 0));
+    const at = reserveFollow(r, p.x / 256, p.y / 256, frame);
+    r.reserves.forEach((t, i) => {
+      const c = cellXY(r.trail[i + 1] ?? here), q = at(i, c.x, c.y);
+      out.push({ key: `egg:${t >= 8 ? 1 : 0}:0`, make: () => eggPix(t >= 8 ? 1 : 0, 0), x: q.x, y: q.y });
+    });
   }
   // L22: reserva queimada — ovo piscando na casa enquanto o core mantém a explosão (EGG_BURST_TICKS).
   for (const b of burstsOf(s)) egg(b.cell, b.mount, (frame >> 3) & 1);
