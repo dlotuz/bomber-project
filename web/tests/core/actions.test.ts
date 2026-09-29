@@ -5,6 +5,7 @@ import { centerX } from '../../src/core/units';
 import { setAct } from '../../src/core/state';
 import { addBomb } from '../../src/core/bombs';
 import { startLift, tickFlyers } from '../../src/core/flyers';
+import { tryKick } from '../../src/core/kick';
 import { NO_MOUNT } from '../../src/core/mounts';
 
 function ticks(s: RoundState, ps: Player[], n: number, ev: GameEvent[] = []): GameEvent[] {
@@ -117,6 +118,30 @@ describe('máquina de ação', () => {
     expect([p.carry, b.state]).toEqual([-1, 'air']);
     for (let i = 0; i < 20; i++) { s.tick++; tickFlyers(s, ev); }
     expect([b.state, b.cell]).toEqual(['idle', C(5, 1)]);
+  });
+  describe('montado: nenhuma habilidade de quem está a pé, só o poder da montaria', () => {
+    function mounted() {
+      const s = arena(); const p = put(s, 0, 4, 1);
+      p.glove = true; p.punch = true; p.pItem = true; p.kick = true; p.face = 2;
+      p.mount = { type: 2, phase: 'riding' };
+      return { s, p };
+    }
+    it('luva: A e B sobre a bomba não levantam', () => {
+      for (const btn of [BTN.A, BTN.B]) {
+        const { s, p } = mounted(); addBomb(s, 0, C(4, 1));
+        playerActions(s, p, btn, btn, 0, []);
+        expect(p.carry, `btn=${btn}`).toBe(-1);
+      }
+    });
+    it('Y sem poder da montaria: não soca nem dá o golpe P', () => {
+      const { s, p } = mounted(); const b = addBomb(s, 0, C(5, 1)); const ev: GameEvent[] = [];
+      withMount({ ...NO_MOUNT, onY: () => false }, () => playerActions(s, p, BTN.Y, BTN.Y, 0, ev));
+      expect([b.state, p.act, ev]).toEqual(['idle', 'idle', []]);
+    });
+    it('chute do item não vale', () => {
+      const { s, p } = mounted(); addBomb(s, 0, C(5, 1));
+      expect(withMount({ ...NO_MOUNT, kicks: () => false }, () => tryKick(s, p, []))).toBe(false);
+    });
   });
   it('Y: a montaria tem precedência sobre o P', () => {
     const s = arena(); const p = put(s, 0, 4, 1); p.pItem = true;

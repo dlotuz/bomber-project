@@ -62,16 +62,18 @@ export function playerActions(s: RoundState, p: Player, btn: number, pressed: nu
   if (p.carry >= 0 && !(btn & (BTN.A | BTN.B))) { tossHeld(s, p); setAct(s, p, 'idle'); }   // levantou com B e soltou
   movePlayer(s, p, btn, ev);
   tryKick(s, p, ev);
-  if (pressed & BTN.A) { if (p.carry < 0 && !(p.glove && startLift(s, p, ev))) placeBomb(s, p, ev); }
+  // Montado (qualquer fase): nada de luva, soco nem P — só o poder da própria montaria (Y) e as bombas.
+  const onFoot = !p.mount;
+  if (pressed & BTN.A) { if (p.carry < 0 && !(onFoot && p.glove && startLift(s, p, ev))) placeBomb(s, p, ev); }
   else if (p.disease === DISEASE.DIARRHEA && p.carry < 0) placeBomb(s, p, ev);
   if (pressed & BTN.B && p.carry >= 0) {   // luva: B larga a bomba na casa da frente
     tossHeld(s, p);
     setAct(s, p, 'idle');
-  } else if (pressed & BTN.B && !startLift(s, p, ev)) {   // luva sobre a bomba: B também levanta (segura enquanto apertado)
+  } else if (pressed & BTN.B && !(onFoot && startLift(s, p, ev))) {   // luva sobre a bomba: B também levanta (segura enquanto apertado)
     detonateRemote(s, p, ev); setAct(s, p, 'detonate', DETONATE_TICKS);
   }
   if (pressed & BTN.X) stopKick(s, p);
-  if (pressed & BTN.Y && !MOUNTS.current.onY(s, p, ev)) {
+  if (pressed & BTN.Y && !MOUNTS.current.onY(s, p, ev) && onFoot) {
     if (p.pItem) startPPunch(s, p, ev);
     else if (p.punch) punchBomb(s, p, ev);
   }

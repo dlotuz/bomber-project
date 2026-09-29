@@ -10,7 +10,7 @@ import { MOUNTS } from './mounts';
 
 /** Chute automático ($C2:4307): depois do movimento, olhando para uma bomba parada vizinha. */
 export function tryKick(s: RoundState, p: Player, ev: GameEvent[]): boolean {
-  if (!(p.kick || MOUNTS.current.kicks?.(p))) return false;
+  if (!((p.kick && !p.mount) || MOUNTS.current.kicks?.(p))) return false;
   const here = playerCell(p);
   if (here < 0 || !(KICK_MASK[subY(p.y) * 16 + subX(p.x)] & KICK_DIRBIT[p.face >> 1])) return false;
   const n = faceStep(here, p.face);

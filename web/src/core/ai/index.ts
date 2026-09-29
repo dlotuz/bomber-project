@@ -61,7 +61,7 @@ function drive(s: RoundState, p: Player, brain: Brain): number {
 /** Caveira $26 (não para): sem direção o jogador segue a última; para ficar parado, empurra uma parede vizinha. */
 function brake(s: RoundState, p: Player): number {
   const here = playerCell(p);
-  const kicks = p.kick || !!MOUNTS.current.kicks?.(p);
+  const kicks = (p.kick && !p.mount) || !!MOUNTS.current.kicks?.(p);
   for (const face of [0, 2, 4, 6]) {
     const v = s.grid[faceStep(here, face)] ?? CODE.HARD;
     if (v === CODE.BOMB ? !kicks && !p.passBomb : blockedFor(p, v)[0]) return FACE_BTN[face];
@@ -74,7 +74,7 @@ function brake(s: RoundState, p: Player): number {
 function hold(s: RoundState, p: Player): number {
   if (p.disease !== DISEASE.NO_STOP) return 0;
   const v = s.grid[faceStep(playerCell(p), p.face)] ?? CODE.HARD;
-  const kicks = p.kick || !!MOUNTS.current.kicks?.(p);
+  const kicks = (p.kick && !p.mount) || !!MOUNTS.current.kicks?.(p);
   if (v === CODE.BOMB ? !kicks && !p.passBomb : blockedFor(p, v)[0]) return FACE_BTN[p.face];
   return brake(s, p);
 }

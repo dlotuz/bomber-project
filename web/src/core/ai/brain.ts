@@ -277,7 +277,7 @@ export function think(s: RoundState, p: Player, level: AiLevel, brain: Brain, _a
       for (const face of [0, 2, 4, 6]) if (kickWorth(s, p, face, level, aim)) { follow(null); brain.push = face; return; }
     }
     // 3c) ir até atrás de uma bomba parada cujo chute encurralaria um adversário
-    if (p.kick || MOUNTS.current.kicks?.(p)) {
+    if ((p.kick && !p.mount) || MOUNTS.current.kicks?.(p)) {
       let best = -1;
       for (const b of s.bombs) {
         if (b.state !== 'idle' || b.chainAt || s.grid[b.cell] !== CODE.BOMB) continue;

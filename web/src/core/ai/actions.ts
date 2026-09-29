@@ -125,7 +125,7 @@ function afterY(s: RoundState, p: Player): { sim: RoundState; delay: number } {
 /** Soco: bomba parada na casa da frente e, no 1º pouso (3 casas adiante, com a volta pela borda), um adversário de pé;
  *  ou, sem fuga garantida agora, o soco abre a fuga. */
 function wantPunch(s: RoundState, p: Player, level: AiLevel, hz: Hazard): boolean {
-  if (!p.punch) return false;
+  if (!p.punch || p.mount) return false;
   const here = playerCell(p), front = faceStep(here, p.face);
   if (!bombAt(s, front)) return false;
   const [x, y] = cellCenter(front);
@@ -139,7 +139,7 @@ function wantPunch(s: RoundState, p: Player, level: AiLevel, hz: Hazard): boolea
 /** Golpe P: adversário na casa da frente e o caminho do empurrão (até 3 casas, parando antes de sólido) fica mortal
  *  enquanto ele passa ou em até 30 ticks no destino (chama prevista ou pressão). */
 function wantP(s: RoundState, p: Player, level: AiLevel): boolean {
-  if (!p.pItem) return false;
+  if (!p.pItem || p.mount) return false;
   const front = faceStep(playerCell(p), p.face);
   const victims = s.players.filter(q => q !== p && standing(q) && playerCell(q) === front);
   if (!victims.length || victims.some(q => !isFoe(s, p, q))) return false;
@@ -177,7 +177,7 @@ function glove(s: RoundState, p: Player, level: AiLevel, brain: Brain, last: num
     if (s.tick <= brain.liftAt + 1) { brain.still = true; return BTN.A; }
     brain.liftAt = -1;
   }
-  if (!p.glove || p.actLeft > 0) return null;
+  if (!p.glove || p.mount || p.actLeft > 0) return null;
   const b = bombAt(s, here);
   if (!b || b.owner !== p.slot || b.bad || s.tick - b.born > FRESH) return null;
   const n = aimThrow(s, here, p.face, p.slot);
@@ -210,7 +210,7 @@ export type KickAim = 'rescue' | 'hit' | 'trap';
  *  garantida? */
 export function kickWorth(s: RoundState, p: Player, face: number, level: AiLevel, aim: KickAim,
   from = playerCell(p)): boolean {
-  if (!(p.kick || MOUNTS.current.kicks?.(p))) return false;
+  if (!((p.kick && !p.mount) || MOUNTS.current.kicks?.(p))) return false;
   const n = faceStep(from, face);
   if (s.grid[n] !== CODE.BOMB) return false;
   const b = bombAt(s, n);
@@ -252,7 +252,7 @@ export function decideActions(s: RoundState, p: Player, level: AiLevel, brain: B
   if (!(last & BTN.Y)) {
     if (MOUNTS.current.ai?.useY?.(s, p.slot)) return BTN.Y;
     const front = faceStep(playerCell(p), p.face);
-    const punchable = p.punch && !!bombAt(s, front);
+    const punchable = p.punch && !p.mount && !!bombAt(s, front);
     if (wantP(s, p, level) || (punchable && wantPunch(s, p, level, hazards(s, p.slot)))) { brain.still = true; return BTN.Y; }
   }
   return 0;
