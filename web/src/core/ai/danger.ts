@@ -13,6 +13,10 @@ import { pressureTriggerSec } from '../clock';
 export const SAFE = 1_000_000;
 /** Quantos ticks antes do gatilho da pressão a IA já trata as casas que vão cair como condenadas (como no legado). */
 export const PRESSURE_LEAD = 300;
+/** Só o bloco que pousa em até 120 ticks conta como perigo. Marcar a espiral inteira de uma vez deixava só o miolo
+ *  (que ela nunca cobre) como refúgio, e todos os CPUs corriam para o centro em 1:00, antes de cair o 1º bloco. Assim
+ *  eles recuam com a espiral (medido em 120 rodadas: menos esmagados e menos TIME UP que marcando tudo). */
+export const PRESSURE_HORIZON = 120;
 /** Pavio da bomba hipotética (a que a IA pensa em soltar agora): explode 127 ticks depois. */
 export const EXTRA_T = 127;
 
@@ -226,7 +230,9 @@ export function hazards(s: RoundState, forSlot = -1, extra?: Extra | readonly Ex
   });
   for (let c = 0; c < CELLS; c++) if (s.grid[c] === CODE.FLAME) mark(c, 1, s.cellT0[c] + FLAME_TICKS + 1 - s.tick);
   const T = pressureTriggerTick(s);
-  if (T >= 0 && T - s.tick <= PRESSURE_LEAD) for (const [c, land] of pressureCells(s)) mark(c, land + 1, SAFE);
+  if (T >= 0 && T - s.tick <= PRESSURE_LEAD) {
+    for (const [c, land] of pressureCells(s)) if (land <= PRESSURE_HORIZON) mark(c, land + 1, SAFE);
+  }
   const extraDanger = STAGES[s.stage]?.ai?.danger?.(s);
   if (extraDanger) for (const [c, o] of extraDanger) mark(c, o, o + FLAME_TICKS);
   return { at, end };

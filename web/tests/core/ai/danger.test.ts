@@ -66,6 +66,9 @@ describe('mapa de perigo (offsets a partir do próximo tick)', () => {
     const pc = pressureCells(s);
     expect(pc.get(C(2, 1))).toBe(10 + 205 + 38);
     expect(pc.get(C(3, 1))).toBe(10 + 219 + 38);
-    expect(dangerMap(s)[C(2, 1)]).toBe(10 + 205 + 38 + 1);
+    // bloco a 253 ticks: além do horizonte, ainda não é perigo (senão todos correm para o centro em 1:00)
+    expect(dangerMap(s)[C(2, 1)]).toBe(SAFE);
+    s.tick = 1000; s.pressure.trigger = s.tick - 150;        // 150 ticks depois do gatilho: pousa em 93, dentro
+    expect([pressureCells(s).get(C(2, 1)), dangerMap(s)[C(2, 1)], dangerMap(s)[C(8, 6)]]).toEqual([93, 94, SAFE]);
   });
 });
