@@ -3,6 +3,8 @@ import { playerActions, tickAct, startPPunch } from '../../src/core/actions';
 import { BTN, CODE, type GameEvent, type Player, type RoundState } from '../../src/core/types';
 import { centerX } from '../../src/core/units';
 import { setAct } from '../../src/core/state';
+import { addBomb } from '../../src/core/bombs';
+import { startLift } from '../../src/core/flyers';
 import { NO_MOUNT } from '../../src/core/mounts';
 
 function ticks(s: RoundState, ps: Player[], n: number, ev: GameEvent[] = []): GameEvent[] {
@@ -71,6 +73,20 @@ describe('máquina de ação', () => {
     p.carry = 5; setAct(s, p, 'lift', 4);
     playerActions(s, p, 0, 0, BTN.A, []);
     expect(p.throwQueued).toBe(true);
+  });
+  it('luva: B com a bomba na mão larga na casa da frente; bloqueada, na própria', () => {
+    const s = arena(); const p = put(s, 0, 4, 1); p.glove = true; p.face = 2;
+    const b = addBomb(s, 0, C(4, 1)); startLift(s, p, []); setAct(s, p, 'carryIdle');
+    playerActions(s, p, BTN.A | BTN.B, BTN.B, 0, []);
+    expect([p.carry, p.act, b.state, b.cell, s.grid[C(5, 1)]]).toEqual([-1, 'idle', 'idle', C(5, 1), CODE.BOMB]);
+    playerActions(s, p, BTN.A, 0, 0, []);
+    playerActions(s, p, 0, 0, BTN.A, []);                          // soltar A depois não arremessa nada
+    expect(p.act).not.toBe('throw');
+    const s2 = arena(); const q = put(s2, 0, 4, 1); q.glove = true; q.face = 2;
+    setCell(s2, 5, 1, CODE.HARD);
+    const b2 = addBomb(s2, 0, C(4, 1)); startLift(s2, q, []); setAct(s2, q, 'carryIdle');
+    playerActions(s2, q, BTN.A | BTN.B, BTN.B, 0, []);
+    expect([q.carry, b2.state, b2.cell]).toEqual([-1, 'idle', C(4, 1)]);
   });
   it('B: pose de detonar por 3 ticks, mesmo sem remota', () => {
     const s = arena(); const p = put(s, 0, 4, 1);

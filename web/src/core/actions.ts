@@ -5,7 +5,7 @@ import { playerCell, setAct, standing } from './state';
 import { movePlayer } from './movement';
 import { stopKick, tryKick } from './kick';
 import { detonateRemote, placeBomb } from './bombs';
-import { punchBomb, startLift, throwHeld } from './flyers';
+import { dropHeld, punchBomb, startLift, throwHeld } from './flyers';
 import { isImmune } from './hit';
 import { MOUNTS } from './mounts';
 import { STAGES } from './stages';
@@ -63,7 +63,10 @@ export function playerActions(s: RoundState, p: Player, btn: number, pressed: nu
   tryKick(s, p, ev);
   if (pressed & BTN.A) { if (p.carry < 0 && !(p.glove && startLift(s, p, ev))) placeBomb(s, p, ev); }
   else if (p.disease === DISEASE.DIARRHEA && p.carry < 0) placeBomb(s, p, ev);
-  if (pressed & BTN.B) { detonateRemote(s, p, ev); setAct(s, p, 'detonate', DETONATE_TICKS); }
+  if (pressed & BTN.B && p.carry >= 0) {   // luva: B larga a bomba na casa da frente (ou na própria, se a da frente não estiver livre)
+    dropHeld(s, p, [faceStep(playerCell(p), p.face), playerCell(p)]);
+    setAct(s, p, 'idle');
+  } else if (pressed & BTN.B) { detonateRemote(s, p, ev); setAct(s, p, 'detonate', DETONATE_TICKS); }
   if (pressed & BTN.X) stopKick(s, p);
   if (pressed & BTN.Y && !MOUNTS.current.onY(s, p, ev)) {
     if (p.pItem) startPPunch(s, p, ev);
