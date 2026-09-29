@@ -4,7 +4,7 @@ import {
   KEY_FIELDS, DEFAULT_KEYMAPS, DEFAULT_PADMAP, DEVICE_IDS, keyLabel, padLabel, assignKey, assignPadButton, isReservedKey,
   type DeviceId, type KeyMap,
 } from '../input/input';
-import { setDevice } from '../app/settings';
+import { defaultSettings, setDevice } from '../app/settings';
 import { S } from '../render/text/strings';
 import { FADE_MENU } from '../app/fade';
 import { drawOptionsPage, PpuCanvas, type OptionsRow } from '../render/screens-rom/options';
@@ -15,8 +15,9 @@ type Capture = keyof KeyMap | 'device';
 /**
  * Controles de um jogador: dispositivo (←/→ troca; A espera uma tecla ou um botão e escolhe o teclado ou aquele
  * controle), as 12 ações dele (A na ação, depois a tecla/botão nova), "configurar todos" (pede uma ação depois da
- * outra), restaurar o padrão deste jogador e voltar. Teclado: `inp.key` (Escape cancela; F1–F12, Tab e as teclas do
- * sistema são ignoradas). Controle: `inp.padButton` do próprio controle. Tecla/botão já usado em outra ação: as duas
+ * outra), restaurar o padrão deste jogador e voltar. Na captura vale tecla (`inp.key`; Escape cancela; F1–F12, Tab e
+ * as teclas do sistema são ignoradas) ou botão de qualquer controle (`inp.padButton`), e o jogador passa para o
+ * dispositivo usado. Tecla/botão já usado em outra ação: as duas
  * trocam (`assignKey`/`assignPadButton`). Depois de gravar ou cancelar: `applyInput()`, `save()` e ignora tudo até
  * soltar (evita reabrir com a tecla/botão novo ainda segurado).
  */
@@ -39,6 +40,7 @@ export function remapScreen(app: App, player: number): Screen & { readonly menu:
       id: 'reset', select: () => {
         for (const f of KEY_FIELDS) assignKey(st.keymaps, player, f, DEFAULT_KEYMAPS[player][f]);
         st.padmaps[player] = { ...DEFAULT_PADMAP };
+        setDevice(st.devices, player, defaultSettings().devices[player]);
         app.applyInput(); app.save();
       },
     },
@@ -46,8 +48,6 @@ export function remapScreen(app: App, player: number): Screen & { readonly menu:
   ];
   const menu = new Menu(rows);
   const canvas = new PpuCanvas();
-  // Sem dispositivo não há o que mapear: as ações ficam cinza e o cursor pula.
-  const syncDisabled = (): void => { for (const r of rows) if (r.id !== 'device' && r.id !== 'back') r.disabled = dev() === 'none'; };
 
   const label = (id: string): string => (id === 'device' ? S.options.device : id === 'all' ? S.options.all
     : id === 'reset' ? S.options.reset : id === 'back' ? S.options.back : S.options.actions[id as keyof KeyMap]);
@@ -72,29 +72,28 @@ export function remapScreen(app: App, player: number): Screen & { readonly menu:
     menu,
     get capturing() { return capturing; },
     update(inp) {
-      syncDisabled();
       if (suppress) { if (inp.any === 0) suppress = false; return; }
       if (capturing) {
         if (inp.key === 'Escape') { cancel(); return; }
-        const d = dev();
-        if (capturing === 'device') {
-          if (inp.key && !isReservedKey(inp.key)) { setDevice(st.devices, player, 'kb'); done(); }
-          else if (inp.padButton && inp.padButton.pad < 4) { setDevice(st.devices, player, `gp${inp.padButton.pad}` as DeviceId); done(); }
-          return;
+        // Aceita qualquer dispositivo (senão quem está no controle ficaria preso esperando uma tecla): o jogador passa a
+        // usar aquele em que apertou.
+        const key = inp.key && !isReservedKey(inp.key) ? inp.key : null;
+        const pb = inp.padButton && inp.padButton.pad < 4 ? inp.padButton : null;
+        if (!key && !pb) return;
+        setDevice(st.devices, player, key ? 'kb' : `gp${pb!.pad}` as DeviceId);
+        if (capturing !== 'device') {
+          if (key) assignKey(st.keymaps, player, capturing, key);
+          else assignPadButton(st.padmaps[player], capturing, pb!.button);
         }
-        const f = capturing;
-        if (d === 'kb' && inp.key) { if (!isReservedKey(inp.key)) { assignKey(st.keymaps, player, f, inp.key); done(); } return; }
-        if (d !== 'kb' && inp.padButton && `gp${inp.padButton.pad}` === d) { assignPadButton(st.padmaps[player], f, inp.padButton.button); done(); }
+        done();
         return;
       }
       const ev = menu.update(inp.any, inp.pressedAny, app.audio);
       if (ev === 'back') goBack();
     },
     draw(ctx, bank) {
-      syncDisabled();
-      const rowsOut: OptionsRow[] = rows.map(r => ({ label: label(r.id), value: value(r.id), disabled: r.disabled }));
-      const footer = capturing === 'device' ? S.options.pressAny
-        : capturing ? (dev() === 'kb' ? S.options.pressKey : S.options.pressPad) : undefined;
+      const rowsOut: OptionsRow[] = rows.map(r => ({ label: label(r.id), value: value(r.id) }));
+      const footer = capturing ? S.options.pressAny : undefined;
       drawOptionsPage(ctx, bank, canvas, S.options.controls(player + 1), rowsOut, menu.cursor, footer, 'ascii8');
     },
   };

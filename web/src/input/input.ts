@@ -21,14 +21,12 @@ export const DEFAULT_KEYMAPS: readonly KeyMap[] = [
   },
   NO_KEYS, NO_KEYS, NO_KEYS,
 ];
-/** Teclas que navegam os menus mesmo sem nenhum jogador no teclado. */
-const MENU_KEYMAPS = DEFAULT_KEYMAPS.slice(0, 2);
 
 /** Dispositivo de um jogador: o teclado (com as teclas daquele jogador), um dos 4 controles ou nenhum. */
 export type DeviceId = 'kb' | 'gp0' | 'gp1' | 'gp2' | 'gp3' | 'none';
 export const DEVICE_IDS: readonly DeviceId[] = ['kb', 'gp0', 'gp1', 'gp2', 'gp3', 'none'];
-/** Botões segurados por jogador (0–4); o índice 5 junta o que não é de ninguém (controles sem dono, teclas
- *  padrão sem jogador no teclado), que só serve para navegar os menus. */
+/** Botões segurados por jogador (0–4); o índice 5 junta o que não é de ninguém (controles sem dono, teclas de quem
+ *  não está no teclado), que só serve para navegar os menus. */
 export type DeviceState = number[];
 
 export function emptyDevices(): DeviceState {
@@ -103,8 +101,10 @@ export function readDevices(
     if (d === 'kb') return keymaps[i] ? readKeyMap(down, keymaps[i]) : 0;
     return readGamepad(gps[Number(d[2])] ?? null, padmaps[i] ?? DEFAULT_PADMAP);
   });
+  // Teclas de quem não está no teclado continuam navegando os menus (senão, passar o P1 para "nenhum" deixaria
+  // WASD/J mortos até nas Opções). As teclas não se repetem entre jogadores (`assignKey`), então não há conflito.
   let free = 0;
-  if (!assign.includes('kb')) for (const m of MENU_KEYMAPS) free |= readKeyMap(down, m);
+  keymaps.forEach((m, i) => { if ((assign[i] ?? 'none') !== 'kb') free |= readKeyMap(down, m); });
   gps.forEach((gp, n) => { if (!assign.includes(`gp${n}` as DeviceId)) free |= readGamepad(gp); });
   return [...out, free];
 }
@@ -239,7 +239,7 @@ export class InputManager {
 
   setKeymaps(maps: readonly KeyMap[]): void {
     this.maps = maps.map(m => ({ ...m }));
-    this.gameKeys = new Set([...this.maps, ...MENU_KEYMAPS].flatMap(m => Object.values(m)).filter(Boolean));
+    this.gameKeys = new Set(this.maps.flatMap(m => Object.values(m)).filter(Boolean));
   }
 
   setPadmaps(maps: readonly PadMap[]): void {

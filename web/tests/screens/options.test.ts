@@ -153,15 +153,21 @@ describe('controles do jogador', () => {
     app.update(inputOf(0, 0, undefined, { key: 'ArrowUp' }));   // era o CIMA do P2
     expect([r.capturing, app.settings.keymaps[0].a, app.settings.keymaps[1].up]).toEqual([null, 'ArrowUp', 'KeyJ']);
   });
-  it('controle: botão já usado em outra ação troca as duas; só aceita o controle do jogador', () => {
+  it('controle: botão já usado em outra ação troca as duas', () => {
     const { app } = mkApp();
     const r = remapScreen(app, 3); app.go(r);                 // P4 = controle 2 (gp1)
     r.menu.cursor = row('a');
     press(app, BTN.A);
-    app.update(inputOf(0, 0, undefined, { padButton: { pad: 0, button: 9 } }));
-    expect(r.capturing).toBe('a');
     app.update(inputOf(0, 0, undefined, { padButton: { pad: 1, button: 9 } }));   // 9 era START
     expect([r.capturing, app.settings.padmaps[3].a, app.settings.padmaps[3].start, app.settings.padmaps[2]]).toEqual([null, 9, DEFAULT_PADMAP.a, DEFAULT_PADMAP]);
+  });
+  it('captura aceita qualquer dispositivo: jogador no teclado aperta um botão do controle e passa para ele', () => {
+    const { app } = mkApp();
+    const r = remapScreen(app, 0); app.go(r);                 // P1 = teclado
+    r.menu.cursor = row('up');
+    press(app, BTN.A);
+    app.update(inputOf(0, 0, undefined, { padButton: { pad: 1, button: 12 } }));
+    expect([r.capturing, app.settings.devices[0], app.settings.devices[3], app.settings.padmaps[0].up]).toEqual([null, 'gp1', 'kb', 12]);
   });
   it('configurar todos: pede as 12 ações em sequência', () => {
     const { app } = mkApp();
@@ -190,12 +196,21 @@ describe('controles do jogador', () => {
     app.update(inputOf(0, 0, undefined, { key: 'KeyP' }));
     expect(app.settings.devices[0]).toBe('kb');
   });
-  it('restaurar padrão do jogador', () => {
+  it('sem dispositivo (NENHUM) ainda dá para configurar: a tecla apertada põe o jogador no teclado', () => {
     const { app } = mkApp();
-    app.settings.keymaps[0].a = 'KeyZ'; app.settings.padmaps[0].a = 5;
+    app.settings.devices[0] = 'none';
+    const r = remapScreen(app, 0); app.go(r);
+    r.menu.cursor = row('a');
+    press(app, BTN.A);
+    app.update(inputOf(0, 0, undefined, { key: 'KeyZ' }));
+    expect([app.settings.devices[0], app.settings.keymaps[0].a]).toEqual(['kb', 'KeyZ']);
+  });
+  it('restaurar padrão do jogador (teclas, botões e dispositivo)', () => {
+    const { app } = mkApp();
+    app.settings.keymaps[0].a = 'KeyZ'; app.settings.padmaps[0].a = 5; app.settings.devices[0] = 'none';
     const r = remapScreen(app, 0); app.go(r);
     r.menu.cursor = row('reset'); press(app, BTN.A);
-    expect([app.settings.keymaps[0], app.settings.padmaps[0]]).toEqual([defaultSettings().keymaps[0], DEFAULT_PADMAP]);
+    expect([app.settings.keymaps[0], app.settings.padmaps[0], app.settings.devices[0]]).toEqual([defaultSettings().keymaps[0], DEFAULT_PADMAP, 'kb']);
   });
   it('B fora da captura volta às opções, com o cursor no jogador', () => {
     const { app } = mkApp();

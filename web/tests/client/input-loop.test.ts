@@ -104,8 +104,8 @@ describe('dispositivos, conexão e atribuição', () => {
     const maps = [DEFAULT_KEYMAPS[0], DEFAULT_KEYMAPS[1], { ...DEFAULT_KEYMAPS[2], a: 'KeyZ' }, DEFAULT_KEYMAPS[3], DEFAULT_KEYMAPS[4]];
     const d = readDevices(new Set(['KeyJ', 'Numpad2', 'KeyZ']), ['kb', 'kb', 'kb', 'none', 'none'], maps, [pad([9])]);
     expect(d).toEqual([BTN.A, BTN.B, BTN.A, 0, 0, BTN.START]);
-    // Ninguém no teclado: as teclas padrão ainda navegam os menus (índice 5).
-    expect(readDevices(new Set(['KeyJ']), ['gp0', 'none', 'none', 'none', 'none'], maps, [])[5]).toBe(BTN.A);
+    // P1 fora do teclado: as teclas dele ainda navegam os menus (índice 5), mas não movem ninguém.
+    expect(readDevices(new Set(['KeyJ']), ['none', 'kb', 'none', 'none', 'none'], maps, [])).toEqual([0, 0, 0, 0, 0, BTN.A]);
   });
 });
 
