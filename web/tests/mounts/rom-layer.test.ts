@@ -4,8 +4,8 @@ import { ASSETS, stable } from './rom-helpers';
 import { mkRound, placePx, ride, run, flameAt, BTN, cx, cy } from './helpers';
 import { riderHook } from '../../src/render/rom/mounts/rider';
 import { mountRomSprites } from '../../src/render/rom/mounts/sprites';
-import { fallbackMountFrame, objPx } from '../../src/render/rom/mounts/gfx';
-import { MOUNT_GFX, MOUNTING_ANIMS, DANCE_NOTE_TICKS } from '../../src/render/rom/mounts/facts';
+import { fallbackMountFrame, objPx, sampleSeq } from '../../src/render/rom/mounts/gfx';
+import { MOUNT_GFX, MOUNTING_ANIMS, REMOUNT_ANIMS, DANCE_NOTE_TICKS } from '../../src/render/rom/mounts/facts';
 import { cellOf } from '../../src/core/units';
 import type { ObjEntry } from '../../src/render/ppu';
 import type { Anim, RomAssets } from '../../src/rom/types';
@@ -204,5 +204,14 @@ describe.skipIf(!ASSETS)('camada ROM das montarias × emulador', () => {
     }
     expect(n).toBeGreaterThan(15);
     expect(mountRomSprites(s, ASSETS!, s.tick + 40)).toHaveLength(0);
+  });
+  // `my` é o passo de cada quadro (acumula): no remonte medido o y do objeto sobe e volta ao início (soma 0).
+  it('pulo do remonte: my acumulado = y medido do objeto, nos ticks estáveis', () => {
+    const raw = (fx.remount as unknown as (FxSample & { y: number })[]);
+    const y0 = raw[raw.length - 1].y;
+    for (const smp of stable(raw.map((x, i) => ({ ...x, i })))) {
+      if (smp.anim !== REMOUNT_ANIMS[0]) continue;
+      expect(y0 + sampleSeq(ASSETS!, REMOUNT_ANIMS, smp.i).oy, `t=${smp.i}`).toBe(smp.y);
+    }
   });
 });

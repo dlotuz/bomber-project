@@ -116,7 +116,7 @@ export function playerCellXY(cell: number): { X: number; Y: number } {
   return { X: 16 * colOf(cell) - 1, Y: 16 * (linOf(cell) + 2) - 1 };
 }
 
-export interface SeqSample { addr: number; frame: AnimFrame }
+export interface SeqSample { addr: number; frame: AnimFrame; ox: number; oy: number }
 
 /** Amostra uma lista de animações [ANI §2.1, spec §7.4]: percorre os quadros pela duração; quando a lista tem mais
  *  de 1 endereço, avança para o seguinte quando a duração do anterior termina; `dur = 255` no ÚLTIMO quadro do
@@ -124,7 +124,9 @@ export interface SeqSample { addr: number; frame: AnimFrame }
  *  Um `dur = 255` que NÃO seja o último quadro é tratado como duração 1 (placeholder): sem isso a lista nunca
  *  avançaria para o endereço seguinte (caso de `MOUNTING_ANIMS`/`DISMOUNT_ANIMS`, cujo 1º endereço reaproveita uma
  *  animação `idle` de 1 quadro congelado). Essa é uma simplificação nossa quando a ROM não documenta a duração
- *  exata da transição entre endereços (ver relatório da T14). */
+ *  exata da transição entre endereços (ver relatório da T14).
+ *  `ox`/`oy`: soma de `mx`/`my` dos quadros já iniciados do endereço atual (como `sampleAnim`) — o `my` é o passo
+ *  de cada quadro, não um deslocamento absoluto (remonte medido: y 47→46→44→40…→47, soma 0). */
 export function sampleSeq(a: RomAssets, addrs: readonly number[], t: number): SeqSample {
   const seqs = addrs.map(addr => ({ addr, frames: a.anim(addr) as Anim }));
   const lastSeq = seqs[seqs.length - 1], lastFrame = lastSeq.frames[lastSeq.frames.length - 1];
@@ -134,12 +136,15 @@ export function sampleSeq(a: RomAssets, addrs: readonly number[], t: number): Se
   let tt = t < 0 ? 0 : t;
   if (freezesAtEnd) tt = Math.min(tt, Math.max(0, total - 1));
   else if (total > 0) tt = tt % total;
+  let ox = 0, oy = 0;
   for (const { addr, frames } of seqs) {
+    ox = 0; oy = 0;
     for (const fr of frames) {
+      ox += fr.mx; oy += fr.my;
       const dur = fr.dur === 255 ? 1 : fr.dur;
-      if (tt < dur) return { addr, frame: fr };
+      if (tt < dur) return { addr, frame: fr, ox, oy };
       tt -= dur;
     }
   }
-  return { addr: lastSeq.addr, frame: lastFrame };
+  return { addr: lastSeq.addr, frame: lastFrame, ox, oy };
 }

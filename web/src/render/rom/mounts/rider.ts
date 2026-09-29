@@ -26,7 +26,8 @@ function dirIdxOf(face: number): 0 | 1 | 2 | 3 {
 }
 
 /** `mx`/`my` do quadro somam à posição da peça — deslocamento só visual [spec §7.4]. É o que faz o jogador "pular"
- *  durante `mounting`/`remount` (a montaria fica parada porque seu próprio quadro, congelado, tem `mx=my=0`). */
+ *  durante `mounting`/`remount` (a montaria fica parada porque seu próprio quadro, congelado, tem `mx=my=0`).
+ *  Quem chama passa o quadro de `seqFrame`, com `mx`/`my` já acumulados. */
 function pxEntry(px: Uint8Array, X: number, Y: number, pal: number, fr: AnimFrame, piece: Piece): ObjEntry {
   return { x: X + piece.dx + fr.mx, y: Y + piece.dy + fr.my, size: piece.big ? 32 : 16, pal, prio: 2, hflip: piece.hflip, vflip: piece.vflip, src: { px } };
 }
@@ -58,6 +59,12 @@ function mountPieces(a: RomAssets, stage: number, type: number, face: 0 | 2 | 4 
     return [{ x: X - 16, y: Y - 18, size: 32, pal, prio: 2, hflip: false, vflip: false, src: { px } }];
   }
   return entriesFor(a, stage, X, Y, fr, 'mount', type, pal);
+}
+
+/** Quadro de `sampleSeq` com `mx`/`my` trocados pelo acumulado (`ox`/`oy`), para o arco do pulo sair contínuo. */
+function seqFrame(a: RomAssets, addrs: readonly number[], t: number): AnimFrame {
+  const { frame, ox, oy } = sampleSeq(a, addrs, t);
+  return { ...frame, mx: ox, my: oy };
 }
 
 /** Índice do quadro em `ticks` (duração medida de cada quadro, não a `dur` da própria tabela) para um `t` dado —
@@ -121,7 +128,7 @@ export const riderHook: RomPlayerHook = (s, p, a, hostFrame, frame = hostFrame) 
   if (!r) {
     if (p.act !== 'dance') return null;
     const t = frame - p.actT0;
-    const { frame: fr } = sampleSeq(a, DANCE_ANIMS, t);
+    const fr = seqFrame(a, DANCE_ANIMS, t);
     const out = charPieces(a, s.stage, p, X, Y, pal, fr);
     // T14b: notas do acerto (mont. F) — objeto próprio que nasce no tick do acerto e dura só os ticks medidos
     // (facts.ts DANCE_NOTE_TICKS), ancorado na posição do próprio jogador dançando.
@@ -142,28 +149,28 @@ export const riderHook: RomPlayerHook = (s, p, a, hostFrame, frame = hostFrame) 
     const riderList = walking ? RIDER_ANIMS[r.type][dirIdx].walk : RIDER_ANIMS[r.type][dirIdx].idle;
     const mountList = walking ? MOUNT_ANIMS[r.type][dirIdx].walk : MOUNT_ANIMS[r.type][dirIdx].idle;
     const t = frame - p.actT0;
-    const rf = sampleSeq(a, riderList, t).frame, mf = sampleSeq(a, mountList, t).frame;
+    const rf = seqFrame(a, riderList, t), mf = seqFrame(a, mountList, t);
     return [...charPieces(a, s.stage, p, X, Y, pal, rf), ...mountPieces(a, s.stage, r.type, face, step, X, Y, mountPal, mf),
       ...remountFxPieces(a, s.stage, r, frame, X, Y)];   // I2: explosão do remonte ainda no ar (t < 71)
   }
 
   const t = frame - r.t0;
   if (r.phase === 'mounting') {
-    const rf = sampleSeq(a, MOUNTING_ANIMS[r.type], t).frame;
-    const mf = sampleSeq(a, MOUNTING_MOUNT_ANIMS[r.type], t).frame;
+    const rf = seqFrame(a, MOUNTING_ANIMS[r.type], t);
+    const mf = seqFrame(a, MOUNTING_MOUNT_ANIMS[r.type], t);
     return [...charPieces(a, s.stage, p, X, Y, pal, rf), ...mountPieces(a, s.stage, r.type, face, step, X, Y, mountPal, mf)];
   }
 
   // dismount
   if (r.remount) {
-    const rf = sampleSeq(a, REMOUNT_ANIMS, t).frame;
-    const mf = sampleSeq(a, REMOUNT_MOUNT_ANIMS, t).frame;
+    const rf = seqFrame(a, REMOUNT_ANIMS, t);
+    const mf = seqFrame(a, REMOUNT_MOUNT_ANIMS, t);
     const out = [...charPieces(a, s.stage, p, X, Y, pal, rf), ...mountPieces(a, s.stage, r.type, face, step, X, Y, mountPal, mf)];
     // T14b: o próprio ovo reserva "brilha" na casa de origem, "pula" até o jogador e estoura, revelando a
     // montaria — não nasce outro objeto (facts.ts REMOUNT_GLOW_ANIMS/REMOUNT_GLOW_STAGE_TICKS).
     out.push(...remountFxPieces(a, s.stage, r, frame, X, Y));
     return out;
   }
-  const rf = sampleSeq(a, DISMOUNT_ANIMS, t).frame;
+  const rf = seqFrame(a, DISMOUNT_ANIMS, t);
   return charPieces(a, s.stage, p, X, Y, pal, rf);
 };
