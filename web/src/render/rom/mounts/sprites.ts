@@ -7,6 +7,10 @@ import { isEggCode } from '../../../core/mounts/core-api';
 import { EGG_ANIMS, RESERVE_EGG_ANIMS, PROJ_ANIMS, REMOUNT_GLOW_ANIMS } from './facts';
 import { sampleSeq, piecePx, cellXY } from './gfx';
 
+/** Míssil D por direção ↑ → ↓ ←: tabela de ponteiros em $C1:32D6, indexada por `$1D & 3` ($C1:32A0). A fixture só
+ *  mediu a direita (`PROJ_ANIMS.d` = $D8:0EDB). */
+const PROJ_D_BY_DIR = [0xd80ec8, 0xd80edb, 0xd80eee, 0xd80f01] as const;
+
 const EGG_PAL = 7;   // paleta comum (bomba/itens/ovos), medida pal:7 em todas as peças de ovo/reserva/projétil
 
 /** Leitura sem efeito colateral (mesma regra da camada de fallback, T5): nunca criar `s.mountState` ao desenhar. */
@@ -69,7 +73,7 @@ export function mountRomSprites(s: RoundState, a: RomAssets, frame: number): Mou
     if (pr.state === 'done') continue;
     const X = Math.floor(pr.x / 256), Y = Math.floor(pr.y / 256);
     const t = frame - pr.born;
-    const addrs = pr.kind === 0xd ? PROJ_ANIMS.d
+    const addrs = pr.kind === 0xd ? [PROJ_D_BY_DIR[(pr.dir >> 1) & 3]]
       : pr.kind === 0xf ? PROJ_ANIMS.f
       : [pr.state === 'cloud' ? (PROJ_ANIMS.e[1] ?? PROJ_ANIMS.e[0]) : PROJ_ANIMS.e[0]];
     const { frame: fr } = sampleSeq(a, addrs, t);

@@ -214,4 +214,15 @@ describe.skipIf(!ASSETS)('camada ROM das montarias × emulador', () => {
       expect(y0 + sampleSeq(ASSETS!, REMOUNT_ANIMS, smp.i).oy, `t=${smp.i}`).toBe(smp.y);
     }
   });
+  // Míssil D: a animação segue a direção do voo (tabela $C1:32D6, ↑ → ↓ ←), não só a direita medida.
+  it('míssil D usa a animação da direção do voo', () => {
+    const tables = [0xd80ec8, 0xd80edb, 0xd80eee, 0xd80f01];
+    for (const dir of [0, 2, 4, 6]) {
+      const s = mkRound();
+      s.mountState = { projectiles: [{ id: 1, kind: 0xd, owner: 0, x: cx(7) * 256, y: cy(5) * 256, dir, born: s.tick, state: 'fly', t: s.tick, slot: 1 }], nextId: 2, bursts: [] };
+      const got = mountRomSprites(s, ASSETS!, s.tick).map(x => x.e);
+      const fr = (ASSETS!.anim(tables[dir >> 1]) as Anim)[0];
+      expect(got.map(e => [e.x - cx(7), e.y - cy(5), +e.hflip, +e.vflip]), `dir=${dir}`).toEqual(fr.pieces.map(q => [q.dx, q.dy, +q.hflip, +q.vflip]));
+    }
+  });
 });
