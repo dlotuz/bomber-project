@@ -11,7 +11,7 @@ export interface SetupLike {
 export interface GameConfig {
   rules: Rules; stage: number; chars: number[]; humans: boolean[]; devices: DeviceId[]; seed: number | null;
 }
-const DEFAULT_DEVICES: DeviceId[] = ['kb0', 'kb1', 'gp0', 'gp1', 'gp2'];
+const DEFAULT_DEVICES: DeviceId[] = ['kb', 'kb', 'gp0', 'gp1', 'gp2'];
 
 export const activeCount = (slots: readonly SlotKind[]): number => slots.filter(k => k !== 'off').length;
 export const canStart = (slots: readonly SlotKind[]): boolean => activeCount(slots) >= 2;

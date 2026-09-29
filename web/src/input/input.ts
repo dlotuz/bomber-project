@@ -7,7 +7,9 @@ export interface KeyMap {
 
 export const KEY_FIELDS: readonly (keyof KeyMap)[] = ['up', 'down', 'left', 'right', 'a', 'b', 'x', 'y', 'l', 'r', 'start', 'select'];
 
-/** Spec §11/R16: Teclado 1 = WASD + J/K/L/I + Enter + Q/E/F; Teclado 2 = setas + Numpad1/2/3/5 + NumpadEnter + 7/9/0. */
+/** Spec §11/R16: P1 = WASD + J/K/L/I + Enter + Q/E/F; P2 = setas + Numpad1/2/3/5 + NumpadEnter + 7/9/0.
+ *  P3–P5 começam sem teclas (''): quem passar para o teclado configura as suas. */
+const NO_KEYS: KeyMap = { up: '', down: '', left: '', right: '', a: '', b: '', x: '', y: '', l: '', r: '', start: '', select: '' };
 export const DEFAULT_KEYMAPS: readonly KeyMap[] = [
   {
     up: 'KeyW', down: 'KeyS', left: 'KeyA', right: 'KeyD', a: 'KeyJ', b: 'KeyK', y: 'KeyL', x: 'KeyI',
@@ -17,15 +19,20 @@ export const DEFAULT_KEYMAPS: readonly KeyMap[] = [
     up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', a: 'Numpad1', b: 'Numpad2',
     y: 'Numpad3', x: 'Numpad5', start: 'NumpadEnter', l: 'Numpad7', r: 'Numpad9', select: 'Numpad0',
   },
+  NO_KEYS, NO_KEYS, NO_KEYS,
 ];
+/** Teclas que navegam os menus mesmo sem nenhum jogador no teclado. */
+const MENU_KEYMAPS = DEFAULT_KEYMAPS.slice(0, 2);
 
-/** Dispositivos de entrada que podem ser atribuídos a um jogador. */
-export type DeviceId = 'kb0' | 'kb1' | 'gp0' | 'gp1' | 'gp2' | 'gp3' | 'none';
-export const DEVICE_IDS: readonly DeviceId[] = ['kb0', 'kb1', 'gp0', 'gp1', 'gp2', 'gp3', 'none'];
-export type DeviceState = Record<DeviceId, number>;
+/** Dispositivo de um jogador: o teclado (com as teclas daquele jogador), um dos 4 controles ou nenhum. */
+export type DeviceId = 'kb' | 'gp0' | 'gp1' | 'gp2' | 'gp3' | 'none';
+export const DEVICE_IDS: readonly DeviceId[] = ['kb', 'gp0', 'gp1', 'gp2', 'gp3', 'none'];
+/** Botões segurados por jogador (0–4); o índice 5 junta o que não é de ninguém (controles sem dono, teclas
+ *  padrão sem jogador no teclado), que só serve para navegar os menus. */
+export type DeviceState = number[];
 
 export function emptyDevices(): DeviceState {
-  return { kb0: 0, kb1: 0, gp0: 0, gp1: 0, gp2: 0, gp3: 0, none: 0 };
+  return [0, 0, 0, 0, 0, 0];
 }
 
 const FIELD_BTN: Record<keyof KeyMap, number> = {
@@ -35,7 +42,7 @@ const FIELD_BTN: Record<keyof KeyMap, number> = {
 
 export function readKeyMap(down: ReadonlySet<string>, m: KeyMap): number {
   let v = 0;
-  for (const f of KEY_FIELDS) if (down.has(m[f])) v |= FIELD_BTN[f];
+  for (const f of KEY_FIELDS) if (m[f] && down.has(m[f])) v |= FIELD_BTN[f];
   return v;
 }
 
@@ -76,24 +83,30 @@ export function readGamepad(gp: GamepadLike | null, map: PadMap = DEFAULT_PADMAP
   return v;
 }
 
-/** Nome legível de um índice de botão bruto (Gamepad API) para a tela de remapeamento. */
+/** Nomes dos botões do layout "standard" (posições de um controle de Xbox), para a tela de controles. */
+export const PAD_NAMES: readonly string[] = [
+  'A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'SELECT', 'START', 'L3', 'R3', 'CIMA', 'BAIXO', 'ESQUERDA', 'DIREITA', 'HOME',
+];
+
+/** Nome legível de um índice de botão bruto (Gamepad API) para a tela de controles. */
 export function padLabel(i: number): string {
-  return `BOTÃO ${i}`;
+  return PAD_NAMES[i] ?? `BOTÃO ${i}`;
 }
 
 export function readDevices(
-  down: ReadonlySet<string>, maps: readonly KeyMap[], gps: readonly (GamepadLike | null)[],
+  down: ReadonlySet<string>, assign: readonly DeviceId[], keymaps: readonly KeyMap[], gps: readonly (GamepadLike | null)[],
   padmaps: readonly PadMap[] = [],
 ): DeviceState {
-  return {
-    kb0: maps[0] ? readKeyMap(down, maps[0]) : 0,
-    kb1: maps[1] ? readKeyMap(down, maps[1]) : 0,
-    gp0: readGamepad(gps[0] ?? null, padmaps[0] ?? DEFAULT_PADMAP),
-    gp1: readGamepad(gps[1] ?? null, padmaps[1] ?? DEFAULT_PADMAP),
-    gp2: readGamepad(gps[2] ?? null, padmaps[2] ?? DEFAULT_PADMAP),
-    gp3: readGamepad(gps[3] ?? null, padmaps[3] ?? DEFAULT_PADMAP),
-    none: 0,
-  };
+  const out = [0, 1, 2, 3, 4].map(i => {
+    const d = assign[i] ?? 'none';
+    if (d === 'none') return 0;
+    if (d === 'kb') return keymaps[i] ? readKeyMap(down, keymaps[i]) : 0;
+    return readGamepad(gps[Number(d[2])] ?? null, padmaps[i] ?? DEFAULT_PADMAP);
+  });
+  let free = 0;
+  if (!assign.includes('kb')) for (const m of MENU_KEYMAPS) free |= readKeyMap(down, m);
+  gps.forEach((gp, n) => { if (!assign.includes(`gp${n}` as DeviceId)) free |= readGamepad(gp); });
+  return [...out, free];
 }
 
 /** Entrada de um tick já resolvida: por jogador (via atribuição de dispositivo) e de qualquer dispositivo (menus). */
@@ -112,12 +125,11 @@ export function buildInput(
   cur: DeviceState, prev: DeviceState, assign: readonly DeviceId[], key: string | null = null,
   extra: { connected?: Partial<Record<DeviceId, boolean>>; esc?: boolean; padButton?: { pad: number; button: number } | null } = {},
 ): MenuInput {
-  const edge = (d: DeviceId) => cur[d] & ~prev[d];
-  let any = 0, pressedAny = 0;
-  for (const d of DEVICE_IDS) { any |= cur[d]; pressedAny |= edge(d); }
-  const connected = assign.map(d => (d === 'none' ? false : d.startsWith('kb') ? true : (extra.connected?.[d] ?? true)));
+  const edges = cur.map((v, i) => v & ~(prev[i] ?? 0));
+  const any = cur.reduce((a, v) => a | v, 0), pressedAny = edges.reduce((a, v) => a | v, 0);
+  const connected = assign.map(d => (d === 'none' ? false : d === 'kb' ? true : (extra.connected?.[d] ?? true)));
   return {
-    pads: assign.map(d => cur[d]), pressed: assign.map(d => edge(d)), any, pressedAny, key,
+    pads: cur.slice(0, 5), pressed: edges.slice(0, 5), any, pressedAny, key,
     connected, esc: extra.esc ?? false, padButton: extra.padButton ?? null,
   };
 }
@@ -157,6 +169,7 @@ export function keyLabel(code: string): string {
   if (/^Digit[0-9]$/.test(code)) return code.slice(5);
   if (/^Numpad[0-9]$/.test(code)) return `NUM ${code.slice(6)}`;
   if (/^F[0-9]{1,2}$/.test(code)) return code;
+  if (!code) return '---';
   return KEY_NAMES[code] ?? 'OUTRA TECLA';
 }
 
@@ -167,11 +180,11 @@ export function isReservedKey(code: string): boolean {
     || code === 'ContextMenu' || code === 'PrintScreen';
 }
 
-/** Grava `code` na ação `f` do teclado `idx`. Se a tecla já estava em outra ação (deste teclado ou do outro), as duas
- *  trocam: a outra ação fica com a tecla antiga de `f` (M3: nenhuma tecla em duas ações ao mesmo tempo). */
+/** Grava `code` na ação `f` das teclas do jogador `idx`. Se a tecla já estava em outra ação (deste jogador ou de outro),
+ *  as duas trocam: a outra ação fica com a tecla antiga de `f` (M3: nenhuma tecla em duas ações ao mesmo tempo). */
 export function assignKey(maps: KeyMap[], idx: number, f: keyof KeyMap, code: string): void {
   const old = maps[idx][f];
-  maps.forEach((m, k) => { for (const g of KEY_FIELDS) if (m[g] === code && !(k === idx && g === f)) m[g] = old; });
+  if (code) maps.forEach((m, k) => { for (const g of KEY_FIELDS) if (m[g] === code && !(k === idx && g === f)) m[g] = old; });
   maps[idx][f] = code;
 }
 
@@ -226,17 +239,17 @@ export class InputManager {
 
   setKeymaps(maps: readonly KeyMap[]): void {
     this.maps = maps.map(m => ({ ...m }));
-    this.gameKeys = new Set(this.maps.flatMap(m => Object.values(m)));
+    this.gameKeys = new Set([...this.maps, ...MENU_KEYMAPS].flatMap(m => Object.values(m)).filter(Boolean));
   }
 
   setPadmaps(maps: readonly PadMap[]): void {
     this.padmaps = maps.map(m => ({ ...m }));
   }
 
-  poll(): DeviceState {
+  poll(assign: readonly DeviceId[]): DeviceState {
     const gps = this.gamepads();
     this.trackPadButtons(gps);
-    return readDevices(this.down, this.maps, gps, this.padmaps);
+    return readDevices(this.down, assign, this.maps, gps, this.padmaps);
   }
 
   private trackPadButtons(gps: readonly (GamepadLike | null)[]): void {
@@ -264,7 +277,7 @@ export class InputManager {
   connected(): Record<DeviceId, boolean> {
     const gps = this.gamepads();
     const gp = (i: number) => { const g = gps[i]; return !!g && g.connected !== false; };
-    return { kb0: true, kb1: true, gp0: gp(0), gp1: gp(1), gp2: gp(2), gp3: gp(3), none: false };
+    return { kb: true, gp0: gp(0), gp1: gp(1), gp2: gp(2), gp3: gp(3), none: false };
   }
 
   /** Esc está segurado neste instante. */

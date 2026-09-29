@@ -48,7 +48,7 @@ describe('teclado (spec §2.6, R16)', () => {
     expect([maps[0].a, maps[0].up]).toEqual(['KeyW', 'KeyJ']);
     assignKey(maps, 0, 'b', 'ArrowUp');              // ↑ era do teclado 2
     expect([maps[0].b, maps[1].up]).toEqual(['ArrowUp', 'KeyK']);
-    const all = maps.flatMap(m => Object.values(m));
+    const all = maps.flatMap(m => Object.values(m)).filter(Boolean);   // P3–P5 sem teclas ('')
     expect(new Set(all).size).toBe(all.length);
   });
   it('assignPadButton troca dentro do mesmo controle', () => {
@@ -72,16 +72,17 @@ describe('gamepad (standard, remapeável)', () => {
     expect(readGamepad(pad([], [0.9, 0]))).toBe(BTN.RIGHT);
     expect(readGamepad(pad([], [0.3, 0.3]))).toBe(0);
   });
-  it('rótulo de botão', () => { expect(padLabel(9)).toBe('BOTÃO 9'); });
+  it('rótulo de botão', () => { expect([padLabel(0), padLabel(9), padLabel(20)]).toEqual(['A', 'START', 'BOTÃO 20']); });
 });
 
 describe('dispositivos, conexão e atribuição', () => {
   it('buildInput: por jogador, qualquer dispositivo, conexão por jogador, Esc e botão bruto', () => {
-    const cur = { ...emptyDevices(), kb0: BTN.A, gp1: BTN.START };
-    const inp = buildInput(cur, emptyDevices(), ['kb0', 'gp1', 'gp0', 'none', 'kb1'], 'KeyJ',
+    const cur = [BTN.A, BTN.START, 0, 0, 0, BTN.B];
+    const inp = buildInput(cur, emptyDevices(), ['kb', 'gp1', 'gp0', 'none', 'kb'], 'KeyJ',
       { connected: { gp0: false, gp1: true }, esc: true, padButton: { pad: 1, button: 9 } });
     expect(inp.pads).toEqual([BTN.A, BTN.START, 0, 0, 0]);
-    expect(inp.connected).toEqual([true, true, false, false, true]);   // teclados sempre; 'none' nunca
+    expect([inp.any, inp.pressedAny]).toEqual([BTN.A | BTN.START | BTN.B, BTN.A | BTN.START | BTN.B]);   // + sem dono
+    expect(inp.connected).toEqual([true, true, false, false, true]);   // teclado sempre; 'none' nunca
     expect(inp.esc).toBe(true);
     expect(inp.padButton).toEqual({ pad: 1, button: 9 });
   });
@@ -94,10 +95,17 @@ describe('dispositivos, conexão e atribuição', () => {
   it('idleInput tem os campos novos', () => {
     expect(idleInput()).toMatchObject({ connected: [true, true, true, true, true], esc: false, padButton: null });
   });
-  it('readDevices usa os mapas de gamepad', () => {
+  it('readDevices usa os mapas do jogador', () => {
     // DEFAULT_PADMAP.b já é 0: sem mover 'b' também, o botão 0 acionaria A e B ao mesmo tempo.
-    const d = readDevices(new Set(), DEFAULT_KEYMAPS, [pad([0])], [{ ...DEFAULT_PADMAP, a: 0, b: 1 }]);
-    expect(d.gp0).toBe(BTN.A);
+    const d = readDevices(new Set(), ['gp0', 'none', 'none', 'none', 'none'], DEFAULT_KEYMAPS, [pad([0])], [{ ...DEFAULT_PADMAP, a: 0, b: 1 }]);
+    expect(d[0]).toBe(BTN.A);
+  });
+  it('readDevices: dois jogadores no teclado, cada um com as suas teclas; sem dono vai para o índice 5', () => {
+    const maps = [DEFAULT_KEYMAPS[0], DEFAULT_KEYMAPS[1], { ...DEFAULT_KEYMAPS[2], a: 'KeyZ' }, DEFAULT_KEYMAPS[3], DEFAULT_KEYMAPS[4]];
+    const d = readDevices(new Set(['KeyJ', 'Numpad2', 'KeyZ']), ['kb', 'kb', 'kb', 'none', 'none'], maps, [pad([9])]);
+    expect(d).toEqual([BTN.A, BTN.B, BTN.A, 0, 0, BTN.START]);
+    // Ninguém no teclado: as teclas padrão ainda navegam os menus (índice 5).
+    expect(readDevices(new Set(['KeyJ']), ['gp0', 'none', 'none', 'none', 'none'], maps, [])[5]).toBe(BTN.A);
   });
 });
 
@@ -124,9 +132,8 @@ describe('InputManager', () => {
     const t = fakeTarget();
     const im = new InputManager(t, DEFAULT_KEYMAPS, () => gps);
     t.fire('keydown', 'KeyJ'); t.fire('keydown', 'Escape');
-    expect(im.poll().kb0).toBe(BTN.A);
-    expect(im.poll().gp0).toBe(BTN.A);
-    expect(im.connected()).toMatchObject({ kb0: true, kb1: true, gp0: true, gp1: false, gp2: false, none: false });
+    expect(im.poll(['kb', 'gp0', 'none', 'none', 'none']).slice(0, 2)).toEqual([BTN.A, BTN.A]);
+    expect(im.connected()).toMatchObject({ kb: true, gp0: true, gp1: false, gp2: false, none: false });
     expect(im.escHeld()).toBe(true);
     t.fire('keyup', 'Escape');
     expect(im.escHeld()).toBe(false);
@@ -134,18 +141,18 @@ describe('InputManager', () => {
   it('takePadButton: primeiro botão bruto recém-apertado desde a última leitura', () => {
     let gps: (GamepadLike | null)[] = [pad([]), pad([])];
     const im = new InputManager(fakeTarget(), DEFAULT_KEYMAPS, () => gps);
-    im.poll();
+    im.poll([]);
     gps = [pad([]), pad([7])];
-    im.poll();
+    im.poll([]);
     expect(im.takePadButton()).toEqual({ pad: 1, button: 7 });
     expect(im.takePadButton()).toBeNull();
-    im.poll();                                  // continua segurado: não é novo
+    im.poll([]);                                  // continua segurado: não é novo
     expect(im.takePadButton()).toBeNull();
   });
   it('setPadmaps troca o mapa usado no poll', () => {
     const im = new InputManager(fakeTarget(), DEFAULT_KEYMAPS, () => [pad([0])]);
     im.setPadmaps([{ ...DEFAULT_PADMAP, a: 0, b: 1 }]);
-    expect(im.poll().gp0).toBe(BTN.A);
+    expect(im.poll(['gp0', 'none', 'none', 'none', 'none'])[0]).toBe(BTN.A);
   });
 });
 

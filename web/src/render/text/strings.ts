@@ -1,4 +1,5 @@
 import type { TextStyleId } from './types';
+import { PAD_NAMES } from '../../input/input';
 
 export const STAGE_NAMES_PT = ['O Clássico', 'Rápido e Devagar', 'Bombardeio Orbital', 'Não Me Empurre', 'Escola de Choques',
   'Piso Traiçoeiro', 'Esconde-Explode', 'Caça-Níquel', 'Gangorra', 'Alfaiataria'] as const;
@@ -9,7 +10,7 @@ export const RACER_PRIZE_NAMES = {
   passSoft: 'ATRAVESSA BLOCO', 'speed-1': 'PATINS -1', punch: 'SOCO', heart: 'CORAÇÃO', p: 'GOLPE P',
 } as const;
 
-const DEVICE_NAMES = { kb0: 'TECLADO 1', kb1: 'TECLADO 2', gp0: 'CONTROLE 1', gp1: 'CONTROLE 2', gp2: 'CONTROLE 3', gp3: 'CONTROLE 4', none: 'NENHUM' } as const;
+const DEVICE_NAMES = { kb: 'TECLADO', gp0: 'CONTROLE 1', gp1: 'CONTROLE 2', gp2: 'CONTROLE 3', gp3: 'CONTROLE 4', none: 'NENHUM' } as const;
 const ACTIONS = { up: 'CIMA', down: 'BAIXO', left: 'ESQUERDA', right: 'DIREITA', a: 'A', b: 'B', x: 'X', y: 'Y', l: 'L', r: 'R', start: 'START', select: 'SELECT' } as const;
 
 export const S = {
@@ -33,7 +34,8 @@ export const S = {
   racer: { press: 'APERTE B!', prize: 'PRÊMIO', names: RACER_PRIZE_NAMES },
   options: {
     title: 'Opções', player: (n: number) => `JOGADOR ${n}`, devices: DEVICE_NAMES,
-    keys: (n: number) => `TECLAS DO TECLADO ${n}`, pad: (n: number) => `BOTÕES DO CONTROLE ${n}`,
+    controls: (n: number) => `CONTROLES DO JOGADOR ${n}`, device: 'DISPOSITIVO', all: 'CONFIGURAR TODOS',
+    playerHelp: 'A: CONFIGURAR  ESQ/DIR: TROCA', pressAny: 'TECLA OU BOTÃO? (ESC CANCELA)',
     spawns: 'SPAWNS ALEATÓRIOS', music: 'VOLUME DA MÚSICA', sfx: 'VOLUME DOS EFEITOS',
     rom: 'ROM', romOk: 'CARREGADA ✓', romNo: 'NÃO CARREGADA', load: 'CARREGAR ROM...', forget: 'ESQUECER ROM',
     forgetAsk: 'ESQUECER A ROM? A: SIM  B: NÃO', reset: 'RESTAURAR PADRÃO', back: 'VOLTAR', no: 'NÃO', yes: 'SIM',
@@ -56,8 +58,8 @@ export const STRING_USES: readonly Use[] = uniq([
   ...as('banner', [S.battle.pause, S.battle.hurry, S.battle.timeUp, S.battle.timeUpShort, S.racer.press]),
   ...as('ascii8', [
     ...[1, 2, 3, 4].map(S.battle.disconnected), ...S.score.tags, ...S.chars.tags, S.chars.allReady, S.chars.help, S.teams.help, S.racer.prize, ...Object.values(RACER_PRIZE_NAMES),
-    ...[1, 2, 3, 4, 5].map(S.options.player), ...Object.values(DEVICE_NAMES), S.options.keys(1), S.options.keys(2),
-    ...[1, 2, 3, 4].map(S.options.pad), S.options.spawns, S.options.music, S.options.sfx, S.options.rom, S.options.romOk,
+    ...[1, 2, 3, 4, 5].map(S.options.player), ...Object.values(DEVICE_NAMES), ...[1, 2, 3, 4, 5].map(S.options.controls),
+    S.options.device, S.options.all, S.options.playerHelp, S.options.pressAny, ...PAD_NAMES, '---', S.options.spawns, S.options.music, S.options.sfx, S.options.rom, S.options.romOk,
     S.options.romNo, S.options.load, S.options.forget, S.options.forgetAsk, S.options.reset, S.options.back, S.options.no,
     S.options.yes, S.options.pressKey, S.options.pressPad, ...Object.values(ACTIONS),
     ...Array.from({ length: 32 }, (_, i) => S.options.button(i)),

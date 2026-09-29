@@ -7,11 +7,11 @@ const setup = {
 
 describe('configuração da partida', () => {
   it('configFromSetup: regras, ativos, humanos, equipes, personagens, dispositivos e spawns aleatórios', () => {
-    const c = configFromSetup(setup, true, ['kb0', 'gp0', 'none', 'kb1', 'gp1']);
+    const c = configFromSetup(setup, true, ['kb', 'gp0', 'none', 'kb', 'gp1']);
     expect(c.rules).toMatchObject({ cpuLevel: 2, matches: 4, timeIdx: 4, suddenDeath: true, badBomber: true, racer: false,
       randomSpawns: true, mode: 'team', teams: [0, 1, 0, 1, 0], active: [true, true, false, true, true] });
     expect(c.humans).toEqual([true, false, false, true, false]);
-    expect([c.stage, c.chars, c.devices, c.seed]).toEqual([7, [5, 4, 3, 2, 1], ['kb0', 'gp0', 'none', 'kb1', 'gp1'], null]);
+    expect([c.stage, c.chars, c.devices, c.seed]).toEqual([7, [5, 4, 3, 2, 1], ['kb', 'gp0', 'none', 'kb', 'gp1'], null]);
   });
   it('parseConfig (?quick): padrões, spawns aleatórios desligados (original)', () => {
     const c = parseConfig('');

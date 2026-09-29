@@ -76,7 +76,7 @@ if (import.meta.env.DEV && params.has('debug')) {
 let prev = emptyDevices();
 startLoop(() => {
   if (held) return;
-  const cur = input.poll();
+  const cur = input.poll(app.settings.devices);
   const inp = withEscapeAsBack(buildInput(cur, prev, app.settings.devices, input.takeLastKey(),
     { connected: input.connected(), esc: input.escHeld(), padButton: input.takePadButton() }));
   if (inp.pressedAny) audioStart.gesture();        // botão do controle também conta como gesto (M6)

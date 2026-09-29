@@ -1,8 +1,8 @@
 import type { App, Screen } from '../app/app';
 import { BTN } from '../game/core-api';
 import { Menu, clamp, cycle, type MenuRow } from './menu';
-import { DEVICE_IDS, type DeviceId } from '../input/input';
-import { defaultSettings } from '../app/settings';
+import { DEVICE_IDS } from '../input/input';
+import { defaultSettings, setDevice } from '../app/settings';
 import { romState, openRomDialog, forgetStoredRom } from '../app/rom-api';
 import { S } from '../render/text/strings';
 import { MUSIC } from '../app/audio';
@@ -14,10 +14,10 @@ import { remapScreen } from './remap';
 interface Row extends MenuRow { label: string; value?: () => string }
 
 /**
- * Opções (§6.13, R15, R25): dispositivo por jogador, remapeamento de teclado/gamepad, spawns aleatórios, volume
+ * Opções (§6.13, R15, R25): por jogador, dispositivo (←/→) e controles próprios (A abre), spawns aleatórios, volume
  * de música/efeitos e o painel da ROM (carregar/esquecer). `back` (linha e B) volta ao título na "Opções".
  */
-export function optionsScreen(app: App): Screen & { readonly menu: Menu; rowIds(): string[]; value(id: string): string; readonly asking: boolean } {
+export function optionsScreen(app: App, cursor?: number): Screen & { readonly menu: Menu; rowIds(): string[]; value(id: string): string; readonly asking: boolean } {
   const st = app.settings;
   // `opt()` lê `st.options` na hora (nunca um alias congelado): "RESTAURAR PADRÃO" troca `st.options` por um
   // objeto novo (`d.options`), e um alias tirado na criação da tela ficaria apontando para o objeto antigo —
@@ -28,29 +28,15 @@ export function optionsScreen(app: App): Screen & { readonly menu: Menu; rowIds(
   app.audio.ensureMenus(MUSIC.title);
 
   const goBack = (): void => { app.transition(() => titleScreen(app, { cursor: 2 }), FADE_TO_TITLE); };
-  const openRemap = (dev: Exclude<DeviceId, 'none'>) => (): void => { app.transition(() => remapScreen(app, dev), FADE_MENU); };
-
-  // M4: dois jogadores nunca ficam no mesmo dispositivo (os dois se mexeriam juntos). Escolher o de outro jogador
-  // troca: ele fica com o dispositivo antigo deste. 'none' pode repetir.
-  const setDevice = (i: number, d: DeviceId): void => {
-    const j = d === 'none' ? -1 : st.devices.findIndex((x, k) => k !== i && x === d);
-    if (j >= 0) st.devices[j] = st.devices[i];
-    st.devices[i] = d;
-    app.save();
-  };
+  const turn = (i: number, d: number): boolean => { setDevice(st.devices, i, cycle(DEVICE_IDS, st.devices[i], d)); app.save(); return true; };
   const rows: Row[] = [];
   for (let i = 0; i < 5; i++) {
     rows.push({
       id: `p${i + 1}`, label: S.options.player(i + 1), value: () => S.options.devices[st.devices[i]],
-      left: () => { setDevice(i, cycle(DEVICE_IDS, st.devices[i], -1)); return true; },
-      right: () => { setDevice(i, cycle(DEVICE_IDS, st.devices[i], 1)); return true; },
+      left: () => turn(i, -1), right: () => turn(i, 1),
+      select: () => { app.transition(() => remapScreen(app, i), FADE_MENU); },
     });
   }
-  rows.push({ id: 'kb1', label: S.options.keys(1), select: openRemap('kb0') });
-  rows.push({ id: 'kb2', label: S.options.keys(2), select: openRemap('kb1') });
-  (['gp0', 'gp1', 'gp2', 'gp3'] as const).forEach((dev, i) => {
-    rows.push({ id: `gp${i + 1}`, label: S.options.pad(i + 1), select: openRemap(dev) });
-  });
   rows.push({
     id: 'spawns', label: S.options.spawns, value: () => (opt().randomSpawns ? S.options.yes : S.options.no),
     left: () => { const changed = opt().randomSpawns; opt().randomSpawns = false; app.save(); return changed; },
@@ -81,7 +67,7 @@ export function optionsScreen(app: App): Screen & { readonly menu: Menu; rowIds(
   });
   rows.push({ id: 'back', label: S.options.back, select: () => { goBack(); } });
 
-  const menu = new Menu(rows);
+  const menu = new Menu(rows, { cursor });
   const canvas = new PpuCanvas();
 
   return {
@@ -101,7 +87,8 @@ export function optionsScreen(app: App): Screen & { readonly menu: Menu; rowIds(
     },
     draw(ctx, bank) {
       const displayRows: OptionsRow[] = rows.map(r => ({ label: r.label, value: r.value?.() ?? '', disabled: r.disabled }));
-      drawOptionsPage(ctx, bank, canvas, S.options.title, displayRows, menu.cursor, asking ? S.options.forgetAsk : undefined);
+      const footer = asking ? S.options.forgetAsk : menu.cursor < 5 ? S.options.playerHelp : undefined;
+      drawOptionsPage(ctx, bank, canvas, S.options.title, displayRows, menu.cursor, footer);
     },
   };
 }

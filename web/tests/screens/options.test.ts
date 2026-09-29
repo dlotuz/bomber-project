@@ -22,28 +22,33 @@ beforeEach(() => vi.clearAllMocks());
 describe('opções (§6.13)', () => {
   it('linhas na ordem', () => {
     const { app } = mkApp();
-    expect(optionsScreen(app).rowIds()).toEqual(['p1', 'p2', 'p3', 'p4', 'p5', 'kb1', 'kb2', 'gp1', 'gp2', 'gp3', 'gp4',
+    expect(optionsScreen(app).rowIds()).toEqual(['p1', 'p2', 'p3', 'p4', 'p5',
       'spawns', 'music', 'sfx', 'romStatus', 'romLoad', 'romForget', 'reset', 'back']);
   });
   it('dispositivo por jogador com ←/→, com volta; grava', () => {
     const { app, saves } = mkApp();
     const o = optionsScreen(app); app.go(o); goRow(o, 'p1');
-    press(app, BTN.RIGHT); expect(app.settings.devices[0]).toBe('kb1');
+    press(app, BTN.RIGHT); expect(app.settings.devices[0]).toBe('gp0');
     press(app, BTN.LEFT); press(app, BTN.LEFT);
     expect([app.settings.devices[0], o.value('p1')]).toEqual(['none', 'NENHUM']);
     expect(saves()).toBeGreaterThanOrEqual(3);
   });
-  it('dois jogadores nunca no mesmo dispositivo: escolher o de outro troca os dois (M4)', () => {
+  it('dois jogadores nunca no mesmo controle: escolher o de outro troca os dois (M4); teclado repete', () => {
     const { app } = mkApp();
-    const o = optionsScreen(app); app.go(o); goRow(o, 'p1');
-    press(app, BTN.RIGHT);                                   // P1 pega o teclado 2, que era do P2
-    expect(app.settings.devices.slice(0, 2)).toEqual(['kb1', 'kb0']);
+    const o = optionsScreen(app); app.go(o);
+    expect(o.value('p2')).toBe('TECLADO');
     goRow(o, 'p3'); press(app, BTN.RIGHT);                   // gp0 → gp1 (do P4): trocam
-    expect(app.settings.devices).toEqual(['kb1', 'kb0', 'gp1', 'gp0', 'gp2']);
-    const real = app.settings.devices.filter(d => d !== 'none');
-    expect(new Set(real).size).toBe(real.length);
+    expect(app.settings.devices).toEqual(['kb', 'kb', 'gp1', 'gp0', 'gp2']);
     goRow(o, 'p5'); press(app, BTN.RIGHT); press(app, BTN.RIGHT);   // gp2 → gp3 → nenhum; 'none' não troca
-    expect(app.settings.devices).toEqual(['kb1', 'kb0', 'gp1', 'gp0', 'none']);
+    expect(app.settings.devices).toEqual(['kb', 'kb', 'gp1', 'gp0', 'none']);
+    goRow(o, 'p1'); press(app, BTN.RIGHT);                   // P1 pega o controle 1 do P4, que vai para o teclado
+    expect(app.settings.devices).toEqual(['gp0', 'kb', 'gp1', 'kb', 'none']);
+  });
+  it('A no jogador abre os controles dele', () => {
+    const { app } = mkApp();
+    const o = optionsScreen(app); app.go(o); goRow(o, 'p3');
+    press(app, BTN.A); settle(app);
+    expect(app.screen.id).toBe('remap');
   });
   it('spawns aleatórios: NÃO → SIM', () => {
     const { app } = mkApp();
@@ -118,12 +123,13 @@ describe('opções (§6.13)', () => {
   });
 });
 
-describe('remapeamento', () => {
+describe('controles do jogador', () => {
+  const row = (f: string) => ['device', ...KEY_FIELDS, 'all', 'reset', 'back'].indexOf(f);
   it('teclado: A na ação, depois a tecla nova; aplica e grava; Escape cancela', () => {
     const { app, saves } = mkApp();
     const applied = vi.spyOn(app, 'applyInput');
-    const r = remapScreen(app, 'kb0'); app.go(r);
-    r.menu.cursor = KEY_FIELDS.indexOf('a');
+    const r = remapScreen(app, 0); app.go(r);
+    r.menu.cursor = row('a');
     press(app, BTN.A);
     expect(r.capturing).toBe('a');
     app.update(inputOf(0, 0, undefined, { key: 'KeyZ' }));
@@ -131,45 +137,71 @@ describe('remapeamento', () => {
     app.update(inputOf(BTN.A, BTN.A));                        // a tecla nova ainda segurada: não reabre
     expect(r.capturing).toBeNull();
     app.update(idleInput());
-    r.menu.cursor = KEY_FIELDS.indexOf('b');
+    r.menu.cursor = row('b');
     press(app, BTN.A);
     app.update(inputOf(0, 0, undefined, { key: 'Escape' }));
     expect([r.capturing, app.settings.keymaps[0].b]).toEqual([null, 'KeyK']);
   });
-  it('teclado: tecla já usada em outra ação troca as duas; F5/Tab são ignoradas (M3)', () => {
+  it('teclado: tecla já usada em outra ação (até de outro jogador) troca as duas; F5/Tab são ignoradas (M3)', () => {
     const { app } = mkApp();
-    const r = remapScreen(app, 'kb0'); app.go(r);
-    r.menu.cursor = KEY_FIELDS.indexOf('a');
+    const r = remapScreen(app, 0); app.go(r);
+    r.menu.cursor = row('a');
     press(app, BTN.A);
     app.update(inputOf(0, 0, undefined, { key: 'F5' }));
     app.update(inputOf(0, 0, undefined, { key: 'Tab' }));
     expect([r.capturing, app.settings.keymaps[0].a]).toEqual(['a', 'KeyJ']);
-    app.update(inputOf(0, 0, undefined, { key: 'KeyW' }));
-    expect([r.capturing, app.settings.keymaps[0].a, app.settings.keymaps[0].up]).toEqual([null, 'KeyW', 'KeyJ']);
+    app.update(inputOf(0, 0, undefined, { key: 'ArrowUp' }));   // era o CIMA do P2
+    expect([r.capturing, app.settings.keymaps[0].a, app.settings.keymaps[1].up]).toEqual([null, 'ArrowUp', 'KeyJ']);
   });
-  it('gamepad: botão já usado em outra ação troca as duas', () => {
+  it('controle: botão já usado em outra ação troca as duas; só aceita o controle do jogador', () => {
     const { app } = mkApp();
-    const r = remapScreen(app, 'gp0'); app.go(r);
-    r.menu.cursor = KEY_FIELDS.indexOf('a');
+    const r = remapScreen(app, 3); app.go(r);                 // P4 = controle 2 (gp1)
+    r.menu.cursor = row('a');
     press(app, BTN.A);
-    app.update(inputOf(0, 0, undefined, { padButton: { pad: 0, button: 9 } }));   // 9 era START
-    expect([app.settings.padmaps[0].a, app.settings.padmaps[0].start]).toEqual([9, DEFAULT_PADMAP.a]);
+    app.update(inputOf(0, 0, undefined, { padButton: { pad: 0, button: 9 } }));
+    expect(r.capturing).toBe('a');
+    app.update(inputOf(0, 0, undefined, { padButton: { pad: 1, button: 9 } }));   // 9 era START
+    expect([r.capturing, app.settings.padmaps[3].a, app.settings.padmaps[3].start, app.settings.padmaps[2]]).toEqual([null, 9, DEFAULT_PADMAP.a, DEFAULT_PADMAP]);
   });
-  it('gamepad: só aceita botão do próprio controle', () => {
+  it('configurar todos: pede as 12 ações em sequência', () => {
     const { app } = mkApp();
-    const r = remapScreen(app, 'gp1'); app.go(r);
-    r.menu.cursor = KEY_FIELDS.indexOf('start');
+    const r = remapScreen(app, 2); app.go(r);
+    app.settings.devices[2] = 'kb';
+    r.menu.cursor = row('all');
     press(app, BTN.A);
-    app.update(inputOf(0, 0, undefined, { padButton: { pad: 0, button: 3 } }));
-    expect(r.capturing).toBe('start');
-    app.update(inputOf(0, 0, undefined, { padButton: { pad: 1, button: 11 } }));
-    expect([r.capturing, app.settings.padmaps[1].start, app.settings.padmaps[0]]).toEqual([null, 11, DEFAULT_PADMAP]);
+    const keys = ['KeyT', 'KeyG', 'KeyF', 'KeyH', 'KeyB', 'KeyN', 'KeyM', 'KeyV', 'KeyR', 'KeyY', 'KeyU', 'KeyO'];
+    for (const [k, f] of KEY_FIELDS.entries()) {
+      expect(r.capturing).toBe(f);
+      app.update(inputOf(0, 0, undefined, { key: keys[k] })); app.update(idleInput());
+    }
+    expect([r.capturing, Object.values(app.settings.keymaps[2])]).toEqual([null, keys]);
+    expect(app.settings.keymaps[0].select).toBe('');          // F era o SELECT do P1: fica com a tecla antiga do P3 (nenhuma)
   });
-  it('B fora da captura volta às opções', () => {
+  it('dispositivo: A e depois um botão escolhe aquele controle; uma tecla escolhe o teclado', () => {
     const { app } = mkApp();
-    app.go(remapScreen(app, 'kb1'));
+    const r = remapScreen(app, 0); app.go(r);
+    r.menu.cursor = row('device');
+    press(app, BTN.A);
+    expect(r.capturing).toBe('device');
+    app.update(inputOf(0, 0, undefined, { padButton: { pad: 2, button: 0 } }));
+    expect(app.settings.devices).toEqual(['gp2', 'kb', 'gp0', 'gp1', 'kb']);   // P5 tinha o controle 3: troca
+    app.update(idleInput());
+    press(app, BTN.A);
+    app.update(inputOf(0, 0, undefined, { key: 'KeyP' }));
+    expect(app.settings.devices[0]).toBe('kb');
+  });
+  it('restaurar padrão do jogador', () => {
+    const { app } = mkApp();
+    app.settings.keymaps[0].a = 'KeyZ'; app.settings.padmaps[0].a = 5;
+    const r = remapScreen(app, 0); app.go(r);
+    r.menu.cursor = row('reset'); press(app, BTN.A);
+    expect([app.settings.keymaps[0], app.settings.padmaps[0]]).toEqual([defaultSettings().keymaps[0], DEFAULT_PADMAP]);
+  });
+  it('B fora da captura volta às opções, com o cursor no jogador', () => {
+    const { app } = mkApp();
+    app.go(remapScreen(app, 1));
     press(app, BTN.B); settle(app);
-    expect(app.screen.id).toBe('options');
+    expect([app.screen.id, (app.screen as unknown as { menu: { cursor: number } }).menu.cursor]).toEqual(['options', 1]);
   });
 });
 
@@ -199,7 +231,7 @@ describe.skipIf(!ASSETS)('quadro ROM (cena rules reaproveitada, sem captura pró
     expect(sawEdge).toBe(true);
   });
   it('funciona com um título bem mais largo (o do remapeamento de gamepad)', () => {
-    const f = optionsPpuFrame(ASSETS!, 'BOTÕES DO CONTROLE 4', 'ascii8', 28);
+    const f = optionsPpuFrame(ASSETS!, 'CONTROLES DO JOGADOR 5', 'ascii8', 28);
     expect(() => renderPpu(f, createImage(256, 224))).not.toThrow();
   });
 });

@@ -31,7 +31,7 @@ function afterWin(cfg = parseConfig('?players=3&humans=1'), crownsBefore = 0) {
 describe('placar (§6.10, R7, R8, A15)', () => {
   it('só as linhas dos slots ativos, na posição do slot', () => {
     const setup = { ...defaultSetup(), slots: ['human', 'off', 'cpu', 'off', 'cpu'] as const };
-    const { sb } = afterWin(configFromSetup(setup, false, ['kb0', 'kb1', 'gp0', 'gp1', 'gp2']));
+    const { sb } = afterWin(configFromSetup(setup, false, ['kb', 'kb', 'gp0', 'gp1', 'gp2']));
     expect(sb.rows()).toEqual([{ slot: 0, y: 56 }, { slot: 2, y: 120 }, { slot: 4, y: 184 }]);
   });
   it('coroa nova: casa preta até S=4, gira 104 f pela animação e para', () => {

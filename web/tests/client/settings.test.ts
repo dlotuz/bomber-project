@@ -1,5 +1,5 @@
 import {
-  defaultSettings, loadSettings, saveSettings, normalizeSettings, STORAGE_KEY, type StorageLike,
+  defaultSettings, loadSettings, saveSettings, normalizeSettings, migrate, STORAGE_KEY, type StorageLike,
 } from '../../src/app/settings';
 import { DEFAULT_KEYMAPS, DEFAULT_PADMAP } from '../../src/input/input';
 
@@ -8,13 +8,14 @@ const mem = (): StorageLike & { data: Map<string, string> } => {
   return { data, getItem: k => data.get(k) ?? null, setItem: (k, v) => { data.set(k, v); } };
 };
 
-describe('configurações v2', () => {
-  it('padrão: versão 2, P1 Teclado 1, P2 Teclado 2, P3–P5 Controles 1–3, 4 mapas de gamepad, opções', () => {
+describe('configurações v3', () => {
+  it('padrão: versão 3, P1 e P2 no teclado, P3–P5 Controles 1–3, teclas e botões por jogador, opções', () => {
     const s = defaultSettings();
-    expect(s.version).toBe(2);
-    expect(s.devices).toEqual(['kb0', 'kb1', 'gp0', 'gp1', 'gp2']);
-    expect(s.padmaps).toHaveLength(4);
-    expect(s.padmaps[3]).toEqual(DEFAULT_PADMAP);
+    expect(s.version).toBe(3);
+    expect(s.devices).toEqual(['kb', 'kb', 'gp0', 'gp1', 'gp2']);
+    expect([s.keymaps.length, s.padmaps.length]).toEqual([5, 5]);
+    expect(s.padmaps[4]).toEqual(DEFAULT_PADMAP);
+    expect(s.keymaps[2].a).toBe('');
     expect(s.options).toEqual({ randomSpawns: false, musicVol: 8, sfxVol: 8 });
     expect(s.setup.rules).not.toHaveProperty('randomSpawns');
   });
@@ -34,13 +35,21 @@ describe('configurações v2', () => {
     const st = mem();
     st.setItem(STORAGE_KEY, JSON.stringify(v1));
     const s = loadSettings(st);
-    expect(s.version).toBe(2);
-    expect(s.devices).toEqual(['gp0', 'kb0', 'kb1', 'none', 'gp1']);
-    expect(s.keymaps[0]).toMatchObject({ up: 'KeyT', a: 'KeyZ', x: 'KeyI', l: 'KeyQ', r: 'KeyE', select: 'KeyF' });
-    expect(s.keymaps[1]).toEqual(DEFAULT_KEYMAPS[1]);
+    expect(s.version).toBe(3);
+    expect(s.devices).toEqual(['gp0', 'kb', 'kb', 'none', 'gp1']);
+    // Cada jogador herda o mapa do teclado que usava (P2 = Teclado 1, P3 = Teclado 2).
+    expect(s.keymaps[1]).toMatchObject({ up: 'KeyT', a: 'KeyZ', x: 'KeyI', l: 'KeyQ', r: 'KeyE', select: 'KeyF' });
+    expect(s.keymaps[2]).toEqual(DEFAULT_KEYMAPS[1]);
     expect(s.setup.mode).toBe('team');
     expect(s.setup.rules.matches).toBe(5);
     expect(s.options.randomSpawns).toBe(false);
+  });
+  it('migra a v2: mapas por dispositivo viram por jogador', () => {
+    const v2 = { version: 2, devices: ['gp1', 'kb1', 'kb0', 'none', 'none'],
+      keymaps: [{ ...DEFAULT_KEYMAPS[0], a: 'KeyZ' }, { ...DEFAULT_KEYMAPS[1], a: 'KeyX' }], padmaps: [DEFAULT_PADMAP, { ...DEFAULT_PADMAP, a: 7, x: 1 }] };
+    const s = normalizeSettings(migrate(v2));
+    expect(s.devices).toEqual(['gp1', 'kb', 'kb', 'none', 'none']);
+    expect([s.padmaps[0].a, s.keymaps[1].a, s.keymaps[2].a]).toEqual([7, 'KeyX', 'KeyZ']);
   });
   it('valores inválidos caem no padrão', () => {
     const s = normalizeSettings({ padmaps: [{ a: -1, b: 99, x: 'q' }], options: { musicVol: 11, sfxVol: 2.5, randomSpawns: 'sim' } });

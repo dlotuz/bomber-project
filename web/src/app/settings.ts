@@ -32,9 +32,10 @@ export interface Setup {
 }
 
 export interface Settings {
-  version: 2;
+  version: 3;
   names: string[];
   devices: DeviceId[];
+  /** Teclas e botões de controle de cada jogador (5 cada), usados conforme o dispositivo escolhido. */
   keymaps: KeyMap[];
   padmaps: PadMap[];
   options: Options;
@@ -59,8 +60,8 @@ export function defaultSetup(): Setup {
 
 export function defaultSettings(): Settings {
   return {
-    version: 2, names: ['', '', '', '', ''], devices: ['kb0', 'kb1', 'gp0', 'gp1', 'gp2'],
-    keymaps: DEFAULT_KEYMAPS.map(m => ({ ...m })), padmaps: [0, 1, 2, 3].map(() => ({ ...DEFAULT_PADMAP })),
+    version: 3, names: ['', '', '', '', ''], devices: ['kb', 'kb', 'gp0', 'gp1', 'gp2'],
+    keymaps: DEFAULT_KEYMAPS.map(m => ({ ...m })), padmaps: [0, 1, 2, 3, 4].map(() => ({ ...DEFAULT_PADMAP })),
     options: defaultOptions(), setup: defaultSetup(),
   };
 }
@@ -86,7 +87,7 @@ function normalizeKeyMap(v: unknown, def: KeyMap): KeyMap {
   const m = { ...def };
   for (const f of KEY_FIELDS) {
     const k = o[f];
-    if (typeof k === 'string' && k.length > 0 && k.length < 32) m[f] = k;
+    if (typeof k === 'string' && k.length < 32) m[f] = k;
   }
   return m;
 }
@@ -110,11 +111,11 @@ export function normalizeSettings(raw: unknown): Settings {
   const ro = asObj(r.options);
   const ds = d.setup;
   return {
-    version: 2,
+    version: 3,
     names: five(r.names, x => sanitizeName(x)),
     devices: five(r.devices, (x, i) => oneOf(x, DEVICE_IDS, d.devices[i])),
-    keymaps: [0, 1].map(k => normalizeKeyMap(Array.isArray(r.keymaps) ? r.keymaps[k] : undefined, d.keymaps[k])),
-    padmaps: [0, 1, 2, 3].map(k => normalizePadMap(Array.isArray(r.padmaps) ? r.padmaps[k] : undefined)),
+    keymaps: five(r.keymaps, (x, i) => normalizeKeyMap(x, d.keymaps[i])),
+    padmaps: five(r.padmaps, x => normalizePadMap(x)),
     options: {
       randomSpawns: bool(ro.randomSpawns, d.options.randomSpawns),
       musicVol: intIn(ro.musicVol, 0, 10, d.options.musicVol),
@@ -141,8 +142,9 @@ export function normalizeSettings(raw: unknown): Settings {
 /**
  * Gancho para migrações entre versões do formato salvo. A v1 não tinha `padmaps`/`options` e trazia
  * `randomSpawns` dentro de `setup.rules` (agora em Opções): apaga o campo de lá (o valor antigo é
- * descartado — Opções nasce com o padrão Não) e deixa o resto para `normalizeSettings` completar
- * (teclas novas do teclado, ex. L/R/SELECT, ganham o padrão daquele conjunto).
+ * descartado — Opções nasce com o padrão Não) e deixa o resto para `normalizeSettings` completar.
+ * Até a v2 os mapas eram por dispositivo (Teclado 1/2, Controles 1–4); na v3 são por jogador: cada jogador herda
+ * o mapa do dispositivo que usava (teclas novas, ex. L/R/SELECT, ganham o padrão daquele teclado).
  */
 export function migrate(raw: unknown): unknown {
   const version = asObj(raw).version;
@@ -150,7 +152,26 @@ export function migrate(raw: unknown): unknown {
     const rules = asObj(asObj(raw).setup).rules;
     if (rules && typeof rules === 'object') delete (rules as Obj).randomSpawns;
   }
+  if ((version === undefined || version === 1 || version === 2) && raw && typeof raw === 'object') {
+    const o = raw as Obj;
+    const devs: unknown[] = Array.isArray(o.devices) ? o.devices : ['kb0', 'kb1', 'gp0', 'gp1', 'gp2'];
+    const oldK: unknown[] = Array.isArray(o.keymaps) ? o.keymaps : [];
+    const oldP: unknown[] = Array.isArray(o.padmaps) ? o.padmaps : [];
+    const kb = (d: unknown): number => (d === 'kb0' ? 0 : d === 'kb1' ? 1 : -1);
+    const gp = (d: unknown): number => (typeof d === 'string' && /^gp[0-3]$/.test(d) ? Number(d[2]) : -1);
+    o.keymaps = [0, 1, 2, 3, 4].map(i => { const k = kb(devs[i]); return k < 0 ? undefined : { ...DEFAULT_KEYMAPS[k], ...asObj(oldK[k]) }; });
+    o.padmaps = [0, 1, 2, 3, 4].map(i => { const g = gp(devs[i]); return g < 0 ? undefined : oldP[g]; });
+    o.devices = devs.map(d => (kb(d) >= 0 ? 'kb' : d));
+  }
   return raw;
+}
+
+/** Dá o dispositivo `d` ao jogador `i` (M4): um controle nunca fica com dois jogadores — quem estava com ele fica
+ *  com o dispositivo antigo de `i`. Teclado e "nenhum" podem repetir (cada jogador no teclado tem suas teclas). */
+export function setDevice(devices: DeviceId[], i: number, d: DeviceId): void {
+  const j = d === 'kb' || d === 'none' ? -1 : devices.findIndex((x, k) => k !== i && x === d);
+  if (j >= 0) devices[j] = devices[i];
+  devices[i] = d;
 }
 
 export interface StorageLike { getItem(k: string): string | null; setItem(k: string, v: string): void }
