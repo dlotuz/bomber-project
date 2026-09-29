@@ -145,13 +145,23 @@ export function throwHeld(s: RoundState, p: Player, ev: GameEvent[]): void {
   ev.push({ type: 'throw', slot: p.slot });
 }
 
-/** Solta a bomba da mão: cai na 1ª casa livre de `cells` (padrão: a do jogador); senão some e volta ao dono. */
-export function dropHeld(s: RoundState, p: Player, cells: readonly number[] = [playerCell(p)]): void {
+/** Luva, B: a bomba sai da mão quicando 1 casa para a frente; o pouso (`land`) cuida do resto — parede ou bomba:
+ *  quica mais uma casa; jogador: fica atordoado e ela quica para a casa seguinte. */
+export function tossHeld(s: RoundState, p: Player): void {
   const b = bombById(s, p.carry);
   p.carry = -1; p.throwQueued = false;
   if (!b) return;
-  const c = cells.find(c => c >= 0 && s.grid[c] === CODE.FLOOR && !bombOccupies(s, c)) ?? -1;
-  if (c >= 0) {
+  const [x, y] = cellCenter(playerCell(p));
+  launchBomb(s, b, 'bounce', (p.face >> 1) as 0 | 1 | 2 | 3, { x, y, z: 0 });
+}
+
+/** Solta a bomba da mão: cai na casa se estiver livre; senão some e volta ao dono. */
+export function dropHeld(s: RoundState, p: Player): void {
+  const b = bombById(s, p.carry);
+  p.carry = -1; p.throwQueued = false;
+  if (!b) return;
+  const c = playerCell(p);
+  if (c >= 0 && s.grid[c] === CODE.FLOOR && !bombOccupies(s, c)) {
     b.state = 'idle'; b.cell = c; [b.x, b.y] = cellCenter(c); s.grid[c] = CODE.BOMB;
   } else removeBomb(s, b, true);
 }
