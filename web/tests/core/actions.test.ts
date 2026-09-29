@@ -105,6 +105,19 @@ describe('máquina de ação', () => {
     playerActions(s, p, BTN.B, BTN.B, 0, []);
     expect([p.act, p.actLeft]).toEqual(['detonate', 3]);
   });
+  it('luva: B sobre a bomba levanta, segura enquanto apertado e larga 1 casa à frente ao soltar', () => {
+    const s = arena(); const p = put(s, 0, 4, 1); p.glove = true; p.face = 2;
+    const b = addBomb(s, 0, C(4, 1)); const ev: GameEvent[] = [];
+    const hold = (btn: number, n: number) => { for (let i = 0; i < n; i++) { s.tick++; playerActions(s, p, btn, btn & ~p.prevBtn, p.prevBtn & ~btn, ev); p.prevBtn = btn; } };
+    hold(BTN.B, 1);
+    expect([p.carry, p.act]).toEqual([b.id, 'lift']);
+    hold(BTN.B, 30);                                              // segurando: continua na mão, sem detonar
+    expect([p.carry, p.act]).toEqual([b.id, 'carryIdle']);
+    hold(0, 1);
+    expect([p.carry, b.state]).toEqual([-1, 'air']);
+    for (let i = 0; i < 20; i++) { s.tick++; tickFlyers(s, ev); }
+    expect([b.state, b.cell]).toEqual(['idle', C(5, 1)]);
+  });
   it('Y: a montaria tem precedência sobre o P', () => {
     const s = arena(); const p = put(s, 0, 4, 1); p.pItem = true;
     withMount({ ...NO_MOUNT, onY: () => true }, () => playerActions(s, p, BTN.Y, BTN.Y, 0, []));
