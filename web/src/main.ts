@@ -71,6 +71,16 @@ if (import.meta.env.DEV && params.has('debug')) {
       app.draw(ctx, bank);
     },
   };
+  // F9: baixa a rodada atual (regras, estado e cérebros da IA) em JSON, para reproduzir um bug fora do navegador.
+  window.addEventListener('keydown', e => {
+    const ms = (app.screen as Partial<{ ms: MatchSession }>).ms;
+    if (e.key !== 'F9' || !ms?.round) return;
+    const typed = (_k: string, v: unknown): unknown => (ArrayBuffer.isView(v) ? { ta: v.constructor.name, v: Array.from(v as Int32Array) } : v);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify({ cfg: ms.cfg, round: ms.round, brains: ms.ai.brains }, typed)]));
+    a.download = `partida-${ms.round.clock.sec}s.json`;
+    a.click();
+  });
 }
 
 let prev = emptyDevices();
