@@ -16,7 +16,7 @@ describe('configurações v3', () => {
     expect([s.keymaps.length, s.padmaps.length]).toEqual([5, 5]);
     expect(s.padmaps[4]).toEqual(DEFAULT_PADMAP);
     expect(s.keymaps[2].a).toBe('');
-    expect(s.options).toEqual({ randomSpawns: false, musicVol: 8, sfxVol: 8 });
+    expect(s.options).toEqual({ randomSpawns: false, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3 });
     expect(s.setup.rules).not.toHaveProperty('randomSpawns');
   });
   it('salva e carrega de volta', () => {
@@ -52,9 +52,9 @@ describe('configurações v3', () => {
     expect([s.padmaps[0].a, s.keymaps[1].a, s.keymaps[2].a]).toEqual([7, 'KeyX', 'KeyZ']);
   });
   it('valores inválidos caem no padrão', () => {
-    const s = normalizeSettings({ padmaps: [{ a: -1, b: 99, x: 'q' }], options: { musicVol: 11, sfxVol: 2.5, randomSpawns: 'sim' } });
+    const s = normalizeSettings({ padmaps: [{ a: -1, b: 99, x: 'q' }], options: { musicVol: 11, sfxVol: 2.5, randomSpawns: 'sim', gloveEscape: 99 } });
     expect(s.padmaps[0]).toEqual(DEFAULT_PADMAP);
-    expect(s.options).toEqual({ randomSpawns: false, musicVol: 8, sfxVol: 8 });
+    expect(s.options).toEqual({ randomSpawns: false, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3 });
   });
   it('JSON corrompido → padrão; falha ao gravar não derruba', () => {
     const st = mem();
@@ -62,5 +62,22 @@ describe('configurações v3', () => {
     expect(loadSettings(st)).toEqual(defaultSettings());
     const bad: StorageLike = { getItem: () => null, setItem: () => { throw new Error('cota'); } };
     expect(() => saveSettings(bad, defaultSettings())).not.toThrow();
+  });
+});
+
+describe('slots de controles e jogabilidade', () => {
+  it('sem slots salvos (versão antiga): controles vazios, jogabilidade 1 = padrão do jogo', () => {
+    const s = normalizeSettings({});
+    expect(s.controlSlots).toEqual([null, null, null]);
+    expect(s.gameplaySlots).toEqual([{ randomSpawns: false, gloveEscape: 10, throwStun: false, sleepSec: 3 }, null, null]);
+  });
+  it('slot inválido vira vazio; valores fora da faixa caem no padrão', () => {
+    const s = normalizeSettings({
+      controlSlots: [7, { devices: ['kb', 'xx'], keymaps: [{ a: 'KeyZ' }] }, null],
+      gameplaySlots: [null, { gloveEscape: 99, sleepSec: 5 }, 'x'],
+    });
+    expect(s.controlSlots[0]).toBeNull();
+    expect([s.controlSlots[1]!.devices[1], s.controlSlots[1]!.keymaps[0].a]).toEqual(['kb', 'KeyZ']);
+    expect(s.gameplaySlots).toEqual([null, { randomSpawns: false, gloveEscape: 10, throwStun: false, sleepSec: 5 }, null]);
   });
 });

@@ -13,7 +13,11 @@ export function resetCarry(): void { carry.seed = null; carry.racerPrize = null;
 export function createMatchSession(cfg: GameConfig): MatchSession {
   const seed = cfg.seed ?? carry.seed ?? 0x0012;
   const prize = cfg.rules.racer && cfg.rules.mode === 'ffa' ? carry.racerPrize : null;
-  return { cfg, match: newMatch(cfg.rules, cfg.stage, seed, prize, cfg.chars), round: null, ai: createAi(),
+  const match = newMatch(cfg.rules, cfg.stage, seed, prize, cfg.chars);
+  // Spawns aleatórios: semente própria do navegador (o RNG do jogo começa sempre em $0012 ao abrir a página, e a
+  // ordem sairia igual a cada recarga). Com ?seed= na URL fica determinística, para reproduzir partidas.
+  if (cfg.seed === null) match.spawnSeed = (Math.random() * 0x100000000) >>> 0;
+  return { cfg, match, round: null, ai: createAi(),
     roundNo: 0, lastWinners: [], champions: [], over: false };
 }
 export function beginRound(ms: MatchSession): RoundState {

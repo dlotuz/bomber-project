@@ -68,3 +68,20 @@ describe('montaria tipo D (alcachofra): Y lança a montaria', () => {
     expect(r).toMatchObject({ phase: 'riding', type: 0x3 });
   });
 });
+
+describe('ajuste: fogo do míssil D', () => {
+  it('não usa o fogo do jogador: a explosão pega a linha inteira', () => {
+    const s = mkRound({ players: [0, 2] });
+    const p = placePx(s, 0, 32, 47); p.face = 2; p.fire = 0;
+    placePx(s, 2, cx(14), cy(11));
+    ride(s, 0, 0xd);
+    run(s, 1, { 0: BTN.Y });
+    let ex: { cell?: number } | undefined;
+    for (let k = 0; !ex && k < 200; k++) ex = run(s, 1).find(e => e.type === 'explosion') as { cell?: number } | undefined;
+    expect(ex).toBeDefined();
+    const lin = Math.floor(ex!.cell! / 17), col = ex!.cell! % 17;
+    const row = [];
+    for (let c = 3; c < col; c++) row.push(s.grid[cellOf(c, lin)]);
+    expect(row.every(v => v === 0x1000)).toBe(true);
+  });
+});

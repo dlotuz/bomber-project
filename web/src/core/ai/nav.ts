@@ -5,7 +5,7 @@ import { playerCell, standing } from '../state';
 import { blockedFor, moveStep } from '../movement';
 import { speedLevel } from '../disease';
 import { SPEED_BY_LEVEL } from '../tables/movement';
-import { MOUNTS } from '../mounts';
+import { canKick } from '../kick';
 import { STAGES } from '../stages';
 import { SAFE, blockedUntil, type Hazard } from './danger';
 import type { AiLevel } from './level';
@@ -278,5 +278,5 @@ export function steer(s: RoundState, p: Player, next: number): number {
 
 /** Virar para a face `face` chutaria uma bomba vizinha? */
 function kicksToward(s: RoundState, p: Player, here: number, face: number): boolean {
-  return ((p.kick && !p.mount) || !!MOUNTS.current.kicks?.(p)) && s.grid[faceStep(here, face)] === CODE.BOMB;
+  return canKick(p) && s.grid[faceStep(here, face)] === CODE.BOMB;
 }

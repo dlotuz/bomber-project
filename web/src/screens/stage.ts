@@ -65,7 +65,10 @@ export function stageScreen(app: App): Screen & {
   };
 
   const startBattle = (): void => {
-    const cfg = configFromSetup(setup, app.settings.options.randomSpawns, app.settings.devices);
+    const cfg = configFromSetup(setup, app.settings.options.randomSpawns, app.settings.devices, null, {
+      gloveEscape: app.settings.options.gloveEscape, throwStun: app.settings.options.throwStun,
+      sleepTicks: app.settings.options.sleepSec * 60,
+    });
     const cues: Cue[] = [
       { at: 32, run: fadeAudio }, { at: 233, run: bankCue(BANK.battle) }, { at: 245, run: musicCue(MUSIC.battle) },
     ];

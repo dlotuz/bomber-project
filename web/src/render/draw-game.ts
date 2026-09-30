@@ -1,4 +1,4 @@
-import { BURN, CODE, GRID_H, GRID_W, cellOf, isItemCode, itemOfCode, px, invisibleVisible, clockText, type RoundState } from '../core';
+import { BURN, CODE, GRID_H, GRID_W, cellOf, isItemCode, itemOfCode, px, invisibleVisible, clockText, CLOCK_FROZEN_FROM, type RoundState } from '../core';
 import type { SpriteBank } from './sprite-bank';
 import { SCREEN_W, SCREEN_H } from './display';
 import { flameShrink, flamePart, walkFrame, dyingVisible, type ViewState } from './view';
@@ -38,7 +38,7 @@ export function drawHud(ctx: CanvasRenderingContext2D, round: RoundState, bank: 
   ctx.fillStyle = '#1b6a2a';
   ctx.fillRect(3, 3, SCREEN_W - 6, 18);
   ctx.drawImage(bank.clock(), 6, 4);
-  const clock = bank.plainText(clockText(round.clock), '#ffffff');
+  const clock = bank.plainText(round.clock.sec >= CLOCK_FROZEN_FROM ? '∞' : clockText(round.clock), '#ffffff');
   ctx.drawImage(clock, 24, 1, clock.width * 2, clock.height * 2);
   let x = 82;
   round.players.forEach((p, i) => {
@@ -77,14 +77,15 @@ export function drawRound(ctx: CanvasRenderingContext2D, round: RoundState, view
     if (b.state === 'idle' || b.state === 'kicked') ctx.drawImage(bank.bomb((frame >> 3) & 1), px(b.x) - 7, px(b.y) - 7);
   }
   for (const f of round.flyers) {
+    if (f.kind === 'player') continue;   // o próprio jogador é desenhado com a altura p.z
     const img = f.kind === 'bomb' ? bank.bomb(0) : bank.item(f.ref);
     ctx.drawImage(img, px(f.x) - 7, px(f.y) + f.z - 7);
   }
-  const shown = round.players.filter(p => p.present && (p.state === 'alive' || p.state === 'dying')).sort((p, q) => p.y - q.y || p.slot - q.slot);
+  const shown = round.players.filter(p => p.present && (p.state === 'alive' || p.state === 'dying')).sort((p, q) => p.y - q.y || p.z - q.z || p.slot - q.slot);
   for (const p of shown) {
     if (p.state === 'dying' && !dyingVisible(round.tick - p.hitT0)) continue;
     if (p.state === 'alive' && (!invisibleVisible(p) || (p.inv & 2) !== 0)) continue;
-    const sx = px(p.x) - 7, sy = px(p.y) - 11;
+    const sx = px(p.x) - 7, sy = px(p.y) - 11 - p.z;
     const frameIdx = p.state === 'dying' ? 0 : walkFrame(view.walk[p.slot]);
     ctx.drawImage(bank.bomber(chars[p.slot], FACE_TO_DIR[p.face], frameIdx), sx, sy);
     if (p.carry >= 0) ctx.drawImage(bank.bomb(0), sx, sy - 12);

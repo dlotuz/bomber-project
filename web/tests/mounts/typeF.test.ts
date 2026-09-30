@@ -57,3 +57,21 @@ describe('montaria tipo F (palhaço): Y = notas', () => {
     expect(mstate(s).projectiles).toHaveLength(0);
   });
 });
+
+describe('ajuste: duração do soneca', () => {
+  it('Rules.sleepTicks muda quanto tempo o alvo fica travado', () => {
+    const s = mkRound({ players: [0, 2] });
+    s.rules.sleepTicks = 60;
+    const p = placePx(s, 0, 32, 47); p.face = 2;
+    const q = placePx(s, 2, 72, 47);
+    ride(s, 0, 0xf);
+    run(s, 1, { 0: BTN.Y });
+    let hit = -1;
+    for (let k = 1; k < 200 && hit < 0; k++) { run(s, 1); if (q.act === 'dance') hit = s.tick; }
+    expect(hit).toBeGreaterThan(0);
+    run(s, 58);
+    expect(q.act).toBe('dance');
+    run(s, 2);
+    expect(q.act).not.toBe('dance');
+  });
+});

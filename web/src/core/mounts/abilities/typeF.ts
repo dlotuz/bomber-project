@@ -21,7 +21,7 @@ export const ABILITY_F: MountAbility = {
   tickProjectile(s, pr, ev) {
     const res = advanceProjectile(s, pr, F_SPEC);
     if (res.kind === 'player') {
-      lockAct(s, s.players[res.slot], 'dance', DANCE_TICKS);
+      lockAct(s, s.players[res.slot], 'dance', s.rules.sleepTicks ?? DANCE_TICKS);   // extra: duração configurável
       ev.push(mev({ id: 'mount_struck', slot: pr.owner, target: res.slot, mount: 0xf }));
     }
     if (res.kind !== 'none' || s.tick - pr.born >= F_FLIGHT) { pr.state = 'done'; pr.t = s.tick; }

@@ -28,7 +28,7 @@ export function remapScreen(app: App, player: number): Screen & { readonly menu:
   let seq = false;
   let suppress = false;
 
-  const goBack = (): void => { app.transition(() => optionsScreen(app, player), FADE_MENU); };
+  const goBack = (): void => { app.transition(() => optionsScreen(app, player, 'controls'), FADE_MENU); };
   const capture = (c: Capture): void => { capturing = c; menu.cursor = rows.findIndex(r => r.id === c); };
   const turn = (d: number): boolean => { setDevice(st.devices, player, cycle(DEVICE_IDS, dev(), d)); app.save(); return true; };
 

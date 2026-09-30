@@ -12,6 +12,19 @@ describe('MatchSession', () => {
     expect(matchRngState(createMatchSession(parseConfig('')).match)).toBe(0x4321);
     expect(matchRngState(createMatchSession(parseConfig('?seed=7')).match)).toBe(7);
   });
+  it('spawns aleatórios: cada partida sorteia a própria ordem, mesmo com a semente $0012 de página nova', () => {
+    const orders = new Set<string>();
+    for (let i = 0; i < 20; i++) {
+      resetCarry();
+      const r = beginRound(createMatchSession(parseConfig('?players=2&spawns=1')));
+      orders.add(r.players.slice(0, 2).map(p => `${p.x},${p.y}`).join('|'));
+    }
+    expect(orders.size).toBeGreaterThan(1);
+  });
+  it('spawns aleatórios com ?seed=: a ordem se repete (partida reproduzível)', () => {
+    const at = () => beginRound(createMatchSession(parseConfig('?players=2&spawns=1&seed=7'))).players.map(p => p.x);
+    expect(at()).toEqual(at());
+  });
   it('beginRound cria a rodada em intro e conta', () => {
     const ms = createMatchSession(parseConfig('?players=2'));
     const r = beginRound(ms);

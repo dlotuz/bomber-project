@@ -27,6 +27,9 @@ export const REMOUNT_ANIMS: number[] = [0xd818ef, 0xd816d3];
 export const REMOUNT_MOUNT_ANIMS: number[] = [0xd835e5];   // +$38 durante o remonte
 export const RESERVE_EGG_ANIMS: number[] = [0xd8d1f1, 0xd8d258, 0xd8d206];
 export const EGG_ANIMS: number[] = [0xd8d271];
+// Ovo de máquina (metálico): a ROM usa $D8:D2CC para os ids ≥ $38 (relatório montarias-e-telas §A.3). Aqui vale para
+// as montarias de máquina do Crown Blast (A, D, F — `isMachine`), no chão e seguindo o jogador.
+export const MACHINE_EGG_ANIMS: number[] = [0xd8d2cc];
 export const PROJ_ANIMS: Record<'d' | 'e' | 'f', number[]> = {d: [0xd80edb], e: [0xd80f93, 0xd8d327], f: [0xd80f14]};
 export const DANCE_ANIMS: number[] = [0xd81653, 0xd82a0d];
 // Notas da dança (T14b): objeto OAM independente da nota que acerta (tipo F, Y), não o jogador dançando.

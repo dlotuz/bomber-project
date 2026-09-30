@@ -10,6 +10,7 @@ import { pickup } from './items';
 import { checkHit, tickDeath, tickInv } from './hit';
 import { tickBombs, tickCells } from './bombs';
 import { tickFlyers } from './flyers';
+import { tickHeld } from './grab';
 import { tickBadBombers } from './bad-bomber';
 import { checkRoundEnd, tickEndPhases } from './round-end';
 
@@ -31,6 +32,7 @@ export function playerTick(s: RoundState, p: Player, raw: number, ev: GameEvent[
 export function tickObjects(s: RoundState, inputs: readonly number[], ev: GameEvent[]): void {
   tickBombs(s, ev);          // pavio, deslize, cadeia, explosões
   tickCells(s, ev);          // fim de chamas e queimas (revela itens)
+  tickHeld(s);               // quem está na mão da luva acompanha quem segura
   tickFlyers(s, ev);
   tickPressure(s, ev);
   tickBadBombers(s, inputs, ev);

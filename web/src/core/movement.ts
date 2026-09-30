@@ -91,7 +91,7 @@ export function movePlayer(s: RoundState, p: Player, btn: number, ev: GameEvent[
   p.moveDir = d;
   const moving = din !== 8;
   if (moving) setFace(s, p, FACE_OF_DIR[d !== 8 ? d : din]);
-  setAct(s, p, p.carry >= 0 ? (moving ? 'carryWalk' : 'carryIdle') : moving ? 'walk' : 'idle');
+  setAct(s, p, p.carry >= 0 || p.grab >= 0 ? (moving ? 'carryWalk' : 'carryIdle') : moving ? 'walk' : 'idle');
   if (moving) { if (++p.walkT % FOOTSTEP_EVERY === 0) ev.push({ type: 'footstep', slot: p.slot }); } else p.walkT = 0;
   const now = cellAt(p.x, p.y);
   const st = STAGES[s.stage];

@@ -79,7 +79,7 @@ function drawFrame(b: FrameBuilder, c: SpriteCtx, p: Player, X: number, Y: numbe
   for (const pc of sm.frame.pieces) {
     const full = ch.frame(pc.tile);
     b.sprite({ x: X + pc.dx + sm.ox, y: Y + pc.dy + sm.oy, size: pc.big ? 32 : 16, pal: (pal + pc.palAdd) & 7, prio: 2,
-      hflip: pc.hflip, vflip: pc.vflip, src: { px: pc.big ? full : smallFramePx(full) } }, Y, ORDER_PLAYER + p.slot);
+      hflip: pc.hflip, vflip: pc.vflip, src: { px: pc.big ? full : smallFramePx(full) } }, Y + p.z + (p.z ? 1 : 0), ORDER_PLAYER + p.slot);   // no alto: na frente de quem está embaixo
   }
 }
 
@@ -91,14 +91,14 @@ export function drawPlayers(b: FrameBuilder, c: SpriteCtx): void {
     if (invincibleHidden(p.inv)) continue;
     if (p.disease === 0x29 && !invisibleVisible(p)) continue;
     const X = px(p.x);
-    const Y = px(p.y);
+    const Y = px(p.y) - p.z;   // na mão da luva ou arremessado: acima do chão
     let hooked = false;
     for (let i = 0; i < romPlayerHooks.length; i++) {
       let r: ObjEntry[] | null;
       // M1: um gancho do plano 9 que lance não deve tirar o jogador da tela — cai para o desenho padrão.
       try { r = romPlayerHooks[i](s, p, a, clock.frame, clock.tick); }
       catch (e) { warnOnce(a, 'hook:' + i, `Crown Blast: gancho de jogador #${i} falhou; usando o desenho padrão.`, e); continue; }
-      if (r) { for (const e of r) b.sprite(e, Y, ORDER_PLAYER + p.slot); hooked = true; break; }
+      if (r) { for (const e of r) b.sprite(e, Y + p.z + (p.z ? 1 : 0), ORDER_PLAYER + p.slot); hooked = true; break; }
     }
     if (!hooked) drawFrame(b, c, p, X, Y, p.act, p.face, p.moveDir !== 8, clock.tick - p.actT0);
   }

@@ -14,6 +14,7 @@ export function createPlayer(slot: number, present: boolean, team = 0, char = sl
     passSoft: false, passBomb: false, heart: false, costume: -1,
     disease: 0, diseaseT: 0, contactLock: 0, inv: 0, effect: { kind: 0, left: 0 },
     act: 'idle', actT0: 0, actLeft: 0, carry: -1, throwQueued: false,
+    grab: -1, heldBy: -1, flying: false, escape: 0, z: 0,
     push: { vx: 0, vy: 0, left: 0 }, walkT: 0,
     state: present ? 'alive' : 'out', hitT0: -1, prevBtn: 0, mount: null,
   };

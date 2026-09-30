@@ -2,6 +2,7 @@ import { CODE, type RoundState, type Player, type GameEvent, type PlayerAct } fr
 import { setAct } from '../state';
 import { addBomb, canPlaceBomb, bombFireOf, fuseOf, explodeBomb, bombOccupies } from '../bombs';
 import { MOUNTS } from './index';
+import { FIRE_LINE, rangeOf } from '../constants';
 import { CAPSULE_TYPES } from '../tables/misc';                 // $C1:5DA4 (gerado pelo plano 6, §3.16)
 
 export { rnd } from '../rng';
@@ -27,7 +28,7 @@ export function placeBombAt(s: RoundState, p: Player, cell: number, ev: GameEven
 /** Explosão imediata em cruz na casa `cell` (range 2 = fogo 0), sem perfurar, dono `owner`; emite `explosion`.
  *  Não é bomba do jogador: explodeBomb devolve a bomba ao dono (refundBomb), então o `bombsFree` é restaurado. */
 export function explodeAt(s: RoundState, cell: number, range: number, owner: number, ev: GameEvent[]): void {
-  const fire = range === 1 ? 10 : range - 2;
+  const fire = range === 1 ? 10 : range >= rangeOf(FIRE_LINE) ? FIRE_LINE : range - 2;
   const p = s.players[owner];
   const free = p.bombsFree;
   const b = addBomb(s, owner, cell, { fire, type: 0 });

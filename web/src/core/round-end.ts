@@ -2,6 +2,7 @@ import type { GameEvent, RoundResult, RoundState } from './types';
 import { CELEBRATE_TICKS, TIME_UP_TICKS, VICTORY_SFX_AT, WIN_DELAY } from './constants';
 import { setAct, standing } from './state';
 import { dropHeld } from './flyers';
+import { landNow, releaseGrab } from './grab';
 
 export function groupsStanding(s: RoundState): number {
   const st = s.players.filter(standing);
@@ -23,6 +24,8 @@ export function checkRoundEnd(s: RoundState, _ev: GameEvent[]): void {
   for (const p of s.players) {
     if (!standing(p)) continue;
     if (p.carry >= 0) dropHeld(s, p);
+    if (p.grab >= 0) releaseGrab(s, p);
+    landNow(s, p);
     p.push.left = 0;
     setAct(s, p, 'victory', 0);
   }

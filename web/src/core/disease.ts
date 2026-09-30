@@ -44,7 +44,7 @@ export function inContact(a: Player, b: Player): boolean {
 
 export function contagion(s: RoundState, ev: GameEvent[]): void {
   if (s.phase !== 'play') return;
-  const live = s.players.filter(standing);
+  const live = s.players.filter(p => standing(p) && p.heldBy < 0 && !p.flying);
   for (let i = 0; i < live.length; i++) for (let j = i + 1; j < live.length; j++) {
     const a = live[i], b = live[j];
     const bitA = 1 << a.slot, bitB = 1 << b.slot;

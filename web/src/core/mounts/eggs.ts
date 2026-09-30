@@ -1,7 +1,9 @@
 import type { RoundState, Player, GameEvent } from '../types';
-import { rider, mstate, MAX_ACTIVE, MAX_RESERVES, MOUNTING_TICKS, type MountRider, type MountState } from './types';
-import { EGG_TYPES, rnd, lockAct, isEggCode } from './core-api';
+import { rider, mstate, sameClass, MAX_ACTIVE, MAX_RESERVES, MOUNTING_TICKS, type MountRider, type MountState } from './types';
+import { EGG_TYPES, rnd, lockAct, isEggCode, cellAt, centerX, centerY, colOf, linOf } from './core-api';
 import { mev } from './events';
+import { dropHeld } from '../flyers';
+import { releaseGrab } from '../grab';
 
 export function eggsOnGrid(s: RoundState): number {
   let n = 0;
@@ -52,13 +54,44 @@ export function stepOnEgg(s: RoundState, p: Player, cell: number, ev: GameEvent[
     s.grid[cell] = 0;
     const nr: MountRider = { type: t, slot: freeSlot(s) || 1, phase: 'mounting', t0: s.tick, reserves: [], trail: [], cooldown: 0, remount: false, remountFx: null };
     p.mount = nr;
+    p.x = centerX(colOf(cell)); p.y = centerY(linOf(cell));   // choca embaixo: o jogador vai para o centro do ovo
+    if (p.carry >= 0) dropHeld(s, p);   // montado não usa luva: a bomba da mão fica na casa do ovo
+    if (p.grab >= 0) releaseGrab(s, p);   // ... e quem estava na mão é solto
     lockAct(s, p, 'mounting', MOUNTING_TICKS);
     ev.push(mev({ id: 'mount_start', slot: p.slot, mount: t }));
     return;
   }
-  if (r.phase === 'riding' && t < 8 && r.reserves.length < MAX_RESERVES) {
+  if (r.phase === 'riding' && sameClass(t, r.type) && r.reserves.length < MAX_RESERVES) {   // ROM: só t < 8
     s.grid[cell] = 0;
     r.reserves.push(t);
     ev.push(mev({ id: 'egg_reserved', slot: p.slot, mount: t }));
+  }
+}
+
+/** Extra: pode receber um ovo do tipo `t` (a pé monta; montado na mesma classe e com vaga, vira reserva). */
+function canTake(p: Player, t: number): boolean {
+  const r = rider(p);
+  return !r || (r.phase === 'riding' && sameClass(t, r.type) && r.reserves.length < MAX_RESERVES);
+}
+
+/** Extra: outro jogador que pisa na casa de um ovo reserva (`trail[i + 1]`) rouba esse ovo, se puder recebê-lo. */
+export function stealReserves(s: RoundState, ev: GameEvent[]): void {
+  for (const p of s.players) {
+    const r = rider(p);
+    if (!r) continue;
+    for (let i = 0; i < r.reserves.length; i++) {
+      const cell = r.trail[i + 1];
+      if (cell === undefined) continue;
+      const t = r.reserves[i];
+      const q = s.players.find(o => o !== p && o.state === 'alive' && o.heldBy < 0 && !o.flying
+        && cellAt(o.x, o.y) === cell && canTake(o, t));
+      if (!q) continue;
+      r.reserves.splice(i, 1); i--;
+      ev.push(mev({ id: 'egg_stolen', slot: q.slot, from: p.slot, mount: t }));
+      const code = s.grid[cell];
+      s.grid[cell] = 0x0970 + t;                           // passa pelo caminho normal de pisar no ovo
+      stepOnEgg(s, q, cell, ev);
+      s.grid[cell] = code;                                 // o ovo não estava na grade: a casa volta ao que era
+    }
   }
 }

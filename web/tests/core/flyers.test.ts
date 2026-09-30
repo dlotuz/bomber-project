@@ -1,5 +1,5 @@
 import { arena, put, setCell, codeAt, C } from './kit';
-import { punchBomb, startLift, throwHeld, aimThrow, tickFlyers, spawnItemFlyer, dropHeld } from '../../src/core/flyers';
+import { punchBomb, startLift, throwHeld, tossHeld, aimThrow, tickFlyers, spawnItemFlyer, dropHeld } from '../../src/core/flyers';
 import { addBomb, bombById } from '../../src/core/bombs';
 import { CODE, type GameEvent, type RoundState } from '../../src/core/types';
 import { itemCode } from '../../src/core/state';
@@ -149,5 +149,59 @@ describe('itens voando ($C1:6715)', () => {
     spawnItemFlyer(s2, 0x03, C(8, 5), 1);
     fly(s2, 12);
     expect([s2.flyers.length, codeAt(s2, 13, 5)]).toEqual([0, CODE.BURNING]);
+  });
+});
+
+describe('reflect (luva × luva) e soco em quem segura bomba', () => {
+  function holding(s: RoundState, slot: number, col: number, face: 0 | 2 | 4 | 6) {
+    const p = put(s, slot, col, 1); p.glove = true; p.face = face;
+    const b = addBomb(s, slot, C(col, 1));
+    startLift(s, p, []);
+    return { p, b };
+  }
+  it('bomba da luva em quem segura bomba com a luva volta na direção de quem jogou', () => {
+    const s = arena({ players: 2 });
+    const a = holding(s, 0, 4, 2), d = holding(s, 1, 7, 6);
+    throwHeld(s, a.p, []);
+    const f = s.flyers[0];
+    for (let i = 0; i < 60 && f.dir === 1; i++) fly(s, 1);
+    expect(f.dir).toBe(3);                       // voltou para a esquerda
+    expect(d.p.act).not.toBe('stunned');
+    expect(d.p.carry).toBe(d.b.id);              // o defensor segue com a bomba na cabeça
+    for (let i = 0; i < 80 && a.p.act !== 'stunned'; i++) fly(s, 1);
+    expect(a.p.act).toBe('stunned');             // cai em quem jogou
+  });
+  it('quicou antes de cair em quem segura bomba: sem reflect — atordoa e a bomba dele cai na casa da frente', () => {
+    const s = arena({ players: 2 });
+    const a = holding(s, 0, 4, 2);
+    setCell(s, 9, 1, CODE.SOFT);                 // arremesso de 5 casas cai no bloco (9,1) e quica para a (10,1)
+    const d = holding(s, 1, 10, 2);
+    throwHeld(s, a.p, []);
+    const f = s.flyers[0];
+    expect(f.flight).toBe('throw5');
+    for (let i = 0; i < 80 && d.p.act !== 'stunned'; i++) fly(s, 1);
+    expect(d.p.act).toBe('stunned');
+    expect(f.dir).toBe(1);
+    expect([d.b.state, d.b.cell]).toEqual(['idle', C(11, 1)]);
+  });
+  it('bomba largada com B caindo direto em quem segura bomba: também reflete', () => {
+    const s = arena({ players: 2 });
+    const a = holding(s, 0, 4, 2), d = holding(s, 1, 5, 6);
+    tossHeld(s, a.p);
+    const f = s.flyers[0];
+    for (let i = 0; i < 40 && f.dir === 1; i++) fly(s, 1);
+    expect(f.dir).toBe(3);
+    expect([d.p.act, d.p.carry]).toEqual(['lift', d.b.id]);
+  });
+  it('soco em quem segura bomba: atordoa e ele larga a própria bomba na casa da frente', () => {
+    const s = arena({ players: 2 });
+    const d = holding(s, 1, 8, 6);
+    const p = put(s, 0, 4, 1); p.punch = true; p.face = 2;
+    addBomb(s, 0, C(5, 1));
+    punchBomb(s, p, []);
+    for (let i = 0; i < 60 && d.p.act !== 'stunned'; i++) fly(s, 1);
+    expect(d.p.act).toBe('stunned');
+    expect(d.p.carry).toBe(-1);
+    expect([d.b.state, d.b.cell]).toEqual(['idle', C(7, 1)]);
   });
 });

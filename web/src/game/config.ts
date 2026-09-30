@@ -16,11 +16,15 @@ const DEFAULT_DEVICES: DeviceId[] = ['kb', 'kb', 'gp0', 'gp1', 'gp2'];
 export const activeCount = (slots: readonly SlotKind[]): number => slots.filter(k => k !== 'off').length;
 export const canStart = (slots: readonly SlotKind[]): boolean => activeCount(slots) >= 2;
 
-export function configFromSetup(setup: SetupLike, randomSpawns: boolean, devices: readonly DeviceId[], seed: number | null = null): GameConfig {
+/** Regras extras que vêm das Opções (não do menu de regras). */
+export type ExtraRules = Partial<Pick<Rules, 'gloveEscape' | 'throwStun' | 'sleepTicks'>>;
+
+export function configFromSetup(setup: SetupLike, randomSpawns: boolean, devices: readonly DeviceId[], seed: number | null = null,
+  extras: ExtraRules = {}): GameConfig {
   const r = setup.rules;
   const rules: Rules = {
     ...defaultRules(), cpuLevel: r.cpuLevel, matches: r.matches, timeIdx: r.timeIdx, suddenDeath: r.suddenDeath,
-    badBomber: r.badBomber, racer: r.racer, randomSpawns, mode: setup.mode, teams: [...setup.teams],
+    badBomber: r.badBomber, racer: r.racer, randomSpawns, ...extras, mode: setup.mode, teams: [...setup.teams],
     active: setup.slots.map(k => k !== 'off'),
   };
   return { rules, stage: setup.stage, chars: [...setup.chars], humans: setup.slots.map(k => k === 'human'),

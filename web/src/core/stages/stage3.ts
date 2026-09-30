@@ -5,6 +5,7 @@ import type { Orb, Stage3State } from './state';
 import { A3_ORBS, A3_TURN } from './tables';
 import { burnSoft, px, restoreFloor, rnd255, stageEvent, standing, stun } from './kit';
 import { stage3Ai } from '../ai/stages/stage3';
+import { bombOccupies } from '../bombs';
 
 /** Passo em casas por direção: 0 cima, 1 direita, 2 baixo, 3 esquerda ($C3:09F8). */
 export const ORB_STEP = [-17, 1, 17, -1];
@@ -48,7 +49,8 @@ function evaluate(s: RoundState, o: Orb): void {
     const dest = o.cell + ORB_STEP[o.dir];
     const g = s.grid[dest] ?? CODE.HARD;
     let blocked = true;
-    if ((g & 0x30) === 0x30 || (g & 0xefc0) === CODE.BOMB) { /* bloqueia */ }
+    // bomba deslizando: a grade dela é piso até parar — sem isto a bola rolava para a casa e parava por cima da bomba
+    if ((g & 0x30) === 0x30 || (g & 0xefc0) === CODE.BOMB || bombOccupies(s, dest)) { /* bloqueia */ }
     else if ((g & 0xefc0) === CODE.SOFT) { if (o.softArmed) { o.softArmed = false; burnSoft(s, dest); } }
     else if (g & 0xc000) { /* bloqueia */ }
     else blocked = false;
@@ -95,6 +97,10 @@ export const stage3: StageModule = {
   init(s) {
     s.stageState = { orbs: A3_ORBS.map(([c, l]) => newOrb(c, l)) };
     for (const o of st3(s).orbs) s.grid[o.cell] = CODE.ORB;
+  },
+  /** Bomba chutada não entra na casa da bola nem na casa para onde ela está rolando (as duas parariam juntas). */
+  kickedBombEnter(s, _b, cell) {
+    return st3(s).orbs.some(o => o.alive && (o.cell === cell || (o.rolling && o.cell + ORB_STEP[o.dir] === cell))) ? 'stop' : 'go';
   },
   onFlameCell(s, cell) {
     for (const o of st3(s).orbs) if (o.alive && !o.rolling && o.cell === cell && o.flamedAt < 0) o.flamedAt = s.tick;

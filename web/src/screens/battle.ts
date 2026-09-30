@@ -10,7 +10,7 @@ import { drawRomBattle, romState } from '../app/rom-api';
 import { timeUpLabel } from '../render/text/text';
 import { createView, updateView } from '../render/view';
 import { drawRound } from '../render/draw-game';
-import { drawBattleOverlays } from '../render/draw-screens';
+import { drawBattleOverlays, drawBombLevels } from '../render/draw-screens';
 import { scoreboardScreen } from './scoreboard';
 import { drawScreen } from './draw';
 import { stageScreen } from './stage';
@@ -106,6 +106,7 @@ export function battleScreen(app: App, ms: MatchSession): BattleScreen {
       if (!(a && drawRomBattle(ctx, round, { crowns }, a, frame))) {
         drawRound(ctx, round, view, bank, ms.cfg.chars, frame, [...crowns]);
       }
+      drawBombLevels(ctx, bank, round);
       drawBattleOverlays(ctx, bank, { paused, disconnected, ...banners() });
     },
   };

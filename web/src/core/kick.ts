@@ -1,22 +1,28 @@
-import { CODE, type Bomb, type GameEvent, type Player, type RoundState } from './types';
+import { BTN, CODE, type Bomb, type GameEvent, type Player, type RoundState } from './types';
 import { KICK_DIRBIT, KICK_MASK } from './tables/movement';
 import { KICK_STEP } from './tables/flights';
-import { KICK_STEPS } from './constants';
+import { FUSE, KICK_STEPS, MAX_LEVEL } from './constants';
 import { SUB, cellAt, cellCenter, faceStep, subX, subY } from './units';
 import { isEggCode, isItemCode, playerCell, standing } from './state';
-import { bombAt, bombOccupies } from './bombs';
+import { bombAt, bombOccupies, removeBomb } from './bombs';
 import { STAGES } from './stages';
 import { MOUNTS } from './mounts';
 
+/** Chuta: o item Chute vale também montado (extra: qualquer montaria), ou a montaria que chuta (A). */
+export const canKick = (p: Player): boolean => p.kick || !!MOUNTS.current.kicks?.(p);
+/** Extra: o dono segurando X (parar chute) tranca as próprias bombas contra o chute dos outros (o soco ainda vale). */
+export const kickLocked = (s: RoundState, p: Player, b: Bomb): boolean =>
+  b.owner !== p.slot && !!(s.players[b.owner]?.prevBtn & BTN.X);
+
 /** Chute automático ($C2:4307): depois do movimento, olhando para uma bomba parada vizinha. */
 export function tryKick(s: RoundState, p: Player, ev: GameEvent[]): boolean {
-  if (!((p.kick && !p.mount) || MOUNTS.current.kicks?.(p))) return false;
+  if (!canKick(p)) return false;
   const here = playerCell(p);
   if (here < 0 || !(KICK_MASK[subY(p.y) * 16 + subX(p.x)] & KICK_DIRBIT[p.face >> 1])) return false;
   const n = faceStep(here, p.face);
   if (s.grid[n] !== CODE.BOMB) return false;
   const b = bombAt(s, n);
-  if (!b || b.fuse <= 1) return false;
+  if (!b || b.fuse <= 1 || kickLocked(s, p, b)) return false;
   b.state = 'kicked'; b.dir = p.face; b.step = 0; b.kickedBy = p.slot; b.turn = -1;
   s.grid[n] = CODE.FLOOR;
   ev.push({ type: 'bomb_kicked', slot: p.slot });
@@ -39,14 +45,25 @@ function park(s: RoundState, b: Bomb, cell: number): boolean {
   return true;
 }
 
+/** Extra: nível da bomba parada `o` depois de `b` (chutada) bater nela, ou -1 se não fundem. Só funde em bomba
+ *  comum: comum chutada = D, D chutada = S, S chutada = H (H chutada continua H). Na evoluída, só encosta. */
+export function mergedLevel(b: Bomb, o: Bomb): number {
+  if (o.level) return -1;
+  return Math.min(MAX_LEVEL, (b.level ?? 0) + 1);
+}
+
 /** Um tick do deslize ($C1:34D0/$C1:35E1). */
 export function slideStep(s: RoundState, b: Bomb, _ev: GameEvent[]): void {
   if (b.step === 0) {
     const next = faceStep(b.cell, b.dir);
+    const o = bombAt(s, next);
+    const lv = o ? mergedLevel(b, o) : -1;
+    // funde: a parada evolui com o pavio reiniciado (no vídeo a D explode ~1,6 s depois da fusão); a chutada volta ao dono
+    if (o && lv > 0) { o.level = lv; o.fuse = FUSE; removeBomb(s, b, true); return; }
     const v = s.grid[next] ?? CODE.HARD;
     const blocked = (v & 0x8400) !== 0 || isEggCode(v)
       || bombOccupies(s, next, b)
-      || s.players.some(q => standing(q) && playerCell(q) === next);
+      || s.players.some(q => standing(q) && q.heldBy < 0 && !q.flying && playerCell(q) === next);
     const verdict = blocked ? 'stop' : STAGES[s.stage]?.kickedBombEnter?.(s, b, next) ?? 'go';
     if (verdict === 'stop') { park(s, b, b.cell); return; }      // sem casa para parar: tenta de novo no próximo tick
     if (typeof verdict === 'object') b.turn = verdict.turn;

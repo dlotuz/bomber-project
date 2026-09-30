@@ -3,6 +3,7 @@ import { addBomb, placeBomb, detonateRemote, tickBombs, bombAt, bombOccupies, fu
 import { BURN, CODE, FLAME_PIECE, type GameEvent } from '../../src/core/types';
 import { itemCode } from '../../src/core/state';
 import { centerX } from '../../src/core/units';
+import { tickFlyers } from '../../src/core/flyers';
 
 const explodedAt = (s: ReturnType<typeof arena>, max = 400) => runUntil(s, (_s, ev) => ev.some(e => e.type === 'explosion'), max);
 
@@ -152,6 +153,16 @@ describe('explosão', () => {
     run(s, 24);
     expect(codeAt(s, 5, 1)).toBe(CODE.FLOOR);
   });
+  it('caveira no braço não queima: pula para outra casa e segura a chama', () => {
+    const s = arena(); setCell(s, 5, 1, itemCode(0x23));
+    const b = addBomb(s, 0, C(4, 1), { fuse: 0 }); b.born = 0;
+    run(s, 1);
+    expect([codeAt(s, 5, 1), codeAt(s, 6, 1)]).toEqual([CODE.FLOOR, CODE.FLOOR]);
+    expect(s.flyers).toEqual([expect.objectContaining({ kind: 'item', ref: 0x23 })]);
+    for (let i = 0; i < 200 && s.flyers.length; i++) { s.tick++; tickFlyers(s, []); }
+    expect(s.flyers).toEqual([]);
+    expect(Array.from(s.grid).filter(v => v === itemCode(0x23))).toHaveLength(1);
+  });
   it('bloco queimando segura a chama', () => {
     const s = arena(); setCell(s, 5, 1, CODE.BURNING); s.cellT0[C(5, 1)] = 100;
     const b = addBomb(s, 0, C(4, 1), { fuse: 0 }); b.born = 0;
@@ -190,5 +201,31 @@ describe('explosão', () => {
     expect(bombAt(s, C(4, 1))).toBe(b);
     b.state = 'held';
     expect(bombAt(s, C(4, 1))).toBeUndefined();
+  });
+});
+
+describe('explosão das bombas evoluídas (área, atravessa blocos)', () => {
+  const flame = (s: ReturnType<typeof arena>, c: number, l: number) => codeAt(s, c, l) === CODE.FLAME;
+  it('D: todas as casas livres do quadrado 5×5; nada fora', () => {
+    const s = arena();
+    const b = addBomb(s, 0, C(7, 5), { fuse: 0, level: 1 }); b.born = 0;
+    run(s, 1);
+    for (const [c, l] of [[5, 3], [9, 3], [5, 7], [9, 7], [6, 4], [8, 6], [7, 3], [7, 7]]) expect(flame(s, c, l), `${c},${l}`).toBe(true);
+    expect([codeAt(s, 7, 4), codeAt(s, 7, 6)]).toEqual([CODE.HARD, CODE.HARD]);   // pilares ficam
+    for (const [c, l] of [[4, 5], [10, 5], [7, 2], [7, 8]]) expect(flame(s, c, l), `${c},${l}`).toBe(false);
+  });
+  it('S: quadrado 7×7 e queima blocos atrás de blocos', () => {
+    const s = arena();
+    setCell(s, 9, 5, CODE.SOFT); setCell(s, 10, 5, CODE.SOFT);
+    const b = addBomb(s, 0, C(8, 5), { fuse: 0, level: 2, type: 0 }); b.born = 0;
+    run(s, 1);
+    expect([codeAt(s, 9, 5), codeAt(s, 10, 5)]).toEqual([CODE.BURNING, CODE.BURNING]);
+    expect([flame(s, 5, 5), flame(s, 11, 5), flame(s, 8, 2), flame(s, 8, 8), flame(s, 4, 5)]).toEqual([true, true, true, true, false]);
+  });
+  it('H: a arena inteira', () => {
+    const s = arena();
+    const b = addBomb(s, 0, C(7, 5), { fuse: 0, level: 3 }); b.born = 0;
+    run(s, 1);
+    expect([flame(s, 2, 1), flame(s, 14, 11), flame(s, 2, 11), flame(s, 14, 1)]).toEqual([true, true, true, true]);
   });
 });

@@ -5,7 +5,7 @@ import { DETONATE_TICKS, FUSE, LIFT_TICKS, P_TICKS, PUNCH_TICKS, THROW_TICKS } f
 import { cellAt, cellCenter, colOf, faceStep, inField, linOf } from '../units';
 import { playerCell, standing } from '../state';
 import { bombAt } from '../bombs';
-import { stopKick } from '../kick';
+import { canKick, kickLocked, stopKick } from '../kick';
 import { aimThrow, handFrom } from '../flyers';
 import { MOUNTS } from '../mounts';
 import { SAFE, crossCells, firstLanding, hazards, kickPath, type Hazard } from './danger';
@@ -77,7 +77,7 @@ function wantB(s: RoundState, p: Player, level: AiLevel, brain: Brain): boolean 
   if (!b) return false;
   const c = b.state === 'kicked' ? cellAt(b.x, b.y) : b.cell;
   if (c < 0) return false;
-  const cross = new Set(crossCells(s, c, b.fire, false).cells);
+  const cross = new Set(crossCells(s, c, b.fire, false, undefined, true, b.level ?? 0).cells);
   const w = who(s, p, cross);
   if (w.ours || !(w.foe || (s.tick >= b.born + FUSE && b.state === 'idle'))) return false;
   if (routeCells(s, p, brain, ROUTE_HORIZON).some(i => cross.has(i))) return false;
@@ -95,7 +95,7 @@ function wantX(s: RoundState, p: Player, level: AiLevel): boolean {
   if (!mine.some(b => {
     const c = cellAt(b.x, b.y);
     if (c < 0) return false;
-    const w = who(s, p, new Set(crossCells(s, c, b.fire, b.type === 2).cells));
+    const w = who(s, p, new Set(crossCells(s, c, b.fire, b.type === 2, undefined, true, b.level ?? 0).cells));
     return w.foe && !w.ours;
   })) return false;
   const sim = fork(s);                                     // o X para todas as bombas chutadas pela CPU
@@ -210,11 +210,11 @@ export type KickAim = 'rescue' | 'hit' | 'trap';
  *  garantida? */
 export function kickWorth(s: RoundState, p: Player, face: number, level: AiLevel, aim: KickAim,
   from = playerCell(p)): boolean {
-  if (!((p.kick && !p.mount) || MOUNTS.current.kicks?.(p))) return false;
+  if (!canKick(p)) return false;
   const n = faceStep(from, face);
   if (s.grid[n] !== CODE.BOMB) return false;
   const b = bombAt(s, n);
-  if (!b || b.fuse <= 1 || b.chainAt) return false;
+  if (!b || b.fuse <= 1 || b.chainAt || kickLocked(s, p, b)) return false;
   const sim = fork(s);
   const sb = sim.bombs.find(x => x.id === b.id)!;
   sb.state = 'kicked'; sb.dir = face as Bomb['dir']; sb.step = 0; sb.kickedBy = p.slot; sb.turn = -1;
@@ -223,7 +223,7 @@ export function kickWorth(s: RoundState, p: Player, face: number, level: AiLevel
   const kp = kickPath(sim, sb);
   if (kp.trail.length < 2) return false;                                // parada: não sai do lugar
   if (aim === 'hit' && !kp.trail.slice(1).some(c => {
-    const w = who(s, p, new Set(crossCells(s, c, b.fire, b.type === 2).cells));
+    const w = who(s, p, new Set(crossCells(s, c, b.fire, b.type === 2, undefined, true, b.level ?? 0).cells));
     return w.foe && !w.ours;
   })) return false;
   if (aim === 'trap' && !sim.players.some(q => {

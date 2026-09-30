@@ -30,12 +30,14 @@ export function playerAnimRef(p: PlayerPose, t: number): { ref: AnimRef; t: numb
     case 'throw': return at(TAB.throw, d8);
     case 'punch': return at(TAB.punch, d8);
     case 'pPunch': return at(TAB.pPunch, d8);
-    case 'detonate': return at(TAB.misc, 12);
+    // Pose de 3 ticks (DETONATE_TICKS); trancar (B segurado) congela no último quadro dela.
+    case 'detonate': return { ref: { tab: TAB.misc, idx: 12 }, t: Math.min(t, 2) };
     case 'shocked': return at(TAB.misc, 4);
     case 'stunned': return at(TAB.spin, 10);
     case 'dying': return at(TAB.dying, null);
     case 'victory': return at(TAB.victory, null);
     case 'launched': return at(TAB.launched, d4);   // D14 🟡
+    case 'held': return { ref: { tab: TAB.stand, idx: d8 + 8 }, t: 0 };   // na mão da luva / arremessado: pose parada
     case 'pushed': return at(TAB.misc, d4);         // D14 🟡
     case 'dance': return at(TAB.dance, d4);         // D14 🟡
     case 'bad': return at(TAB.stand, p.moving ? d8 : d8 + 8);

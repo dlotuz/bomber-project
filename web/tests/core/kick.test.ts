@@ -1,13 +1,14 @@
 import { arena, put, setCell, codeAt, C, withStage } from './kit';
 import { tryKick, slideStep, stopKick } from '../../src/core/kick';
 import { addBomb, tickBombs } from '../../src/core/bombs';
-import { launchBomb, tickFlyers } from '../../src/core/flyers';
-import { CODE, type Bomb, type GameEvent, type RoundState } from '../../src/core/types';
+import { launchBomb, punchBomb, tickFlyers } from '../../src/core/flyers';
+import { BTN, CODE, type Bomb, type GameEvent, type RoundState } from '../../src/core/types';
 import { CELLS, cellCenter, centerX, centerY } from '../../src/core/units';
 import { itemCode } from '../../src/core/state';
+import { FUSE } from '../../src/core/constants';
 
 function slide(s: RoundState, b: Bomb, n: number, ev: GameEvent[] = []): void {
-  for (let i = 0; i < n; i++) { s.tick++; if (b.state === 'kicked') slideStep(s, b, ev); }
+  for (let i = 0; i < n; i++) { s.tick++; if (b.state === 'kicked' && s.bombs.includes(b)) slideStep(s, b, ev); }   // como tickBombs: removida (fundiu) não anda
 }
 function setup(bombCol = 5, lin = 1) {
   const s = arena();
@@ -42,7 +43,7 @@ describe('chute (t36, t41, t91)', () => {
       const { s, p, b } = setup();
       if (block === 'player') put(s, 1, 8, 1);
       if (block === 'soft') setCell(s, 8, 1, CODE.SOFT);
-      if (block === 'bomb') addBomb(s, 1, C(8, 1));
+      if (block === 'bomb') addBomb(s, 1, C(8, 1), { level: 1 });   // comum numa D não funde (comum + comum funde: ver evolução)
       tryKick(s, p, []);
       slide(s, b, 40);
       expect([b.state, b.cell]).toEqual(['idle', C(7, 1)]);
@@ -143,5 +144,67 @@ describe('chute (t36, t41, t91)', () => {
     while (s.tick < t0 + 60) tick();
     expect([a.state, b.state]).toEqual(['idle', 'idle']);
     expect(a.cell).not.toBe(b.cell);
+  });
+});
+
+describe('X segurado: minha bomba não pode ser chutada pelos outros', () => {
+  it('dono segurando X: outro jogador não chuta; eu mesmo chuto; soltou X, chuta', () => {
+    const { s, p, b } = setup();                // p (slot 0) chuta a bomba do slot 1
+    s.players[1].prevBtn = BTN.X;
+    expect(tryKick(s, p, [])).toBe(false);
+    expect(b.state).toBe('idle');
+    s.players[1].prevBtn = 0;
+    expect(tryKick(s, p, [])).toBe(true);
+  });
+  it('a própria bomba: X segurado não impede o dono de chutar', () => {
+    const { s, p, b } = setup();
+    b.owner = 0; p.prevBtn = BTN.X;
+    expect(tryKick(s, p, [])).toBe(true);
+  });
+  it('o soco continua valendo na bomba de quem segura X', () => {
+    const { s, p, b } = setup();
+    s.players[1].prevBtn = BTN.X; p.punch = true;
+    expect(punchBomb(s, p, [])).toBe(true);
+    expect(b.state).toBe('air');
+  });
+});
+
+describe('evolução no chute: comum+comum = D, D chutada = S, S chutada = H', () => {
+  function fire(level = 0, targetLevel = 0) {
+    const { s, p, b } = setup();                 // p em (4,1) chuta a bomba de (5,1) para a direita
+    b.level = level;
+    const t = addBomb(s, 2, C(8, 1), { level: targetLevel });
+    s.players[1].bombsFree = 0;                  // a bomba chutada é dele e está em campo
+    const free = s.players[1].bombsFree;
+    tryKick(s, p, []); slide(s, b, 40);
+    return { s, b, t, free };
+  }
+  it('comum chutada em comum parada: a parada vira D e a chutada volta para o dono', () => {
+    const { s, b, t, free } = fire(0, 0);
+    expect(t.level).toBe(1);
+    expect(s.bombs.includes(b)).toBe(false);
+    expect(s.players[1].bombsFree).toBe(free + 1);
+    expect(codeAt(s, 7, 1)).toBe(CODE.FLOOR);
+  });
+  it('D chutada em comum vira S; S chutada em comum vira H; H chutada em comum continua H', () => {
+    expect(fire(1, 0).t.level).toBe(2);
+    expect(fire(2, 0).t.level).toBe(3);
+    expect(fire(3, 0).t.level).toBe(3);
+  });
+  it('a fusão reinicia o pavio da bomba evoluída (vídeo: a D explode ~1,6 s depois da fusão, não no pavio antigo)', () => {
+    const { s, p, b } = setup();
+    const t = addBomb(s, 2, C(8, 1), { fuse: 20 });
+    tryKick(s, p, []); slide(s, b, 40);
+    expect([t.level, t.fuse]).toEqual([1, FUSE]);
+  });
+  it('evoluída chutada em evoluída só encosta (D em D, S em D, H em H)', () => {
+    for (const [k, t] of [[1, 1], [2, 1], [3, 3]] as const) {
+      const r = fire(k, t);
+      expect([r.t.level, r.b.level, r.s.bombs.includes(r.b), r.b.cell], `${k} em ${t}`).toEqual([t, k, true, C(7, 1)]);
+    }
+  });
+  it('comum chutada numa D só encosta (não funde)', () => {
+    const { s, b, t } = fire(0, 1);
+    expect([t.level, s.bombs.includes(b), b.state, b.cell]).toEqual([1, true, 'idle', C(7, 1)]);
   });
 });

@@ -31,7 +31,7 @@ export function applyItem(s: RoundState, p: Player, id: number, _ev: GameEvent[]
 
 export function pickup(s: RoundState, p: Player, ev: GameEvent[]): void {
   const c = playerCell(p);
-  if (c < 0 || !isItemCode(s.grid[c])) return;
+  if (c < 0 || p.heldBy >= 0 || p.flying || !isItemCode(s.grid[c])) return;
   if (isEggCode(s.grid[c])) { MOUNTS.current.stepOnEgg(s, p, c, ev); return; }
   const id = itemOfCode(s.grid[c]);
   s.grid[c] = CODE.FLOOR;

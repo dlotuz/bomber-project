@@ -164,3 +164,15 @@ describe('arena 3: IA e camadas', () => {
     expect(a.log.filter(x => x === 'arc').length).toBe(2);
   });
 });
+
+describe('arena 3: bola × bomba chutada (invariante: bola nunca sobre bomba)', () => {
+  it('bomba chutada para antes da casa da bola parada e da casa para onde ela rola', () => {
+    const s = stageArena(3);
+    const o = st3(s).orbs[0];
+    const b = { cell: o.cell - 1 } as Parameters<NonNullable<typeof stage3.kickedBombEnter>>[1];
+    expect(stage3.kickedBombEnter!(s, b, o.cell)).toBe('stop');
+    o.rolling = true; o.dir = 1;                                     // rolando para a direita
+    expect(stage3.kickedBombEnter!(s, b, o.cell + 1)).toBe('stop');
+    expect(stage3.kickedBombEnter!(s, b, o.cell + 17 * 3)).toBe('go');
+  });
+});

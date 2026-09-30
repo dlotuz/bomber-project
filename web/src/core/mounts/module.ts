@@ -2,7 +2,7 @@ import type { MountModule } from '../hooks';
 import type { Player } from '../types';
 import { mountAiHints } from '../ai/mounts';
 import { ABILITIES } from './abilities';
-import { revealEgg, stepOnEgg } from './eggs';
+import { revealEgg, stepOnEgg, stealReserves } from './eggs';
 import { onHit, onStunLoss, tickRiders } from './rider';
 import { mstate, rider, EGG_BURST_TICKS, type MountRider } from './types';
 
@@ -27,6 +27,7 @@ export const mountModule: MountModule = {
   tick(s, ev) {
     tickRiders(s, ev);
     if (s.phase !== 'play') return;                       // L16
+    stealReserves(s, ev);
     const ms = mstate(s);
     for (const pr of ms.projectiles) {
       if (pr.state === 'done' || pr.born === s.tick) continue;

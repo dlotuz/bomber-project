@@ -1,14 +1,17 @@
 // bombs.ts (T6) — pavio, explosões, chamas e queima (decisões 9–13 da spec)
 import { BURN, CODE, DISEASE, FLAME_PIECE, type Bomb, type GameEvent, type Player, type RoundState } from './types';
-import { BAD_COOLDOWN, BURN_TICKS, CHAIN_DELAY, FLAME_TICKS, FUSE, FUSE_LONG, FUSE_SHORT, rangeOf } from './constants';
-import { CELLS, cellAt, cellCenter, colOf, faceStep, inGrid, linOf } from './units';
-import { isItemCode, itemCode, newId, playerCell } from './state';
+import { BAD_COOLDOWN, BURN_TICKS, CHAIN_DELAY, FLAME_TICKS, FUSE, FUSE_LONG, FUSE_SHORT, LEVEL_RADIUS, rangeOf } from './constants';
+import { CELLS, cellAt, cellCenter, cellOf, colOf, faceStep, inField, inGrid, linOf } from './units';
+import { isItemCode, itemCode, itemOfCode, newId, playerCell } from './state';
 import { STAGES } from './stages';
 import { MOUNTS } from './mounts';
 import { slideStep } from './kick';
+import { spawnItemFlyer } from './flyers';
+import { rnd } from './rng';
 
 const ARM = [FLAME_PIECE.ARM_UP, 0, FLAME_PIECE.ARM_RIGHT, 0, FLAME_PIECE.ARM_DOWN, 0, FLAME_PIECE.ARM_LEFT];
 const TIP = [FLAME_PIECE.TIP_UP, 0, FLAME_PIECE.TIP_RIGHT, 0, FLAME_PIECE.TIP_DOWN, 0, FLAME_PIECE.TIP_LEFT];
+const isSkullCode = (v: number): boolean => isItemCode(v) && (v & 0xf0) === 0xa0;   // CODE.SKULL + $2x
 
 export function fuseOf(p: Player): number {
   return p.disease === DISEASE.SHORT_FUSE ? FUSE_SHORT : p.disease === DISEASE.LONG_FUSE ? FUSE_LONG : FUSE;
@@ -34,7 +37,7 @@ export function bombById(s: RoundState, id: number): Bomb | undefined { return s
 export function addBomb(s: RoundState, owner: number, cell: number, init: Partial<Bomb> = {}): Bomb {
   const [x, y] = cellCenter(cell);
   const b: Bomb = { id: newId(s), owner, bad: false, cell, x, y, fuse: FUSE, fire: 0, type: 0, state: 'idle',
-    dir: 4, step: 0, kickedBy: -1, turn: -1, chainAt: 0, born: s.tick, ...init };
+    dir: 4, step: 0, kickedBy: -1, turn: -1, chainAt: 0, born: s.tick, level: 0, ...init };
   if (b.state === 'idle') s.grid[cell] = CODE.BOMB;
   s.bombs.push(b);
   return b;
@@ -82,6 +85,50 @@ export function burnCell(s: RoundState, cell: number, kind: number): void {
   s.grid[cell] = CODE.BURNING; s.cellT0[cell] = s.tick; s.cellAux[cell] = kind;
 }
 
+/** Bomba evoluída (D/S/H): casas do quadrado de raio LEVEL_RADIUS em volta de `c0` dentro do campo, menos parede,
+ *  pilar e pressão. `bombs` = casas com bomba na grade (cadeia); `cells` = o resto (inclui `c0`). Atravessa blocos. */
+export function areaCells(s: RoundState, c0: number, level: number, asBomb?: ReadonlySet<number>): { cells: number[]; bombs: number[] } {
+  const r = LEVEL_RADIUS[level] ?? 0, col0 = colOf(c0), lin0 = linOf(c0);
+  const cells = [c0], bombs: number[] = [];
+  for (let lin = lin0 - r; lin <= lin0 + r; lin++) for (let col = col0 - r; col <= col0 + r; col++) {
+    if (!inField(col, lin)) continue;
+    const c = cellOf(col, lin);
+    if (c === c0) continue;
+    const v = s.grid[c];
+    if (v === CODE.HARD || v === CODE.PRESSURE || v === CODE.BURNING) continue;
+    if (v === CODE.BOMB || asBomb?.has(c)) bombs.push(c); else cells.push(c);
+  }
+  return { cells, bombs };
+}
+
+/** Explosão por área da bomba evoluída: cada casa vira chama (peça pela vizinhança, para as linhas saírem ligadas),
+ *  bloco queima, item queima, caveira pula e bomba entra na cadeia. */
+function explodeArea(s: RoundState, b: Bomb, ev: GameEvent[]): void {
+  const st = STAGES[s.stage];
+  const { cells, bombs } = areaCells(s, b.cell, b.level ?? 0);
+  const lit = new Set(cells);
+  const piece = (c: number): number => {
+    const l = lit.has(faceStep(c, 6)), r = lit.has(faceStep(c, 2)), u = lit.has(faceStep(c, 0)), d = lit.has(faceStep(c, 4));
+    if ((l || r) && (u || d)) return FLAME_PIECE.CENTER;
+    if (l && r) return ARM[2];
+    if (u && d) return ARM[0];
+    return l ? TIP[2] : r ? TIP[6] : u ? TIP[4] : d ? TIP[0] : FLAME_PIECE.CENTER;
+  };
+  for (const c of cells) {
+    if (c === b.cell) continue;
+    const v = s.grid[c];
+    if (v === CODE.SOFT) burnCell(s, c, BURN.SOFT);
+    else if (isSkullCode(v)) { s.grid[c] = CODE.FLOOR; spawnItemFlyer(s, itemOfCode(v), c, rnd(s.rng, 12)); }
+    else if (isItemCode(v)) burnCell(s, c, BURN.ITEM);
+    else if (v === CODE.FLOOR || v === CODE.FLAME) setFlame(s, c, piece(c));
+    st?.onFlameCell?.(s, c, -1, ev);
+  }
+  for (const c of bombs) {
+    const o = bombAt(s, c);
+    if (o && (o.chainAt === 0 || o.chainAt > s.tick + CHAIN_DELAY)) o.chainAt = s.tick + CHAIN_DELAY;
+  }
+}
+
 export function explodeBomb(s: RoundState, b: Bomb, ev: GameEvent[]): void {
   const i = s.bombs.indexOf(b);
   if (i < 0) return;
@@ -93,6 +140,7 @@ export function explodeBomb(s: RoundState, b: Bomb, ev: GameEvent[]): void {
   if (v0 === CODE.BOMB || v0 === CODE.FLOOR || v0 === CODE.FLAME) setFlame(s, c0, FLAME_PIECE.CENTER);
   st?.onFlameCell?.(s, c0, -1, ev);            // plano 8: toda casa alcançada chama o gancho (centro = −1, primeiro)
   ev.push({ type: 'explosion', cell: c0, owner: b.owner });
+  if (b.level) { explodeArea(s, b, ev); return; }
   const range = rangeOf(b.fire);
   for (const face of [0, 2, 4, 6]) {
     let c = c0, last = -1;
@@ -102,6 +150,12 @@ export function explodeBomb(s: RoundState, b: Bomb, ev: GameEvent[]): void {
       const v = s.grid[c];
       if (v === CODE.HARD || v === CODE.PRESSURE || v === CODE.BURNING) break;
       if (v === CODE.SOFT) { burnCell(s, c, BURN.SOFT); st?.onFlameCell?.(s, c, face, ev); if (b.type === 2) continue; break; }
+      if (isSkullCode(v)) {   // caveira não queima: pula como a que sai do jogador curado; o braço para nela
+        s.grid[c] = CODE.FLOOR;
+        spawnItemFlyer(s, itemOfCode(v), c, rnd(s.rng, 12));
+        st?.onFlameCell?.(s, c, face, ev);
+        break;
+      }
       if (isItemCode(v)) { burnCell(s, c, BURN.ITEM); st?.onFlameCell?.(s, c, face, ev); break; }
       if (v === CODE.BOMB) {
         const o = bombAt(s, c);

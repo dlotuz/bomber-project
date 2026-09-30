@@ -58,6 +58,12 @@ export const MAX_ACTIVE = 2;        // $1ED4
 export const MAX_RESERVES = 3;      // +$52/+$54/+$56
 export const EGG_BURST_TICKS = 40;  // $D8:D327: 4 quadros × 10 ticks (explosão do ovo; reserva queimada, L22)
 
+/** Ovo de máquina (metálico, gráfico $D8:D2CC), como na ROM (ids ≥ $38): chute (A), linha de bombas (C), foguete (D),
+ *  tiro lento (E) e soneca (F). Ovo verde: atravessa bloco (2) e bomba perfurante (3). */
+export const isMachine = (type: number): boolean => type >= 8;
+/** Ovo reserva: só segue quem está numa montaria da mesma classe (máquina × normal). */
+export const sameClass = (a: number, b: number): boolean => isMachine(a) === isMachine(b);
+
 export function rider(p: Player): MountRider | null {
   return (p.mount as MountRider | null | undefined) ?? null;
 }

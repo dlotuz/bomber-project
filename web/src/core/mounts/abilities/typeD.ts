@@ -3,8 +3,9 @@ import { spawnProjectile, advanceProjectile, D_SPEC } from '../projectile';
 import { loseMount } from '../rider';
 import { cellAt, explodeAt } from '../core-api';
 import { mev } from '../events';
+import { FIRE_LINE, rangeOf } from '../../constants';
 
-export const D_RANGE = 2;   // fogo 0 (spec §12 A8)
+export const D_RANGE = rangeOf(FIRE_LINE);   // a linha inteira, independente do fogo de quem lançou
 
 /** Tipo D: Y lança a própria montaria ($C1:3238 → $C1:32EA). */
 export const ABILITY_D: MountAbility = {

@@ -9,17 +9,23 @@ import type { ObjEntry } from '../../ppu/types';
 import type { RomPlayerHook } from '../../battle-layers';
 import { rider } from '../../../core/mounts/types';
 import {
-  RIDER_ANIMS, MOUNT_ANIMS, MOUNTING_ANIMS, MOUNTING_MOUNT_ANIMS, DISMOUNT_ANIMS,
+  RIDER_ANIMS, MOUNT_ANIMS, DISMOUNT_ANIMS,
   REMOUNT_ANIMS, REMOUNT_MOUNT_ANIMS, DANCE_ANIMS, DANCE_NOTE_ANIMS, DANCE_NOTE_TICKS,
   DANCE_NOTE_FRAME_TICKS, REMOUNT_GLOW_ANIMS, REMOUNT_GLOW_STAGE_TICKS, MOUNT_GFX,
 } from './facts';
 import { sampleSeq, piecePx, fallbackMountFrame, playerCellXY, COMMON_BASE_TILE } from './gfx';
 import { commonPieces } from './sprites';
+import { sampleAnim } from '../../anim/sample';
+import { playerAnimRef, resolveAnim } from '../../anim/player-anim';
+import { smallFramePx } from '../sprites';
 
 /** Paleta OBJ do slot do jogador (P1..P5), [ANI/spec §7.4]. */
 const PLAYER_OBJ_PAL = [0, 1, 4, 5, 6] as const;
 /** Paleta OBJ dos objetos comuns (ovo/decoração), igual à de ovo/reserva/projétil [spec §7.2]. */
 const COMMON_PAL = 7;
+
+/** Giro do atordoamento montado: troca de direção a cada 2^STUN_SPIN_SHIFT = 4 ticks. */
+const STUN_SPIN_SHIFT = 2;
 
 function dirIdxOf(face: number): 0 | 1 | 2 | 3 {
   return (((face >> 1) & 3) as 0 | 1 | 2 | 3);
@@ -59,6 +65,26 @@ function mountPieces(a: RomAssets, stage: number, type: number, face: 0 | 2 | 4 
     return [{ x: X - 16, y: Y - 18, size: 32, pal, prio: 2, hflip: false, vflip: false, src: { px } }];
   }
   return entriesFor(a, stage, X, Y, fr, 'mount', type, pal);
+}
+
+/** Pulo para a montaria (fase `mounting`, 43 ticks no core): espera, arco e o resto já sentado. */
+const JUMP_WAIT = 6;
+const JUMP_TICKS = 30;
+const JUMP_PEAK = 14;    // px acima da reta entre o chão e o assento
+const SEAT_RISE = 16;    // px: o personagem montado fica 16 px acima do de pé (dy −40 × −24 na OAM medida)
+const MOUNT_FADE = 16;   // ticks da montaria surgindo embaixo (piscando e subindo)
+const MOUNT_RISE = 6;    // px que ela sobe enquanto surge
+
+/** Personagem na pose parada olhando para `p.face` (mesmo desenho do jogador a pé, `drawFrame` de ../sprites). */
+function standPieces(a: RomAssets, p: Player, X: number, Y: number, pal: number): ObjEntry[] {
+  const { ref } = playerAnimRef({ act: 'idle', face: p.face, char: p.char, moving: false }, 0);
+  const { frame, ox, oy } = sampleAnim(resolveAnim(a, ref, p.char), 0);
+  const ch = a.character(p.char);
+  return frame.pieces.map(pc => {
+    const full = ch.frame(pc.tile);
+    return { x: X + pc.dx + ox, y: Y + pc.dy + oy, size: pc.big ? 32 : 16, pal: (pal + pc.palAdd) & 7, prio: 2,
+      hflip: pc.hflip, vflip: pc.vflip, src: { px: pc.big ? full : smallFramePx(full) } };
+  });
 }
 
 /** Quadro de `sampleSeq` com `mx`/`my` trocados pelo acumulado (`ox`/`oy`), para o arco do pulo sair contínuo. */
@@ -125,40 +151,62 @@ export const riderHook: RomPlayerHook = (s, p, a, hostFrame, frame = hostFrame) 
   const X = Math.floor(p.x / 256), Y = Math.floor(p.y / 256);
   const pal = PLAYER_OBJ_PAL[p.slot] ?? 0;
 
-  if (!r) {
-    if (p.act !== 'dance') return null;
+  /** T14b: notas do acerto (mont. F) — objeto próprio que nasce no tick do acerto e dura só os ticks medidos
+   *  (facts.ts DANCE_NOTE_TICKS), ancorado na posição do próprio jogador. */
+  const notes = (): ObjEntry[] => {
     const t = frame - p.actT0;
-    const fr = seqFrame(a, DANCE_ANIMS, t);
-    const out = charPieces(a, s.stage, p, X, Y, pal, fr);
-    // T14b: notas do acerto (mont. F) — objeto próprio que nasce no tick do acerto e dura só os ticks medidos
-    // (facts.ts DANCE_NOTE_TICKS), ancorado na posição do próprio jogador dançando.
-    if (t >= 0 && t < DANCE_NOTE_TICKS) {
-      const nfr = (a.anim(DANCE_NOTE_ANIMS[0]) as AnimFrame[])[frameAtTicks(DANCE_NOTE_FRAME_TICKS, t)];
-      out.push(...commonPieces(a, s.stage, X, Y, nfr).map(m => m.e));
-    }
-    return out;
+    if (t < 0 || t >= DANCE_NOTE_TICKS) return [];
+    const nfr = (a.anim(DANCE_NOTE_ANIMS[0]) as AnimFrame[])[frameAtTicks(DANCE_NOTE_FRAME_TICKS, t)];
+    return commonPieces(a, s.stage, X, Y, nfr).map(m => m.e);
+  };
+
+  // Na mão da luva de outro (ou arremessado): sentado, com a pose de montado da ROM (já SEAT_RISE px mais alta que a
+  // de pé, por isso desce SEAT_RISE para ficar na altura z de quem está na mão).
+  // Largado da luva: o mesmo pulo de quem perde a montaria ($C2:10D5), a partir da cabeça de quem segurava
+  if (!r && p.act === 'dropped') return charPieces(a, s.stage, p, X, Y, pal, seqFrame(a, DISMOUNT_ANIMS, frame - p.actT0));
+  if (!r && p.act === 'held') {
+    return charPieces(a, s.stage, p, X, Y - p.z + SEAT_RISE, pal, seqFrame(a, RIDER_ANIMS[0x2][dirIdxOf(p.face)].idle, 0));
   }
+  if (!r) return p.act === 'dance' ? [...charPieces(a, s.stage, p, X, Y, pal, seqFrame(a, DANCE_ANIMS, frame - p.actT0)), ...notes()] : null;
 
   const mountPal = 1 + (r.slot || 1);
   const face = (p.face & 6) as 0 | 2 | 4 | 6;
   const step: 0 | 1 = p.moveDir !== 8 ? ((frame >> 3) & 1) as 0 | 1 : 0;
 
   if (r.phase === 'riding') {
-    const dirIdx = dirIdxOf(p.face);
-    const walking = p.moveDir !== 8;
+    // Atordoado ou no soneca (mont. F) montado: jogador e montaria giram juntos (sentido horário, 1 direção a cada
+    // 4 ticks); no soneca, as notas do acerto ficam embaixo, no jogador.
+    const spinning = p.act === 'stunned' || p.act === 'dance';
+    const dirIdx = spinning ? ((dirIdxOf(p.face) + ((frame - p.actT0) >> STUN_SPIN_SHIFT)) & 3) as 0 | 1 | 2 | 3 : dirIdxOf(p.face);
+    const face = (dirIdx << 1) as 0 | 2 | 4 | 6;
+    const walking = !spinning && p.moveDir !== 8;
     const riderList = walking ? RIDER_ANIMS[r.type][dirIdx].walk : RIDER_ANIMS[r.type][dirIdx].idle;
     const mountList = walking ? MOUNT_ANIMS[r.type][dirIdx].walk : MOUNT_ANIMS[r.type][dirIdx].idle;
     const t = frame - p.actT0;
     const rf = seqFrame(a, riderList, t), mf = seqFrame(a, mountList, t);
     return [...charPieces(a, s.stage, p, X, Y, pal, rf), ...mountPieces(a, s.stage, r.type, face, step, X, Y, mountPal, mf),
+      ...(p.act === 'dance' ? notes() : []),
       ...remountFxPieces(a, s.stage, r, frame, X, Y)];   // I2: explosão do remonte ainda no ar (t < 71)
   }
 
   const t = frame - r.t0;
   if (r.phase === 'mounting') {
-    const rf = seqFrame(a, MOUNTING_ANIMS[r.type], t);
-    const mf = seqFrame(a, MOUNTING_MOUNT_ANIMS[r.type], t);
-    return [...charPieces(a, s.stage, p, X, Y, pal, rf), ...mountPieces(a, s.stage, r.type, face, step, X, Y, mountPal, mf)];
+    // A montaria aparece embaixo desde o 1º tick, virada para o lado em que o ovo foi pego; o personagem, olhando
+    // para o mesmo lado, espera JUMP_WAIT, pula em arco por JUMP_TICKS e cai sentado (pose montada da ROM).
+    const dirIdx = dirIdxOf(p.face);
+    // Surge piscando (1 em 4 quadros, depois 1 em 2, depois fixa) e subindo MOUNT_RISE px até o lugar.
+    const shown = t >= MOUNT_FADE || (t < MOUNT_FADE / 2 ? (t & 3) === 0 : (t & 1) === 0);
+    const rise = Math.round(MOUNT_RISE * Math.max(0, 1 - t / MOUNT_FADE));
+    const mount = shown
+      ? mountPieces(a, s.stage, r.type, face, 0, X, Y + rise, mountPal, seqFrame(a, MOUNT_ANIMS[r.type][dirIdx].idle, t)) : [];
+    const u = (t - JUMP_WAIT) / JUMP_TICKS;
+    if (u < 1) {
+      const k = Math.max(0, u);
+      const dy = Math.round(-SEAT_RISE * k - JUMP_PEAK * 4 * k * (1 - k));
+      return [...standPieces(a, p, X, Y + dy, pal), ...mount];
+    }
+    const rf = seqFrame(a, RIDER_ANIMS[r.type][dirIdx].idle, t - JUMP_WAIT - JUMP_TICKS);
+    return [...charPieces(a, s.stage, p, X, Y, pal, rf), ...mount];
   }
 
   // dismount

@@ -2,9 +2,9 @@
 import type { RoundState } from '../../../core/types';
 import type { RomAssets, Piece, AnimFrame } from '../../../rom/types';
 import type { ObjEntry } from '../../ppu/types';
-import { rider, EGG_BURST_TICKS, type MountState } from '../../../core/mounts/types';
+import { rider, isMachine, EGG_BURST_TICKS, type MountState } from '../../../core/mounts/types';
 import { isEggCode } from '../../../core/mounts/core-api';
-import { EGG_ANIMS, RESERVE_EGG_ANIMS, PROJ_ANIMS, REMOUNT_GLOW_ANIMS } from './facts';
+import { EGG_ANIMS, MACHINE_EGG_ANIMS, RESERVE_EGG_ANIMS, PROJ_ANIMS, REMOUNT_GLOW_ANIMS } from './facts';
 import { sampleSeq, piecePx, cellXY } from './gfx';
 import { follower } from '../../anim/follow';
 
@@ -42,7 +42,7 @@ export function mountRomSprites(s: RoundState, a: RomAssets, frame: number): Mou
   for (let cell = 0; cell < s.grid.length; cell++) {
     if (!isEggCode(s.grid[cell])) continue;
     const { X, Y } = cellXY(cell);
-    const { frame: fr } = sampleSeq(a, EGG_ANIMS, frame - s.phaseT0);
+    const { frame: fr } = sampleSeq(a, isMachine(s.grid[cell] & 0x0f) ? MACHINE_EGG_ANIMS : EGG_ANIMS, frame - s.phaseT0);
     out.push(...commonPieces(a, s.stage, X, Y, fr));
   }
 
@@ -53,12 +53,13 @@ export function mountRomSprites(s: RoundState, a: RomAssets, frame: number): Mou
     const ownCell = r.trail[0];
     const t = frame - r.t0;
     const { frame: fr } = sampleSeq(a, RESERVE_EGG_ANIMS, t);
+    const { frame: metal } = sampleSeq(a, MACHINE_EGG_ANIMS, t);
     const at = reserveFollow(r, p.x / 256, p.y / 256, frame);
-    r.reserves.forEach((_type, i) => {
+    r.reserves.forEach((type, i) => {
       const cell = r.trail[i + 1] ?? ownCell;
       if (cell === undefined) return;
       const c = cellXY(cell), { x: X, y: Y } = at(i, c.X, c.Y);
-      out.push(...commonPieces(a, s.stage, X, Y, fr));
+      out.push(...commonPieces(a, s.stage, X, Y, isMachine(type) ? metal : fr));
     });
   }
 

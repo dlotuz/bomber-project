@@ -28,6 +28,22 @@ export const CURSIVE_EXTRA: readonly ExtraGlyph[] = [
     '1bbbbbbbb1',
     '.11111111.',
   ]) },
+  // b (título "Jogabilidade" das Opções): haste como a do E e bojo fechado embaixo, cor por linha como nas demais
+  { ch: 'b', rows: rows16(9, 0, [
+    '..11.....',
+    '.1ff1....',
+    '.1f1.....',
+    '.1e1.....',
+    '.1e1111..',
+    '1eeeeee1.',
+    '1d1111d1.',
+    '1d1..1d1.',
+    '1c1..1c1.',
+    '1c1.1cc1.',
+    '1b111b1..',
+    '1bbbb1...',
+    '.1111....',
+  ]) },
   { ch: 'J', rows: rows16(10, 0, [
     '....11111.',
     '...1fffff1',

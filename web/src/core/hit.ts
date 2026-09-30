@@ -3,16 +3,17 @@ import { rnd } from './rng';
 import { DROP_EVERY, DROP_START, HIT_INV, OUT_AT, STUN_TICKS } from './constants';
 import { playerCell, setAct } from './state';
 import { dropCategory, loseItems } from './items';
-import { dropHeld } from './flyers';
+import { dropFront, dropHeld } from './flyers';
 import { becomeBad } from './bad-bomber';
 import { MOUNTS } from './mounts';
+import { airborne, releaseGrab } from './grab';
 
 export const isImmune = (s: RoundState, p: Player): boolean => s.phase === 'won' && p.state === 'alive';
 
 export function tickInv(p: Player): void { if (p.inv > 0) p.inv--; }
 
 export function checkHit(s: RoundState, p: Player, ev: GameEvent[]): void {
-  if (p.state !== 'alive' || isImmune(s, p)) return;
+  if (p.state !== 'alive' || isImmune(s, p) || airborne(p)) return;   // na mão ou voando: fora do chão
   const c = playerCell(p);
   if (c < 0) return;
   const v = s.grid[c];
@@ -28,6 +29,7 @@ export function hitPlayer(s: RoundState, p: Player, cause: 'flame' | 'pressure',
     if (p.heart) { p.heart = false; p.inv = HIT_INV; return; }
   }
   if (p.carry >= 0) dropHeld(s, p);
+  if (p.grab >= 0) releaseGrab(s, p);
   p.state = 'dying'; p.hitT0 = s.tick; s.lastHit = s.tick;
   p.disease = 0; p.diseaseT = 0; p.push.left = 0;
   setAct(s, p, 'dying', 0);
@@ -48,11 +50,12 @@ export function tickDeath(s: RoundState, p: Player, ev: GameEvent[]): void {
 /** Atordoamento ($C2:4C54 → $C2:0E29). Já atordoado, ignora: o estado de atordoamento ($C2:0E86) não chama a checagem
  *  do pedido ($C2:4C54) e, ao fim dos 64 ticks, apaga o pedido pendente ($C2:59AB, bit $0002 de +$C0). */
 export function stunPlayer(s: RoundState, p: Player, ev: GameEvent[]): void {
-  if (p.state !== 'alive' || isImmune(s, p) || p.act === 'stunned') return;
-  if (p.carry >= 0) dropHeld(s, p);
+  if (p.state !== 'alive' || isImmune(s, p) || p.act === 'stunned' || airborne(p)) return;
+  if (p.carry >= 0) dropFront(s, p);
+  if (p.grab >= 0) releaseGrab(s, p);
   p.push.left = 0;
   setAct(s, p, 'stunned', STUN_TICKS);
-  const n = ((rnd(s.rng, 0xff) & 6) >> 1) + 1;
-  loseItems(s, p, n, ev);
+  // Montado: só o atordoamento — não perde a montaria (nem outros itens no lugar dela).
+  if (!p.mount) loseItems(s, p, ((rnd(s.rng, 0xff) & 6) >> 1) + 1, ev);
   ev.push({ type: 'stunned', slot: p.slot });
 }

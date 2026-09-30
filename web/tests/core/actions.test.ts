@@ -138,14 +138,43 @@ describe('máquina de ação', () => {
       withMount({ ...NO_MOUNT, onY: () => false }, () => playerActions(s, p, BTN.Y, BTN.Y, 0, ev));
       expect([b.state, p.act, ev]).toEqual(['idle', 'idle', []]);
     });
-    it('chute do item não vale', () => {
-      const { s, p } = mounted(); addBomb(s, 0, C(5, 1));
-      expect(withMount({ ...NO_MOUNT, kicks: () => false }, () => tryKick(s, p, []))).toBe(false);
+    it('chute do item continua valendo montado (qualquer montaria)', () => {
+      const { s, p } = mounted(); p.kick = true; addBomb(s, 0, C(5, 1));
+      expect(withMount({ ...NO_MOUNT, kicks: () => false }, () => tryKick(s, p, []))).toBe(true);
     });
   });
   it('Y: a montaria tem precedência sobre o P', () => {
     const s = arena(); const p = put(s, 0, 4, 1); p.pItem = true;
     withMount({ ...NO_MOUNT, onY: () => true }, () => playerActions(s, p, BTN.Y, BTN.Y, 0, []));
     expect(p.act).toBe('idle');
+  });
+});
+
+describe('chute + soco no mesmo jogador', () => {
+  function both() {
+    const s = arena(); const p = put(s, 0, 4, 1); p.kick = true; p.punch = true; p.face = 2;
+    const b = addBomb(s, 1, C(5, 1));
+    return { s, p, b };
+  }
+  it('parado olhando para a bomba (sem direcional) não chuta sozinho', () => {
+    const { s, p, b } = both();
+    ticks(s, [p], 3);
+    expect(b.state).toBe('idle');
+  });
+  it('Y soca a bomba da frente mesmo tendo Chute', () => {
+    const { s, p, b } = both(); const ev: GameEvent[] = [];
+    playerActions(s, p, BTN.Y, BTN.Y, 0, ev);
+    expect(b.state).toBe('air');
+    expect(ev).toContainEqual({ type: 'punch', slot: 0 });
+  });
+  it('Y junto com o direcional contra a bomba: o soco vence o chute', () => {
+    const { s, p, b } = both(); const ev: GameEvent[] = [];
+    playerActions(s, p, BTN.RIGHT | BTN.Y, BTN.Y, 0, ev);
+    expect(b.state).toBe('air');
+  });
+  it('andando contra a bomba ainda chuta', () => {
+    const { s, p, b } = both();
+    playerActions(s, p, BTN.RIGHT, BTN.RIGHT, 0, []);
+    expect(b.state).toBe('kicked');
   });
 });

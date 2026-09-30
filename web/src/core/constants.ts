@@ -53,5 +53,10 @@ export const STAGE_NAMES = [
   'Piso Traiçoeiro', 'Esconde-Explode', 'Caça-Níquel', 'Gangorra', 'Alfaiataria',
 ];
 
-/** Alcance da chama pelo nível de fogo: 0..8 → 2..10; 9 → 10; 10 → 1 (caveira $25). */
-export const rangeOf = (fire: number): number => (fire === 10 ? 1 : Math.min(fire, 8) + 2);
+/** Bombas evoluídas no chute (0 comum, 1 D, 2 S, 3 H): raio do quadrado da explosão por área; H = a arena inteira. */
+export const LEVEL_RADIUS: readonly number[] = [0, 2, 3, 99];
+export const MAX_LEVEL = 3;
+/** Fogo especial que atravessa a arena de ponta a ponta (explosão do míssil D). */
+export const FIRE_LINE = 0xff;
+/** Alcance da chama pelo nível de fogo: 0..8 → 2..10; 9 → 10; 10 → 1 (caveira $25); FIRE_LINE → a linha inteira. */
+export const rangeOf = (fire: number): number => (fire === FIRE_LINE ? 17 : fire === 10 ? 1 : Math.min(fire, 8) + 2);

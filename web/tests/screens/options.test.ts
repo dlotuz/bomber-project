@@ -20,14 +20,63 @@ const goRow = (o: Opt, id: string) => { o.menu.cursor = o.rowIds().indexOf(id); 
 beforeEach(() => vi.clearAllMocks());
 
 describe('opções (§6.13)', () => {
-  it('linhas na ordem', () => {
+  it('linhas na ordem: Opções, Controles e Jogabilidade', () => {
     const { app } = mkApp();
-    expect(optionsScreen(app).rowIds()).toEqual(['p1', 'p2', 'p3', 'p4', 'p5',
-      'spawns', 'music', 'sfx', 'romStatus', 'romLoad', 'romForget', 'reset', 'back']);
+    expect(optionsScreen(app).rowIds()).toEqual(['controls', 'gameplay', 'music', 'sfx', 'romStatus', 'romLoad', 'romForget', 'reset', 'back']);
+    expect(optionsScreen(app, 0, 'controls').rowIds()).toEqual(['p1', 'p2', 'p3', 'p4', 'p5', 'slot', 'slotSave', 'slotLoad', 'back']);
+    expect(optionsScreen(app, 0, 'gameplay').rowIds()).toEqual(['spawns', 'escape', 'throwStun', 'sleep', 'slot', 'slotSave', 'slotLoad', 'back']);
+  });
+  it('slots de controles: salvar no 2 e carregar de volta; slot vazio não carrega', () => {
+    const { app } = mkApp();
+    const o = optionsScreen(app, 0, 'controls'); app.go(o);
+    goRow(o, 'slot'); expect(o.value('slot')).toBe('1 VAZIO');
+    goRow(o, 'slotLoad'); press(app, BTN.A);
+    expect(app.settings.devices).toEqual(defaultSettings().devices);
+    goRow(o, 'slot'); press(app, BTN.RIGHT);
+    app.settings.keymaps[0].a = 'KeyZ'; app.settings.devices[4] = 'none';
+    goRow(o, 'slotSave'); press(app, BTN.A);
+    expect([o.value('slot'), o.value('slotSave')]).toEqual(['2', 'SALVO']);
+    app.settings.keymaps[0].a = 'KeyJ'; app.settings.devices[4] = 'gp2';
+    goRow(o, 'slotLoad'); press(app, BTN.A);
+    expect([app.settings.keymaps[0].a, app.settings.devices[4], o.value('slotLoad')]).toEqual(['KeyZ', 'none', 'CARREGADO']);
+    app.settings.keymaps[0].a = 'KeyQ';
+    expect(app.settings.controlSlots[1]!.keymaps[0].a).toBe('KeyZ');   // o slot é uma cópia
+  });
+  it('slots de jogabilidade: o 1 vem com o padrão do jogo; carregar restaura', () => {
+    const { app } = mkApp();
+    const o = optionsScreen(app, 0, 'gameplay'); app.go(o);
+    expect(o.value('slot')).toBe('1');
+    Object.assign(app.settings.options, { gloveEscape: 25, throwStun: true, sleepSec: 7, randomSpawns: true });
+    goRow(o, 'slotLoad'); press(app, BTN.A);
+    const d = defaultSettings().options;
+    expect([app.settings.options.gloveEscape, app.settings.options.throwStun, app.settings.options.sleepSec, app.settings.options.randomSpawns])
+      .toEqual([d.gloveEscape, d.throwStun, d.sleepSec, d.randomSpawns]);
+  });
+  it('restaurar padrão não apaga os slots', () => {
+    const { app } = mkApp();
+    app.settings.controlSlots[2] = { devices: ['none', 'none', 'none', 'none', 'none'], keymaps: app.settings.keymaps, padmaps: app.settings.padmaps };
+    const o = optionsScreen(app); app.go(o); goRow(o, 'reset'); press(app, BTN.A);
+    expect(app.settings.controlSlots[2]?.devices[0]).toBe('none');
+  });
+  it('A em CONTROLES/JOGABILIDADE abre o submenu; B volta às Opções com o cursor nele', () => {
+    const { app } = mkApp();
+    const o = optionsScreen(app); app.go(o); goRow(o, 'gameplay');
+    press(app, BTN.A); settle(app);
+    expect((app.screen as Opt).page).toBe('gameplay');
+    press(app, BTN.B); settle(app);
+    const back = app.screen as Opt;
+    expect([back.page, back.rowIds()[back.menu.cursor]]).toEqual(['main', 'gameplay']);
+  });
+  it('voltar dos controles de um jogador cai no submenu Controles', () => {
+    const { app } = mkApp();
+    app.go(remapScreen(app, 2));
+    press(app, BTN.B); settle(app);
+    const o = app.screen as Opt;
+    expect([o.page, o.rowIds()[o.menu.cursor]]).toEqual(['controls', 'p3']);
   });
   it('dispositivo por jogador com ←/→, com volta; grava', () => {
     const { app, saves } = mkApp();
-    const o = optionsScreen(app); app.go(o); goRow(o, 'p1');
+    const o = optionsScreen(app, 0, 'controls'); app.go(o); goRow(o, 'p1');
     press(app, BTN.RIGHT); expect(app.settings.devices[0]).toBe('gp0');
     press(app, BTN.LEFT); press(app, BTN.LEFT);
     expect([app.settings.devices[0], o.value('p1')]).toEqual(['none', 'NENHUM']);
@@ -35,7 +84,7 @@ describe('opções (§6.13)', () => {
   });
   it('dois jogadores nunca no mesmo controle: escolher o de outro troca os dois (M4); teclado repete', () => {
     const { app } = mkApp();
-    const o = optionsScreen(app); app.go(o);
+    const o = optionsScreen(app, 0, 'controls'); app.go(o);
     expect(o.value('p2')).toBe('TECLADO');
     goRow(o, 'p3'); press(app, BTN.RIGHT);                   // gp0 → gp1 (do P4): trocam
     expect(app.settings.devices).toEqual(['kb', 'kb', 'gp1', 'gp0', 'gp2']);
@@ -46,13 +95,13 @@ describe('opções (§6.13)', () => {
   });
   it('A no jogador abre os controles dele', () => {
     const { app } = mkApp();
-    const o = optionsScreen(app); app.go(o); goRow(o, 'p3');
+    const o = optionsScreen(app, 0, 'controls'); app.go(o); goRow(o, 'p3');
     press(app, BTN.A); settle(app);
     expect(app.screen.id).toBe('remap');
   });
   it('spawns aleatórios: NÃO → SIM', () => {
     const { app } = mkApp();
-    const o = optionsScreen(app); app.go(o); goRow(o, 'spawns');
+    const o = optionsScreen(app, 0, 'gameplay'); app.go(o); goRow(o, 'spawns');
     expect(o.value('spawns')).toBe('NÃO');
     press(app, BTN.RIGHT);
     expect([app.settings.options.randomSpawns, o.value('spawns')]).toEqual([true, 'SIM']);
@@ -102,7 +151,7 @@ describe('opções (§6.13)', () => {
     const o = optionsScreen(app); app.go(o);
     goRow(o, 'reset'); press(app, BTN.A);
     const d = defaultSettings();
-    expect([o.value('music'), o.value('sfx'), o.value('spawns')]).toEqual([String(d.options.musicVol), String(d.options.sfxVol), 'NÃO']);
+    expect([o.value('music'), o.value('sfx'), app.settings.options.randomSpawns]).toEqual([String(d.options.musicVol), String(d.options.sfxVol), false]);
     expect(got.at(-1)).toEqual([d.options.musicVol / 10, d.options.sfxVol / 10]);
     goRow(o, 'music'); press(app, BTN.RIGHT);
     expect([app.settings.options.musicVol, o.value('music')]).toEqual([d.options.musicVol + 1, String(d.options.musicVol + 1)]);

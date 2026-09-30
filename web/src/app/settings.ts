@@ -15,10 +15,26 @@ export interface RuleChoices {
 /** Opções gerais (fora das regras da partida): spawn aleatório e volumes. */
 export interface Options {
   randomSpawns: boolean; musicVol: number; sfxVol: number;
+  gloveEscape: number;   // apertos de B para se soltar da luva (1..30)
+  throwStun: boolean;    // só jogador arremessado sobre outro jogador atordoa os dois (bomba atordoa sempre)
+  sleepSec: number;      // duração do soneca (montaria F), segundos (1..10); a ROM usa 3,2 s
 }
 
 export function defaultOptions(): Options {
-  return { randomSpawns: false, musicVol: 8, sfxVol: 8 };
+  return { randomSpawns: false, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3 };
+}
+
+/** Slots de Opções → Controles: dispositivo, teclas e botões dos 5 jogadores. */
+export interface ControlPreset { devices: DeviceId[]; keymaps: KeyMap[]; padmaps: PadMap[] }
+/** Slots de Opções → Jogabilidade. */
+export type GameplayPreset = Pick<Options, 'randomSpawns' | 'gloveEscape' | 'throwStun' | 'sleepSec'>;
+export const SLOT_COUNT = 3;
+
+export function gameplayOf(o: Options): GameplayPreset {
+  return { randomSpawns: o.randomSpawns, gloveEscape: o.gloveEscape, throwStun: o.throwStun, sleepSec: o.sleepSec };
+}
+export function controlsOf(s: Pick<Settings, 'devices' | 'keymaps' | 'padmaps'>): ControlPreset {
+  return { devices: [...s.devices], keymaps: s.keymaps.map(m => ({ ...m })), padmaps: s.padmaps.map(m => ({ ...m })) };
 }
 
 /** O que foi escolhido nos menus para a próxima partida (lembrado entre sessões). */
@@ -40,6 +56,9 @@ export interface Settings {
   padmaps: PadMap[];
   options: Options;
   setup: Setup;
+  /** Slots salvos (null = vazio). Jogabilidade: o 1 nasce com o padrão do jogo. "Restaurar padrão" não mexe nisto. */
+  controlSlots: (ControlPreset | null)[];
+  gameplaySlots: (GameplayPreset | null)[];
 }
 
 export const NAME_MAX = 8;
@@ -63,6 +82,7 @@ export function defaultSettings(): Settings {
     version: 3, names: ['', '', '', '', ''], devices: ['kb', 'kb', 'gp0', 'gp1', 'gp2'],
     keymaps: DEFAULT_KEYMAPS.map(m => ({ ...m })), padmaps: [0, 1, 2, 3, 4].map(() => ({ ...DEFAULT_PADMAP })),
     options: defaultOptions(), setup: defaultSetup(),
+    controlSlots: [null, null, null], gameplaySlots: [gameplayOf(defaultOptions()), null, null],
   };
 }
 
@@ -102,6 +122,31 @@ function normalizePadMap(v: unknown): PadMap {
   return m;
 }
 
+const slots = <T>(v: unknown, def: readonly (T | null)[], f: (x: unknown) => T): (T | null)[] =>
+  Array.from({ length: SLOT_COUNT }, (_, i) => {
+    if (!Array.isArray(v)) return def[i] ?? null;
+    return v[i] && typeof v[i] === 'object' ? f(v[i]) : null;
+  });
+
+function normalizeControlPreset(v: unknown, d: Settings): ControlPreset {
+  const o = asObj(v);
+  return {
+    devices: five(o.devices, (x, i) => oneOf(x, DEVICE_IDS, d.devices[i])),
+    keymaps: five(o.keymaps, (x, i) => normalizeKeyMap(x, d.keymaps[i])),
+    padmaps: five(o.padmaps, x => normalizePadMap(x)),
+  };
+}
+
+function normalizeGameplayPreset(v: unknown, d: Options): GameplayPreset {
+  const o = asObj(v);
+  return {
+    randomSpawns: bool(o.randomSpawns, d.randomSpawns),
+    gloveEscape: intIn(o.gloveEscape, 1, 30, d.gloveEscape),
+    throwStun: bool(o.throwStun, d.throwStun),
+    sleepSec: intIn(o.sleepSec, 1, 10, d.sleepSec),
+  };
+}
+
 /** Aceita qualquer coisa (JSON antigo, corrompido, parcial) e devolve configurações válidas. */
 export function normalizeSettings(raw: unknown): Settings {
   const d = defaultSettings();
@@ -120,6 +165,9 @@ export function normalizeSettings(raw: unknown): Settings {
       randomSpawns: bool(ro.randomSpawns, d.options.randomSpawns),
       musicVol: intIn(ro.musicVol, 0, 10, d.options.musicVol),
       sfxVol: intIn(ro.sfxVol, 0, 10, d.options.sfxVol),
+      gloveEscape: intIn(ro.gloveEscape, 1, 30, d.options.gloveEscape),
+      throwStun: bool(ro.throwStun, d.options.throwStun),
+      sleepSec: intIn(ro.sleepSec, 1, 10, d.options.sleepSec),
     },
     setup: {
       mode: oneOf(s.mode, ['ffa', 'team'] as const, ds.mode),
@@ -136,6 +184,8 @@ export function normalizeSettings(raw: unknown): Settings {
       chars: five(s.chars, (x, i) => intIn(x, 0, CHARACTERS.length - 1, ds.chars[i])),
       stage: intIn(s.stage, 1, 10, ds.stage),
     },
+    controlSlots: slots(r.controlSlots, d.controlSlots, x => normalizeControlPreset(x, d)),
+    gameplaySlots: slots(r.gameplaySlots, d.gameplaySlots, x => normalizeGameplayPreset(x, d.options)),
   };
 }
 

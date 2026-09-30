@@ -4,6 +4,9 @@ import { activeCount } from '../../src/core/mounts/eggs';
 import { cellOf } from '../../src/core/mounts/core-api';
 import { mountModule } from '../../src/core/mounts/module';
 import type { GameEvent } from '../../src/core/types';
+import { stunPlayer } from '../../src/core/hit';
+import { addBomb } from '../../src/core/bombs';
+import { startLift } from '../../src/core/flyers';
 
 describe('acerto de chama montado ($C2:4B89)', () => {
   it('não morre: 1 + 51 ticks pulando, montaria some, 32 de invencibilidade (mount_battery T6_hit)', () => {
@@ -140,5 +143,35 @@ describe('ovo reserva queima na chama (L22)', () => {
     flameAt(s, cellOf(3, 1));
     run(s, 1);
     expect(r.reserves).toEqual([]);
+  });
+});
+
+describe('ajustes: montado', () => {
+  it('atordoado montado: só o atordoamento, não perde a montaria nem itens', () => {
+    const s = mkRound();
+    const p = placePx(s, 0, cx(2), cy(1));
+    const r = ride(s, 0, 0x2);
+    p.kick = true; p.fire = 3;
+    const ev: GameEvent[] = [];
+    stunPlayer(s, p, ev);
+    expect(p.act).toBe('stunned');
+    expect(p.mount).toBe(r);
+    expect(r.phase).toBe('riding');
+    expect([p.kick, p.fire]).toEqual([true, 3]);
+    expect(ev.some(e => e.type === 'mount')).toBe(false);
+  });
+  it('pisar no ovo segurando bomba: larga a bomba na casa e monta de mãos vazias', () => {
+    const s = mkRound();
+    const p = placePx(s, 0, cx(2) - 6, cy(1)); p.glove = true;   // entrou na casa do ovo, ainda fora do centro
+    const c = cellOf(2, 1);
+    const b = addBomb(s, 0, c);
+    startLift(s, p, []);
+    expect(p.carry).toBe(b.id);
+    s.grid[c] = 0x0972;
+    mountModule.stepOnEgg(s, p, c, []);
+    expect(rider(p)?.phase).toBe('mounting');
+    expect(p.carry).toBe(-1);
+    expect([b.state, b.cell, s.grid[c]]).toEqual(['idle', c, 0xc900]);
+    expect([p.x, p.y]).toEqual([b.x, b.y]);                       // no centro da casa, junto com a bomba
   });
 });

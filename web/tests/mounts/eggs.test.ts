@@ -176,3 +176,53 @@ describe('pisar no ovo', () => {
     expect(r.reserves).toEqual([]);
   });
 });
+
+describe('ovo de máquina (A, C, D, E, F) × ovo verde (2, 3)', () => {
+  it('montado em máquina: ovo de máquina segue; ovo normal fica na grade', () => {
+    const s = mkRound();
+    placePx(s, 0, cx(2), cy(1));
+    const r = ride(s, 0, 0xd);
+    const c = cellOf(2, 1);
+    s.grid[c] = 0x0972;                                      // normal (2)
+    run(s, 1);
+    expect([s.grid[c], r.reserves]).toEqual([0x0972, []]);
+    s.grid[c] = 0x097f;                                      // máquina (F)
+    run(s, 1);
+    expect([s.grid[c], r.reserves]).toEqual([0, [0xf]]);
+  });
+  it('ovo verde só 2 e 3; C e E são de máquina (montado no 2: o 3 segue, o C fica)', () => {
+    const s = mkRound();
+    placePx(s, 0, cx(2), cy(1));
+    const r = ride(s, 0, 0x2);
+    const c = cellOf(2, 1);
+    s.grid[c] = 0x097c;
+    run(s, 1);
+    expect([s.grid[c], r.reserves]).toEqual([0x097c, []]);
+    s.grid[c] = 0x0973;
+    run(s, 1);
+    expect(r.reserves).toEqual([0x3]);
+  });
+  it('outro jogador a pé pisa no ovo que segue alguém: rouba e monta', () => {
+    const s = mkRound({ players: [0, 1] });
+    placePx(s, 0, cx(4), cy(1));
+    const r = ride(s, 0, 0xd, { reserves: [0xa], trail: [cellOf(4, 1), cellOf(3, 1)] });
+    const q = placePx(s, 1, cx(3), cy(1));
+    const ev = run(s, 1);
+    expect(r.reserves).toEqual([]);
+    expect([rider(q)?.type, rider(q)?.phase]).toEqual([0xa, 'mounting']);
+    expect(ev).toContainEqual({ type: 'mount', id: 'egg_stolen', slot: 1, from: 0, mount: 0xa });
+  });
+  it('quem rouba montado na mesma classe fica com ele de reserva; de outra classe, não rouba', () => {
+    const s = mkRound({ players: [0, 1] });
+    placePx(s, 0, cx(4), cy(1));
+    const r = ride(s, 0, 0xd, { reserves: [0xa], trail: [cellOf(4, 1), cellOf(3, 1)] });
+    const q = placePx(s, 1, cx(3), cy(1));
+    const rq = ride(s, 1, 0x2);
+    run(s, 1);
+    expect([r.reserves, rq.reserves]).toEqual([[0xa], []]);
+    rq.type = 0xf;
+    run(s, 1);
+    expect([r.reserves, rq.reserves]).toEqual([[], [0xa]]);
+    expect(q.mount).toBe(rq);
+  });
+});

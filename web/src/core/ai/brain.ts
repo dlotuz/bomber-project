@@ -6,6 +6,7 @@ import { bombFireOf, canPlaceBomb, fuseOf } from '../bombs';
 import { rangeOf } from '../constants';
 import { STAGES } from '../stages';
 import { MOUNTS } from '../mounts';
+import { canKick } from '../kick';
 import { SAFE, crossCells, hazards, pressureCells, type Extra, type Hazard } from './danger';
 import { kickWorth } from './actions';
 import { centered, escape, hasRefuge, lockOf, route, search, ticksPerCell, walkBlocked, type Route } from './nav';
@@ -277,7 +278,7 @@ export function think(s: RoundState, p: Player, level: AiLevel, brain: Brain, _a
       for (const face of [0, 2, 4, 6]) if (kickWorth(s, p, face, level, aim)) { follow(null); brain.push = face; return; }
     }
     // 3c) ir até atrás de uma bomba parada cujo chute encurralaria um adversário
-    if ((p.kick && !p.mount) || MOUNTS.current.kicks?.(p)) {
+    if (canKick(p)) {
       let best = -1;
       for (const b of s.bombs) {
         if (b.state !== 'idle' || b.chainAt || s.grid[b.cell] !== CODE.BOMB) continue;

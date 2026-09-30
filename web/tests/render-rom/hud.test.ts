@@ -1,4 +1,4 @@
-import { digitTile, faceTileIds, headOverrides, headTiles, hudWords } from '../../src/render/rom/hud';
+import { digitTile, faceTileIds, headOverrides, headTiles, hudWords, infinityOverrides } from '../../src/render/rom/hud';
 import { fakeCharacter } from './fakes';
 import { ASSETS } from './rom-fixture';
 
@@ -27,10 +27,24 @@ describe('HUD', () => {
     expect(cols(hudWords(base(), 59, NONE, ZERO, crownWord), 0, [4, 6, 7])).toEqual([0x2639, 0x2634, 0x2638]);
     expect(cols(hudWords(base(), 0, NONE, ZERO, crownWord), 0, [4, 6, 7])).toEqual([0x2639, 0x2639, 0x2639]);
   });
-  it('∞ = 30:01: dezena dos minutos na coluna 3 (D17)', () => {
+  it('tempo infinito: ∞ nas colunas 4–6 (tiles dos dígitos 1–3), coluna 7 em branco, sem dois-pontos', () => {
     const w = hudWords(base(), 1801, NONE, ZERO, crownWord);
-    expect(cols(w, 0, [3, 4, 6, 7])).toEqual([0x2632, 0x2639, 0x2639, 0x2630]);
+    expect(cols(w, 0, [3, 4, 5, 6, 7])).toEqual([0x260b, 0x2630, 0x2631, 0x2632, 0x260b]);
+    expect(cols(w, 2, [4, 5, 6])).toEqual([0x2650, 0x2651, 0x2652]);
     expect(hudWords(base(), 181, NONE, ZERO, crownWord)[3]).toBe(0x260b);
+  });
+  it('∞: 9 tiles (3×3) desenhados com os pixels do "0" sobre o tile em branco', () => {
+    const px = new Uint8Array(1024 * 64);
+    for (let r = 0; r < 3; r++) {            // "0" = contorno 1 nas bordas x=1 e x=6 de cada linha
+      const t = 0x200 + digitTile(0) + 0x10 * r;
+      for (let y = 0; y < 8; y++) { px[t * 64 + y * 8 + 1] = 1; px[t * 64 + y * 8 + 6] = 1; }
+    }
+    px.fill(5, 0x20b * 64, 0x20c * 64);      // tile em branco do HUD = cor 5
+    const o = infinityOverrides(px, base());
+    expect(o.map(x => x.tile)).toEqual([0x230, 0x240, 0x250, 0x231, 0x241, 0x251, 0x232, 0x242, 0x252]);
+    const row0 = [0, 1, 2].flatMap(c => Array.from(o[c * 3].px.subarray(0, 8)));
+    expect(new Set(row0)).toEqual(new Set([1, 5]));
+    expect(row0.filter(v => v === 1).length).toBe(8);   // 2 contornos por volta × 2 voltas, 2 px cada (8 → 13 px)
   });
   it('rostos e coroas só dos presentes; ausente fica com o fundo', () => {
     const w = hudWords(base(), 180, [true, false, true, true, true], [0, 4, 1, 5, 9], crownWord);

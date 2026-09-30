@@ -40,6 +40,10 @@ export interface Rules {
   badBomber: boolean;
   racer: boolean;
   randomSpawns: boolean;    // extra, não original (§6.13); padrão Não
+  gloveEscape: number;      // extra: apertos de B para se soltar da luva de quem te pegou (1..30)
+  throwStun: boolean;       // extra: só jogador arremessado sobre outro jogador — atordoa os dois (padrão Não: só quica).
+                            // Bomba caindo na cabeça atordoa sempre, independente disto.
+  sleepTicks: number;       // extra: duração do soneca (montaria F) em ticks; ROM: 192 ($C0)
   mode: 'ffa' | 'team';
   teams: number[];          // time de cada slot (0/1)
   active: boolean[];        // slot participa?
@@ -48,7 +52,7 @@ export interface Rules {
 export function defaultRules(): Rules {
   return {
     cpuLevel: 1, matches: 3, timeIdx: 2, suddenDeath: false, badBomber: false, racer: false,
-    randomSpawns: false, mode: 'ffa', teams: [0, 1, 0, 1, 0], active: [true, true, true, true, true],
+    randomSpawns: false, gloveEscape: 10, throwStun: false, sleepTicks: 192, mode: 'ffa', teams: [0, 1, 0, 1, 0], active: [true, true, true, true, true],
   };
 }
 
@@ -56,7 +60,7 @@ export type Phase = 'intro' | 'play' | 'won' | 'timeUp' | 'over';
 
 export type PlayerAct = 'idle' | 'walk' | 'lift' | 'carryIdle' | 'carryWalk' | 'throw' | 'punch' | 'pPunch'
   | 'detonate' | 'stunned' | 'dying' | 'victory' | 'mounting' | 'dismount' | 'launched' | 'pushed' | 'shocked'
-  | 'dance' | 'bad';
+  | 'dance' | 'bad' | 'held' | 'dropped';
 
 export interface Player {
   slot: number; present: boolean; char: number; team: number;
@@ -76,6 +80,11 @@ export interface Player {
   act: PlayerAct; actT0: number; actLeft: number; // actLeft > 0 = ação travada
   carry: number;                         // id da bomba na mão (luva) ou -1
   throwQueued: boolean;                  // A solto durante o levantamento
+  grab: number;                          // luva: slot do jogador que está na mão ou -1
+  heldBy: number;                        // slot de quem me segura com a luva ou -1
+  flying: boolean;                       // arremessado por outro jogador (voador kind 'player')
+  escape: number;                        // apertos de B para se soltar (conta até Rules.gloveEscape)
+  z: number;                             // altura em px acima do chão (só desenho: na mão ou voando)
   push: { vx: number; vy: number; left: number }; // movimento forçado (P, empurrão), 1/256 px por tick
   walkT: number;                         // ticks andando (passo a cada 20)
   state: 'alive' | 'dying' | 'out' | 'bad';
@@ -91,6 +100,7 @@ export interface Bomb {
   fuse: number;                          // contador da ROM (126 normal); explode ao ser processada com 0
   fire: number;                          // nível de fogo; alcance = rangeOf(fire)
   type: 0 | 1 | 2;                       // 0 normal, 1 remota, 2 perfurante
+  level?: number;                        // extra: evolução no chute (ausente = 0) — 0 comum, 1 D, 2 S, 3 H (explosão por área)
   state: 'idle' | 'kicked' | 'held' | 'air';
   dir: 0 | 2 | 4 | 6; step: number; kickedBy: number;   // chute
   turn: number;                          // chute: nova face ao chegar na próxima casa (-1 = nenhuma; arena 7)
@@ -101,14 +111,16 @@ export interface Bomb {
 export type FlightId = 'punch' | 'bounce' | 'throw2' | 'throw3' | 'throw4' | 'throw5' | 'item';
 
 export interface Flyer {
-  id: number; kind: 'bomb' | 'item';
-  ref: number;                           // id da bomba ou id do item/caveira
+  id: number; kind: 'bomb' | 'item' | 'player';
+  ref: number;                           // id da bomba, id do item/caveira ou slot do jogador arremessado
   x: number; y: number;                  // chão, 1/256 px
   z: number;                             // altura em px (≤ 0 = acima do chão); o render desenha em (x, y + z·256)
   dir: 0 | 1 | 2 | 3;                    // 0 cima, 1 direita, 2 baixo, 3 esquerda (índice dos scripts)
   flight: FlightId; script: number;      // script = índice em ITEM_FLIGHT quando flight = 'item'
   i: number;                             // passo atual do script
   born: number;
+  glove?: boolean;                       // arremessada com a luva e ainda sem quicar (vale o reflect)
+  hit?: boolean;                         // jogador arremessado que bateu em outro (Rules.throwStun): atordoa ao pousar
 }
 
 export interface Falling { cell: number; t0: number; land: number }

@@ -1,4 +1,4 @@
-import { BTN, CODE, DISEASE, type GameEvent, type Player, type PlayerAct, type RoundState } from './types';
+import { BTN, CODE, DIR_BTNS, DISEASE, type GameEvent, type Player, type PlayerAct, type RoundState } from './types';
 import { DETONATE_TICKS, P_ADVANCE_TICKS, P_PUSH_TICKS, P_SPEED, P_TICKS } from './constants';
 import { cellAt, cellCenter, faceDcol, faceDlin, faceStep } from './units';
 import { playerCell, setAct, standing } from './state';
@@ -7,6 +7,7 @@ import { stopKick, tryKick } from './kick';
 import { detonateRemote, placeBomb } from './bombs';
 import { punchBomb, startLift, throwHeld, tossHeld } from './flyers';
 import { isImmune } from './hit';
+import { DROP_INV, airborne, grabbedInput, holding, throwGrab, tossGrab, tryGrab } from './grab';
 import { MOUNTS } from './mounts';
 import { STAGES } from './stages';
 
@@ -30,8 +31,10 @@ export function tickAct(s: RoundState, p: Player, ev: GameEvent[]): boolean {
   if (p.push.left > 0) applyPush(s, p, ev);
   if (p.actLeft <= 0) return false;
   if (--p.actLeft === 0) {
-    if (p.act === 'lift') { if (p.throwQueued) throwHeld(s, p, ev); else setAct(s, p, 'carryIdle'); }
-    else if (!FREE.has(p.act)) setAct(s, p, p.carry >= 0 ? 'carryIdle' : 'idle');
+    if (p.act === 'lift') { if (p.throwQueued) throwAny(s, p, ev); else setAct(s, p, 'carryIdle'); }
+    else if (p.act === 'detonate' && p.prevBtn & BTN.B) { /* trancar: B ainda segurado, fica na pose */ }
+    else if (p.act === 'dropped') { p.inv = DROP_INV; setAct(s, p, 'idle'); }   // caiu da luva: invencível, como no desmonte
+    else if (!FREE.has(p.act)) setAct(s, p, holding(p) ? 'carryIdle' : 'idle');
   }
   return true;
 }
@@ -42,7 +45,7 @@ export function startPPunch(s: RoundState, p: Player, ev: GameEvent[]): void {
   const vx = faceDcol(p.face) * P_SPEED, vy = faceDlin(p.face) * P_SPEED;
   if (p.punch) punchBomb(s, p, ev);
   for (const q of s.players) {
-    if (q === p || !standing(q) || isImmune(s, q) || playerCell(q) !== front) continue;
+    if (q === p || !standing(q) || airborne(q) || isImmune(s, q) || playerCell(q) !== front) continue;
     q.push = { vx, vy, left: P_PUSH_TICKS };
     setAct(s, q, 'pushed', P_PUSH_TICKS);
   }
@@ -52,22 +55,35 @@ export function startPPunch(s: RoundState, p: Player, ev: GameEvent[]): void {
   ev.push({ type: 'p_punch', slot: p.slot });
 }
 
+/** Luva: arremessa o que está na mão (jogador ou bomba). */
+function throwAny(s: RoundState, p: Player, ev: GameEvent[]): void { if (p.grab >= 0) throwGrab(s, p, ev); else throwHeld(s, p, ev); }
+/** Luva: larga o que está na mão 1 casa à frente. */
+function tossAny(s: RoundState, p: Player): void { if (p.grab >= 0) tossGrab(s, p); else tossHeld(s, p); }
+/** Luva, A: pega o jogador da mesma casa; senão levanta a bomba. (O B só levanta bomba.) */
+const liftAny = (s: RoundState, p: Player, ev: GameEvent[]): boolean => tryGrab(s, p, ev) || startLift(s, p, ev);
+
 /** Botões de um jogador num tick (ordem da decisão 20). */
 export function playerActions(s: RoundState, p: Player, btn: number, pressed: number, released: number, ev: GameEvent[]): void {
-  if (released & BTN.A && p.carry >= 0) {
+  if (grabbedInput(s, p, pressed)) return;   // na mão de alguém (B para se soltar) ou voando
+  if (released & BTN.A && holding(p) && !p.mount) {
     if (p.act === 'lift' && p.actLeft > 0) p.throwQueued = true;
-    else { throwHeld(s, p, ev); return; }
+    else { throwAny(s, p, ev); return; }
   }
   if (tickAct(s, p, ev)) return;
-  if (p.carry >= 0 && !(btn & (BTN.A | BTN.B))) { tossHeld(s, p); setAct(s, p, 'idle'); }   // levantou com B e soltou
+  if (holding(p) && !(btn & (BTN.A | BTN.B))) { tossAny(s, p); setAct(s, p, 'idle'); }   // levantou com B e soltou
+  // Trancar: B segurado (depois do tick em que foi apertado) trava o jogador na pose de detonar; assim a luva não o pega.
+  if (btn & BTN.B && !(pressed & BTN.B) && !holding(p) && !p.mount) { p.moveDir = 8; setAct(s, p, 'detonate'); return; }
   movePlayer(s, p, btn, ev);
-  tryKick(s, p, ev);
   // Montado (qualquer fase): nada de luva, soco nem P — só o poder da própria montaria (Y) e as bombas.
   const onFoot = !p.mount;
-  if (pressed & BTN.A) { if (p.carry < 0 && !(onFoot && p.glove && startLift(s, p, ev))) placeBomb(s, p, ev); }
-  else if (p.disease === DISEASE.DIARRHEA && p.carry < 0) placeBomb(s, p, ev);
-  if (pressed & BTN.B && p.carry >= 0) {   // luva: B larga a bomba na casa da frente
-    tossHeld(s, p);
+  // Chute só andando contra a bomba (direcional apertado); parado olhando para ela, o Y do soco ainda a alcança.
+  // No mesmo tick, Y com Soco vence o chute.
+  const punching = pressed & BTN.Y && onFoot && p.punch;
+  if (btn & DIR_BTNS && !punching) tryKick(s, p, ev);
+  if (pressed & BTN.A) { if (!holding(p) && !(onFoot && p.glove && liftAny(s, p, ev))) placeBomb(s, p, ev); }
+  else if (p.disease === DISEASE.DIARRHEA && !holding(p)) placeBomb(s, p, ev);
+  if (pressed & BTN.B && holding(p)) {   // luva: B larga a bomba (ou o jogador) na casa da frente
+    tossAny(s, p);
     setAct(s, p, 'idle');
   } else if (pressed & BTN.B && !(onFoot && startLift(s, p, ev))) {   // luva sobre a bomba: B também levanta (segura enquanto apertado)
     detonateRemote(s, p, ev); setAct(s, p, 'detonate', DETONATE_TICKS);

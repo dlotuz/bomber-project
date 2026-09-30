@@ -33,10 +33,12 @@ export const S = {
   victory: { title: 'VITÓRIA!' },
   racer: { press: 'APERTE B!', prize: 'PRÊMIO', names: RACER_PRIZE_NAMES },
   options: {
-    title: 'Opções', player: (n: number) => `JOGADOR ${n}`, devices: DEVICE_NAMES,
+    title: 'Opções', controlsTitle: 'Controles', gameplayTitle: 'Jogabilidade',
+    controlsMenu: 'CONTROLES', gameplayMenu: 'JOGABILIDADE', player: (n: number) => `JOGADOR ${n}`, devices: DEVICE_NAMES,
     controls: (n: number) => `CONTROLES DO JOGADOR ${n}`, device: 'DISPOSITIVO', all: 'CONFIGURAR TODOS',
     playerHelp: 'A: CONFIGURAR  ESQ/DIR: TROCA', pressAny: 'TECLA OU BOTÃO? (ESC CANCELA)',
-    spawns: 'SPAWNS ALEATÓRIOS', music: 'VOLUME DA MÚSICA', sfx: 'VOLUME DOS EFEITOS',
+    spawns: 'SPAWNS ALEATÓRIOS', escape: 'SOLTAR DA LUVA', slot: 'SLOT', slotEmpty: 'VAZIO', slotSave: 'SALVAR NO SLOT',
+    slotLoad: 'CARREGAR DO SLOT', slotSaved: 'SALVO', slotLoaded: 'CARREGADO', throwStun: 'PLAYER EM PLAYER: STUN', sleep: 'SONECA (SEG)', music: 'VOLUME DA MÚSICA', sfx: 'VOLUME DOS EFEITOS',
     rom: 'ROM', romOk: 'CARREGADA ✓', romNo: 'NÃO CARREGADA', load: 'CARREGAR ROM...', forget: 'ESQUECER ROM',
     forgetAsk: 'ESQUECER A ROM? A: SIM  B: NÃO', reset: 'RESTAURAR PADRÃO', back: 'VOLTAR', no: 'NÃO', yes: 'SIM',
     pressKey: 'NOVA TECLA? (ESC CANCELA)', pressPad: 'NOVO BOTÃO? (ESC CANCELA)', actions: ACTIONS,
@@ -51,7 +53,7 @@ const uniq = (u: Use[]): Use[] => [...new Map(u.map(x => [`${x.style}|${x.text}`
 /** Todo par (estilo, texto) que o jogo desenha. Base dos testes de cobertura (T4, T16–T18, T22). */
 export const STRING_USES: readonly Use[] = uniq([
   ...as('titleMenu', [S.title.normal, S.title.battle, S.title.options, S.title.pressStart]),
-  ...as('menuTitle', [S.vs.title, S.players.title, S.rules.title, S.chars.title, S.teams.title, S.options.title]),
+  ...as('menuTitle', [S.vs.title, S.players.title, S.rules.title, S.chars.title, S.teams.title, S.options.title, S.options.controlsTitle, S.options.gameplayTitle]),
   ...as('menuItem', [S.vs.royale, S.vs.champ, S.vs.mania, S.vs.ffa, S.vs.team, ...S.players.row, S.players.human, S.players.cpu,
     S.players.off, ...S.rules.labels, ...S.rules.cpu, ...S.rules.crowns, ...S.rules.time, S.rules.no, S.rules.yes, S.teams.vs]),
   ...as('spriteBlue', [S.stage.title, ...Array.from({ length: 10 }, (_, i) => S.stage.stage(i + 1)), ...STAGE_NAMES_PT]),
@@ -59,7 +61,8 @@ export const STRING_USES: readonly Use[] = uniq([
   ...as('ascii8', [
     ...[1, 2, 3, 4].map(S.battle.disconnected), ...S.score.tags, ...S.chars.tags, S.chars.allReady, S.chars.help, S.teams.help, S.racer.prize, ...Object.values(RACER_PRIZE_NAMES),
     ...[1, 2, 3, 4, 5].map(S.options.player), ...Object.values(DEVICE_NAMES), ...[1, 2, 3, 4, 5].map(S.options.controls),
-    S.options.device, S.options.all, S.options.playerHelp, S.options.pressAny, ...PAD_NAMES, '---', S.options.spawns, S.options.music, S.options.sfx, S.options.rom, S.options.romOk,
+    S.options.device, S.options.all, S.options.playerHelp, S.options.pressAny, ...PAD_NAMES, '---', S.options.controlsMenu, S.options.gameplayMenu, S.options.slot, S.options.slotEmpty, S.options.slotSave,
+    S.options.slotLoad, S.options.slotSaved, S.options.slotLoaded, S.options.spawns, S.options.escape, S.options.throwStun, S.options.sleep, S.options.music, S.options.sfx, S.options.rom, S.options.romOk,
     S.options.romNo, S.options.load, S.options.forget, S.options.forgetAsk, S.options.reset, S.options.back, S.options.no,
     S.options.yes, S.options.pressKey, S.options.pressPad, ...Object.values(ACTIONS),
     ...Array.from({ length: 32 }, (_, i) => S.options.button(i)),

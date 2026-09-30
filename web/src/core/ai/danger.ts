@@ -8,6 +8,7 @@ import { isEggCode, isItemCode, playerCell, standing } from '../state';
 import { STAGES } from '../stages';
 import { pressureSpiral } from '../pressure';
 import { pressureTriggerSec } from '../clock';
+import { areaCells } from '../bombs';
 
 /** Casa que nenhuma chama conhecida vai atingir. */
 export const SAFE = 1_000_000;
@@ -29,7 +30,8 @@ export interface Extra { cell: number; fire: number; pierce: boolean; t?: number
  *  `asBomb`: casas tratadas como bomba parada além das da grade (hipotética, ponto de parada de uma chutada).
  *  `itemsStop` = false: o braço segue depois de um item (alguém pode pegá-lo antes da explosão; uso do perigo). */
 export function crossCells(s: RoundState, cell: number, fire: number, pierce: boolean, asBomb?: ReadonlySet<number>,
-  itemsStop = true): { cells: number[]; bombs: number[] } {
+  itemsStop = true, level = 0): { cells: number[]; bombs: number[] } {
+  if (level > 0) return areaCells(s, cell, level, asBomb);   // bomba evoluída (D/S/H): quadrado, atravessa blocos
   const cells = [cell], bombs: number[] = [];
   const range = rangeOf(fire);
   for (const face of [0, 2, 4, 6]) {
@@ -166,7 +168,7 @@ export function blockedUntil(s: RoundState): Int32Array {
   return out;
 }
 
-interface Blast { cell: number; t: number; fire: number; pierce: boolean; trail: number[]; perm?: boolean }
+interface Blast { cell: number; t: number; fire: number; pierce: boolean; trail: number[]; perm?: boolean; level?: number }
 
 /**
  * Perigo previsto de cada casa para o jogador `forSlot` (as remotas dele não contam: ele decide quando detoná-las).
@@ -194,24 +196,24 @@ export function hazards(s: RoundState, forSlot = -1, extra?: Extra | readonly Ex
       if (!f) continue;
       const e = flightEnd(s, f);
       const t = remote ? 0 : orphan ? SAFE : s.grid[e.cell] === CODE.FLAME ? e.t + CHAIN_DELAY : e.t + b.fuse + 1;
-      blasts.push({ cell: e.cell, t, fire: b.fire, pierce, trail: [], perm: remote });
+      blasts.push({ cell: e.cell, t, fire: b.fire, pierce, trail: [], perm: remote, level: b.level });
       continue;
     }
     if (b.state === 'kicked') {
       const k = kickPath(s, b);
       asBomb.add(k.cell);
-      blasts.push({ cell: k.cell, t: remote ? 0 : k.t, fire: b.fire, pierce, trail: k.trail, perm: remote });
+      blasts.push({ cell: k.cell, t: remote ? 0 : k.t, fire: b.fire, pierce, trail: k.trail, perm: remote, level: b.level });
       continue;
     }
-    if (remote) { blasts.push({ cell: b.cell, t: 0, fire: b.fire, pierce, trail: [], perm: true }); continue; }
-    blasts.push({ cell: b.cell, t: fuseTicks(s, b), fire: b.fire, pierce, trail: [] });   // órfã: SAFE até a cadeia
+    if (remote) { blasts.push({ cell: b.cell, t: 0, fire: b.fire, pierce, trail: [], perm: true, level: b.level }); continue; }
+    blasts.push({ cell: b.cell, t: fuseTicks(s, b), fire: b.fire, pierce, trail: [], level: b.level });   // órfã: SAFE até a cadeia
   }
   const extras: readonly Extra[] = extra === undefined ? [] : 'cell' in extra ? [extra as Extra] : extra as readonly Extra[];
   for (const e of extras) {
     asBomb.add(e.cell);
     blasts.push({ cell: e.cell, t: e.t ?? EXTRA_T, fire: e.fire, pierce: e.pierce, trail: [] });
   }
-  const crosses = blasts.map(x => crossCells(s, x.cell, x.fire, x.pierce, asBomb, false));
+  const crosses = blasts.map(x => crossCells(s, x.cell, x.fire, x.pierce, asBomb, false, x.level ?? 0));
   // cadeia: a 1ª bomba alcançada em cada braço explode 2 ticks depois (até estabilizar). Uma remota de adversário pode
   // ser detonada a qualquer momento: o que ela alcança vira perigo permanente também.
   for (let changed = true, guard = 0; changed && guard <= blasts.length; guard++) {

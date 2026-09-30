@@ -18,8 +18,8 @@ export function cellWord(s: RoundState, cell: number, i: number, ar: ArenaAssets
       return ar.logicBase[i] === CODE.SOFT ? floor : ar.bg2Base[i];
     case CODE.SOFT:
       return ar.bg2Base[i];
-    case CODE.PRESSURE:
-      return WORD_PRESSURE;
+    case CODE.PRESSURE:   // bordas de cima/baixo viram pressão todas no mesmo tick: continuam com a cara de parede
+      return cell < GRID_W || cell >= (GRID_H - 1) * GRID_W ? ar.bg2Base[i] : WORD_PRESSURE;
     case CODE.BOMB: {
       const b = scene.gridBombs.get(cell);
       return b ? scriptWord(script(b.type), clock.bombTick - b.born) : scriptWord(script(0), 0);

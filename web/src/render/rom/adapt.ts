@@ -25,6 +25,7 @@ export function readScene(s: RoundState, tick: number, memo: RomMemo): RomScene 
     else if (b.state === 'held') { const o = heldAt(s, b.id, b.owner, tick); if (o) objs.push(o); }
   }
   for (const f of s.flyers) {
+    if (f.kind === 'player') continue;   // o próprio jogador é desenhado com a altura p.z (sprites.ts)
     objs.push({ kind: f.kind, item: f.kind === 'item' ? f.ref : 0, x: px(f.x), y: px(f.y), z: Math.max(0, -f.z) });
   }
   const now: PressureDrop[] = s.pressure.falling.map(f => ({ cell: f.cell, t0: f.t0, land: f.land }));
