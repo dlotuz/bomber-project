@@ -45,21 +45,34 @@ function park(s: RoundState, b: Bomb, cell: number): boolean {
   return true;
 }
 
-/** Extra: nível da bomba parada `o` depois de `b` (chutada) bater nela, ou -1 se não fundem. Só funde em bomba
- *  comum: comum chutada = D, D chutada = S, S chutada = H (H chutada continua H). Na evoluída, só encosta. */
-export function mergedLevel(b: Bomb, o: Bomb): number {
-  if (o.level) return -1;
-  return Math.min(MAX_LEVEL, (b.level ?? 0) + 1);
+/** Extra: nível de duas bombas EM MOVIMENTO que se batem, ou -1 se não fundem: comum + comum = D, D + comum = S,
+ *  S + comum = H. Qualquer outra combinação (e bomba parada) só bate e para. */
+export function mergedLevel(a: Bomb, b: Bomb): number {
+  const la = a.level ?? 0, lb = b.level ?? 0;
+  const hi = Math.max(la, lb);
+  return Math.min(la, lb) === 0 && hi < MAX_LEVEL ? hi + 1 : -1;
+}
+
+/** Outra bomba deslizando que ocupa (ou está entrando em) `c`. */
+function movingAt(s: RoundState, b: Bomb, c: number): Bomb | undefined {
+  return s.bombs.find(x => x !== b && x.state === 'kicked'
+    && (x.cell === c || cellAt(x.x, x.y) === c || (x.step > 0 && faceStep(x.cell, x.dir) === c)));
 }
 
 /** Um tick do deslize ($C1:34D0/$C1:35E1). */
 export function slideStep(s: RoundState, b: Bomb, _ev: GameEvent[]): void {
   if (b.step === 0) {
     const next = faceStep(b.cell, b.dir);
-    const o = bombAt(s, next);
+    // Duas em movimento se batendo fundem: a atingida evolui, para onde está e reinicia o pavio (no vídeo a D explode
+    // ~1,6 s depois da fusão); a outra volta ao dono. Parada não funde: vale a colisão normal logo abaixo.
+    const o = movingAt(s, b, next);
     const lv = o ? mergedLevel(b, o) : -1;
-    // funde: a parada evolui com o pavio reiniciado (no vídeo a D explode ~1,6 s depois da fusão); a chutada volta ao dono
-    if (o && lv > 0) { o.level = lv; o.fuse = FUSE; removeBomb(s, b, true); return; }
+    if (o && lv > 0) {
+      o.level = lv; o.fuse = FUSE;
+      removeBomb(s, b, true);
+      park(s, o, cellAt(o.x, o.y));
+      return;
+    }
     const v = s.grid[next] ?? CODE.HARD;
     const blocked = (v & 0x8400) !== 0 || isEggCode(v)
       || bombOccupies(s, next, b)

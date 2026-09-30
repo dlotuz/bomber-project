@@ -43,7 +43,7 @@ describe('chute (t36, t41, t91)', () => {
       const { s, p, b } = setup();
       if (block === 'player') put(s, 1, 8, 1);
       if (block === 'soft') setCell(s, 8, 1, CODE.SOFT);
-      if (block === 'bomb') addBomb(s, 1, C(8, 1), { level: 1 });   // comum numa D não funde (comum + comum funde: ver evolução)
+      if (block === 'bomb') addBomb(s, 1, C(8, 1));   // parada: não funde (só bombas em movimento fundem)
       tryKick(s, p, []);
       slide(s, b, 40);
       expect([b.state, b.cell]).toEqual(['idle', C(7, 1)]);
@@ -169,42 +169,49 @@ describe('X segurado: minha bomba não pode ser chutada pelos outros', () => {
   });
 });
 
-describe('evolução no chute: comum+comum = D, D chutada = S, S chutada = H', () => {
-  function fire(level = 0, targetLevel = 0) {
-    const { s, p, b } = setup();                 // p em (4,1) chuta a bomba de (5,1) para a direita
-    b.level = level;
-    const t = addBomb(s, 2, C(8, 1), { level: targetLevel });
-    s.players[1].bombsFree = 0;                  // a bomba chutada é dele e está em campo
-    const free = s.players[1].bombsFree;
-    tryKick(s, p, []); slide(s, b, 40);
-    return { s, b, t, free };
+describe('evolução: duas bombas em movimento que se batem (comum+comum = D, D+comum = S, S+comum = H)', () => {
+  /** Bomba em (4,1) deslizando para a direita e outra em (10,1) deslizando para a esquerda. */
+  function collide(la = 0, lb = 0) {
+    const s = arena();
+    const a = addBomb(s, 0, C(4, 1), { level: la });
+    const b = addBomb(s, 1, C(10, 1), { level: lb });
+    for (const [x, dir] of [[a, 2], [b, 6]] as const) {
+      x.state = 'kicked'; x.dir = dir; x.step = 0; x.kickedBy = 0; x.turn = -1; s.grid[x.cell] = CODE.FLOOR;
+    }
+    s.players[0].bombsFree = 0; s.players[1].bombsFree = 0;
+    for (let i = 0; i < 60; i++) {
+      s.tick++;
+      for (const x of [a, b]) if (x.state === 'kicked' && s.bombs.includes(x)) slideStep(s, x, []);
+    }
+    const alive = s.bombs.filter(x => x === a || x === b);
+    return { s, a, b, alive };
   }
-  it('comum chutada em comum parada: a parada vira D e a chutada volta para o dono', () => {
-    const { s, b, t, free } = fire(0, 0);
-    expect(t.level).toBe(1);
-    expect(s.bombs.includes(b)).toBe(false);
-    expect(s.players[1].bombsFree).toBe(free + 1);
-    expect(codeAt(s, 7, 1)).toBe(CODE.FLOOR);
+  it('comum + comum em movimento: sobra uma D parada, com pavio novo; a outra volta ao dono', () => {
+    const { s, alive } = collide(0, 0);
+    expect(alive.length).toBe(1);
+    const m = alive[0];
+    expect([m.level, m.state, m.fuse, s.grid[m.cell]]).toEqual([1, 'idle', FUSE, CODE.BOMB]);
+    expect(s.players[0].bombsFree + s.players[1].bombsFree).toBe(1);
   });
-  it('D chutada em comum vira S; S chutada em comum vira H; H chutada em comum continua H', () => {
-    expect(fire(1, 0).t.level).toBe(2);
-    expect(fire(2, 0).t.level).toBe(3);
-    expect(fire(3, 0).t.level).toBe(3);
+  it('D + comum = S; S + comum = H (tanto faz qual das duas é a evoluída)', () => {
+    expect(collide(1, 0).alive.map(x => x.level)).toEqual([2]);
+    expect(collide(0, 1).alive.map(x => x.level)).toEqual([2]);
+    expect(collide(2, 0).alive.map(x => x.level)).toEqual([3]);
+    expect(collide(0, 2).alive.map(x => x.level)).toEqual([3]);
   });
-  it('a fusão reinicia o pavio da bomba evoluída (vídeo: a D explode ~1,6 s depois da fusão, não no pavio antigo)', () => {
-    const { s, p, b } = setup();
-    const t = addBomb(s, 2, C(8, 1), { fuse: 20 });
-    tryKick(s, p, []); slide(s, b, 40);
-    expect([t.level, t.fuse]).toEqual([1, FUSE]);
-  });
-  it('evoluída chutada em evoluída só encosta (D em D, S em D, H em H)', () => {
-    for (const [k, t] of [[1, 1], [2, 1], [3, 3]] as const) {
-      const r = fire(k, t);
-      expect([r.t.level, r.b.level, r.s.bombs.includes(r.b), r.b.cell], `${k} em ${t}`).toEqual([t, k, true, C(7, 1)]);
+  it('outras combinações em movimento só batem e param (D+D, D+S, H+comum)', () => {
+    for (const [la, lb] of [[1, 1], [1, 2], [3, 0]] as const) {
+      const r = collide(la, lb);
+      expect(r.alive.map(x => [x.level, x.state]), `${la}+${lb}`).toEqual([[la, 'idle'], [lb, 'idle']]);
     }
   });
-  it('comum chutada numa D só encosta (não funde)', () => {
-    const { s, b, t } = fire(0, 1);
-    expect([t.level, s.bombs.includes(b), b.state, b.cell]).toEqual([1, true, 'idle', C(7, 1)]);
+  it('bomba em movimento batendo em bomba parada não funde (só para encostada)', () => {
+    for (const lv of [0, 1, 2]) {
+      const { s, p, b } = setup();
+      b.level = lv;
+      const t = addBomb(s, 2, C(8, 1));
+      tryKick(s, p, []); slide(s, b, 40);
+      expect([t.level, b.level, b.state, b.cell], `nível ${lv}`).toEqual([0, lv, 'idle', C(7, 1)]);
+    }
   });
 });
