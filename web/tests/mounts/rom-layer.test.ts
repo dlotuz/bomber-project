@@ -5,7 +5,7 @@ import { mkRound, placePx, ride, run, flameAt, BTN, cx, cy } from './helpers';
 import { riderHook } from '../../src/render/rom/mounts/rider';
 import { mountRomSprites } from '../../src/render/rom/mounts/sprites';
 import { fallbackMountFrame, objPx, sampleSeq } from '../../src/render/rom/mounts/gfx';
-import { MOUNT_GFX, MOUNTING_ANIMS, REMOUNT_ANIMS, DANCE_NOTE_TICKS } from '../../src/render/rom/mounts/facts';
+import { MOUNT_GFX, DISMOUNT_ANIMS, REMOUNT_ANIMS, DANCE_NOTE_TICKS } from '../../src/render/rom/mounts/facts';
 import { cellOf } from '../../src/core/units';
 import type { ObjEntry } from '../../src/render/ppu';
 import type { Anim, RomAssets } from '../../src/rom/types';
@@ -98,12 +98,13 @@ describe.skipIf(!ASSETS)('camada ROM das montarias × emulador', () => {
       ],
     }];
     const fakeAssets: RomAssets = { ...ASSETS!, anim: (addr: number) => (addr === FAKE_ADDR ? fakeFrames : ASSETS!.anim(addr)) };
-    const type = 0x2, original = MOUNTING_ANIMS[type];
-    MOUNTING_ANIMS[type] = [FAKE_ADDR];
+    // Desmonte sem reserva: único trecho que ainda desenha o personagem direto de uma tabela da ROM fora do `riding`
+    // (o `mounting` agora é um pulo desenhado por código).
+    const type = 0x2, original = DISMOUNT_ANIMS.splice(0, DISMOUNT_ANIMS.length, FAKE_ADDR);
     try {
       const s = mkRound();
       const p = placePx(s, 0, cx(7), cy(5));
-      const r = ride(s, 0, type, { phase: 'mounting', t0: s.tick });
+      const r = ride(s, 0, type, { phase: 'dismount', t0: s.tick });
       const got = riderHook(s, p, fakeAssets, s.tick, s.tick)!;
       expect(got).not.toBeNull();
       const X = cx(7), Y = cy(5);
@@ -117,7 +118,7 @@ describe.skipIf(!ASSETS)('camada ROM das montarias × emulador', () => {
       expect(sha1((extraPiece.src as { px: Uint8Array }).px)).toBe(sha1(objPx(ASSETS!.arena(s.stage).objCommon, 0, 44, 16)));
       void r;
     } finally {
-      MOUNTING_ANIMS[type] = original;
+      DISMOUNT_ANIMS.splice(0, DISMOUNT_ANIMS.length, ...original);
     }
   });
 
