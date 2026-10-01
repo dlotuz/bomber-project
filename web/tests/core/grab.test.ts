@@ -117,6 +117,17 @@ describe('luva pega jogador (extra)', () => {
     untilLanded(s, 1);
     expect([o.act, q.act]).toEqual(['stunned', 'stunned']);
   });
+  it('com Rules.throwStun: quem está parado sobre uma bomba não é atordoado (nem o arremessado)', () => {
+    const s = arena({ players: 3 });
+    s.rules.throwStun = true;
+    const p = put(s, 0, 4, 1); p.glove = true; p.face = 2;
+    const q = put(s, 1, 4, 1);
+    const o = put(s, 2, 9, 1);
+    addBomb(s, 2, C(9, 1));
+    run(s, 1, [BTN.A, 0, 0]); run(s, 5, [BTN.A, 0, 0]); run(s, 1, [0, 0, 0]);
+    untilLanded(s, 1);
+    expect([o.act, q.act]).toEqual(['idle', 'idle']);
+  });
   it('Rules.throwStun não vale para bomba: bomba arremessada na cabeça atordoa sempre', () => {
     const s = arena({ players: 2 });
     expect(s.rules.throwStun).toBe(false);

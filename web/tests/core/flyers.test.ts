@@ -124,6 +124,29 @@ describe('luva (t48)', () => {
     fly(s, 12 + 8);                               // THROW[3] horizontal tem 12 passos + quique de 8
     expect([b.state, b.cell]).toEqual(['idle', C(8, 1)]);
   });
+  // $C1:27A4: a casa com bit $0800 (bomba $C900, bloco, item…) ou com bomba chutada ([$38] bit $4000) quica ($C1:2868)
+  // antes do teste de jogador ([$38] & $3FF7 → $C1:294D): quem está parado sobre uma bomba não é atordoado.
+  it('jogador parado sobre bomba no chão: a bomba que cai quica e não o atordoa', () => {
+    const { s, p, b } = punchSetup([5, 1], [4, 1], 2);
+    const q = put(s, 1, 8, 1); q.fire = 3;
+    const under = addBomb(s, 1, C(8, 1));
+    punchBomb(s, p, []);
+    const ev = fly(s, 17 + 8);
+    expect(q.act).not.toBe('stunned');
+    expect(q.fire).toBe(3);
+    expect(ev.some(e => e.type === 'stunned')).toBe(false);
+    expect([b.state, b.cell]).toEqual(['idle', C(9, 1)]);
+    expect([under.state, under.cell, codeAt(s, 8, 1)]).toEqual(['idle', C(8, 1), CODE.BOMB]);
+  });
+  it('jogador sobre bloco macio (atravessa-bloco): a bomba quica sem atordoar (bit $0800)', () => {
+    const { s, p, b } = punchSetup([5, 1], [4, 1], 2);
+    const q = put(s, 1, 8, 1); q.passSoft = true;
+    setCell(s, 8, 1, CODE.SOFT);
+    punchBomb(s, p, []);
+    fly(s, 17 + 8);
+    expect(q.act).not.toBe('stunned');
+    expect([b.state, b.cell]).toEqual(['idle', C(9, 1)]);
+  });
   it('dropHeld: a bomba da mão cai na casa se estiver livre', () => {
     const s = arena(); const p = put(s, 0, 4, 1); p.glove = true;
     const b = addBomb(s, 0, C(4, 1)); startLift(s, p, []);
