@@ -46,6 +46,25 @@ describe('IA: ações (§9.3)', () => {
     expect(b.state).toBe('idle');
     expect(crossCells(s, b.cell, b.fire, false).cells).toContain(C(8, 5));
   });
+  it('X: para a bomba DELA chutada pelo adversário (a ROM lê o X do dono, $C1:38CE)', () => {
+    const s = arena(); put(s, 0, 4, 3); put(s, 1, 8, 5);
+    const b = addBomb(s, 0, C(5, 3), { fuse: 120, fire: 1 });
+    s.grid[C(5, 3)] = CODE.FLOOR; b.state = 'kicked'; b.dir = 2; b.step = 0; b.kickedBy = 1;
+    play(s, CPU0, 2, 60);
+    expect(b.state).toBe('idle');
+    expect(crossCells(s, b.cell, b.fire, false).cells).toContain(C(8, 5));
+  });
+  it('X: a bomba do adversário chutada pela CPU não para com o X dela (nem tenta)', () => {
+    const s = arena(); put(s, 0, 4, 3); put(s, 1, 8, 5);
+    const b = addBomb(s, 1, C(5, 3), { fuse: 120, fire: 1 });
+    s.grid[C(5, 3)] = CODE.FLOOR; b.state = 'kicked'; b.dir = 2; b.step = 0; b.kickedBy = 0;
+    const ai = createAi(); let x = false;
+    for (let i = 0; i < 60 && b.state === 'kicked'; i++) {
+      const inp = aiInputs(s, ai, CPU0, 2); x ||= !!(inp[0] & BTN.X);
+      step(s, inp);
+    }
+    expect(x).toBe(false);
+  });
   it('B: detona a remota quando a cruz pega um adversário e não a CPU', () => {
     const s = arena(); put(s, 0, 4, 5); put(s, 1, 8, 3);
     addBomb(s, 0, C(6, 3), { type: 1 });
