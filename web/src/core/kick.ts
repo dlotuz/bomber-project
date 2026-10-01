@@ -4,7 +4,7 @@ import { KICK_STEP } from './tables/flights';
 import { FUSE, KICK_STEPS, MAX_LEVEL } from './constants';
 import { SUB, cellAt, cellCenter, faceStep, subX, subY } from './units';
 import { isEggCode, isItemCode, playerCell, standing } from './state';
-import { bombAt, bombOccupies, removeBomb } from './bombs';
+import { bombAt, bombOccupies, kickPending, removeBomb } from './bombs';
 import { STAGES } from './stages';
 import { MOUNTS } from './mounts';
 
@@ -34,8 +34,9 @@ export function tryKick(s: RoundState, p: Player, ev: GameEvent[]): boolean {
   if (s.grid[n] !== CODE.BOMB) return false;
   const b = bombAt(s, n);
   if (!b || !kickable(s, p, b)) return false;
+  // Como $C2:4307: só o estado e a direção. A grade continua $C900 até o deslize sair de fato (`slideStep`), então
+  // quem anda depois no mesmo tick ainda esbarra nela — e, se o destino estiver bloqueado, ela nunca sai da grade.
   b.state = 'kicked'; b.dir = p.face; b.step = 0; b.kickedBy = p.slot; b.turn = -1;
-  s.grid[n] = CODE.FLOOR;
   ev.push({ type: 'bomb_kicked', slot: p.slot });
   return true;
 }
@@ -46,6 +47,10 @@ const parkable = (s: RoundState, b: Bomb, c: number): boolean =>
 /** Estaciona a bomba chutada em `cell`; se a casa está ocupada por outra bomba ou não é piso/chama (ex.: a pressão
  *  $EE80 caiu nela), na casa anterior do deslize. Se nenhuma serve, devolve false e a bomba continua chutada. */
 function park(s: RoundState, b: Bomb, cell: number): boolean {
+  if (cell === b.cell && kickPending(s, b)) {      // chute que não saiu ($C1:352A): volta ao estado 0 onde está
+    b.state = 'idle'; b.step = 0; b.turn = -1;
+    return true;
+  }
   const back = faceStep(cell, (b.dir + 4) & 7);
   const c = parkable(s, b, cell) ? cell : parkable(s, b, back) ? back : -1;
   if (c < 0) return false;
@@ -111,6 +116,7 @@ export function slideStep(s: RoundState, b: Bomb, _ev: GameEvent[]): void {
     if (typeof verdict === 'object') b.turn = verdict.turn;
     if (isItemCode(v)) s.grid[next] = CODE.FLOOR;         // item esmagado
     if (v === CODE.FLAME) b.chainAt = s.tick + 1;
+    if (kickPending(s, b)) s.grid[b.cell] = CODE.FLOOR;   // saiu de fato: $C1:353C → $C1:532C repõe o piso
   }
   const from = romCell(b);
   const [dx, dy] = KICK_STEP[b.dir >> 1][b.step];

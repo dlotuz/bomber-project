@@ -1,6 +1,6 @@
 import type { StageModule } from '../hooks';
 import { CODE, type Player, type RoundState } from '../types';
-import { centerX, centerY, colOf, faceStep, linOf } from '../units';
+import { centerX, centerY, colAt, colOf, faceStep, linAt, linOf } from '../units';
 import type { Stage6State } from './state';
 import { A6_REPAINT } from './tables';
 import { armIndex, floorWord, onGround, playerCell, rnd255, setAct, stageEvent } from './kit';
@@ -67,8 +67,12 @@ export const stage6: StageModule = {
     for (const p of s.players) {
       const t = a.snap[p.slot];
       if (t < 0 || p.push.left > 0) continue;
-      if (a.snapAxis[p.slot] === 0) p.x = t; else p.y = t;
       a.snap[p.slot] = -1;
+      // O fim do empurrão ($C2:1F08) alinha no centro da casa ATUAL. Se ele parou antes do destino (bomba à frente,
+      // $C2:1E7B; `applyPush` já o pôs no centro da casa de onde não saiu), o alvo é outra casa: não puxa para lá.
+      const horiz = a.snapAxis[p.slot] === 0;
+      if (horiz ? colAt(t) !== colAt(p.x) : linAt(t) !== linAt(p.y)) continue;
+      if (horiz) p.x = t; else p.y = t;
     }
   },
   onStand(s, p, cell, ev) {

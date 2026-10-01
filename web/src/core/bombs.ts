@@ -25,6 +25,15 @@ export function canPlaceBomb(p: Player): boolean {
 }
 
 export function bombAt(s: RoundState, cell: number): Bomb | undefined { return s.bombs.find(b => b.state === 'idle' && b.cell === cell); }
+/** Chutada que ainda não saiu: o chute ($C2:4307) só põe +$1C = 2; a grade continua $C900 até a rotina da bomba
+ *  ($C1:34D0) conferir o destino e repor o piso ($C1:532C). Entre os dois (o resto da vez dos jogadores no tick do
+ *  chute) ela ainda é dona da casa. */
+export const kickPending = (s: RoundState, b: Bomb): boolean =>
+  b.state === 'kicked' && b.step === 0 && s.grid[b.cell] === CODE.BOMB && !bombAt(s, b.cell);
+/** Bomba dona da casa `cell` na grade: parada, ou chutada que ainda não saiu (para a cadeia de explosões). */
+export function gridBombAt(s: RoundState, cell: number): Bomb | undefined {
+  return bombAt(s, cell) ?? s.bombs.find(b => b.cell === cell && kickPending(s, b));
+}
 /** Casa `c` ocupada por bomba: parada nela, ou chutada com a casa de origem, a do centro ou (em movimento) a próxima
  *  igual a `c`. Toda bomba nova na grade (pouso, colocação, soltura da luva, parada do chute) passa por aqui, para que
  *  a grade `BOMB` corresponda sempre a exatamente uma bomba parada. `except` = a própria bomba. */
@@ -57,8 +66,9 @@ export function refundBomb(s: RoundState, b: Bomb): void {
 export function removeBomb(s: RoundState, b: Bomb, refund: boolean): void {
   const i = s.bombs.indexOf(b);
   if (i < 0) return;
+  const owned = b.state === 'idle' ? s.grid[b.cell] === CODE.BOMB : kickPending(s, b);
   s.bombs.splice(i, 1);
-  if (b.state === 'idle' && s.grid[b.cell] === CODE.BOMB) s.grid[b.cell] = CODE.FLOOR;
+  if (owned) s.grid[b.cell] = CODE.FLOOR;
   if (refund) refundBomb(s, b);
 }
 
@@ -124,7 +134,7 @@ function explodeArea(s: RoundState, b: Bomb, ev: GameEvent[]): void {
     st?.onFlameCell?.(s, c, -1, ev);
   }
   for (const c of bombs) {
-    const o = bombAt(s, c);
+    const o = gridBombAt(s, c);
     if (o && (o.chainAt === 0 || o.chainAt > s.tick + CHAIN_DELAY)) o.chainAt = s.tick + CHAIN_DELAY;
   }
 }
@@ -164,7 +174,7 @@ export function explodeBomb(s: RoundState, b: Bomb, ev: GameEvent[]): void {
       // Bomba parada: vira D900 (marcada, $C1:40FF–$C1:4104) e o braço termina antes dela, com ponta na casa anterior;
       // a casa da bomba não acende. Já marcada (D900) também termina ($C1:40F1). Chutada em movimento não está na grade.
       if (v === CODE.BOMB) {
-        const o = bombAt(s, c);
+        const o = gridBombAt(s, c);
         if (o && (o.chainAt === 0 || o.chainAt > s.tick + CHAIN_DELAY)) o.chainAt = s.tick + CHAIN_DELAY;
         break;
       }
