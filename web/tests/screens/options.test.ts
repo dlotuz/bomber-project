@@ -24,7 +24,7 @@ describe('opções (§6.13)', () => {
     const { app } = mkApp();
     expect(optionsScreen(app).rowIds()).toEqual(['controls', 'gameplay', 'fx', 'music', 'sfx', 'romStatus', 'romLoad', 'romForget', 'reset', 'back']);
     expect(optionsScreen(app, 0, 'controls').rowIds()).toEqual(['p1', 'p2', 'p3', 'p4', 'p5', 'slot', 'slotSave', 'slotLoad', 'back']);
-    expect(optionsScreen(app, 0, 'gameplay').rowIds()).toEqual(['spawns', 'escape', 'throwStun', 'sleep', 'slot', 'slotSave', 'slotLoad', 'back']);
+    expect(optionsScreen(app, 0, 'gameplay').rowIds()).toEqual(['spawns', 'escape', 'throwStun', 'sleep', 'password', 'slot', 'slotSave', 'slotLoad', 'back']);
   });
   it('slots de controles: salvar no 2 e carregar de volta; slot vazio não carrega', () => {
     const { app } = mkApp();

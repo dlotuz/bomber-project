@@ -9,6 +9,13 @@ export const MOUNT_LOOK: Readonly<Record<number, { body: string; dark: string; a
   0xd: { body: '#5fa83f', dark: '#2a5a1a', accent: '#ffffff', shape: 'leaf' },   // alcachofra verde com olhos
   0xe: { body: '#3f6fd8', dark: '#1a2a70', accent: '#c8c8c8', shape: 'tank' },   // robô-tanque azul
   0xf: { body: '#ffe04f', dark: '#a8861a', accent: '#2f4fcf', shape: 'clown' },  // bola de palhaço, chapéu azul
+  // tipos da senha 0164
+  0x1: { body: '#7fe0b8', dark: '#2f7f60', accent: '#a040c0', shape: 'round' },  // fantasminha verde-água, olhos roxos
+  0x4: { body: '#e0303f', dark: '#7f1020', accent: '#b01828', shape: 'bell' },   // polvo vermelho
+  0x5: { body: '#7a9a30', dark: '#3a4f10', accent: '#f0a020', shape: 'fish' },   // pato verde, bico laranja
+  0x6: { body: '#60a8f0', dark: '#203f8f', accent: '#ffffff', shape: 'round' },  // iéti azul
+  0x9: { body: '#e8c020', dark: '#2f7f20', accent: '#d03020', shape: 'leaf' },   // tartaruga de casco amarelo
+  0xb: { body: '#3f5fd8', dark: '#18287f', accent: '#e8c020', shape: 'tank' },   // robô de corda azul, chave dourada
 };
 
 function ellipse(p: Pix, cx: number, cy: number, rx: number, ry: number, fill: string, edge: string): void {

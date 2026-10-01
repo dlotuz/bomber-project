@@ -1,6 +1,6 @@
 import { BTN, type GameEvent, type Player, type RoundState } from './types';
 import { GRID_W, FACE_OF_DIR, cellAt } from './units';
-import { A20, DIAM, DPAD, PAR, SUBPOS, TBL, speedVec } from './tables/movement';
+import { A20, DIAM, DIR_VEC, DPAD, PAR, SUBPOS, TBL, speedVec } from './tables/movement';
 import { setAct, setFace } from './state';
 import { speedLevel } from './disease';
 import { STAGES } from './stages';
@@ -14,11 +14,14 @@ export function nibble(btn: number): number {
   return (btn & BTN.RIGHT ? 1 : 0) | (btn & BTN.LEFT ? 2 : 0) | (btn & BTN.DOWN ? 4 : 0) | (btn & BTN.UP ? 8 : 0);
 }
 
+/** Atravessa bomba: item $0B ou montaria tipo 1. */
+export const passesBomb = (p: Player): boolean => p.passBomb || !!MOUNTS.current.passes?.(p, 0xc900);
+
 /** blocked() do movesim com atravessa-soft/atravessa-bomba/montaria: [bloqueia ($82), é bomba ($86)]. */
 export function blockedFor(p: Player, v: number): [boolean, boolean] {
   const lo = v & 0xefc0;
   if (lo === 0) return [false, false];
-  if (lo === 0xc900) return p.passBomb ? [false, false] : [true, true];
+  if (lo === 0xc900) return passesBomb(p) ? [false, false] : [true, true];
   if (lo === 0xcc80) return p.passSoft || MOUNTS.current.passes?.(p, v) ? [false, false] : [true, false];
   return [(v & 0x8000) !== 0, false];
 }
@@ -38,8 +41,9 @@ function neigh(s: RoundState, p: Player, cell: number): [number, number] {
   return [b82, b86];
 }
 
-/** Um tick de movimento, idêntico a movesim.step. Devolve a direção (0..7, 8 = parado). */
-export function moveStep(s: RoundState, p: Player, btn: number, level: number): number {
+/** Um tick de movimento, idêntico a movesim.step. Devolve a direção (0..7, 8 = parado). `speed` (1/256 px por tick)
+ *  substitui a velocidade do nível (investida do tipo 4). */
+export function moveStep(s: RoundState, p: Player, btn: number, level: number, speed?: number): number {
   let X = p.x, Y = p.y;
   const xp = X >> 8, yp = Y >> 8;
   const din = DPAD[nibble(btn)];
@@ -56,12 +60,12 @@ export function moveStep(s: RoundState, p: Player, btn: number, level: number): 
     d = 8;
     if (p84) d = t[0x68 + (din & 7)] & 15;
   }
-  let [vx, vy] = d < 9 ? speedVec(level, d) : [0, 0];
+  let [vx, vy] = d >= 9 ? [0, 0] : speed === undefined ? speedVec(level, d) : [DIR_VEC[d][0] * speed, DIR_VEC[d][1] * speed];
   const txp = (X + vx) >> 8, typ = (Y + vy) >> 8;
   const tcell = cellOfPx(txp, typ);
   // Entrar em casa com bomba zera o tick. Desvio do movesim.py: o `!p.passBomb` é nosso, porque o movesim não modela
   // o atravessa-bomba (+$4C), que no jogo deixa andar através de bombas (impossível se esta regra valesse sempre).
-  if (tcell !== cell0 && !p.passBomb && ((s.grid[tcell] ?? 0) & 0xefc0) === 0xc900) return d;
+  if (tcell !== cell0 && !passesBomb(p) && ((s.grid[tcell] ?? 0) & 0xefc0) === 0xc900) return d;
   let b86: number;
   [b82, b86] = neigh(s, p, tcell);
   ys = (typ - 8) & 15; xs = (txp - 8) & 15;

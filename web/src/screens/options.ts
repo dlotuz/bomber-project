@@ -10,6 +10,7 @@ import { FADE_MENU, FADE_TO_TITLE } from '../app/fade';
 import { drawOptionsPage, PpuCanvas, type OptionsRow } from '../render/screens-rom/options';
 import { titleScreen } from './title';
 import { remapScreen } from './remap';
+import { passwordScreen } from './password';
 
 interface Row extends MenuRow { label: string; value?: () => string }
 
@@ -90,6 +91,10 @@ export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'ma
       id: 'sleep', label: S.options.sleep, value: () => String(opt().sleepSec),   // duração do soneca (montaria F)
       left: () => { const b = opt().sleepSec; opt().sleepSec = clamp(b - 1, 1, 10); app.save(); return opt().sleepSec !== b; },
       right: () => { const b = opt().sleepSec; opt().sleepSec = clamp(b + 1, 1, 10); app.save(); return opt().sleepSec !== b; },
+    });
+    rows.push({
+      id: 'password', label: S.password.menu, value: () => (opt().allMounts ? S.password.active : ''),
+      select: () => { const back = rows.findIndex(r => r.id === 'password'); app.transition(() => passwordScreen(app, back), FADE_MENU); },
     });
     slotRows(() => !!st.gameplaySlots[slot], () => { st.gameplaySlots[slot] = gameplayOf(opt()); },
       () => { Object.assign(opt(), st.gameplaySlots[slot]); });

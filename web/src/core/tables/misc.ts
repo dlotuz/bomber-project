@@ -1,9 +1,13 @@
 // GERADO por scripts/rom-facts/core-misc.ts — NÃO EDITAR. Rode: SB4_ROM=… node scripts/rom-facts/core-all.ts
 // ROM SHA-1 38f4394986bd39fcbe32a722a3fe103ee6177d9b
-// CAPSULE_TYPES $C1:5DA4 (14), FUSE_TABLE $C1:56E8 (3), MAX_CAPS $C0:0B4C/48/50, INVISIBLE_PATTERN $C2:4F68 (64),
+// CAPSULE_TYPES $C1:5DA4 (14), CAPSULE_TYPES_ALL $C1:5D87 (26, com a senha), FUSE_TABLE $C1:56E8 (3), MAX_CAPS $C0:0B4C/48/50, INVISIBLE_PATTERN $C2:4F68 (64),
 // RACER_HANDLERS $C2:08F4 (17 × u24, parte baixa), STUN_LOSS_HANDLERS $C2:519D (13 × u24, parte baixa)
 export const CAPSULE_TYPES: readonly number[] = [
   0x32, 0x33, 0x3a, 0x3c, 0x3d, 0x3e, 0x3f, 0x32, 0x33, 0x3a, 0x3c, 0x3d, 0x3e, 0x3f,
+];
+export const CAPSULE_TYPES_ALL: readonly number[] = [
+  0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f, 0x31, 0x32, 0x33,
+  0x34, 0x35, 0x36, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f,
 ];
 export const FUSE_TABLE: readonly number[] = [
   62, 253, 126,

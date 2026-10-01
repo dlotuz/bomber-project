@@ -19,10 +19,11 @@ export interface Options {
   throwStun: boolean;    // só jogador arremessado sobre outro jogador atordoa os dois (bomba atordoa sempre)
   sleepSec: number;      // duração do soneca (montaria F), segundos (1..10); a ROM usa 3,2 s
   fx: boolean;           // efeitos visuais da batalha (luz, partículas, sombras…)
+  allMounts: boolean;    // senha 0164: ovos dos 13 tipos (Opções → Jogabilidade → Senha)
 }
 
 export function defaultOptions(): Options {
-  return { randomSpawns: false, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3, fx: true };
+  return { randomSpawns: false, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3, fx: true, allMounts: false };
 }
 
 /** Slots de Opções → Controles: dispositivo, teclas e botões dos 5 jogadores. */
@@ -170,6 +171,7 @@ export function normalizeSettings(raw: unknown): Settings {
       throwStun: bool(ro.throwStun, d.options.throwStun),
       sleepSec: intIn(ro.sleepSec, 1, 10, d.options.sleepSec),
       fx: bool(ro.fx, d.options.fx),
+      allMounts: bool(ro.allMounts, d.options.allMounts),
     },
     setup: {
       mode: oneOf(s.mode, ['ffa', 'team'] as const, ds.mode),

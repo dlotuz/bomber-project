@@ -8,10 +8,10 @@ import { invisibleVisible } from '../../src/core/disease';
 
 const opaque = (p: { data: Uint8ClampedArray }) => { let n = 0; for (let i = 3; i < p.data.length; i += 4) if (p.data[i]) n++; return n; };
 const hash = (p: { data: Uint8ClampedArray }) => Array.from(p.data).join(',');
-const TYPES = [0x2, 0x3, 0xa, 0xc, 0xd, 0xe, 0xf];
+const TYPES = [0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf];
 
 describe('arte das montarias (fallback)', () => {
-  it('7 tipos × 4 direções × 2 passos: 24×20 com corpo', () => {
+  it('13 tipos × 4 direções × 2 passos: 24×20 com corpo', () => {
     expect(Object.keys(MOUNT_LOOK).map(Number).sort((a, b) => a - b)).toEqual(TYPES);
     for (const t of TYPES) for (const f of [0, 2, 4, 6] as const) for (const st of [0, 1]) {
       const p = mountPix(t, f, st);
@@ -21,7 +21,7 @@ describe('arte das montarias (fallback)', () => {
   });
   it('tipos diferentes têm desenhos diferentes', () => {
     const set = new Set(TYPES.map(t => hash(mountPix(t, 4, 0))));
-    expect(set.size).toBe(7);
+    expect(set.size).toBe(TYPES.length);
   });
   it('ovos 16×16 nas duas artes; projéteis e nuvem', () => {
     for (const k of [0, 1] as const) { const e = eggPix(k, 0); expect([e.w, e.h]).toEqual([16, 16]); expect(opaque(e)).toBeGreaterThan(60); }

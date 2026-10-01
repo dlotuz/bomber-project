@@ -1,7 +1,7 @@
 """Minimal 65816 disassembler for HiROM SNES images (with M/X flag tracking via REP/SEP)."""
 import sys
 
-ROM = open("/Users/dlotuz/Projetos Claude/Bomber Project/Super Bomberman 4 (USA).sfc", "rb").read()
+import os; ROM = open(os.environ.get("SB4_ROM", "/Users/dlotuz/Projetos Claude/Bomber Project/Super Bomberman 4 (USA).sfc"), "rb").read()
 
 # mode: imp, acc, immM, immX, imm8, dp, dpx, dpy, ind, indx, indy, indl, indly, sr, sry,
 #       abs, absx, absy, absl, abslx, absind, absindx, absindl, rel, rell, bm, jabs

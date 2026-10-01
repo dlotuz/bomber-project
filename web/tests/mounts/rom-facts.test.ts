@@ -11,7 +11,9 @@ import {
 } from '../../src/render/rom/mounts/facts';
 
 const sha1 = (b: Uint8Array) => createHash('sha1').update(b).digest('hex');
-const TYPES = [2, 3, 10, 12, 13, 14, 15];
+const TYPES = [2, 3, 10, 12, 13, 14, 15];   // os da fixture mount-render.json
+/** Com os 6 da senha 0164 (1, 4, 5, 6, 9, B). */
+const ALL_TYPES = [1, 2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 14, 15];
 const DIRS = ['up', 'right', 'down', 'left'] as const;
 type FxPiece = { tile: number; size: number; pxSha1: string };
 type FxSample = { anim: number; frame: number; anim2?: number; frame2?: number; sheet1?: number; pieces: FxPiece[] };
@@ -25,8 +27,8 @@ describe('fixture das montarias (sem ROM)', () => {
     expect(txt).not.toMatch(/"(bytes|data|raw|pixels)"\s*:/);
     expect(fx.romSha1).toBe('38f4394986bd39fcbe32a722a3fe103ee6177d9b');
   });
-  it('facts.ts cobre os 7 tipos, 4 direções e 8 trajes', () => {
-    expect(Object.keys(RIDER_ANIMS).map(Number).sort((a, b) => a - b)).toEqual([2, 3, 10, 12, 13, 14, 15]);
+  it('facts.ts cobre os 13 tipos, 4 direções e 8 trajes', () => {
+    expect(Object.keys(RIDER_ANIMS).map(Number).sort((a, b) => a - b)).toEqual(ALL_TYPES);
     for (const t of Object.values(RIDER_ANIMS)) { expect(t).toHaveLength(4); for (const d of t) expect(d.idle.length).toBeGreaterThan(0); }
     expect(Object.keys(COSTUME_ANIMS)).toHaveLength(8);
     for (const k of Object.keys(MOUNTING_ANIMS)) expect(MOUNTING_ANIMS[Number(k)].length).toBeGreaterThan(0);
@@ -37,8 +39,8 @@ describe('fixture das montarias (sem ROM)', () => {
     expect(SHEET2).toBe(0xd40000);
   });
   it('montaria (+$38), remonte, reserva e folhas dos trajes medidos', () => {
-    expect(Object.keys(MOUNT_ANIMS).map(Number).sort((a, b) => a - b)).toEqual(TYPES);
-    for (const t of TYPES) {
+    expect(Object.keys(MOUNT_ANIMS).map(Number).sort((a, b) => a - b)).toEqual(ALL_TYPES);
+    for (const t of ALL_TYPES) {
       expect(MOUNT_ANIMS[t]).toHaveLength(4);
       for (const d of MOUNT_ANIMS[t]) expect(d.walk.length * d.idle.length).toBeGreaterThan(0);
       expect(MOUNTING_MOUNT_ANIMS[t].length).toBeGreaterThan(0);
@@ -85,7 +87,7 @@ describe.skipIf(!ASSETS)('fatos das montarias × ROM', () => {
   });
   it('folhas: montaria = p24($C4:70DC + 3·tipo), traje = p24($C2:0718 + 3·traje)', () => {
     const rom = ASSETS!.rom;
-    for (const t of TYPES) expect(MOUNT_GFX[t].src).toBe(rom.p24(MOUNT_SHEET_TABLE + 3 * t));
+    for (const t of ALL_TYPES) expect(MOUNT_GFX[t].src).toBe(rom.p24(MOUNT_SHEET_TABLE + 3 * t));
     for (let c = 0; c < 8; c++) expect(COSTUME_SHEETS[c]).toBe(rom.p24(COSTUME_SHEET_TABLE + 3 * c));
   });
   it('montado: peça do jogador = quadro de +$A0 pela anim +$08, peça da montaria = quadro de MOUNT_GFX pela anim +$38', () => {

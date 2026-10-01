@@ -44,6 +44,7 @@ export interface Rules {
   throwStun: boolean;       // extra: só jogador arremessado sobre outro jogador — atordoa os dois (padrão Não: só quica).
                             // Bomba caindo na cabeça atordoa sempre, independente disto.
   sleepTicks: number;       // extra: duração do soneca (montaria F) em ticks; ROM: 192 ($C0)
+  allMounts: boolean;       // senha 0164 ($7F:70BD ≠ 0): ovos sorteados entre os 13 tipos de $C1:5D87
   mode: 'ffa' | 'team';
   teams: number[];          // time de cada slot (0/1)
   active: boolean[];        // slot participa?
@@ -52,7 +53,7 @@ export interface Rules {
 export function defaultRules(): Rules {
   return {
     cpuLevel: 1, matches: 3, timeIdx: 2, suddenDeath: false, badBomber: false, racer: false,
-    randomSpawns: false, gloveEscape: 10, throwStun: false, sleepTicks: 192, mode: 'ffa', teams: [0, 1, 0, 1, 0], active: [true, true, true, true, true],
+    randomSpawns: false, gloveEscape: 10, throwStun: false, sleepTicks: 192, allMounts: false, mode: 'ffa', teams: [0, 1, 0, 1, 0], active: [true, true, true, true, true],
   };
 }
 

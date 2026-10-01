@@ -44,6 +44,10 @@ export const S = {
     pressKey: 'NOVA TECLA? (ESC CANCELA)', pressPad: 'NOVO BOTÃO? (ESC CANCELA)', actions: ACTIONS,
     button: (n: number) => `BOTÃO ${n}`,
   },
+  password: {
+    title: 'Senha', menu: 'SENHA', active: 'LIGADA', digit: (n: number) => `NÚMERO ${n}`, ok: 'CONFIRMAR',
+    help: 'ESQ/DIR: MUDA O NÚMERO', wrong: 'SENHA ERRADA', on: 'TODAS AS MONTARIAS: SIM', off: 'TODAS AS MONTARIAS: NÃO',
+  },
 } as const;
 
 type Use = { style: TextStyleId; text: string };
@@ -53,7 +57,7 @@ const uniq = (u: Use[]): Use[] => [...new Map(u.map(x => [`${x.style}|${x.text}`
 /** Todo par (estilo, texto) que o jogo desenha. Base dos testes de cobertura (T4, T16–T18, T22). */
 export const STRING_USES: readonly Use[] = uniq([
   ...as('titleMenu', [S.title.normal, S.title.battle, S.title.options, S.title.pressStart]),
-  ...as('menuTitle', [S.vs.title, S.players.title, S.rules.title, S.chars.title, S.teams.title, S.options.title, S.options.controlsTitle, S.options.gameplayTitle]),
+  ...as('menuTitle', [S.vs.title, S.players.title, S.rules.title, S.chars.title, S.teams.title, S.options.title, S.options.controlsTitle, S.options.gameplayTitle, S.password.title]),
   ...as('menuItem', [S.vs.royale, S.vs.champ, S.vs.mania, S.vs.ffa, S.vs.team, ...S.players.row, S.players.human, S.players.cpu,
     S.players.off, ...S.rules.labels, ...S.rules.cpu, ...S.rules.crowns, ...S.rules.time, S.rules.no, S.rules.yes, S.teams.vs]),
   ...as('spriteBlue', [S.stage.title, ...Array.from({ length: 10 }, (_, i) => S.stage.stage(i + 1)), ...STAGE_NAMES_PT]),
@@ -67,6 +71,8 @@ export const STRING_USES: readonly Use[] = uniq([
     S.options.yes, S.options.pressKey, S.options.pressPad, ...Object.values(ACTIONS),
     ...Array.from({ length: 32 }, (_, i) => S.options.button(i)),
     'ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789 -+.:!?', 'ESPAÇO', '0 1 2 3 4 5 6 7 8 9 10',
+    S.password.menu, S.password.active, ...[1, 2, 3, 4].map(S.password.digit), S.password.ok, S.password.help,
+    S.password.wrong, S.password.on, S.password.off,
   ]),
   ...as('bigBattle', [S.stage.battle]),
   ...as('bigScore', [S.score.title]),
