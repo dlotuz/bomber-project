@@ -70,6 +70,24 @@ function movingAt(s: RoundState, b: Bomb, c: number): Bomb | undefined {
     && (x.cell === c || cellAt(x.x, x.y) === c || (x.step > 0 && faceStep(x.cell, x.dir) === c)));
 }
 
+/** Casa do centro da bomba em movimento como a ROM a calcula ($C2:3221): no deslize o objeto fica 1 px à direita e
+ *  abaixo do nosso centro (a partida $C2:3260 o põe em 16·col, 16·(lin+2)), por isso a troca de casa cai no 4º passo
+ *  para a direita/baixo e no 5º para a esquerda/cima. */
+const romCell = (b: Bomb): number => cellAt(b.x + SUB, b.y + SUB);
+
+/** $C1:3403: jogador de pé na casa da frente de `at` a menos de 20 px da bomba no eixo do deslize (tabela $C1:35D1:
+ *  cima Y+20 ≥ y, direita X−20 < x, baixo Y−20 < y, esquerda X+20 ≥ x; x/y da bomba na conta da ROM, +1 px). Sobre
+ *  as setas (código $0040/$00C0 na casa do centro) a ROM pula este teste ($C1:36B9). */
+function playerAhead(s: RoundState, b: Bomb, at: number): boolean {
+  const lo = (s.grid[at] ?? 0) & 0xefc0;
+  if (lo === 0x0040 || lo === 0x00c0) return false;
+  const n = faceStep(at, b.dir);
+  const bx = (b.x >> 8) + 1, by = (b.y >> 8) + 1;
+  return s.players.some(q => standing(q) && q.heldBy < 0 && !q.flying && playerCell(q) === n && (
+    b.dir === 0 ? (q.y >> 8) + 20 >= by : b.dir === 2 ? (q.x >> 8) - 20 < bx
+      : b.dir === 4 ? (q.y >> 8) - 20 < by : (q.x >> 8) + 20 >= bx));
+}
+
 /** Um tick do deslize ($C1:34D0/$C1:35E1). */
 export function slideStep(s: RoundState, b: Bomb, _ev: GameEvent[]): void {
   if (b.step === 0) {
@@ -94,6 +112,7 @@ export function slideStep(s: RoundState, b: Bomb, _ev: GameEvent[]): void {
     if (isItemCode(v)) s.grid[next] = CODE.FLOOR;         // item esmagado
     if (v === CODE.FLAME) b.chainAt = s.tick + 1;
   }
+  const from = romCell(b);
   const [dx, dy] = KICK_STEP[b.dir >> 1][b.step];
   b.x += dx * SUB; b.y += dy * SUB;
   if (++b.step === KICK_STEPS) {
@@ -102,6 +121,16 @@ export function slideStep(s: RoundState, b: Bomb, _ev: GameEvent[]): void {
     [b.x, b.y] = cellCenter(b.cell);
     if (b.turn >= 0) { b.dir = b.turn as 0 | 2 | 4 | 6; b.turn = -1; }
   }
+  // Testes de jogador a cada tick, depois de andar ($C1:35E1). O teste da casa da frente no centro (acima) não basta:
+  // quem entra no caminho durante os 8 ticks da travessia era atravessado.
+  //  - entrou numa casa com jogador: volta para o centro da anterior e para ($C1:3644 → $C1:3840 → $C2:3260);
+  //  - jogador na casa do centro (entrou nela com a bomba lá): para sob ele ($C1:36AC → $C1:384C);
+  //  - jogador na casa da frente a menos de 20 px: para ($C1:36CC → $C1:3403 → $C1:384C).
+  // Nos dois últimos a ROM deixa a bomba onde está (até 8 px fora do centro); aqui ela estaciona no centro da casa.
+  const at = romCell(b);
+  if (at < 0) return;
+  if (at !== from && from >= 0 && playerOn(s, at)) { park(s, b, from); return; }
+  if (playerOn(s, at) || playerAhead(s, b, at)) park(s, b, at);
 }
 
 /** Botão X: para as bombas chutadas por `p` na casa do centro delas. */

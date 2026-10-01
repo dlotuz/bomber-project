@@ -3,8 +3,9 @@ import { tryKick, slideStep, stopKick } from '../../src/core/kick';
 import { addBomb, tickBombs } from '../../src/core/bombs';
 import { launchBomb, punchBomb, tickFlyers } from '../../src/core/flyers';
 import { BTN, CODE, type Bomb, type GameEvent, type RoundState } from '../../src/core/types';
-import { CELLS, cellCenter, centerX, centerY } from '../../src/core/units';
-import { itemCode } from '../../src/core/state';
+import { CELLS, SUB, cellAt, cellCenter, centerX, centerY } from '../../src/core/units';
+import { step } from '../../src/core/step';
+import { itemCode, playerCell } from '../../src/core/state';
 import { FUSE } from '../../src/core/constants';
 
 function slide(s: RoundState, b: Bomb, n: number, ev: GameEvent[] = []): void {
@@ -166,6 +167,56 @@ describe('jogador em cima da bomba: ninguém a chuta ($C1:34F0 → $C1:33FD)', (
     expect(tryKick(k.s, k.p, [])).toBe(true);
     k = setup(); put(k.s, 1, 5, 1).flying = true;
     expect(tryKick(k.s, k.p, [])).toBe(true);
+  });
+});
+
+describe('bomba chutada não atravessa jogador: testes a cada tick do deslize ($C1:35E1)', () => {
+  it('jogador que chega na casa da frente no meio do caminho: para antes dele (janela de 20 px, $C1:3403)', () => {
+    const { s, p, b } = setup();               // chutada de (5,1) para a direita
+    tryKick(s, p, []);
+    slide(s, b, 2);                            // 4 px andados; a casa da frente (6,1) estava livre no centro
+    put(s, 1, 6, 1);
+    slide(s, b, 1);
+    expect([b.state, b.cell, b.x, codeAt(s, 5, 1)]).toEqual(['idle', C(5, 1), centerX(5), CODE.BOMB]);
+  });
+  it('as quatro direções: jogador que chega na casa da frente no meio do caminho a para na casa atual', () => {
+    for (const [face, col, lin, fc, fl] of [[0, 6, 5, 6, 4], [4, 6, 5, 6, 6], [6, 8, 3, 7, 3], [2, 4, 3, 5, 3]] as const) {
+      const s = arena();
+      const p = put(s, 0, col - (face === 2 ? 1 : face === 6 ? -1 : 0), lin + (face === 0 ? 1 : face === 4 ? -1 : 0));
+      p.kick = true; p.face = face;
+      const b = addBomb(s, 1, C(col, lin));
+      expect(tryKick(s, p, []), `face ${face}`).toBe(true);
+      slide(s, b, 2);
+      put(s, 1, fc, fl);
+      slide(s, b, 1);
+      expect([b.state, b.cell], `face ${face}`).toEqual(['idle', C(col, lin)]);
+    }
+  });
+  it('jogador que entra na casa em que a bomba já está: ela para sob ele ($C1:36AC)', () => {
+    const { s, p, b } = setup();
+    tryKick(s, p, []);
+    slide(s, b, 5);                            // passou da metade: a casa do centro (conta da ROM) já é (6,1)
+    put(s, 1, 6, 1);
+    slide(s, b, 1);
+    expect([b.state, b.cell, codeAt(s, 6, 1)]).toEqual(['idle', C(6, 1), CODE.BOMB]);
+  });
+  it('partida: jogador sobe para a linha do chute em vários momentos; a bomba nunca passa por ele', () => {
+    for (let d = 0; d < 40; d++) {
+      const s = arena({ players: 2 });
+      const p = put(s, 0, 2, 1); p.kick = true;
+      const b = addBomb(s, 0, C(4, 1)); b.born = 0;
+      const q = put(s, 1, 8, 2);
+      let t0 = -1, arrived = -1;
+      for (let i = 0; i < 160; i++) {
+        const inp = [t0 < 0 ? BTN.RIGHT : 0, t0 >= 0 && s.tick - t0 >= d && s.tick - t0 < d + 40 ? BTN.UP : 0, 0, 0, 0];
+        step(s, inp);
+        if (t0 < 0 && b.state === 'kicked') t0 = s.tick;
+        if (b.state === 'kicked') expect(cellAt(b.x + SUB, b.y + SUB), `atraso ${d}, tick ${s.tick}`).not.toBe(playerCell(q));
+        if (arrived < 0 && playerCell(q) === C(8, 1)) arrived = b.state === 'kicked' ? cellAt(b.x + SUB, b.y + SUB) : b.cell;
+      }
+      // a bomba só termina depois da coluna 8 se o jogador chegou lá com ela já adiante (ele fica para trás)
+      if (b.cell > C(8, 1) && arrived >= 0) expect(arrived, `atraso ${d}`).toBeGreaterThan(C(8, 1));
+    }
   });
 });
 
