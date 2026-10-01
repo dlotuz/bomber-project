@@ -124,6 +124,21 @@ describe('luva (t48)', () => {
     fly(s, 12 + 8);                               // THROW[3] horizontal tem 12 passos + quique de 8
     expect([b.state, b.cell]).toEqual(['idle', C(8, 1)]);
   });
+  // $C1:294D → $C2:59D6: a bomba que cai na casa de jogadores pede o atordoamento de cada um, mas $C2:59D6 não pede
+  // (e apaga o pedido pendente) se o alvo tem +$96 ≠ 0; a bomba quica do mesmo jeito ($C1:2868). Emulador (soco do
+  // t44 com +$96 do P2 > 0): o P2 não entra em $C2:0E29 e não perde item.
+  it('invencível (inv > 0): a bomba que cai em cima quica e não atordoa nem tira item ($C2:59D6)', () => {
+    const { s, p, b } = punchSetup([5, 1], [4, 1], 2);
+    const q = put(s, 1, 8, 1); q.fire = 3; q.inv = 32;
+    const seed = s.rng.seed;
+    punchBomb(s, p, []);
+    const ev = fly(s, 17 + 8);
+    expect(q.act).not.toBe('stunned');
+    expect(q.fire).toBe(3);
+    expect(s.rng.seed).toBe(seed);
+    expect(ev.some(e => e.type === 'stunned')).toBe(false);
+    expect([b.state, b.cell]).toEqual(['idle', C(9, 1)]);
+  });
   // $C1:27A4: a casa com bit $0800 (bomba $C900, bloco, item…) ou com bomba chutada ([$38] bit $4000) quica ($C1:2868)
   // antes do teste de jogador ([$38] & $3FF7 → $C1:294D): quem está parado sobre uma bomba não é atordoado.
   it('jogador parado sobre bomba no chão: a bomba que cai quica e não o atordoa', () => {

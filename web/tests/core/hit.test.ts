@@ -105,6 +105,13 @@ describe('atordoamento (t44)', () => {
     stunPlayer(s, p, ev);
     expect([p.act, p.actLeft, s.rng.seed, p.fire, s.flyers.length, ev]).toEqual(['stunned', 30, seed, fire, flyers, []]);
   });
+  it('invencível (inv > 0) não é atordoado ($C2:59D6 só pede o atordoamento com +$96 == 0)', () => {
+    const s = arena(); const p = put(s, 0, 4, 1); p.fire = 5; p.inv = 1;
+    const seed = s.rng.seed;
+    const ev: GameEvent[] = [];
+    stunPlayer(s, p, ev);
+    expect([p.act, p.fire, s.rng.seed, s.flyers.length, ev]).toEqual(['idle', 5, seed, 0, []]);
+  });
   it('em `won` não atordoa', () => {
     const s = arena(); const p = put(s, 0, 4, 1); s.phase = 'won';
     stunPlayer(s, p, []);

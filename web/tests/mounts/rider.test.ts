@@ -1,4 +1,5 @@
 import { mkRound, placePx, ride, run, flameAt, BTN, cx, cy } from './helpers';
+import { landBomb } from '../../src/core/stages/kit';
 import { rider, mstate } from '../../src/core/mounts/types';
 import { activeCount } from '../../src/core/mounts/eggs';
 import { cellOf } from '../../src/core/mounts/core-api';
@@ -181,5 +182,56 @@ describe('ajustes: montado', () => {
     expect(p.carry).toBe(-1);
     expect([b.state, b.cell, s.grid[c]]).toEqual(['idle', c, 0xc900]);
     expect([p.x, p.y]).toEqual([b.x, b.y]);                       // no centro da casa, junto com a bomba
+  });
+});
+
+// Ajuste "a invencibilidade depois de perder a montaria não conta". Emulador (T6 da mount_battery, P1 montado na 3 sobre
+// a própria bomba): acerto em H = f126, $C2:10D5 até f177, +$96 = 32 em H+52 (STA $96 em $C2:10E0/$C2:1096), 31…1, e
+// em H+84 o DEC de $C1:77E7 zera +$96 e põe +$E0 = $FF, que $C2:4B5C ainda trata como invencível. Chama posta na casa
+// a cada frame: sobrevive até H+84 e morre a partir de H+85 ($C2:10F9).
+describe('ajuste: invencibilidade depois de perder a montaria', () => {
+  const hitMounted = (reserves: number[] = []) => {
+    const s = mkRound();
+    const p = placePx(s, 0, cx(2), cy(1));
+    const r = ride(s, 0, 0x3, { reserves });
+    flameAt(s, cellOf(2, 1));
+    run(s, 1);                                               // H
+    return { s, p, r };
+  };
+  it('sem reserva: +$96 = 32 em H+52 e desconta 1 por tick até 0 em H+84', () => {
+    const { s, p } = hitMounted();
+    run(s, 51);
+    expect(p.inv).toBe(0);
+    for (let k = 52; k <= 84; k++) { run(s, 1); expect(p.inv, `H+${k}`).toBe(84 - k); }
+  });
+  it('sem reserva: chama não mata até H+84 (inclusive, +$E0); mata a partir de H+85', () => {
+    for (const [k, dies] of [[60, false], [83, false], [84, false], [85, true]] as const) {
+      const { s, p } = hitMounted();
+      run(s, k - 1);
+      flameAt(s, cellOf(2, 1));
+      run(s, 1);                                             // H+k
+      expect(p.state, `H+${k}`).toBe(dies ? 'dying' : 'alive');
+    }
+  });
+  it('com reserva: remonta com 32 de invencibilidade; chama até H+84 não tira a nova montaria, em H+85 tira', () => {
+    for (const [k, loses] of [[70, false], [84, false], [85, true]] as const) {
+      const { s, p, r } = hitMounted([0x2]);
+      run(s, k - 1);
+      flameAt(s, cellOf(2, 1));
+      const ev = run(s, 1);                                  // H+k
+      expect(p.state).toBe('alive');
+      expect(r.phase, `H+${k}`).toBe(loses ? 'dismount' : 'riding');
+      expect(ev.some(e => e.type === 'mount' && e.id === 'mount_lost')).toBe(loses);
+    }
+  });
+  it('piscando depois do desmonte: bomba que cai em cima não atordoa ($C2:59D6 com +$96 ≠ 0)', () => {
+    const { s, p } = hitMounted();
+    run(s, 60);                                              // H+61: inv = 23
+    p.fire = 4;
+    const ev: GameEvent[] = [];
+    landBomb(s, cellOf(2, 1), ev);
+    expect(p.act).not.toBe('stunned');
+    expect(p.fire).toBe(4);
+    expect(ev.some(e => e.type === 'stunned')).toBe(false);
   });
 });
