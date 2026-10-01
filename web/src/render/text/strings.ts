@@ -38,7 +38,7 @@ export const S = {
     controls: (n: number) => `CONTROLES DO JOGADOR ${n}`, device: 'DISPOSITIVO', all: 'CONFIGURAR TODOS',
     playerHelp: 'A: CONFIGURAR  ESQ/DIR: TROCA', pressAny: 'TECLA OU BOTÃO? (ESC CANCELA)',
     spawns: 'SPAWNS ALEATÓRIOS', escape: 'SOLTAR DA LUVA', slot: 'SLOT', slotEmpty: 'VAZIO', slotSave: 'SALVAR NO SLOT',
-    slotLoad: 'CARREGAR DO SLOT', slotSaved: 'SALVO', slotLoaded: 'CARREGADO', throwStun: 'PLAYER EM PLAYER: STUN', sleep: 'SONECA (SEG)', music: 'VOLUME DA MÚSICA', sfx: 'VOLUME DOS EFEITOS',
+    slotLoad: 'CARREGAR DO SLOT', slotSaved: 'SALVO', slotLoaded: 'CARREGADO', throwStun: 'PLAYER EM PLAYER: STUN', sleep: 'SONECA (SEG)', fx: 'EFEITOS VISUAIS', music: 'VOLUME DA MÚSICA', sfx: 'VOLUME DOS EFEITOS',
     rom: 'ROM', romOk: 'CARREGADA ✓', romNo: 'NÃO CARREGADA', load: 'CARREGAR ROM...', forget: 'ESQUECER ROM',
     forgetAsk: 'ESQUECER A ROM? A: SIM  B: NÃO', reset: 'RESTAURAR PADRÃO', back: 'VOLTAR', no: 'NÃO', yes: 'SIM',
     pressKey: 'NOVA TECLA? (ESC CANCELA)', pressPad: 'NOVO BOTÃO? (ESC CANCELA)', actions: ACTIONS,

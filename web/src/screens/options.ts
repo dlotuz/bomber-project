@@ -97,6 +97,11 @@ export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'ma
   const setVol = (): void => app.audio.setVolume(opt().musicVol / 10, opt().sfxVol / 10);
   if (page === 'main') {
     rows.push({
+      id: 'fx', label: S.options.fx, value: () => (opt().fx ? S.options.yes : S.options.no),
+      left: () => { const changed = opt().fx; opt().fx = false; app.save(); return changed; },
+      right: () => { const changed = !opt().fx; opt().fx = true; app.save(); return changed; },
+    });
+    rows.push({
       id: 'music', label: S.options.music, value: () => String(opt().musicVol),
       left: () => { const b = opt().musicVol; opt().musicVol = clamp(opt().musicVol - 1, 0, 10); app.save(); setVol(); return opt().musicVol !== b; },
       right: () => { const b = opt().musicVol; opt().musicVol = clamp(opt().musicVol + 1, 0, 10); app.save(); setVol(); return opt().musicVol !== b; },
