@@ -4,7 +4,6 @@ import { ambientFill } from './ambient';
 import { FIELD_TOP, cellX, cellY, entX, entY } from './coords';
 import { tintBomb } from './bomb-tint';
 import { actorMask, drawShadows, type ActorMask } from './shadows';
-import { playerColor } from './update';
 import { flameLight, halo, puff, rgb } from './sprites';
 import { MAX_PARTS, PART, type FxFrame, type FxState } from './state';
 
@@ -59,6 +58,10 @@ function particles(out: CanvasRenderingContext2D, fx: FxState, fade: number): vo
   }
 }
 
+/** Cor da bomba por jogador (as cores dos bombers no Battle): P1 branco, P2 preto (cinza-escuro, para o sombreado
+ *  aparecer), P3 vermelho, P4 azul, P5 verde. */
+export const BOMB_COLORS = [0xf0f0f0, 0x3a3a44, 0xe83030, 0x3070ff, 0x30c040];
+
 let tintCtx: CanvasRenderingContext2D | null = null;
 
 /** Corpo de cada bomba (parada, chutada ou em voo) na cor do dono; contorno, brilho e pavio ficam como na arte. */
@@ -75,7 +78,7 @@ function bombColors(out: CanvasRenderingContext2D, frame: FxFrame, m: ActorMask,
   out.globalCompositeOperation = 'source-over';
   out.globalAlpha = fade;
   for (const [x, y, owner] of at) {
-    img.data.set(tintBomb(m.base, m.ground, SCREEN_W, x, y, playerColor(owner)));
+    img.data.set(tintBomb(m.base, m.ground, SCREEN_W, x, y, BOMB_COLORS[owner] ?? BOMB_COLORS[0]));
     tintCtx.putImageData(img, 0, 0);
     out.drawImage(tintCtx.canvas, x - 8, y - 8);
   }
