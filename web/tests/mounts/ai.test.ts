@@ -63,8 +63,9 @@ describe('wantMountY', () => {
     a.s.grid[cellOf(5, 1)] = 0xcc80;
     expect(lineCells(a.s, a.p, 2, 3)).toEqual([cellOf(3, 1), cellOf(4, 1)]);
   });
-  it('E com recarga e F com nota em voo: não', () => {
-    const e = duel(0xe, 2); e.r.cooldown = 10;
+  it('E com tiro em jogo e F com nota em voo: não', () => {
+    const e = duel(0xe, 2);
+    mstate(e.s).projectiles.push({ id: 1, kind: 0xe, owner: 0, x: 0, y: 0, dir: 2, born: 0, state: 'cloud', t: e.s.tick, slot: 0 });
     expect(wantMountY(e.s, e.p, yes)).toBeNull();
     const f = duel(0xf, 2);
     mstate(f.s).projectiles.push({ id: 1, kind: 0xf, owner: 0, x: 0, y: 0, dir: 2, born: 0, state: 'fly', t: 0, slot: 0 });

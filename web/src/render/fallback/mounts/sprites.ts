@@ -50,6 +50,7 @@ export function fallbackMountSprites(s: RoundState, frame: number): FbSprite[] {
   for (const pr of projectilesOf(s)) {
     if (pr.state === 'done') continue;
     const x = Math.floor(pr.x / 256), y = Math.floor(pr.y / 256), a = (frame >> 2) & 1;
+    if (pr.state === 'cloud' && pr.target !== undefined) continue;   // F no acerto: as notas saem no alvo
     if (pr.state === 'cloud') { out.push({ key: `shot:${pr.kind.toString(16)}:cloud`, make: () => shotPix(pr.kind, 'cloud', 0), x: x - 8, y: y - 6 }); continue; }
     if (pr.kind === 0xd) out.push({ key: `mount:13:${pr.dir}:${a}`, make: () => mountPix(0xd, pr.dir, a), x: x - 12, y: y - 12 });
     else if (pr.kind === 0xe) out.push({ key: 'shot:e:fly', make: () => shotPix(0xe, 'fly', 0), x: x - 4, y: y - 4 });

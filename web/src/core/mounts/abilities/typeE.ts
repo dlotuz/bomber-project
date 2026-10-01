@@ -1,17 +1,17 @@
 import type { MountAbility } from '../types';
-import { spawnProjectile, advanceProjectile, E_SPEC } from '../projectile';
+import { spawnShot, advanceProjectile, shotInPlay, E_SPEC, SHOT_END_TICKS } from '../projectile';
 import { mev } from '../events';
 
-export const E_COOLDOWN = 64;   // +$C6 (spec §12 A8)
-export const E_CLOUD = 40;      // $C1:2EB6 por 39 ticks + $C3:50E8 por 1 (medido; sem limite de voo, L7)
+export const E_CLOUD = SHOT_END_TICKS;   // $C1:2EB6 por 39 ticks + $C3:50E8 por 1 (medido; sem limite de voo, L7)
 
-/** Tipo E: tiro lento ($C1:2CFF/$C1:2D73 → nuvem $C1:2EB6). */
+/** Tipo E: tiro lento ($C1:2CFF/$C1:2D73 → nuvem $C1:2EB6).
+ *  Um tiro por vez ($C2:46D0): o +$C6 do dono é um "tiro em jogo" (0/1), não uma recarga; só zera quando a nuvem
+ *  some ($C1:2ECA). Ajuste C: os 64 ticks da spec (A8) não existem na ROM — medido, novo tiro em fim + 40. */
 export const ABILITY_E: MountAbility = {
   type: 0xe,
-  onY(s, p, r, ev) {
-    if (r.cooldown > 0) return true;
-    spawnProjectile(s, p, 0xe);
-    r.cooldown = E_COOLDOWN + 1;   // tickRiders desconta 1 ainda neste tick: depois do tick do Y vale 64
+  onY(s, p, _r, ev) {
+    if (shotInPlay(s, p.slot, 0xe)) return true;
+    spawnShot(s, p, 0xe);
     ev.push(mev({ id: 'mount_ability', slot: p.slot, mount: 0xe }));
     return true;
   },
