@@ -1,7 +1,7 @@
 // Mapa de perigo da IA. Tudo em offsets de tick a partir do próximo (1 = o próximo `step`). Uma bomba que explode no
 // passo de objetos do offset `t` fere quem está na casa nos offsets t+1 … t+25: janela [at, end) = [t+1, t+26).
 import { CODE, type Bomb, type Flyer, type RoundState } from '../types';
-import { CELLS, WRAP_X, WRAP_Y, SUB, cellAt, cellCenter, colAt, colOf, faceStep, inField, inGrid, linAt, linOf } from '../units';
+import { CELLS, SUB, cellAt, cellCenter, centerX, centerY, colAt, colOf, faceStep, inField, inGrid, linAt, linOf, wrapFlight } from '../units';
 import { BURN_TICKS, CHAIN_DELAY, FLAME_TICKS, KICK_STEPS, PRESSURE_EVERY, PRESSURE_FIRST, fallTicks, rangeOf } from '../constants';
 import { BOUNCE, ITEM_FLIGHT, PUNCH, THROW, type Script } from '../tables/flights';
 import { isEggCode, isItemCode, playerCell, standing } from '../state';
@@ -107,9 +107,7 @@ function runScript(x: number, y: number, dir: number, sc: Script, i: number): { 
   for (; i < sc.length; i++, n++) {
     const [dx, dy] = sc[i];
     x += dx * SUB; if (dir === 0 || dir === 2) y += dy * SUB;
-    const col = colAt(x), lin = linAt(y);
-    if (col > 16) x -= WRAP_X; else if (col < 0) x += WRAP_X;
-    if (lin > 12) y -= WRAP_Y; else if (lin < 0) y += WRAP_Y;
+    [x, y] = wrapFlight(x, y);
   }
   return { x, y, n };
 }
@@ -120,17 +118,19 @@ export function firstLanding(x: number, y: number, dir: 0 | 1 | 2 | 3, flight: F
   return cellAt(r.x, r.y);
 }
 
-/** Casa e offset (passo de objetos) de pouso de um voador (até 8 quiques, regras de T8). */
+/** Casa e offset (passo de objetos) de pouso de um voador (até 8 quiques, regras de T8). Casa −1: cai num bloco de
+ *  pressão e some ($C1:27D7). */
 export function flightEnd(s: RoundState, f: Flyer): { cell: number; t: number } {
   let x = f.x, y = f.y, i = f.i, sc = scriptOf(f), t = 0;
   for (let bounces = 0; bounces <= 8; bounces++) {
     const r = runScript(x, y, f.dir, sc, i);
     x = r.x; y = r.y; t += r.n;
     const cell = cellAt(x, y);
+    if (cell >= 0 && (s.grid[cell] & 0xefc0) === CODE.PRESSURE) return { cell: -1, t };
     const v = cell >= 0 && inField(colOf(cell), linOf(cell)) ? s.grid[cell] : CODE.HARD;
     const player = s.players.some(q => standing(q) && playerCell(q) === cell);
-    if (!player && (v === CODE.FLOOR || v === CODE.FLAME || v === CODE.BURNING)) return { cell, t };
-    [x, y] = cellCenter(cell); sc = BOUNCE[f.dir]; i = 0;
+    if (!player && (v === CODE.FLOOR || v === CODE.FLAME)) return { cell, t };
+    x = centerX(colAt(x)); y = centerY(linAt(y)); sc = BOUNCE[f.dir]; i = 0;
   }
   return { cell: cellAt(x, y), t };
 }
@@ -196,6 +196,7 @@ export function hazards(s: RoundState, forSlot = -1, extra?: Extra | readonly Ex
       const f = s.flyers.find(x => x.kind === 'bomb' && x.ref === b.id);
       if (!f) continue;
       const e = flightEnd(s, f);
+      if (e.cell < 0) continue;                                           // cai na pressão e some
       const t = remote ? 0 : orphan ? SAFE : s.grid[e.cell] === CODE.FLAME ? e.t + CHAIN_DELAY : e.t + b.fuse + 1;
       blasts.push({ cell: e.cell, t, fire: b.fire, pierce, trail: [], perm: remote, level: b.level });
       continue;

@@ -223,9 +223,12 @@ Ao pegar **qualquer** item doente, a doença é removida e jogada fora como nova
   - Casa livre: vira bomba normal.
   - Casa com bloco, bomba, item ou caveira: **quica 1 casa** (8 ticks: dx `3,3,3,3,2,2,0,0`, altura `−4,−6,−6,−6,−4,0`, **pico de 6 px**) e repete.
   - Jogador na casa: **atordoa** o jogador (§5.8) e quica.
-  - Bloco queimando: a bomba some 🟡 (código `$C1:2871`).
-- **Borda:** passando da parede, a bomba **dá a volta** (toroidal, 272 px). Continua quicando casa a casa por cima das
-  paredes até achar casa livre. Ex.: da col 13 para a direita → pousa na col 2. Da lin 2 para cima → pousa na lin 10.
+  - Bloco de pressão (`$EE80`, testado antes de tudo em `$C1:27D7`): a bomba some (`$C1:2871` → `$C1:5C2F`) e volta ao dono. ✅ emulador (2026-10-01). Bloco queimando (`$EDC0`) tem o bit `$0800`: **quica**.
+- **Borda** (`$C1:6566`): passando da parede, a bomba **dá a volta** (toroidal: ±272 px se x < −12 ou ≥ 268; ±224 px se
+  y < 12 ou ≥ 244 — 14 linhas, com a linha 13 da grade, `$EC40` fora da tela, lida por `$C2:3221` como (y − 24) mod 224).
+  Continua quicando casa a casa por cima das paredes até achar casa livre. Ex.: da col 13 para a direita → pousa na col 2.
+  Da lin 2 para cima → quica na linha 13 e na parede e pousa na lin 10 (T+41 com jogador em (2,11)). Da lin 10 para baixo
+  → linha 13, parede, lin 1 (T+33).
 
 ### 5.5 Luva (`$07`) ✅ (`t48.py`; `$C1:25FD`–`$C1:2780`)
 - Parado sobre uma bomba (a recém-colocada ou outra), **aperte A de novo e segure**: levanta a bomba (4 ticks).

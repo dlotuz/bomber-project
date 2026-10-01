@@ -537,10 +537,10 @@ Algoritmo por tick:
   - pavio congelado.
   - **Pouso** (`$C1:27A4`):
     - casa livre: vira bomba normal;
-    - bloco, bomba, item ou caveira: **quica 1 casa** em 8 ticks (dx `3,3,3,3,2,2,0,0`, altura `−4,−6,−6,−6,−4,0`) e testa de novo;
-    - jogador: **atordoa** (§3.10) e quica;
-    - bloco queimando: a bomba some 🟡.
-  - **Borda:** dá a volta (±272 px), quicando por cima das paredes. Da col 13 para a direita pousa na col 2; da lin 2 para cima, na lin 10.
+    - **bloco de pressão `EE80`** (testado antes de tudo, `$C1:27D7`; inclui as paredes de cima e de baixo depois de T+192): a bomba **some** sem explodir (`$C1:5C2F`, nuvem `$D8:D327`) e volta ao dono (`$C1:5588`) ✅ emulador;
+    - bloco (inclusive queimando `EDC0`), bomba, item ou caveira: **quica 1 casa** em 8 ticks (dx `3,3,3,3,2,2,0,0`, altura `−4,−6,−6,−6,−4,0`) e testa de novo;
+    - jogador: **atordoa** (§3.10) e quica.
+  - **Borda** (`$C1:6566`): dá a volta, ±272 px na horizontal (x < −12 ou ≥ 268) e ±224 px na vertical (y < 12 ou ≥ 244): são 14 linhas, porque a grade da ROM tem uma linha 13 (`EC40`, fora da tela) abaixo da parede de baixo, e `$C2:3221` lê a linha de (y − 24) mod 224. Quica por cima das paredes. Da col 13 para a direita pousa na col 2 (T+41); da lin 2 para cima quica na linha 13, na parede e (com jogador em (2,11)) pousa na lin 10 (T+41); da lin 10 para baixo, na lin 1 (T+33).
 - **Luva** [MEC §5.5], item `$07`:
   - parado sobre uma bomba (a recém-colocada ou outra), **aperta A de novo e segura**: levanta em 4 ticks, pavio congelado, e o jogador anda normalmente;
   - **soltar A arremessa**, com ~20 ticks travado;
@@ -653,7 +653,7 @@ A **ordem das entradas** vem da ROM (`$C3:7C30`, `…7E14`, `…7FF8`, `…8252`
   - **63 ticks** parado;
   - perde **1–4 itens** (`(rnd & 6)/2 + 1`, o *n* do `rnd` sai de `$C2:51C4`, §3.16);
   - prioridade: doença, depois montaria ou traje, depois a lista de 13 perdas `$C2:519D`;
-  - cada item perdido **voa 3, 4 ou 5 casas** numa direção (`rnd(12)` sobre 12 scripts `$C1:6715`), quica se cair em casa ocupada, dá a volta na borda e some se cair em bloco queimando.
+  - cada item perdido **voa 3, 4 ou 5 casas** numa direção (`rnd(12)` sobre 12 scripts `$C1:6715`), quica se cair em casa ocupada (inclusive bloco queimando), dá a volta na borda e some se cair em bloco de pressão (`$C1:6683`).
   - Evento `stunned` (SFX `$12` + voz `$02`).
 
 ### 3.11 Relógio, pressão, Morte Súbita e TIME UP [MEC §7.2–7.4, ARN §2.6]

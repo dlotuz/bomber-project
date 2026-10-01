@@ -4,7 +4,7 @@
 import { CODE, type Bomb, type FlightId, type Flyer, type GameEvent, type Player, type RoundState } from './types';
 import { BOUNCE, ITEM_FLIGHT, PUNCH, THROW, type Script } from './tables/flights';
 import { CHAIN_DELAY, LIFT_TICKS, PUNCH_TICKS, THROW_TICKS } from './constants';
-import { SUB, WRAP_X, WRAP_Y, cellAt, cellCenter, colAt, colOf, faceStep, inField, inGrid, linAt, linOf } from './units';
+import { SUB, cellCenter, cellOf, centerX, centerY, colAt, colOf, faceStep, inField, inGrid, linAt, linOf, wrapFlight } from './units';
 import { isEggCode, isItemCode, itemCode, newId, playerCell, setAct, standing } from './state';
 import { bombAt, bombById, bombOccupies, removeBomb } from './bombs';
 import { hitPlayer, stunPlayer } from './hit';
@@ -46,15 +46,12 @@ function scriptOf(f: Flyer): Script {
 }
 const vertical = (dir: number): boolean => dir === 0 || dir === 2;
 
-function wrap(f: Flyer): void {
-  const col = colAt(f.x), lin = linAt(f.y);
-  if (col > 16) f.x -= WRAP_X; else if (col < 0) f.x += WRAP_X;
-  if (lin > 12) f.y -= WRAP_Y; else if (lin < 0) f.y += WRAP_Y;
-}
+function wrap(f: Flyer): void { [f.x, f.y] = wrapFlight(f.x, f.y); }
 
-/** Recomeça do centro da casa com o script BOUNCE na mesma direção (bombas contam os quiques em `script`). */
+/** Recomeça do centro da casa (col, lin) com o script BOUNCE na mesma direção (bombas contam os quiques em `script`).
+ *  A casa pode ser a linha −1/13 (fora da grade: a linha 13 da ROM), por isso o centro vem de (col, lin). */
 function bounce(f: Flyer, cell: number, ev: GameEvent[]): void {
-  [f.x, f.y] = cellCenter(cell); f.z = 0; f.flight = 'bounce'; f.i = 0;
+  f.x = centerX(colAt(f.x)); f.y = centerY(linAt(f.y)); f.z = 0; f.flight = 'bounce'; f.i = 0;
   f.glove = false;   // quicou: sem reflect — cai como bomba comum (atordoa quem estiver segurando bomba)
   if (f.kind !== 'item') f.script++;
   if (f.kind === 'bomb') ev.push({ type: 'bomb_bounce', cell });
@@ -71,12 +68,21 @@ function reflect(s: RoundState, f: Flyer, q: Player, ev: GameEvent[]): void {
 }
 
 function land(s: RoundState, f: Flyer, ev: GameEvent[]): void {
-  const cell = cellAt(f.x, f.y);
-  const out = cell < 0 || !inField(colOf(cell), linOf(cell));
+  const col = colAt(f.x), lin = linAt(f.y);
+  const cell = inGrid(col, lin) ? cellOf(col, lin) : -1;
+  const out = cell < 0 || !inField(col, lin);
   const v = out ? CODE.HARD : s.grid[cell];
   const drop = (): void => { s.flyers.splice(s.flyers.indexOf(f), 1); };
+  // Pressão antes de tudo — bomba $C1:27D7, item $C1:6683: [$28] & $EFC0 = $EE80 (bloco caído ou parede de cima/de
+  // baixo depois de T+192) → o voador some ($C1:5C2F, nuvem $D8:D327) e a bomba volta ao dono ($C1:5588), sem explodir
+  if (f.kind !== 'player' && cell >= 0 && (s.grid[cell] & 0xefc0) === CODE.PRESSURE) {
+    drop();
+    const b = f.kind === 'bomb' ? bombById(s, f.ref) : undefined;
+    if (b) removeBomb(s, b, true);
+    return;
+  }
   if (f.kind === 'item') {
-    if (!out && v === CODE.BURNING) { drop(); return; }
+    // $C1:66A9: bit $0800 (bloco, queimando $EDC0, bomba, item) segue com o script de quique
     if (!out && v === CODE.FLOOR) { s.grid[cell] = itemCode(f.ref); s.cellT0[cell] = s.tick; drop(); return; }
     bounce(f, cell, ev);
     return;
@@ -84,8 +90,7 @@ function land(s: RoundState, f: Flyer, ev: GameEvent[]): void {
   if (f.kind === 'player') { landPlayer(s, f, cell, out, v, ev); return; }
   const b = bombById(s, f.ref);
   if (!b) { drop(); return; }
-  if (!out && v === CODE.BURNING) { drop(); removeBomb(s, b, true); return; }
-  // $C1:27A4: casa com bit $0800 (bomba $C900, bloco, item, caveira) ou com bomba chutada ([$38] bit $4000) quica
+  // $C1:27A4: casa com bit $0800 (bomba $C900, bloco, queimando $EDC0, item, caveira) ou com bomba chutada ([$38] bit $4000) quica
   // ($C1:2868) antes do teste de jogador ($C1:280B → $C1:294D): quem está sobre uma bomba não é atordoado.
   const blocked = out || (v & 0x0800) !== 0 || bombOccupies(s, cell);
   const victims = blocked ? [] : s.players.filter(q => grounded(q) && playerCell(q) === cell);

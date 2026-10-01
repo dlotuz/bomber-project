@@ -53,7 +53,7 @@ export function refundBomb(s: RoundState, b: Bomb): void {
   const p = s.players[b.owner];
   if (p) p.bombsFree = Math.min(p.bombsCap, p.bombsFree + 1);
 }
-/** Tira a bomba do jogo sem explodir (pressão, pouso em bloco queimando). */
+/** Tira a bomba do jogo sem explodir (bloco de pressão caindo nela ou ela caindo num bloco de pressão). */
 export function removeBomb(s: RoundState, b: Bomb, refund: boolean): void {
   const i = s.bombs.indexOf(b);
   if (i < 0) return;
