@@ -148,15 +148,21 @@ export function explodeBomb(s: RoundState, b: Bomb, ev: GameEvent[]): void {
       c = faceStep(c, face);
       if (!inGrid(colOf(c), linOf(c))) break;
       const v = s.grid[c];
-      if (v === CODE.HARD || v === CODE.PRESSURE || v === CODE.BURNING) break;
+      // Rotina do braço $C1:403A. Perfurante (+$22 = 2) segue depois de bloco queimando ($C1:405B → $C1:40E5), de
+      // soft ($C1:411A) e de item/caveira ($C1:416E → $C1:411A); bomba ($C1:40EF) segura qualquer tipo.
+      if (v === CODE.BURNING) { if (b.type === 2) continue; break; }
+      if (v === CODE.HARD || v === CODE.PRESSURE) break;
       if (v === CODE.SOFT) { burnCell(s, c, BURN.SOFT); st?.onFlameCell?.(s, c, face, ev); if (b.type === 2) continue; break; }
-      if (isSkullCode(v)) {   // caveira não queima: pula como a que sai do jogador curado; o braço para nela
+      if (isSkullCode(v)) {   // caveira não queima: pula como a que sai do jogador curado; o braço para nela (perfurante segue)
         s.grid[c] = CODE.FLOOR;
         spawnItemFlyer(s, itemOfCode(v), c, rnd(s.rng, 12));
         st?.onFlameCell?.(s, c, face, ev);
+        if (b.type === 2) continue;
         break;
       }
-      if (isItemCode(v)) { burnCell(s, c, BURN.ITEM); st?.onFlameCell?.(s, c, face, ev); break; }
+      if (isItemCode(v)) { burnCell(s, c, BURN.ITEM); st?.onFlameCell?.(s, c, face, ev); if (b.type === 2) continue; break; }
+      // Bomba parada: vira D900 (marcada, $C1:40FF–$C1:4104) e o braço termina antes dela, com ponta na casa anterior;
+      // a casa da bomba não acende. Já marcada (D900) também termina ($C1:40F1). Chutada em movimento não está na grade.
       if (v === CODE.BOMB) {
         const o = bombAt(s, c);
         if (o && (o.chainAt === 0 || o.chainAt > s.tick + CHAIN_DELAY)) o.chainAt = s.tick + CHAIN_DELAY;

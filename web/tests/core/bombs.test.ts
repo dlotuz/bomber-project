@@ -4,6 +4,7 @@ import { BURN, CODE, FLAME_PIECE, type GameEvent } from '../../src/core/types';
 import { itemCode } from '../../src/core/state';
 import { centerX } from '../../src/core/units';
 import { tickFlyers } from '../../src/core/flyers';
+import { crossCells } from '../../src/core/ai/danger';
 
 const explodedAt = (s: ReturnType<typeof arena>, max = 400) => runUntil(s, (_s, ev) => ev.some(e => e.type === 'explosion'), max);
 
@@ -201,6 +202,92 @@ describe('explosão', () => {
     expect(bombAt(s, C(4, 1))).toBe(b);
     b.state = 'held';
     expect(bombAt(s, C(4, 1))).toBeUndefined();
+  });
+});
+
+describe('propagação do braço ($C1:403A): bomba no caminho segura o fogo', () => {
+  // Rotina que anda casa a casa: casa com bomba parada (C900) ganha o bit de chama (D900 = marcada para a cadeia,
+  // $C1:40FF–$C1:4104) e o braço termina ali (RTL), sem acender a casa da bomba e sem testar o tipo da bomba.
+  // D900 (bomba já marcada) também termina o braço ($C1:40F1). Emulador: alcance 10 com bomba na 7ª casa → chama
+  // só nas 6 casas antes dela; a outra explode 2 ticks depois com o próprio alcance.
+  const arm = (s: ReturnType<typeof arena>, from: number, to: number) => {
+    const out: number[] = [];
+    for (let c = from; c <= to; c++) out.push(codeAt(s, c, 1));
+    return out;
+  };
+  it('exemplo do usuário: alcance 10, bomba parada na 7ª casa → o braço vai só até a casa antes dela, com ponta', () => {
+    const s = arena();
+    const a = addBomb(s, 0, C(2, 1), { fuse: 0, fire: 8 }); a.born = 0;   // fogo 8 = alcance 10 (até a col 12)
+    addBomb(s, 1, C(9, 1), { fire: 0 });                                   // 7ª casa; alcance 2 (até a col 11)
+    expect(run(s, 1).filter(e => e.type === 'explosion')).toEqual([{ type: 'explosion', cell: C(2, 1), owner: 0 }]);
+    const F = CODE.FLAME;
+    expect(arm(s, 3, 12)).toEqual([F, F, F, F, F, F, CODE.BOMB, CODE.FLOOR, CODE.FLOOR, CODE.FLOOR]);
+    expect([s.cellAux[C(7, 1)], s.cellAux[C(8, 1)]]).toEqual([FLAME_PIECE.ARM_RIGHT, FLAME_PIECE.TIP_RIGHT]);
+    run(s, 1);
+    expect(codeAt(s, 9, 1)).toBe(CODE.BOMB);
+    expect(run(s, 1).filter(e => e.type === 'explosion')).toEqual([{ type: 'explosion', cell: C(9, 1), owner: 1 }]);
+    expect(arm(s, 3, 12)).toEqual([F, F, F, F, F, F, F, F, F, CODE.FLOOR]);  // a segunda acende 10 e 11 com o alcance dela
+  });
+  it('sem a segunda bomba o mesmo braço chega à 10ª casa', () => {
+    const s = arena();
+    const a = addBomb(s, 0, C(2, 1), { fuse: 0, fire: 8 }); a.born = 0;
+    run(s, 1);
+    expect([codeAt(s, 12, 1), codeAt(s, 13, 1), s.cellAux[C(12, 1)]]).toEqual([CODE.FLAME, CODE.FLOOR, FLAME_PIECE.TIP_RIGHT]);
+  });
+  it('perfurante também para na bomba (o desvio da bomba não olha o tipo)', () => {
+    const s = arena();
+    const a = addBomb(s, 0, C(2, 1), { fuse: 0, fire: 8, type: 2 }); a.born = 0;
+    addBomb(s, 1, C(9, 1));
+    run(s, 1);
+    expect([codeAt(s, 8, 1), codeAt(s, 9, 1), codeAt(s, 10, 1)]).toEqual([CODE.FLAME, CODE.BOMB, CODE.FLOOR]);
+  });
+  it('bomba já marcada pela cadeia também segura o braço e não tem a cadeia adiada', () => {
+    const s = arena();
+    const a = addBomb(s, 0, C(2, 1), { fuse: 0, fire: 8 }); a.born = 0;
+    const o = addBomb(s, 1, C(9, 1), { chainAt: 101 });
+    run(s, 1);                                       // tick 101: as duas explodem; a ordem do vetor decide quem vê quem
+    expect(o.chainAt).toBe(101);
+    expect(codeAt(s, 13, 1)).toBe(CODE.FLOOR);
+  });
+  it('bomba chutada em movimento não está na grade: o braço passa e ela explode 1 tick depois (emulador)', () => {
+    const s = arena();
+    const a = addBomb(s, 0, C(2, 1), { fuse: 0, fire: 8 }); a.born = 0;
+    addBomb(s, 1, C(6, 1), { state: 'kicked', dir: 2, step: 3, x: centerX(6) + 6 * 256 });
+    const ev1 = run(s, 1);                           // tick 101
+    expect(ev1.filter(e => e.type === 'explosion').length).toBe(1);
+    expect([codeAt(s, 6, 1), codeAt(s, 7, 1), codeAt(s, 12, 1)]).toEqual([CODE.FLAME, CODE.FLAME, CODE.FLAME]);
+    expect(run(s, 1).filter(e => e.type === 'explosion').map(e => e.type === 'explosion' && e.owner)).toEqual([1]);   // tick 102
+  });
+  it('perfurante: item queima e o braço segue; bloco queimando não segura ($C1:405B, $C1:411A)', () => {
+    const s = arena();
+    setCell(s, 5, 1, itemCode(0x03)); setCell(s, 7, 1, CODE.BURNING); s.cellT0[C(7, 1)] = 100;
+    const b = addBomb(s, 0, C(4, 1), { fuse: 0, fire: 4, type: 2 }); b.born = 0;   // alcance 6 (até a col 10)
+    run(s, 1);
+    expect(arm(s, 5, 11)).toEqual([CODE.BURNING, CODE.FLAME, CODE.BURNING, CODE.FLAME, CODE.FLAME, CODE.FLAME, CODE.FLOOR]);
+    expect(s.cellAux[C(10, 1)]).toBe(FLAME_PIECE.TIP_RIGHT);
+  });
+  it('comum: o mesmo item segura o braço', () => {
+    const s = arena();
+    setCell(s, 5, 1, itemCode(0x03));
+    const b = addBomb(s, 0, C(4, 1), { fuse: 0, fire: 4 }); b.born = 0;
+    run(s, 1);
+    expect(arm(s, 5, 6)).toEqual([CODE.BURNING, CODE.FLOOR]);
+  });
+  it('perfurante: caveira pula e o braço segue', () => {
+    const s = arena(); setCell(s, 5, 1, itemCode(0x23));
+    const b = addBomb(s, 0, C(4, 1), { fuse: 0, fire: 4, type: 2 }); b.born = 0;
+    run(s, 1);
+    expect([codeAt(s, 5, 1), codeAt(s, 6, 1)]).toEqual([CODE.FLOOR, CODE.FLAME]);
+    expect(s.flyers).toEqual([expect.objectContaining({ kind: 'item', ref: 0x23 })]);
+  });
+  it('crossCells (perigo da IA) segue as mesmas regras', () => {
+    const s = arena();
+    setCell(s, 5, 1, itemCode(0x03)); setCell(s, 7, 1, CODE.BURNING); addBomb(s, 1, C(9, 1));
+    const p = crossCells(s, C(4, 1), 8, true);
+    expect([p.cells.includes(C(6, 1)), p.cells.includes(C(8, 1)), p.cells.includes(C(7, 1)), p.bombs]).toEqual([true, true, false, [C(9, 1)]]);
+    expect(p.cells.includes(C(10, 1))).toBe(false);
+    const n = crossCells(s, C(4, 1), 8, false);
+    expect([n.cells.includes(C(5, 1)), n.cells.includes(C(6, 1))]).toEqual([true, false]);
   });
 });
 
