@@ -1,6 +1,6 @@
 import { arena, put, setCell, codeAt, C, withStage } from './kit';
 import { tryKick, slideStep, stopKick } from '../../src/core/kick';
-import { addBomb, tickBombs } from '../../src/core/bombs';
+import { addBomb, explodeBomb, removeBomb, tickBombs } from '../../src/core/bombs';
 import { launchBomb, punchBomb, tickFlyers } from '../../src/core/flyers';
 import { BTN, CODE, type Bomb, type GameEvent, type RoundState } from '../../src/core/types';
 import { CELLS, SUB, cellAt, cellCenter, centerX, centerY } from '../../src/core/units';
@@ -19,11 +19,39 @@ function setup(bombCol = 5, lin = 1) {
 }
 
 describe('chute (t36, t41, t91)', () => {
-  it('dispara no centro olhando para a bomba; a bomba sai da grade', () => {
+  it('dispara no centro olhando para a bomba; a bomba só sai da grade quando começa a deslizar', () => {
     const { s, p, b } = setup(); const ev: GameEvent[] = [];
     expect(tryKick(s, p, ev)).toBe(true);
-    expect([b.state, b.dir, b.kickedBy, codeAt(s, 5, 1)]).toEqual(['kicked', 2, 0, CODE.FLOOR]);
+    // $C2:4307 só muda o estado (+$1C = 2) e a direção; a grade fica $C900 até a rotina da bomba ($C1:34D0) conferir o
+    // destino e chamar $C1:532C (repõe o piso em [$28]).
+    expect([b.state, b.dir, b.kickedBy, codeAt(s, 5, 1)]).toEqual(['kicked', 2, 0, CODE.BOMB]);
     expect(ev).toEqual([{ type: 'bomb_kicked', slot: 0 }]);
+    s.tick++; tickBombs(s, ev);
+    expect([b.state, codeAt(s, 5, 1), b.x]).toEqual(['kicked', CODE.FLOOR, centerX(5) + 2 * 256]);
+  });
+  it('chutada que ainda não saiu é dona da casa: tirar do jogo limpa a grade; braço de chama a põe na cadeia', () => {
+    let k = setup();
+    tryKick(k.s, k.p, []);
+    removeBomb(k.s, k.b, true);
+    expect(codeAt(k.s, 5, 1)).toBe(CODE.FLOOR);
+    k = setup();
+    const o = addBomb(k.s, 1, C(7, 1), { fire: 1 });
+    tryKick(k.s, k.p, []);
+    explodeBomb(k.s, o, []);
+    expect(k.b.chainAt).toBeGreaterThan(0);
+  });
+  it('chute que não sai (destino bloqueado): a bomba nunca deixa a grade; quem anda depois no mesmo tick não entra nela', () => {
+    // P1 empurra para a direita a bomba encostada na parede (col 15): o chute dispara todo tick e a bomba desiste
+    // ($C1:34EB → $C1:352A, estado 0). P2 (slot maior) sobe para a casa dela no mesmo tick: a grade ainda é $C900.
+    const s = arena({ players: 2 });
+    const p = put(s, 0, 13, 1); p.kick = true; p.face = 2;
+    const b = addBomb(s, 0, C(14, 1));
+    const q = put(s, 1, 14, 2, 0, 1);
+    for (let i = 0; i < 40; i++) {
+      step(s, [BTN.RIGHT, BTN.UP, 0, 0, 0]);
+      expect(playerCell(q), `tick ${s.tick}`).toBe(C(14, 2));
+      expect([b.state, codeAt(s, 14, 1)]).toEqual(['idle', CODE.BOMB]);
+    }
   });
   it('não dispara sem Chute, 2 px antes do centro, nem com pavio 1', () => {
     let k = setup(); k.p.kick = false; expect(tryKick(k.s, k.p, [])).toBe(false);
