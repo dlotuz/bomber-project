@@ -48,14 +48,15 @@ export function tickDeath(s: RoundState, p: Player, ev: GameEvent[]): void {
 }
 
 /** Atordoamento ($C2:4C54 → $C2:0E29). Já atordoado, ignora: o estado de atordoamento ($C2:0E86) não chama a checagem
- *  do pedido ($C2:4C54) e, ao fim dos 64 ticks, apaga o pedido pendente ($C2:59AB, bit $0002 de +$C0). */
+ *  do pedido ($C2:4C54) e, ao fim dos 64 ticks, apaga o pedido pendente ($C2:59AB, bit $0002 de +$C0).
+ *  Montado: $C2:0E29 chama as perdas ($C2:51C4) do mesmo jeito e só depois olha +$5D para a anim montada; a montaria
+ *  fica (não está na lista de perdas). */
 export function stunPlayer(s: RoundState, p: Player, ev: GameEvent[]): void {
   if (p.state !== 'alive' || isImmune(s, p) || p.act === 'stunned' || airborne(p)) return;
   if (p.carry >= 0) dropFront(s, p);
   if (p.grab >= 0) releaseGrab(s, p);
   p.push.left = 0;
   setAct(s, p, 'stunned', STUN_TICKS);
-  // Montado: só o atordoamento — não perde a montaria (nem outros itens no lugar dela).
-  if (!p.mount) loseItems(s, p, ((rnd(s.rng, 0xff) & 6) >> 1) + 1, ev);
+  loseItems(s, p, ((rnd(s.rng, 0xff) & 6) >> 1) + 1, ev);
   ev.push({ type: 'stunned', slot: p.slot });
 }

@@ -31,6 +31,7 @@ export interface MountProjectile {
   state: 'fly' | 'cloud' | 'done';
   t: number;             // tick em que entrou no estado atual
   slot: 0 | 1 | 2;       // D: vaga de sprite da montaria lançada
+  target?: number;       // F: slot atingido (a nota acaba no tick k e o alvo dança no k + 1)
 }
 
 /** Ovo reserva queimado (L22): estoura na casa por EGG_BURST_TICKS e conta no $1ED4 até o fim ($C2:6680). */

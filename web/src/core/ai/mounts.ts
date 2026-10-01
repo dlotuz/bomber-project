@@ -1,7 +1,8 @@
 import type { RoundState, Player } from '../types';
 import type { AiMountHints } from './hints';
-import { rider, MAX_RESERVES, type MountState } from '../mounts/types';
+import { rider, MAX_RESERVES } from '../mounts/types';
 import { cellAt, isEnemy } from '../mounts/core-api';
+import { shotInPlay } from '../mounts/projectile';
 import { rangeOf } from '../constants';
 
 /** A IA só lê o estado: `s.mountState` pode ser null antes do 1º tick de `play` (quem cria é o `tick` do módulo). */
@@ -39,8 +40,7 @@ export function wantMountY(s: RoundState, p: Player, safeWith: (bombCells: numbe
   if (!r || r.phase !== 'riding') return null;
   const range = MOUNT_Y_RANGE[r.type];
   if (!range) return null;
-  if (r.type === 0xe && r.cooldown > 0) return null;
-  if (r.type === 0xf && ((s.mountState as MountState | null)?.projectiles ?? []).some(pr => pr.owner === p.slot && pr.kind === 0xf && pr.state === 'fly')) return null;
+  if ((r.type === 0xe || r.type === 0xf) && shotInPlay(s, p.slot, r.type)) return null;   // um tiro por vez (+$C6)
   if (r.type === 0xc && (p.disease === 0x24 || p.disease === 0x25 || p.bombsFree === 0)) return null;
   const dirs = [p.face, 0, 2, 4, 6].filter((d, i, a) => a.indexOf(d) === i) as (0 | 2 | 4 | 6)[];
   for (const dir of dirs) {

@@ -77,10 +77,7 @@ const flag = (key: 'punch' | 'glove' | 'kick' | 'passBomb' | 'pItem' | 'fullFire
 /** As 13 perdas de $C2:519D, na ordem da ROM. */
 export const STUN_LOSS: readonly Loss[] = [
   (s, p) => { if (!p.disease) return null; p.disease = 0; p.diseaseT = 0; return rollSkull(s); },
-  (s, p, ev) => {
-    if (MOUNTS.current.onStunLoss?.(s, p, ev)) return 0;
-    if (p.costume < 0) return null; p.costume = -1; return ITEM.COSTUME;
-  },
+  (_s, p) => { if (p.costume < 0) return null; p.costume = -1; return ITEM.COSTUME; },   // $C2:556C: só o traje
   (_s, p) => { if (p.speedLv <= 1) return null; p.speedLv--; return ITEM.SPEED; },
   // $C2:5318: capacidade − 1 e disponíveis − 1 só se houver alguma; sem "dívida": com todas no campo, a devolução
   // ($C1:5588) só soma enquanto disponíveis < capacidade, então o jogador volta a ter a capacidade nova
@@ -103,12 +100,13 @@ function tryLoss(s: RoundState, p: Player, idx: number, ev: GameEvent[]): boolea
   return true;
 }
 
-/** Perde `n` itens: por perda, até 8 tentativas (doença → traje/montaria → rnd(13)); depois varre 0..12. */
+/** Perde `n` itens: por perda, até 8 tentativas (doença → traje → rnd(13), $C2:51FC); depois varre 0..12. A montaria
+ *  não entra: $C2:51FC só força a perda 1 com traje (+$45 bit 7). */
 export function loseItems(s: RoundState, p: Player, n: number, ev: GameEvent[]): void {
   for (let k = 0; k < n; k++) {
     let ok = false;
     for (let a = 0; a < 8 && !ok; a++) {
-      const idx = p.disease ? 0 : p.costume >= 0 || p.mount !== null ? 1 : rnd(s.rng, 13);
+      const idx = p.disease ? 0 : p.costume >= 0 ? 1 : rnd(s.rng, 13);
       ok = tryLoss(s, p, idx, ev);
     }
     for (let idx = 0; idx < 13 && !ok; idx++) ok = tryLoss(s, p, idx, ev);

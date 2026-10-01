@@ -40,11 +40,12 @@ export function crossCells(s: RoundState, cell: number, fire: number, pierce: bo
       c = faceStep(c, face);
       if (!inGrid(colOf(c), linOf(c))) break;
       const v = s.grid[c];
-      if (v === CODE.HARD || v === CODE.PRESSURE || v === CODE.BURNING) break;
+      if (v === CODE.BURNING) { if (pierce) continue; break; }   // perfurante passa bloco queimando ($C1:405B)
+      if (v === CODE.HARD || v === CODE.PRESSURE) break;
       if (v === CODE.BOMB || asBomb?.has(c)) { bombs.push(c); break; }
       cells.push(c);
       if (v === CODE.SOFT) { if (pierce) continue; break; }
-      if (itemsStop && isItemCode(v)) break;
+      if (itemsStop && !pierce && isItemCode(v)) break;
     }
   }
   return { cells, bombs };

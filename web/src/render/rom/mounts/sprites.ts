@@ -76,6 +76,13 @@ export function mountRomSprites(s: RoundState, a: RomAssets, frame: number): Mou
   for (const pr of projectilesOf(s)) {
     if (pr.state === 'done') continue;
     const X = Math.floor(pr.x / 256), Y = Math.floor(pr.y / 256);
+    if (pr.kind === 0xf && pr.state === 'cloud') {
+      // Fim da nota ($C1:30FC, anim $D8:D327 = a da nuvem do E). No acerto quem desenha é o riderHook (notas no alvo).
+      if (pr.target !== undefined) continue;
+      const { frame: fr } = sampleSeq(a, [PROJ_ANIMS.e[1] ?? PROJ_ANIMS.e[0]], frame - pr.t);
+      out.push(...commonPieces(a, s.stage, X, Y, fr));
+      continue;
+    }
     const t = frame - pr.born;
     const addrs = pr.kind === 0xd ? [PROJ_D_BY_DIR[(pr.dir >> 1) & 3]]
       : pr.kind === 0xf ? PROJ_ANIMS.f

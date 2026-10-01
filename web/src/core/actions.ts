@@ -31,7 +31,7 @@ export function tickAct(s: RoundState, p: Player, ev: GameEvent[]): boolean {
   if (p.push.left > 0) applyPush(s, p, ev);
   if (p.actLeft <= 0) return false;
   if (--p.actLeft === 0) {
-    if (p.act === 'lift') { if (p.throwQueued) throwAny(s, p, ev); else setAct(s, p, 'carryIdle'); }
+    if (p.act === 'lift') setAct(s, p, 'carryIdle');   // T+8: já na mão, ainda parado (o arremesso marcado sai em T+9)
     else if (p.act === 'detonate' && p.prevBtn & BTN.B) { /* trancar: B ainda segurado, fica na pose */ }
     else if (p.act === 'dropped') { p.inv = DROP_INV; setAct(s, p, 'idle'); }   // caiu da luva: invencível, como no desmonte
     else if (!FREE.has(p.act)) setAct(s, p, holding(p) ? 'carryIdle' : 'idle');
@@ -70,6 +70,12 @@ export function playerActions(s: RoundState, p: Player, btn: number, pressed: nu
     else { throwAny(s, p, ev); return; }
   }
   if (tickAct(s, p, ev)) return;
+  // 1º tick livre depois do levantamento ($C2:3692 → normal): a ROM olha o A *apertado* — soltou durante a pose e não
+  // apertou de novo, arremessa agora; apertou de novo, continua segurando.
+  if (p.throwQueued && holding(p)) {
+    p.throwQueued = false;
+    if (!(btn & BTN.A)) { throwAny(s, p, ev); return; }
+  }
   if (holding(p) && !(btn & (BTN.A | BTN.B))) { tossAny(s, p); setAct(s, p, 'idle'); }   // levantou com B e soltou
   // Trancar: B segurado (depois do tick em que foi apertado) trava o jogador na pose de detonar; assim a luva não o pega.
   if (btn & BTN.B && !(pressed & BTN.B) && !holding(p) && !p.mount) { p.moveDir = 8; setAct(s, p, 'detonate'); return; }
@@ -84,7 +90,7 @@ export function playerActions(s: RoundState, p: Player, btn: number, pressed: nu
   else if (p.disease === DISEASE.DIARRHEA && !holding(p)) placeBomb(s, p, ev);
   if (pressed & BTN.B && holding(p)) {   // luva: B larga a bomba (ou o jogador) na casa da frente
     tossAny(s, p);
-    setAct(s, p, 'idle');
+    setAct(s, p, 'detonate', 1);   // pose do B ($C2:36CA) no tick do aperto; parado em T+1, anda em T+2 (B segurado: tranca)
   } else if (pressed & BTN.B && !(onFoot && startLift(s, p, ev))) {   // luva sobre a bomba: B também levanta (segura enquanto apertado)
     detonateRemote(s, p, ev); setAct(s, p, 'detonate', DETONATE_TICKS);
   }

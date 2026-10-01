@@ -30,19 +30,31 @@ describe('montaria tipo E (tanque): Y = tiro lento', () => {
     expect(slowed).toBeGreaterThanOrEqual(253);
     expect(slowed).toBeLessThanOrEqual(256);
   });
-  it('recarga de 64 ticks: Y antes disso não atira', () => {
-    const s = mkRound();
-    const p = placePx(s, 0, 32, 47); p.face = 2;
-    const r = ride(s, 0, 0xe);
-    run(s, 1, { 0: BTN.Y });
-    expect(mstate(s).projectiles).toHaveLength(1);
-    expect(r.cooldown).toBe(64);
-    run(s, 30);
-    run(s, 1, { 0: BTN.Y });
-    expect(mstate(s).projectiles.filter(pr => pr.born === s.tick)).toHaveLength(0);
-    run(s, 40);
-    run(s, 1, { 0: BTN.Y });
-    expect(mstate(s).projectiles.filter(pr => pr.born === s.tick)).toHaveLength(1);
+  it('um tiro por vez (+$C6, $C2:46D0): sem alvo, nuvem na parede em 95 → Y em 134 não atira, em 135 atira', () => {
+    // Ajuste C: a ROM não tem recarga de 64 ticks; o +$C6 só zera quando a nuvem some (medido: 91 → 131, 11 → 51).
+    const shotAt = (k: number): boolean => {
+      const s = mkRound();
+      const p = placePx(s, 0, 32, 47 + 16 * 4); p.face = 2;   // linha 5 livre: parede em k = 95
+      ride(s, 0, 0xe);
+      run(s, 1, { 0: BTN.Y });
+      expect(mstate(s).projectiles).toHaveLength(1);
+      run(s, k - 1);
+      run(s, 1, { 0: BTN.Y });
+      return mstate(s).projectiles.some(pr => pr.born === s.tick);
+    };
+    expect(shotAt(30)).toBe(false);
+    expect(shotAt(70)).toBe(false);
+    expect(shotAt(134)).toBe(false);
+    expect(shotAt(135)).toBe(true);
+  });
+  it('acerto a 2 casas (nuvem em 11): Y em 50 não atira, em 51 atira', () => {
+    const shotAt = (k: number): boolean => {
+      const { s } = shoot(64);
+      run(s, k - 1);
+      run(s, 1, { 0: BTN.Y });
+      return mstate(s).projectiles.some(pr => pr.born === s.tick);
+    };
+    expect([shotAt(50), shotAt(51)]).toEqual([false, true]);
   });
   it('sem alvo: voa até a parede (nuvem em k = 95, x = 224), a nuvem dura 40 ticks e some (medido)', () => {
     const s = mkRound();

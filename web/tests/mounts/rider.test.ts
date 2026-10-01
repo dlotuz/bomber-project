@@ -69,18 +69,6 @@ describe('acerto de chama montado ($C2:4B89)', () => {
     run(s, 10, { 0: BTN.RIGHT });
     expect(p.x - x0).toBe(3520);
   });
-  it('atordoamento: onStunLoss tira a montaria (e as reservas) só em riding', () => {
-    const s = mkRound();
-    const p = placePx(s, 0, cx(2), cy(1));
-    const r = ride(s, 0, 0x3, { reserves: [2] });
-    r.phase = 'mounting';
-    expect(mountModule.onStunLoss!(s, p, [])).toBe(false);
-    r.phase = 'riding';
-    const ev: GameEvent[] = [];
-    expect(mountModule.onStunLoss!(s, p, ev)).toBe(true);
-    expect(p.mount).toBeNull();
-    expect(ev).toContainEqual({ type: 'mount', id: 'mount_lost', slot: 0, mount: 0x3, reserve: false, cause: 'stun' });
-  });
   it('quem sai de alive perde a montaria no tick', () => {
     const s = mkRound();
     const p = placePx(s, 0, cx(2), cy(1));
@@ -147,18 +135,38 @@ describe('ovo reserva queima na chama (L22)', () => {
 });
 
 describe('ajustes: montado', () => {
-  it('atordoado montado: só o atordoamento, não perde a montaria nem itens', () => {
+  // $C2:0E29: JSL $C2:51C4 (perdas) sem olhar a montaria; só depois testa +$5D para escolher a anim montada ($C2:6D84 +
+  // $C2:75D5) e segue no laço $C2:0E86 com +$5D intacto. A lista de perdas não tem montaria: a perda 1 ($C2:556C) é só o
+  // traje (+$45 bit 7) e $C2:51FC só a força com traje. Logo: montado perde 1–4 itens como a pé e continua montado.
+  it('atordoado montado: perde itens como a pé e continua montado ($C2:0E29 → $C2:51C4)', () => {
     const s = mkRound();
     const p = placePx(s, 0, cx(2), cy(1));
-    const r = ride(s, 0, 0x2);
-    p.kick = true; p.fire = 3;
+    const r = ride(s, 0, 0x2, { reserves: [0x3] });
+    Object.assign(p, { kick: true, punch: true, glove: true, fire: 4, speedLv: 4, bombsCap: 5, bombsFree: 5 });
+    const total = (): number => +p.kick + +p.punch + +p.glove + p.fire + p.speedLv + p.bombsCap;
+    const before = total();
     const ev: GameEvent[] = [];
     stunPlayer(s, p, ev);
     expect(p.act).toBe('stunned');
     expect(p.mount).toBe(r);
     expect(r.phase).toBe('riding');
-    expect([p.kick, p.fire]).toEqual([true, 3]);
+    expect(r.reserves).toEqual([0x3]);
     expect(ev.some(e => e.type === 'mount')).toBe(false);
+    const lost = before - total();
+    expect(lost).toBeGreaterThanOrEqual(1);
+    expect(lost).toBeLessThanOrEqual(4);
+    expect(s.flyers.filter(f => f.kind === 'item').length).toBe(lost);
+  });
+  it('atordoado montado: mesma sequência de perdas (e RNG) que a pé', () => {
+    const items = { kick: true, punch: true, glove: true, fire: 4, speedLv: 4, bombsCap: 5, bombsFree: 5 };
+    const a = mkRound(); const pa = placePx(a, 0, cx(2), cy(1)); Object.assign(pa, items);
+    const b = mkRound(); const pb = placePx(b, 0, cx(2), cy(1)); Object.assign(pb, items);
+    ride(b, 0, 0x2);
+    stunPlayer(a, pa, []); stunPlayer(b, pb, []);
+    expect(b.rng.seed).toBe(a.rng.seed);
+    expect([pb.kick, pb.punch, pb.glove, pb.fire, pb.speedLv, pb.bombsCap])
+      .toEqual([pa.kick, pa.punch, pa.glove, pa.fire, pa.speedLv, pa.bombsCap]);
+    expect(b.flyers.map(f => f.ref)).toEqual(a.flyers.map(f => f.ref));
   });
   it('pisar no ovo segurando bomba: larga a bomba na casa e monta de mãos vazias', () => {
     const s = mkRound();
