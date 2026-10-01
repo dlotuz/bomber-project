@@ -21,8 +21,11 @@ export function playerTick(s: RoundState, p: Player, raw: number, ev: GameEvent[
   if (p.state !== 'alive' || s.phase === 'won') { p.prevBtn = raw; return; }   // em `won` quem está de pé congela
   const invOver = tickInv(p);
   const btn = applyDiseaseInput(s, p, raw);
+  // A rotina do golpe P ($C2:2216) não pega item nem ovo: quem avança sobre eles pega no 1º tick da rotina normal
+  // (H+36; medido, aj-stop/ptiming.py). A vítima empurrada pega no caminho.
+  const inP = p.act === 'pPunch';
   playerActions(s, p, btn, btn & ~p.prevBtn, p.prevBtn & ~btn, ev);
-  pickup(s, p, ev);
+  if (!inP) pickup(s, p, ev);
   tickDisease(s, p, ev);
   checkHit(s, p, ev, invOver);
   p.prevBtn = btn;

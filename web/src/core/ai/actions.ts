@@ -89,16 +89,17 @@ function wantB(s: RoundState, p: Player, level: AiLevel, brain: Brain): boolean 
 
 // ---------------------------------------------------------------------------------------------------------------- X
 
-/** X: uma bomba chutada pela CPU, parada agora, pegaria um adversário (e não a CPU nem um colega). */
+/** X: uma bomba da CPU rolando (chutada por qualquer um: o X vale para o dono, $C1:38CE), parada agora, pegaria um
+ *  adversário (e não a CPU nem um colega). */
 function wantX(s: RoundState, p: Player, level: AiLevel): boolean {
-  const mine = s.bombs.filter(b => b.state === 'kicked' && b.kickedBy === p.slot);
+  const mine = s.bombs.filter(b => b.state === 'kicked' && b.owner === p.slot);
   if (!mine.some(b => {
     const c = cellAt(b.x, b.y);
     if (c < 0) return false;
     const w = who(s, p, new Set(crossCells(s, c, b.fire, b.type === 2, undefined, true, b.level ?? 0).cells));
     return w.foe && !w.ours;
   })) return false;
-  const sim = fork(s);                                     // o X para todas as bombas chutadas pela CPU
+  const sim = fork(s);                                     // o X para todas as bombas da CPU que estão rolando
   stopKick(sim, sim.players[p.slot]);
   return survives(sim, p.slot, level, 0);
 }

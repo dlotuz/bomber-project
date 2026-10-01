@@ -136,10 +136,18 @@ export function slideStep(s: RoundState, b: Bomb, _ev: GameEvent[]): void {
   const at = romCell(b);
   if (at < 0) return;
   if (at !== from && from >= 0 && playerOn(s, at)) { park(s, b, from); return; }
-  if (playerOn(s, at) || playerAhead(s, b, at)) park(s, b, at);
+  if (playerOn(s, at) || playerAhead(s, b, at)) { park(s, b, at); return; }
+  if (ownerHoldsX(s, b)) park(s, b, at);
 }
 
-/** Botão X: para as bombas chutadas por `p` na casa do centro delas. */
+/** Botão X ($C1:37D6 → $C1:38CE): a cada tick do deslize, depois de andar, a ROM pega o objeto do jogador da bomba
+ *  +$20 — o DONO, que o chute ($C2:4307) não troca — e testa o X segurado (+$30 bit $0040); com X, alinha a bomba na
+ *  casa ((x+8) AND $1F0) − 1 ($C1:3A3B, a conta da ROM com o centro +1 px) e para ($C1:384C). Quem chutou a bomba de
+ *  outro não a para; o dono, de qualquer lugar, para. Medido: aj-stop/stopwho.py, snap.py. `prevBtn` já é o deste tick
+ *  (os jogadores agem antes dos objetos). */
+const ownerHoldsX = (s: RoundState, b: Bomb): boolean => !!((s.players[b.owner]?.prevBtn ?? 0) & BTN.X);
+
+/** Simulação (CPU) do X de `p`: para agora as bombas dele que estão rolando, na casa do centro da conta da ROM. */
 export function stopKick(s: RoundState, p: Player): void {
-  for (const b of s.bombs) if (b.state === 'kicked' && b.kickedBy === p.slot) park(s, b, cellAt(b.x, b.y));
+  for (const b of s.bombs) if (b.state === 'kicked' && b.owner === p.slot) { const c = romCell(b); if (c >= 0) park(s, b, c); }
 }
