@@ -1,8 +1,8 @@
 import { CODE, type RoundState, type Player, type GameEvent, type PlayerAct } from '../types';
 import { setAct } from '../state';
-import { addBomb, canPlaceBomb, bombFireOf, fuseOf, explodeBomb, bombOccupies } from '../bombs';
+import { addBomb, bombAt, canPlaceBomb, bombFireOf, fuseOf, explodeBomb, bombOccupies } from '../bombs';
 import { MOUNTS } from './index';
-import { FIRE_LINE, rangeOf } from '../constants';
+import { CHAIN_DELAY, FIRE_LINE, rangeOf } from '../constants';
 import { CAPSULE_TYPES } from '../tables/misc';                 // $C1:5DA4 (gerado pelo plano 6, §3.16)
 
 export { rnd } from '../rng';
@@ -31,8 +31,14 @@ export function explodeAt(s: RoundState, cell: number, range: number, owner: num
   const fire = range === 1 ? 10 : range >= rangeOf(FIRE_LINE) ? FIRE_LINE : range - 2;
   const p = s.players[owner];
   const free = p.bombsFree;
+  // Bomba parada já na casa (ex.: a linha de bombas da montaria C caiu sob o D no mesmo tick): como o braço que chega
+  // numa bomba ($C1:40EF), ela entra na cadeia e a casa continua dela; sem isso sobrava uma bomba sob a chama, fora da
+  // grade. (Não medido na ROM.)
+  const under = s.grid[cell] === CODE.BOMB ? bombAt(s, cell) : undefined;
+  if (under && (under.chainAt === 0 || under.chainAt > s.tick + CHAIN_DELAY)) under.chainAt = s.tick + CHAIN_DELAY;
   const b = addBomb(s, owner, cell, { fire, type: 0 });
   explodeBomb(s, b, ev);
+  if (under) s.grid[cell] = CODE.BOMB;
   p.bombsFree = free;
 }
 
