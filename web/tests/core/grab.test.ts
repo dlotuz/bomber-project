@@ -124,7 +124,7 @@ describe('luva pega jogador', () => {
     const q = put(s, 1, 4, 1);
     const o = put(s, 2, 9, 1);
     addBomb(s, 2, C(9, 1));
-    run(s, 1, [BTN.A, 0, 0]); run(s, 5, [BTN.A, 0, 0]); run(s, 1, [0, 0, 0]);
+    run(s, 1, [BTN.A, 0, 0]); run(s, 8, [BTN.A, 0, 0]); run(s, 1, [0, 0, 0]);   // levantar dura 8 ticks (LIFT_TICKS, ROM)
     untilLanded(s, 1);
     expect([o.act, q.act]).toEqual(['idle', 'idle']);
   });
