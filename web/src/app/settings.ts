@@ -19,11 +19,11 @@ export interface Options {
   throwStun: boolean;    // só jogador arremessado sobre outro jogador atordoa os dois (bomba atordoa sempre)
   sleepSec: number;      // duração do soneca (montaria F), segundos (1..10); a ROM usa 3,2 s
   fx: boolean;           // efeitos visuais da batalha (luz, partículas, sombras…)
-  allMounts: boolean;    // senha 0164: ovos dos 13 tipos (Opções → Jogabilidade → Senha)
+  allMounts: boolean;    // ovos dos 13 tipos (senha 0164 do original); padrão SIM, a senha desliga e liga
 }
 
 export function defaultOptions(): Options {
-  return { randomSpawns: false, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3, fx: true, allMounts: false };
+  return { randomSpawns: false, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3, fx: true, allMounts: true };
 }
 
 /** Slots de Opções → Controles: dispositivo, teclas e botões dos 5 jogadores. */
