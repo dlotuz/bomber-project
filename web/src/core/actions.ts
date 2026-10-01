@@ -3,7 +3,7 @@ import { DETONATE_TICKS, P_ADVANCE_TICKS, P_PUSH_TICKS, P_SPEED, P_TICKS } from 
 import { cellAt, cellCenter, faceDcol, faceDlin, faceStep } from './units';
 import { playerCell, setAct, standing } from './state';
 import { movePlayer } from './movement';
-import { stopKick, tryKick } from './kick';
+import { tryKick } from './kick';
 import { detonateRemote, placeBomb } from './bombs';
 import { punchBomb, startLift, throwHeld, tossHeld } from './flyers';
 import { isImmune } from './hit';
@@ -95,7 +95,7 @@ export function playerActions(s: RoundState, p: Player, btn: number, pressed: nu
   } else if (pressed & BTN.B && !(onFoot && startLift(s, p, ev))) {   // luva sobre a bomba: B também levanta (segura enquanto apertado)
     detonateRemote(s, p, ev); setAct(s, p, 'detonate', DETONATE_TICKS);
   }
-  if (pressed & BTN.X) stopKick(s, p);
+  // X (parar o chute) não é ação do jogador: o deslize da bomba lê o X segurado do dono (kick.ts, `ownerHoldsX`).
   if (pressed & BTN.Y && !MOUNTS.current.onY(s, p, ev) && onFoot) {
     if (p.pItem) startPPunch(s, p, ev);
     else if (p.punch) punchBomb(s, p, ev);

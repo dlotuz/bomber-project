@@ -1,6 +1,6 @@
 import { arena, put, setCell, codeAt, C, withStage } from './kit';
 import { tryKick, slideStep, stopKick } from '../../src/core/kick';
-import { addBomb, tickBombs } from '../../src/core/bombs';
+import { addBomb, explodeBomb, removeBomb, tickBombs } from '../../src/core/bombs';
 import { launchBomb, punchBomb, tickFlyers } from '../../src/core/flyers';
 import { BTN, CODE, type Bomb, type GameEvent, type RoundState } from '../../src/core/types';
 import { CELLS, SUB, cellAt, cellCenter, centerX, centerY } from '../../src/core/units';
@@ -19,11 +19,39 @@ function setup(bombCol = 5, lin = 1) {
 }
 
 describe('chute (t36, t41, t91)', () => {
-  it('dispara no centro olhando para a bomba; a bomba sai da grade', () => {
+  it('dispara no centro olhando para a bomba; a bomba só sai da grade quando começa a deslizar', () => {
     const { s, p, b } = setup(); const ev: GameEvent[] = [];
     expect(tryKick(s, p, ev)).toBe(true);
-    expect([b.state, b.dir, b.kickedBy, codeAt(s, 5, 1)]).toEqual(['kicked', 2, 0, CODE.FLOOR]);
+    // $C2:4307 só muda o estado (+$1C = 2) e a direção; a grade fica $C900 até a rotina da bomba ($C1:34D0) conferir o
+    // destino e chamar $C1:532C (repõe o piso em [$28]).
+    expect([b.state, b.dir, b.kickedBy, codeAt(s, 5, 1)]).toEqual(['kicked', 2, 0, CODE.BOMB]);
     expect(ev).toEqual([{ type: 'bomb_kicked', slot: 0 }]);
+    s.tick++; tickBombs(s, ev);
+    expect([b.state, codeAt(s, 5, 1), b.x]).toEqual(['kicked', CODE.FLOOR, centerX(5) + 2 * 256]);
+  });
+  it('chutada que ainda não saiu é dona da casa: tirar do jogo limpa a grade; braço de chama a põe na cadeia', () => {
+    let k = setup();
+    tryKick(k.s, k.p, []);
+    removeBomb(k.s, k.b, true);
+    expect(codeAt(k.s, 5, 1)).toBe(CODE.FLOOR);
+    k = setup();
+    const o = addBomb(k.s, 1, C(7, 1), { fire: 1 });
+    tryKick(k.s, k.p, []);
+    explodeBomb(k.s, o, []);
+    expect(k.b.chainAt).toBeGreaterThan(0);
+  });
+  it('chute que não sai (destino bloqueado): a bomba nunca deixa a grade; quem anda depois no mesmo tick não entra nela', () => {
+    // P1 empurra para a direita a bomba encostada na parede (col 15): o chute dispara todo tick e a bomba desiste
+    // ($C1:34EB → $C1:352A, estado 0). P2 (slot maior) sobe para a casa dela no mesmo tick: a grade ainda é $C900.
+    const s = arena({ players: 2 });
+    const p = put(s, 0, 13, 1); p.kick = true; p.face = 2;
+    const b = addBomb(s, 0, C(14, 1));
+    const q = put(s, 1, 14, 2, 0, 1);
+    for (let i = 0; i < 40; i++) {
+      step(s, [BTN.RIGHT, BTN.UP, 0, 0, 0]);
+      expect(playerCell(q), `tick ${s.tick}`).toBe(C(14, 2));
+      expect([b.state, codeAt(s, 14, 1)]).toEqual(['idle', CODE.BOMB]);
+    }
   });
   it('não dispara sem Chute, 2 px antes do centro, nem com pavio 1', () => {
     let k = setup(); k.p.kick = false; expect(tryKick(k.s, k.p, [])).toBe(false);
@@ -61,11 +89,11 @@ describe('chute (t36, t41, t91)', () => {
     tryKick(s, p, []); slide(s, b, 40);
     expect(b.cell).toBe(C(6, 1));
   });
-  it('X para a bomba chutada pelo jogador na casa em que ela está', () => {
+  it('X do dono para a bomba na casa do centro (conta da ROM: +1 px)', () => {
     const { s, p, b } = setup();
     tryKick(s, p, []);
-    slide(s, b, 12);                               // centro em x = centro(5) + 24 px → casa 6
-    stopKick(s, p);
+    slide(s, b, 11);                               // centro em x = centro(5) + 22 px (ROM 102 + 8 → $6E) → casa 6
+    stopKick(s, s.players[1]);
     expect([b.state, b.cell, b.x, codeAt(s, 6, 1)]).toEqual(['idle', C(6, 1), centerX(6), CODE.BOMB]);
   });
   it('entrar em casa com chama marca a explosão para o tick seguinte', () => {
@@ -92,28 +120,28 @@ describe('chute (t36, t41, t91)', () => {
   it('parar em casa ocupada por outra bomba: estaciona na casa anterior', () => {
     const { s, p, b } = setup();
     tryKick(s, p, []);
-    slide(s, b, 12);                               // centro na casa 6; a casa 6 já tem bomba
+    slide(s, b, 11);                               // centro na casa 6; a casa 6 já tem bomba
     addBomb(s, 1, C(6, 1));
-    stopKick(s, p);
+    stopKick(s, s.players[1]);
     expect([b.state, b.cell, codeAt(s, 5, 1)]).toEqual(['idle', C(5, 1), CODE.BOMB]);
   });
   it('parar em casa de pressão ($EE80): estaciona na anterior; sem nenhuma, continua deslizando', () => {
     let k = setup();
-    tryKick(k.s, k.p, []); slide(k.s, k.b, 12);
+    tryKick(k.s, k.p, []); slide(k.s, k.b, 11);
     setCell(k.s, 6, 1, CODE.PRESSURE);
-    stopKick(k.s, k.p);
+    stopKick(k.s, k.s.players[1]);
     expect([k.b.state, k.b.cell]).toEqual(['idle', C(5, 1)]);
     k = setup();
-    tryKick(k.s, k.p, []); slide(k.s, k.b, 12);
+    tryKick(k.s, k.p, []); slide(k.s, k.b, 11);
     setCell(k.s, 6, 1, CODE.PRESSURE); addBomb(k.s, 1, C(5, 1));
-    stopKick(k.s, k.p);
+    stopKick(k.s, k.s.players[1]);
     expect(k.b.state).toBe('kicked');
   });
   it('parar sobre chama marca a explosão para o tick seguinte', () => {
     const { s, p, b } = setup();
-    tryKick(s, p, []); slide(s, b, 12);
+    tryKick(s, p, []); slide(s, b, 11);
     setCell(s, 6, 1, CODE.FLAME);
-    stopKick(s, p);
+    stopKick(s, s.players[1]);
     expect([b.state, b.cell, b.chainAt]).toEqual(['idle', C(6, 1), s.tick + 1]);
   });
   it('cenário: chutar, arremessar sobre a casa da bomba que desliza, chutar de novo, X → nunca 2 bombas na mesma casa', () => {
@@ -141,7 +169,7 @@ describe('chute (t36, t41, t91)', () => {
     expect(ev.some(e => e.type === 'bomb_bounce' && e.cell === C(5, 3))).toBe(true);
     tick(() => tryKick(s, p, ev));                            // chutar de novo: não há bomba parada em (5,3)
     while (s.tick < t0 + 22) tick();
-    tick(() => stopKick(s, p));                               // X
+    tick(() => stopKick(s, s.players[1]));                    // X do dono
     while (s.tick < t0 + 60) tick();
     expect([a.state, b.state]).toEqual(['idle', 'idle']);
     expect(a.cell).not.toBe(b.cell);
@@ -286,5 +314,85 @@ describe('evolução: duas bombas em movimento que se batem (comum+comum = D, D+
       tryKick(s, p, []); slide(s, b, 40);
       expect([t.level, b.level, b.state, b.cell], `nível ${lv}`).toEqual([0, lv, 'idle', C(7, 1)]);
     }
+  });
+});
+
+describe('X para a bomba do DONO, não a de quem chutou ($C1:37D6 → $C1:38CE)', () => {
+  // Medido no emulador (st_arena05, aj-stop/stopwho.py): o slot 0 chuta a bomba do slot 1 de (4,1) para a direita.
+  // A ROM lê o objeto do jogador da bomba +$20 (o dono; o chute $C2:4307 não o troca) e testa o X SEGURADO
+  // (+$30 bit $0040) a cada tick do deslize, depois de andar; com X, alinha na casa ((x+8) AND $1F0) − 1 ($C1:3A3B).
+  function rolling() {
+    const s = arena({ players: 2 });                     // slot 0 em (2,1), slot 1 em (14,11), longe
+    const b = addBomb(s, 1, C(4, 1)); b.born = 0;
+    b.state = 'kicked'; b.dir = 2; b.step = 0; b.kickedBy = 0; b.turn = -1; s.grid[C(4, 1)] = CODE.FLOOR;
+    return { s, b };
+  }
+  /** Roda sem botões até a bomba estar em `xPx` (nossa conta; a da ROM é +1). */
+  function until(s: RoundState, b: Bomb, xPx: number): void {
+    for (let i = 0; i < 40 && b.x !== xPx * SUB; i++) step(s, [0, 0, 0, 0, 0]);
+    expect(b.x).toBe(xPx * SUB);
+  }
+  it('quem chutou a bomba de outro aperta X: ela segue rolando', () => {
+    const { s, b } = rolling();
+    until(s, b, 85);
+    for (let i = 0; i < 4; i++) step(s, [BTN.X, 0, 0, 0, 0]);
+    expect([b.state, b.x]).toEqual(['kicked', 93 * SUB]);
+  });
+  it('o dono, longe, aperta X: ela para na casa da conta da ROM, depois de andar o tick', () => {
+    let k = rolling();
+    until(k.s, k.b, 85);                                 // ROM x = 86 → anda para 88 → (88+8) AND $1F0 = 96: casa 6
+    step(k.s, [0, BTN.X, 0, 0, 0]);
+    expect([k.b.state, k.b.cell, k.b.x, codeAt(k.s, 6, 1)]).toEqual(['idle', C(6, 1), centerX(6), CODE.BOMB]);
+    k = rolling();
+    until(k.s, k.b, 83);                                 // ROM x = 84 → 86 → (86+8) AND $1F0 = 80: casa 5
+    step(k.s, [0, BTN.X, 0, 0, 0]);
+    expect([k.b.state, k.b.cell]).toEqual(['idle', C(5, 1)]);
+  });
+  it('X segurado (não só a borda): a bomba para no tick em que o dono está com X apertado', () => {
+    const { s, b } = rolling();
+    step(s, [0, BTN.X, 0, 0, 0]);                        // X desde antes: na ROM a bomba nem sai da casa
+    const x = b.x;
+    expect([b.state, b.cell, x]).toEqual(['idle', C(4, 1), centerX(4)]);
+    for (let i = 0; i < 6; i++) step(s, [0, BTN.X, 0, 0, 0]);
+    expect([b.state, b.x]).toEqual(['idle', x]);
+  });
+  it('a própria bomba chutada por mim continua parando com o meu X', () => {
+    const { s, b } = rolling(); b.owner = 0;
+    until(s, b, 85);
+    step(s, [BTN.X, 0, 0, 0, 0]);
+    expect([b.state, b.cell]).toEqual(['idle', C(6, 1)]);
+  });
+  it('stopKick (simulação da CPU) para as bombas do dono, não as chutadas por ele', () => {
+    let k = rolling(); slide(k.s, k.b, 12);
+    stopKick(k.s, k.s.players[0]);
+    expect(k.b.state).toBe('kicked');
+    k = rolling(); slide(k.s, k.b, 12);
+    stopKick(k.s, k.s.players[1]);
+    expect(k.b.state).toBe('idle');
+  });
+});
+
+describe('Y não para a bomba rolando de outro (emulador, aj-stop/ypunch.py)', () => {
+  /** Slot 0 chuta de (2,1) a bomba do slot 1 em (4,1); o slot 1 em (8,2) olha para cima e aperta Y `d` ticks depois. */
+  function scene(item: 'punch' | 'P', d: number) {
+    const s = arena({ players: 2 });
+    const p = put(s, 0, 2, 1); p.kick = true;
+    const b = addBomb(s, 1, C(4, 1)); b.born = 0;
+    const q = put(s, 1, 8, 2); q.face = 0;
+    if (item === 'punch') q.punch = true; else q.pItem = true;
+    let t0 = -1;
+    for (let i = 0; i < 140; i++) {
+      const y = t0 >= 0 && s.tick - t0 >= d && s.tick - t0 < d + 3 ? BTN.Y : 0;
+      step(s, [t0 < 0 ? BTN.RIGHT : 0, y, 0, 0, 0]);
+      if (t0 < 0 && b.state === 'kicked') t0 = s.tick;
+    }
+    return { b, q };
+  }
+  it('soco: a bomba rolando não está na grade; o Y não a alcança e ela segue até a parede', () => {
+    for (const d of [0, 6, 12, 18, 24, 30]) expect(scene('punch', d).b.cell, `atraso ${d}`).toBe(C(14, 1));
+  });
+  it('golpe P: o avanço leva o corpo para a linha e a bomba para antes dele, como no original (corpo, não o Y)', () => {
+    const { b, q } = scene('P', 0);                     // ROM: o slot 1 vai a y = 47 (lin 1) e a bomba para em x = 108
+    expect([playerCell(q), b.state, b.cell]).toEqual([C(8, 1), 'idle', C(7, 1)]);
   });
 });

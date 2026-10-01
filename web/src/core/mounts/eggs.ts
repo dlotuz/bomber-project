@@ -55,6 +55,7 @@ export function stepOnEgg(s: RoundState, p: Player, cell: number, ev: GameEvent[
     const nr: MountRider = { type: t, slot: freeSlot(s) || 1, phase: 'mounting', t0: s.tick, reserves: [], trail: [], cooldown: 0, remount: false, remountFx: null };
     p.mount = nr;
     p.x = centerX(colOf(cell)); p.y = centerY(linOf(cell));   // choca embaixo: o jogador vai para o centro do ovo
+    p.push.left = 0;   // a rotina de montar ($C2:261E) substitui a do empurrão do P ($C2:1F36): para no ovo (pvict.py)
     if (p.carry >= 0) dropHeld(s, p);   // montado não usa luva: a bomba da mão fica na casa do ovo
     if (p.grab >= 0) releaseGrab(s, p);   // ... e quem estava na mão é solto
     lockAct(s, p, 'mounting', MOUNTING_TICKS);

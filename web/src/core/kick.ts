@@ -4,7 +4,7 @@ import { KICK_STEP } from './tables/flights';
 import { FUSE, KICK_STEPS, MAX_LEVEL } from './constants';
 import { SUB, cellAt, cellCenter, faceStep, subX, subY } from './units';
 import { isEggCode, isItemCode, playerCell, standing } from './state';
-import { bombAt, bombOccupies, removeBomb } from './bombs';
+import { bombAt, bombOccupies, kickPending, removeBomb } from './bombs';
 import { STAGES } from './stages';
 import { MOUNTS } from './mounts';
 
@@ -34,8 +34,9 @@ export function tryKick(s: RoundState, p: Player, ev: GameEvent[]): boolean {
   if (s.grid[n] !== CODE.BOMB) return false;
   const b = bombAt(s, n);
   if (!b || !kickable(s, p, b)) return false;
+  // Como $C2:4307: só o estado e a direção. A grade continua $C900 até o deslize sair de fato (`slideStep`), então
+  // quem anda depois no mesmo tick ainda esbarra nela — e, se o destino estiver bloqueado, ela nunca sai da grade.
   b.state = 'kicked'; b.dir = p.face; b.step = 0; b.kickedBy = p.slot; b.turn = -1;
-  s.grid[n] = CODE.FLOOR;
   ev.push({ type: 'bomb_kicked', slot: p.slot });
   return true;
 }
@@ -46,6 +47,10 @@ const parkable = (s: RoundState, b: Bomb, c: number): boolean =>
 /** Estaciona a bomba chutada em `cell`; se a casa está ocupada por outra bomba ou não é piso/chama (ex.: a pressão
  *  $EE80 caiu nela), na casa anterior do deslize. Se nenhuma serve, devolve false e a bomba continua chutada. */
 function park(s: RoundState, b: Bomb, cell: number): boolean {
+  if (cell === b.cell && kickPending(s, b)) {      // chute que não saiu ($C1:352A): volta ao estado 0 onde está
+    b.state = 'idle'; b.step = 0; b.turn = -1;
+    return true;
+  }
   const back = faceStep(cell, (b.dir + 4) & 7);
   const c = parkable(s, b, cell) ? cell : parkable(s, b, back) ? back : -1;
   if (c < 0) return false;
@@ -111,6 +116,7 @@ export function slideStep(s: RoundState, b: Bomb, _ev: GameEvent[]): void {
     if (typeof verdict === 'object') b.turn = verdict.turn;
     if (isItemCode(v)) s.grid[next] = CODE.FLOOR;         // item esmagado
     if (v === CODE.FLAME) b.chainAt = s.tick + 1;
+    if (kickPending(s, b)) s.grid[b.cell] = CODE.FLOOR;   // saiu de fato: $C1:353C → $C1:532C repõe o piso
   }
   const from = romCell(b);
   const [dx, dy] = KICK_STEP[b.dir >> 1][b.step];
@@ -130,10 +136,18 @@ export function slideStep(s: RoundState, b: Bomb, _ev: GameEvent[]): void {
   const at = romCell(b);
   if (at < 0) return;
   if (at !== from && from >= 0 && playerOn(s, at)) { park(s, b, from); return; }
-  if (playerOn(s, at) || playerAhead(s, b, at)) park(s, b, at);
+  if (playerOn(s, at) || playerAhead(s, b, at)) { park(s, b, at); return; }
+  if (ownerHoldsX(s, b)) park(s, b, at);
 }
 
-/** Botão X: para as bombas chutadas por `p` na casa do centro delas. */
+/** Botão X ($C1:37D6 → $C1:38CE): a cada tick do deslize, depois de andar, a ROM pega o objeto do jogador da bomba
+ *  +$20 — o DONO, que o chute ($C2:4307) não troca — e testa o X segurado (+$30 bit $0040); com X, alinha a bomba na
+ *  casa ((x+8) AND $1F0) − 1 ($C1:3A3B, a conta da ROM com o centro +1 px) e para ($C1:384C). Quem chutou a bomba de
+ *  outro não a para; o dono, de qualquer lugar, para. Medido: aj-stop/stopwho.py, snap.py. `prevBtn` já é o deste tick
+ *  (os jogadores agem antes dos objetos). */
+const ownerHoldsX = (s: RoundState, b: Bomb): boolean => !!((s.players[b.owner]?.prevBtn ?? 0) & BTN.X);
+
+/** Simulação (CPU) do X de `p`: para agora as bombas dele que estão rolando, na casa do centro da conta da ROM. */
 export function stopKick(s: RoundState, p: Player): void {
-  for (const b of s.bombs) if (b.state === 'kicked' && b.kickedBy === p.slot) park(s, b, cellAt(b.x, b.y));
+  for (const b of s.bombs) if (b.state === 'kicked' && b.owner === p.slot) { const c = romCell(b); if (c >= 0) park(s, b, c); }
 }

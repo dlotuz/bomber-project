@@ -3,6 +3,8 @@ import { stage6, st6 } from '../../src/core/stages/stage6';
 import { stage6Ai } from '../../src/core/ai/stages/stage6';
 import { BTN, CODE, type GameEvent } from '../../src/core/types';
 import { cellOf, centerX, px } from '../../src/core/units';
+import { addBomb } from '../../src/core/bombs';
+import { playerCell } from '../../src/core/state';
 import { fallbackLayers } from '../../src/render/battle-layers';
 import '../../src/render/fallback/stages/stage6';
 import { stageArena, fullRound, put, run, setCell, stageEvents, mirror, fakeCtx } from './kit';
@@ -99,6 +101,20 @@ describe('arena 6: efeitos [D10, D11]', () => {
     expect(px(p.y)).toBe(111);                          // eixo perpendicular alinhado
     run(s, 13);
     expect(px(p.x)).toBe(95);
+  });
+  it('1C0A: bomba que aparece na casa de destino no meio do empurrão: para no centro da casa atual, não entra nela', () => {
+    // $C2:1E6D–$C2:1E92: a cada tick do empurrão, objeto bomba ([$38] bit $4000) na casa da frente → $C2:1F08 alinha
+    // X e Y no centro da casa ATUAL e volta ao estado normal ($C2:22F0). Antes, o alinhamento final do empurrão ia para
+    // o centro do destino mesmo depois de o empurrão parar, e o jogador era posto dentro da bomba.
+    const s = stageArena(6);
+    s.floor[cellOf(5, 5)] = 0x1c0a;
+    const p = put(s, 0, 5, 5, -7, 0);
+    p.face = 2;
+    stage6.onStand!(s, p, cellOf(5, 5), []);
+    run(s, 2);
+    addBomb(s, 1, cellOf(6, 5));                        // alguém pôs uma bomba no destino
+    for (let i = 0; i < 20; i++) { run(s, 1); expect(playerCell(p), `tick ${s.tick}`).toBe(cellOf(5, 5)); }
+    expect(px(p.x)).toBe(79);                           // centro da (5,5)
   });
   it('1C0A: não empurra se a casa da frente tem bit $8000', () => {
     const s = stageArena(6);
