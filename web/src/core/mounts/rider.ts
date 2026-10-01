@@ -29,15 +29,6 @@ export function onHit(s: RoundState, p: Player, ev: GameEvent[]): boolean {
   return true;
 }
 
-/** Atordoamento (§3.10, L15): a montaria é a perda "montaria ou traje"; some com as reservas, sem voar. */
-export function onStunLoss(s: RoundState, p: Player, ev: GameEvent[]): boolean {
-  const r = rider(p);
-  if (!r || r.phase !== 'riding') return false;
-  p.mount = null;
-  ev.push(mev({ id: 'mount_lost', slot: p.slot, mount: r.type, reserve: false, cause: 'stun' }));
-  return true;
-}
-
 function updateTrail(p: Player, r: MountRider): void {
   const c = cellAt(p.x, p.y);
   if (r.trail[0] !== c) {

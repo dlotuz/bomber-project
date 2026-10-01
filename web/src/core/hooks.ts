@@ -31,7 +31,6 @@ export interface MountModule {
   stepOnEgg(s: RoundState, p: Player, cell: number, ev: GameEvent[]): void;
   onHit(s: RoundState, p: Player, ev: GameEvent[]): boolean;               // true = absorveu o golpe
   onY(s: RoundState, p: Player, ev: GameEvent[]): boolean;                 // true = consumiu o Y
-  onStunLoss?(s: RoundState, p: Player, ev: GameEvent[]): boolean;         // true = perdeu a montaria no atordoamento
   passes?(p: Player, code: number): boolean;                                // tipo 2 atravessa soft
   bombType?(p: Player): 0 | 1 | 2 | null;                                   // tipo 3: bomba perfurante
   kicks?(p: Player): boolean;                                               // tipo A
