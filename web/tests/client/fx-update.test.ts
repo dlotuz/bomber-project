@@ -65,3 +65,13 @@ describe('fxUpdate', () => {
     expect([a.dx, a.dy]).toEqual([b.dx, b.dy]);
   });
 });
+
+import { flameIntensity } from '../../src/render/fx/draw';
+describe('luz da chama', () => {
+  it('sobe em 2 ticks, apaga no fim', () => {
+    expect(flameIntensity(0)).toBe(0.5);
+    expect(flameIntensity(1)).toBe(1);
+    expect(flameIntensity(24)).toBeLessThan(0.05);
+    expect(flameIntensity(25)).toBe(0);
+  });
+});
