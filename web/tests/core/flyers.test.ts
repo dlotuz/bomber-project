@@ -88,11 +88,11 @@ describe('soco (t42, t43, t49)', () => {
 });
 
 describe('luva (t48)', () => {
-  it('levanta em 4 ticks; a bomba sai da grade e fica na mão', () => {
+  it('levantar trava 8 ticks ($C2:3692); a bomba sai da grade e fica na mão', () => {
     const s = arena(); const p = put(s, 0, 4, 1); p.glove = true;
     const b = addBomb(s, 0, C(4, 1));
     expect(startLift(s, p, [])).toBe(true);
-    expect([b.state, p.carry, codeAt(s, 4, 1), p.act, p.actLeft]).toEqual(['held', b.id, CODE.FLOOR, 'lift', 4]);
+    expect([b.state, p.carry, codeAt(s, 4, 1), p.act, p.actLeft]).toEqual(['held', b.id, CODE.FLOOR, 'lift', 8]);
     expect(startLift(s, p, [])).toBe(false);
   });
   it('sem alvo: 5 casas em 12 ticks (horizontal) e 11 ticks (vertical)', () => {

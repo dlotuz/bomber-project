@@ -15,12 +15,12 @@ function untilLanded(s: RoundState, slot: number, max = 200): void {
   for (let i = 0; i < max && s.players[slot].flying; i++) run(s, 1);
 }
 
-describe('luva pega jogador (extra)', () => {
+describe('luva pega jogador', () => {
   it('A com outro jogador na mesma casa: pega, ele acompanha, e ao soltar A é arremessado 5 casas', () => {
     const { s, p, q } = pair();
     run(s, 1, [BTN.A, 0]);
     expect([p.grab, q.heldBy, q.act]).toEqual([1, 0, 'held']);
-    run(s, 6, [BTN.A | BTN.RIGHT, 0]);
+    run(s, 9, [BTN.A | BTN.RIGHT, 0]);   // levantar: 8 ticks travado (ROM $C2:3692); anda em T+9
     expect([q.x, q.y]).toEqual([p.x, p.y]);
     run(s, 1, [0, 0]);
     expect(q.flying).toBe(true);
@@ -68,14 +68,14 @@ describe('luva pega jogador (extra)', () => {
   it('cair num bloco de pressão (mapa fechando) mata', () => {
     const { s, q } = pair();
     setCell(s, 9, 1, CODE.PRESSURE);
-    run(s, 1, [BTN.A, 0]); run(s, 5, [BTN.A, 0]); run(s, 1, [0, 0]);
+    run(s, 1, [BTN.A, 0]); run(s, 8, [BTN.A, 0]); run(s, 1, [0, 0]);
     untilLanded(s, 1);
     expect(q.state).toBe('dying');
   });
   it('cair num bloco quica para a casa seguinte e continua vivo', () => {
     const { s, q } = pair();
     setCell(s, 9, 1, CODE.SOFT);
-    run(s, 1, [BTN.A, 0]); run(s, 5, [BTN.A, 0]); run(s, 1, [0, 0]);
+    run(s, 1, [BTN.A, 0]); run(s, 8, [BTN.A, 0]); run(s, 1, [0, 0]);
     untilLanded(s, 1);
     expect([q.state, playerCell(q)]).toEqual(['alive', C(10, 1)]);
   });
@@ -83,7 +83,7 @@ describe('luva pega jogador (extra)', () => {
     const s = arena({ players: 2 });
     const p = put(s, 0, 12, 1); p.glove = true; p.face = 2;
     const q = put(s, 1, 12, 1);
-    run(s, 1, [BTN.A, 0]); run(s, 5, [BTN.A, 0]); run(s, 1, [0, 0]);
+    run(s, 1, [BTN.A, 0]); run(s, 8, [BTN.A, 0]); run(s, 1, [0, 0]);
     untilLanded(s, 1, 400);
     expect([q.flying, q.state]).toEqual([false, 'alive']);
     expect(s.grid[playerCell(q)]).toBe(CODE.FLOOR);
@@ -102,7 +102,7 @@ describe('luva pega jogador (extra)', () => {
     const p = put(s, 0, 4, 1); p.glove = true; p.face = 2;
     const q = put(s, 1, 4, 1);
     const o = put(s, 2, 9, 1);
-    run(s, 1, [BTN.A, 0, 0]); run(s, 5, [BTN.A, 0, 0]); run(s, 1, [0, 0, 0]);
+    run(s, 1, [BTN.A, 0, 0]); run(s, 8, [BTN.A, 0, 0]); run(s, 1, [0, 0, 0]);
     untilLanded(s, 1);
     expect([o.act, q.act]).toEqual(['idle', 'idle']);
     expect(playerCell(q)).not.toBe(C(9, 1));
@@ -113,7 +113,7 @@ describe('luva pega jogador (extra)', () => {
     const p = put(s, 0, 4, 1); p.glove = true; p.face = 2;
     const q = put(s, 1, 4, 1);
     const o = put(s, 2, 9, 1);
-    run(s, 1, [BTN.A, 0, 0]); run(s, 5, [BTN.A, 0, 0]); run(s, 1, [0, 0, 0]);
+    run(s, 1, [BTN.A, 0, 0]); run(s, 8, [BTN.A, 0, 0]); run(s, 1, [0, 0, 0]);
     untilLanded(s, 1);
     expect([o.act, q.act]).toEqual(['stunned', 'stunned']);
   });
@@ -134,14 +134,14 @@ describe('luva pega jogador (extra)', () => {
     const p = put(s, 0, 4, 1); p.glove = true; p.face = 2;
     put(s, 1, 7, 1);
     addBomb(s, 0, C(4, 1));
-    run(s, 1, [BTN.A, 0]); run(s, 5, [BTN.A, 0]); run(s, 1, [0, 0]);
+    run(s, 1, [BTN.A, 0]); run(s, 8, [BTN.A, 0]); run(s, 1, [0, 0]);
     let stunned = false;
     for (let i = 0; i < 80 && !stunned; i++) { run(s, 1); stunned = s.players[1].act === 'stunned'; }
     expect(stunned).toBe(true);
   });
   it('B segurando jogador: larga na própria casa; ele cai em 52 ticks (pulo de perder montaria), imune, e ganha 32 de invencibilidade', () => {
     const { s, p, q } = pair();
-    run(s, 1, [BTN.A, 0]); run(s, 5, [BTN.A, 0]);
+    run(s, 1, [BTN.A, 0]); run(s, 8, [BTN.A, 0]);
     run(s, 1, [BTN.A | BTN.B, 0]);
     expect([p.grab, q.heldBy, q.act, playerCell(q)]).toEqual([-1, -1, 'dropped', playerCell(p)]);
     setCell(s, 4, 1, CODE.FLAME);
@@ -157,7 +157,7 @@ describe('luva pega jogador (extra)', () => {
     const s = arena({ players: 2 });
     const q = put(s, 0, 4, 1);
     const p = put(s, 1, 4, 1); p.glove = true; p.face = 2;
-    run(s, 1, [0, BTN.A]); run(s, 5, [0, BTN.A]);
+    run(s, 1, [0, BTN.A]); run(s, 8, [0, BTN.A]);
     run(s, 1, [0, BTN.A | BTN.B]);
     expect(q.act).toBe('dropped');
     run(s, 50);

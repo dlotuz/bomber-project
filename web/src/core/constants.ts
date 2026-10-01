@@ -33,7 +33,9 @@ export const PRESSURE_STEPS_SD = 143;
 export const fallTicks = (lin: number): number => 36 + 2 * lin;
 export const TIME_MINUTES = [1, 2, 3, 5, 30];
 export const CLOCK_FROZEN_FROM = 600;
-export const LIFT_TICKS = 4;
+/** Luva, levantar (bomba ou jogador): estado $C2:3692 até o fim da anim $C2:7515 — 8 ticks na pose; em T+8 o jogador
+ *  volta ao estado normal ainda parado e anda (ou arremessa, se soltou o A) em T+9. A bomba sobe nos 4 primeiros. */
+export const LIFT_TICKS = 8;
 export const THROW_TICKS = 20;
 export const PUNCH_TICKS = 8;
 export const DETONATE_TICKS = 3;
