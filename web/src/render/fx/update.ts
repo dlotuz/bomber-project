@@ -8,6 +8,8 @@ const SHAKE_ADD = 1.2, SHAKE_MAX = 3, SHAKE_DECAY = 0.85, SHAKE_MIN = 0.3;
 const FLASH_STEP = 1 / 6;
 const SPARK_COLORS = [0xfff2a0, 0xffc040, 0xff8a2a];
 const hex = (s: string): number => Number.parseInt(s.slice(1), 16);
+/** Cor 0xRRGGBB do jogador (as mesmas das etiquetas nP). */
+export const playerColor = (slot: number): number => hex(PLAYER_COLORS[slot] ?? '#ffffff');
 
 function explosion(fx: FxState, cell: number): void {
   const x = cellX(cell), y = cellY(cell);
@@ -41,7 +43,7 @@ function dust(fx: FxState, cell: number): void {
 
 function burst(fx: FxState, round: RoundState, slot: number): void {
   const p = round.players[slot];
-  const x = entX(p.x), y = entY(p.y) - 8 - p.z, color = hex(PLAYER_COLORS[slot]);
+  const x = entX(p.x), y = entY(p.y) - 8 - p.z, color = playerColor(slot);
   for (let k = 0; k < 24; k++) {
     const a = rand(fx) * Math.PI * 2, v = between(fx, 0.8, 2.4);
     spawn(fx, { kind: PART.BURST, color, life: 30, x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 0.5, g: 0.05, size: between(fx, 1.5, 2.5) });

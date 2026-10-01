@@ -1,6 +1,6 @@
 import type { App, Screen } from '../app/app';
 import { beginRound, endRound, closeMatch, type MatchSession } from '../game/match-session';
-import { BTN, step, aiInputs, phaseElapsed, eventType, isDraw, drawReason, crownsOf, type RoundState } from '../game/core-api';
+import { BTN, CODE, step, aiInputs, phaseElapsed, eventType, isDraw, drawReason, crownsOf, type RoundState } from '../game/core-api';
 import {
   introBrightness, hurryX, hurryVisible, timeUpY, BANNER, PAUSE, WIN_END, DRAW_TIME_END, DRAW_DEAD_END,
 } from '../game/timeline';
@@ -37,6 +37,15 @@ export function battleScreen(app: App, ms: MatchSession): BattleScreen {
   const fx = createFx();
   let last: { bank: SpriteBank; frame: number } | null = null;
   const NO_ACTORS = { sprites: false, layers: [] };
+  // Na ROM a bomba parada é tile de fundo: o quadro "sem atores" usa uma cópia da rodada sem bombas (objeto estável,
+  // para a memória de congelamento por rodada do render da ROM continuar valendo).
+  const bombless = { ...round };
+  const withoutBombs = (): RoundState => {
+    Object.assign(bombless, round);
+    bombless.grid = round.grid.map(v => (v === CODE.BOMB ? CODE.FLOOR : v));
+    bombless.bombs = [];
+    return bombless;
+  };
   let paused = false, ended = false, quitHold = 0;
   let disconnected: number | null = null;
   let prevConn: boolean[] | null = null;
@@ -76,7 +85,7 @@ export function battleScreen(app: App, ms: MatchSession): BattleScreen {
     drawNoActors(ctx) {
       if (!last) return;
       const a = romState.assets, crowns = crownsOf(ms.match);
-      if (!(a && drawRomBattle(ctx, round, { crowns }, a, last.frame, NO_ACTORS))) {
+      if (!(a && drawRomBattle(ctx, withoutBombs(), { crowns }, a, last.frame, NO_ACTORS))) {
         drawRound(ctx, round, view, last.bank, ms.cfg.chars, last.frame, [...crowns], { actors: false });
       }
       drawBombLevels(ctx, last.bank, round);

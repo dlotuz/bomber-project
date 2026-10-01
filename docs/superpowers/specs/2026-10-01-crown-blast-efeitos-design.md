@@ -99,8 +99,14 @@ Cor por item: fogo laranja, bomba azul, velocidade verde, doença (caveira) roxo
 Tabela de 10 entradas (arena 1..10): cor + força (0..0,25), aplicada com `'multiply'` sobre o retângulo do campo
 (y ≥ 24, a HUD fica fora). A escuridão máxima é 25% para não atrapalhar a leitura do jogo.
 
-### 4.8 Ordem de desenho
-base (com tremor) → sombras → clima → luzes e brilho dos itens → partículas → flash.
+### 4.8 Cor das bombas
+O corpo de cada bomba (parada, chutada ou em voo) é repintado na cor do dono (`PLAYER_COLORS[owner]`), pixel a pixel,
+mantendo o sombreado. Só pixels de ator (máscara de chão) com cor de corpo (escura, não preta, sem dominância de vermelho
+ou de verde puro), num raio de 7 px do centro. Contorno preto, brilho e pavio ficam como na arte. Na ROM a bomba parada
+é tile de fundo: o quadro "sem atores" usa uma cópia da rodada com as casas de bomba como piso.
+
+### 4.9 Ordem de desenho
+base (com tremor) → sombras → cor das bombas → clima → luzes e brilho dos itens → partículas → flash.
 Clima, luzes e flash só cobrem o retângulo do campo.
 
 ## 5. Opção

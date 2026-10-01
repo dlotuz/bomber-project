@@ -185,6 +185,10 @@ async function effects(h) {
     await h.step(8);
     await h.shot(`29-fx-explosao-${String(stage).padStart(2, '0')}-b`);
   }
+  // Bombas na cor de cada jogador: várias bombas paradas na arena.
+  await h.open('quick&fx=1&seed=5&players=5&humans=0&level=1&stage=1');
+  await h.stepUntil(c => c.ms.round.bombs.filter(b => b.state === 'idle').length >= 3, 3000);
+  await h.shot('30-fx-bombas-cor');
 }
 
 // SNAP_ONLY=effects,arenas roda só esses cenários.

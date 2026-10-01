@@ -1,8 +1,10 @@
 import { CODE, FLAME_PIECE, FLAME_TICKS, ITEM, isEggCode, isItemCode, itemOfCode } from '../../core';
 import { SCREEN_H, SCREEN_W } from '../display';
 import { ambientFill } from './ambient';
-import { FIELD_TOP, cellX, cellY } from './coords';
-import { drawShadows } from './shadows';
+import { FIELD_TOP, cellX, cellY, entX, entY } from './coords';
+import { tintBomb } from './bomb-tint';
+import { actorMask, drawShadows, type ActorMask } from './shadows';
+import { playerColor } from './update';
 import { flameLight, halo, puff, rgb } from './sprites';
 import { MAX_PARTS, PART, type FxFrame, type FxState } from './state';
 
@@ -57,12 +59,36 @@ function particles(out: CanvasRenderingContext2D, fx: FxState, fade: number): vo
   }
 }
 
-/** Ordem da spec §4.8: sombras → clima → luzes/halo → partículas → flash; tudo abaixo do HUD. */
+let tintCtx: CanvasRenderingContext2D | null = null;
+
+/** Corpo de cada bomba (parada, chutada ou em voo) na cor do dono; contorno, brilho e pavio ficam como na arte. */
+function bombColors(out: CanvasRenderingContext2D, frame: FxFrame, m: ActorMask, fade: number): void {
+  const r = frame.round, at: [number, number, number][] = [];
+  for (const b of r.bombs) if (b.state === 'idle' || b.state === 'kicked') at.push([entX(b.x), entY(b.y), b.owner]);
+  for (const f of r.flyers) {
+    const b = f.kind === 'bomb' ? r.bombs.find(q => q.id === f.ref) : undefined;
+    if (b) at.push([entX(f.x), entY(f.y) + f.z, b.owner]);
+  }
+  if (!at.length) return;
+  if (!tintCtx) { const c = document.createElement('canvas'); c.width = c.height = 16; tintCtx = c.getContext('2d')!; }
+  const img = tintCtx.createImageData(16, 16);
+  out.globalCompositeOperation = 'source-over';
+  out.globalAlpha = fade;
+  for (const [x, y, owner] of at) {
+    img.data.set(tintBomb(m.base, m.ground, SCREEN_W, x, y, playerColor(owner)));
+    tintCtx.putImageData(img, 0, 0);
+    out.drawImage(tintCtx.canvas, x - 8, y - 8);
+  }
+}
+
+/** Ordem da spec §4.8: sombras → cor das bombas → clima → luzes/halo → partículas → flash; tudo abaixo do HUD. */
 export function drawFx(out: CanvasRenderingContext2D, frame: FxFrame, base: CanvasRenderingContext2D, fade: number): void {
   const fx = frame.state, s = out.getTransform().a;
   if (!fx.shadowsOff) {
     const t0 = performance.now();
-    drawShadows(out, frame, base, fade, s);
+    const m = actorMask(frame, base);
+    drawShadows(out, frame, m, fade, s);
+    bombColors(out, frame, m, fade);
     fx.costSum += performance.now() - t0;
     if (++fx.costN === SHADOW_WINDOW) {
       if (fx.costSum / SHADOW_WINDOW > SHADOW_BUDGET_MS) fx.shadowsOff = true;
