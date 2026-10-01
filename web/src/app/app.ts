@@ -3,6 +3,7 @@ import type { SpriteBank } from '../render/sprite-bank';
 import type { Settings } from './settings';
 import type { AudioSink } from './rom-api';
 import { AudioDirector } from './audio';
+import type { FxFrame } from '../render/fx/state';
 
 export interface Screen {
   id: string;
@@ -11,6 +12,8 @@ export interface Screen {
   /** Brilho 0..15 fora das transições (padrão 15). A partida usa para o intro. */
   brightness?(): number;
   frozen?(): boolean;
+  /** Efeitos visuais por cima da base (spec 2026-10-01); só a batalha implementa. */
+  fx?(): FxFrame | null;
 }
 
 /** Ação agendada numa transição; `at` conta do 1º frame da saída (0). */

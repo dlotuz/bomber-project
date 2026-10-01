@@ -100,10 +100,10 @@ export function buildBattleFrame(s: RoundState, vis: RomBattleVis, a: RomAssets,
 
 const images = new WeakMap<CanvasRenderingContext2D, ImageData>();
 
-export function drawRomBattle(ctx: CanvasRenderingContext2D, round: RoundState, vis: RomBattleVis, assets: RomAssets, frame: number): boolean {
+export function drawRomBattle(ctx: CanvasRenderingContext2D, round: RoundState, vis: RomBattleVis, assets: RomAssets, frame: number, opts: BuildOpts = {}): boolean {
   let f: PpuFrame;
   try {
-    f = buildBattleFrame(round, vis, assets, frame);
+    f = buildBattleFrame(round, vis, assets, frame, opts);
   } catch (e) {
     // M1: a chave do aviso vive em `assets`, então uma ROM nova (outro objeto) volta a avisar se falhar de novo.
     warnOnce(assets, 'frame', 'Crown Blast: gráficos da ROM indisponíveis nesta partida; usando a arte própria.', e);

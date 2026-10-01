@@ -10,6 +10,7 @@ import { parseConfig } from './game/config';
 import { createMatchSession, carry, type MatchSession } from './game/match-session';
 import { InputManager, buildInput, emptyDevices, idleInput, withEscapeAsBack } from './input/input';
 import { createDisplay } from './render/display';
+import { present } from './render/fx/present';
 import { SpriteBank } from './render/sprite-bank';
 import { titleScreen } from './screens/title';
 import { battleScreen } from './screens/battle';
@@ -47,8 +48,15 @@ const audioStart = createAudioStarter({
 for (const ev of ['keydown', 'pointerdown', 'pointerup', 'click'] as const) window.addEventListener(ev, () => audioStart.gesture());
 onRomChange(() => audioStart.romChanged());
 
-const ctx = createDisplay(document.getElementById('screen') as HTMLCanvasElement);
+const display = createDisplay(document.getElementById('screen') as HTMLCanvasElement);
+const ctx = display.ctx;
 const bank = new SpriteBank();
+// ?fx=0 desliga os efeitos nesta sessão (debug e capturas fiéis).
+const fxOff = params.get('fx') === '0';
+const render = (): void => {
+  app.draw(ctx, bank);
+  present(display, fxOff ? null : app.screen.fx?.() ?? null, app.brightness() / 15);
+};
 // ?quick abre direto numa partida com as regras da URL (ver parseConfig); sem ele, começa no título.
 if (params.has('quick')) app.go(battleScreen(app, createMatchSession(parseConfig(window.location.search))));
 else app.transition(() => titleScreen(app), { out: [], black: 0, in: FADE_IN_1 });
@@ -68,7 +76,7 @@ if (import.meta.env.DEV && params.has('debug')) {
         if (k === 0 && btn) { inp.any = inp.pressedAny = btn; inp.pads[slot] = inp.pressed[slot] = btn; }
         app.update(inp);
       }
-      app.draw(ctx, bank);
+      render();
     },
   };
   // F9: baixa a rodada atual (regras, estado e cérebros da IA) em JSON, para reproduzir um bug fora do navegador.
@@ -92,4 +100,4 @@ startLoop(() => {
   if (inp.pressedAny) audioStart.gesture();        // botão do controle também conta como gesto (M6)
   app.update(inp);
   prev = cur;
-}, () => app.draw(ctx, bank));
+}, render);

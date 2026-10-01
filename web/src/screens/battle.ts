@@ -14,6 +14,11 @@ import { drawBattleOverlays, drawBombLevels } from '../render/draw-screens';
 import { scoreboardScreen } from './scoreboard';
 import { drawScreen } from './draw';
 import { stageScreen } from './stage';
+import type { SpriteBank } from '../render/sprite-bank';
+import { sampleBase } from '../render/display';
+import { cellX, cellY } from '../render/fx/coords';
+import { createFx, type FxFrame } from '../render/fx/state';
+import { DEBRIS_COLOR, fxUpdate } from '../render/fx/update';
 
 export interface Banners {
   hurry: { x: number; y: number } | null;
@@ -28,6 +33,10 @@ export type BattleScreen = Screen & {
 export function battleScreen(app: App, ms: MatchSession): BattleScreen {
   const round = beginRound(ms);
   const view = createView();
+  // Efeitos visuais (spec 2026-10-01): estado próprio, avançado a cada tick; o quadro "sem atores" alimenta a sombra.
+  const fx = createFx();
+  let last: { bank: SpriteBank; frame: number } | null = null;
+  const NO_ACTORS = { sprites: false, layers: [] };
   let paused = false, ended = false, quitHold = 0;
   let disconnected: number | null = null;
   let prevConn: boolean[] | null = null;
@@ -62,12 +71,26 @@ export function battleScreen(app: App, ms: MatchSession): BattleScreen {
     timeUp: timeUpT0 >= 0 ? { y: timeUpY(round.tick - timeUpT0), text: timeUpLabel() } : null,
   });
 
+  const fxFrame: FxFrame = {
+    state: fx, round,
+    drawNoActors(ctx) {
+      if (!last) return;
+      const a = romState.assets, crowns = crownsOf(ms.match);
+      if (!(a && drawRomBattle(ctx, round, { crowns }, a, last.frame, NO_ACTORS))) {
+        drawRound(ctx, round, view, last.bank, ms.cfg.chars, last.frame, [...crowns], { actors: false });
+      }
+      drawBombLevels(ctx, last.bank, round);
+      drawBattleOverlays(ctx, last.bank, { paused, disconnected, ...banners() });
+    },
+  };
+
   return {
     id: 'battle', ms,
     get round() { return round; }, get paused() { return paused; }, get disconnected() { return disconnected; },
     banners,
     brightness: () => (round.phase === 'intro' ? introBrightness(phaseElapsed(round)) : 15),
     frozen: () => paused,
+    fx: () => (app.settings.options.fx ? fxFrame : null),
     update(inp) {
       if (ended) return;
       // Só a borda conectado → desconectado de um humano com gamepad pausa (R19); quem já começa desligado, não.
@@ -93,6 +116,7 @@ export function battleScreen(app: App, ms: MatchSession): BattleScreen {
       const pads = [0, 1, 2, 3, 4].map(i => (ms.cfg.humans[i] ? inp.pads[i] & ~(BTN.START | BTN.SELECT) : ai[i]));
       const ev = step(round, pads);
       updateView(view, round, ev);
+      fxUpdate(fx, round, ev, c => sampleBase(cellX(c), cellY(c), DEBRIS_COLOR));
       app.audio.playEvents(ev);
       for (const e of ev) {
         if (eventType(e) === 'hurry') hurryT0 = round.tick;
@@ -101,6 +125,7 @@ export function battleScreen(app: App, ms: MatchSession): BattleScreen {
       if (round.phase === 'over') endOfRound();
     },
     draw(ctx, bank, frame) {
+      last = { bank, frame };
       const a = romState.assets;
       const crowns = crownsOf(ms.match);
       if (!(a && drawRomBattle(ctx, round, { crowns }, a, frame))) {
