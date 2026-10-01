@@ -113,16 +113,17 @@ export function charactersScreen(app: App): Screen & {
         }
       }
       const ctrl = scheme.controllingSlot();
-      // Cursores "[ ]" (4 cantos, fillRect) com a etiqueta nP na cor de quem está escolhendo cada vaga ainda aberta.
+      // Cursores "[ ]" (4 cantos, fillRect) na cor de cada vaga ainda aberta, com a etiqueta nP da vaga (não do
+      // controle que a escolhe — o controlador escolhe pela fila de CPUs).
       for (const i of scheme.activeIdx) {
         if (scheme.confirmed[i]) continue;
         const driver = scheme.selfPicking(i) ? i : i === ctrl ? scheme.controller : null;
         if (driver === null) continue;
         const k = setup.chars[i];
         const x = CHARSEL_GRID.x[k % COLS], y = CHARSEL_GRID.y[Math.floor(k / COLS)];
-        const color = PLAYER_COLORS[driver];
+        const color = PLAYER_COLORS[i];
         drawCornerCursor(ctx, x - 2, y - 2, CHARSEL_GRID.cellW - 12, CHARSEL_GRID.cellH - 4, color);
-        drawText(ctx, bank, 'ascii8', S.chars.tags[driver], x - 3, y - 10, { color, bare: true });
+        drawText(ctx, bank, 'ascii8', S.chars.tags[i], x - 3, y - 10, { color, bare: true });
       }
       // `bare` (M1, revisão final): igual a Opções/Remapeamento — sem o campo opaco do `ascii8`, como na ROM.
       drawText(ctx, bank, 'ascii8', scheme.activeIdx.every(i => scheme.confirmed[i]) ? S.chars.allReady : S.chars.help,
