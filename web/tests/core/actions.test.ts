@@ -81,7 +81,7 @@ describe('máquina de ação', () => {
       const b = addBomb(s, 0, C(4, 1)); startLift(s, p, []); setAct(s, p, 'carryIdle');
       const ev: GameEvent[] = [];
       playerActions(s, p, BTN.A | BTN.B, BTN.B, 0, ev);
-      expect([p.carry, p.act]).toEqual([-1, 'idle']);
+      expect([p.carry, p.act, p.actLeft]).toEqual([-1, 'detonate', 1]);   // pose do B ($C2:36CA), anda em T+2
       playerActions(s, p, 0, 0, BTN.A, ev);                        // soltar A depois não arremessa nada
       expect(p.act).not.toBe('throw');
       for (let i = 0; i < 20; i++) { s.tick++; tickFlyers(s, ev); }

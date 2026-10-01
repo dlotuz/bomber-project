@@ -1,4 +1,4 @@
-// grab.ts — extra (não original): a luva também pega outro jogador na mesma casa, segura, arremessa ou larga.
+// grab.ts — a luva também pega outro jogador na mesma casa (a ROM faz o mesmo: $C2:3DD9 → $C2:3E92), segura, arremessa ou larga.
 // Quem está na mão ou voando não toma chama, não pega item e não conta como obstáculo; aperta B
 // Rules.gloveEscape vezes para se soltar. Só o A pega jogador; quem está segurando B ("trancar") não pode ser pego.
 import { BTN, type FlightId, type GameEvent, type Player, type RoundState } from './types';
@@ -30,12 +30,20 @@ export function tryGrab(s: RoundState, p: Player, _ev: GameEvent[]): boolean {
   p.grab = q.slot; p.throwQueued = false;
   q.heldBy = p.slot; q.escape = 0; q.push.left = 0;
   setAct(s, q, 'held', GRAB_LOCK);
-  follow(p, q);
+  follow(s, p, q);
   setAct(s, p, 'lift', LIFT_TICKS);
   return true;
 }
 
-function follow(p: Player, q: Player): void { q.x = p.x; q.y = p.y; q.z = HELD_Z; q.face = p.face; }
+/** Quem é pego sobe nos 8 ticks do levantar (T..T+7) balançando para o lado em que quem segura olha (só na
+ *  horizontal) e, em T+8, dá um pulo de 3 px; medido na ROM (objeto do pego em $C2:1A72 → $C2:1AE7). [dx, z] em px. */
+const RISE: readonly (readonly [number, number])[] = [[2, 3], [4, 6], [6, 8], [8, 10], [6, 12], [4, 14], [2, 15], [0, 16], [2, 19]];
+
+function follow(s: RoundState, p: Player, q: Player): void {
+  const [dx, z] = RISE[s.tick - q.actT0] ?? [0, HELD_Z];
+  const side = p.face === 2 ? 1 : p.face === 6 ? -1 : 0;
+  q.x = p.x + dx * side * 256; q.y = p.y; q.z = z; q.face = p.face;
+}
 
 /** Solta quem está na mão na casa de quem segura (dano, atordoamento, montaria, fim da rodada, fuga). */
 export function releaseGrab(s: RoundState, p: Player): void {
@@ -93,7 +101,7 @@ export function tickHeld(s: RoundState): void {
     if (p.grab < 0) continue;
     const q = s.players[p.grab];
     if (!standing(p) || !q || !standing(q)) { releaseGrab(s, p); continue; }
-    follow(p, q);
+    follow(s, p, q);
   }
 }
 
