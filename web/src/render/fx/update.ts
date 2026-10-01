@@ -4,15 +4,15 @@ import { cellX, cellY, entX, entY } from './coords';
 import { PART, between, clearFx, rand, spawn, type FxState } from './state';
 
 export const DEBRIS_COLOR = 0x8a6a3a;
-const SHAKE_ADD = 2.5, SHAKE_MAX = 6, SHAKE_DECAY = 0.85, SHAKE_MIN = 0.3;
+const SHAKE_ADD = 1.2, SHAKE_MAX = 3, SHAKE_DECAY = 0.85, SHAKE_MIN = 0.3;
 const FLASH_STEP = 1 / 6;
 const SPARK_COLORS = [0xfff2a0, 0xffc040, 0xff8a2a];
 const hex = (s: string): number => Number.parseInt(s.slice(1), 16);
 
 function explosion(fx: FxState, cell: number): void {
   const x = cellX(cell), y = cellY(cell);
-  for (let k = 0; k < 18; k++) {
-    const a = rand(fx) * Math.PI * 2, v = between(fx, 1.5, 3);
+  for (let k = 0; k < 10; k++) {
+    const a = rand(fx) * Math.PI * 2, v = between(fx, 1, 2.2);
     spawn(fx, { kind: PART.SPARK, color: SPARK_COLORS[k % 3], life: Math.round(between(fx, 14, 24)),
       x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: 0.08, size: between(fx, 1, 2) });
   }

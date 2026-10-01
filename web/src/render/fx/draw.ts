@@ -7,7 +7,7 @@ import { flameLight, halo, puff, rgb } from './sprites';
 import { MAX_PARTS, PART, type FxFrame, type FxState } from './state';
 
 const SHADOW_BUDGET_MS = 12, SHADOW_WINDOW = 60;
-const LIGHT_R = 24, LIGHT_ALPHA = 0.55, HALO_R = 14;
+const LIGHT_R = 22, LIGHT_ALPHA = 0.3, HALO_R = 14;
 
 function itemColor(v: number): number {
   if (isEggCode(v)) return 0xffe08a;
@@ -31,7 +31,7 @@ function lights(out: CanvasRenderingContext2D, frame: FxFrame, fade: number): vo
     const v = r.grid[c];
     if (v === CODE.FLAME) {
       const k = flameIntensity(r.tick - r.cellT0[c]);
-      const rad = r.cellAux[c] === FLAME_PIECE.CENTER ? LIGHT_R * 1.5 : LIGHT_R;
+      const rad = r.cellAux[c] === FLAME_PIECE.CENTER ? LIGHT_R * 1.25 : LIGHT_R;
       out.globalAlpha = k * LIGHT_ALPHA * fade;
       out.drawImage(flameLight(), cellX(c) - rad, cellY(c) - rad, rad * 2, rad * 2);
     } else if (isItemCode(v)) {

@@ -6,10 +6,10 @@ const boom = (cell: number) => ({ type: 'explosion' as const, cell, owner: 0 });
 const round = () => createRound(1, defaultRules(), makeRng());
 
 describe('fxUpdate', () => {
-  it('explosão gera 18 faíscas + 6 fumaças e tremor', () => {
+  it('explosão gera 10 faíscas + 6 fumaças e tremor', () => {
     const r = round(), fx = createFx();
     fxUpdate(fx, r, [boom(cellOf(5, 5))]);
-    expect(liveCount(fx)).toBe(24);
+    expect(liveCount(fx)).toBe(16);
     expect(fx.shake).toBeGreaterThan(0);
   });
   it('tudo some e o tremor zera depois de 60 ticks', () => {
@@ -37,11 +37,11 @@ describe('fxUpdate', () => {
     expect(fx.flash).toBe(1);
     expect(liveCount(fx)).toBe(24);
   });
-  it('cadeia: teto de 600 partículas e de 6 px de tremor', () => {
+  it('cadeia: teto de 600 partículas e de 3 px de tremor', () => {
     const r = round(), fx = createFx();
     fxUpdate(fx, r, Array.from({ length: 40 }, () => boom(cellOf(7, 7))));
     expect(liveCount(fx)).toBe(600);
-    expect(fx.shake).toBeLessThanOrEqual(6);
+    expect(fx.shake).toBeLessThanOrEqual(3);
   });
   it('TIME UP e fim de rodada não geram efeitos novos', () => {
     const r = round(), fx = createFx();

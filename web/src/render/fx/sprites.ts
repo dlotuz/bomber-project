@@ -14,7 +14,7 @@ export function radial(key: string, stops: readonly (readonly [number, string])[
   return c;
 }
 export const rgb = (c: number): string => `${(c >> 16) & 255}, ${(c >> 8) & 255}, ${c & 255}`;
-export const flameLight = () => radial('flame', [[0, 'rgba(255, 240, 170, 1)'], [0.35, 'rgba(255, 170, 60, 0.6)'], [1, 'rgba(255, 90, 20, 0)']]);
+export const flameLight = () => radial('flame', [[0, 'rgba(255, 200, 110, 0.8)'], [0.35, 'rgba(255, 150, 50, 0.45)'], [1, 'rgba(255, 90, 20, 0)']]);
 export const halo = (c: number) => radial(`halo${c}`, [[0, `rgba(${rgb(c)}, 0.9)`], [1, `rgba(${rgb(c)}, 0)`]]);
 export const puff = () => radial('puff', [[0, 'rgba(90, 90, 96, 0.55)'], [1, 'rgba(90, 90, 96, 0)']]);
 export const shadowBlob = () => radial('shadow', [[0, 'rgba(0, 0, 0, 0.4)'], [0.6, 'rgba(0, 0, 0, 0.3)'], [1, 'rgba(0, 0, 0, 0)']]);

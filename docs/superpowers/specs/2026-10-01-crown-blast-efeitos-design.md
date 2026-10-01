@@ -64,15 +64,15 @@ constantes no topo de cada arquivo para ajuste.
 
 ### 4.1 Luz das chamas
 Cada casa `CODE.FLAME` emite luz quente (sprite radial pré-renderizado, centro amarelo → borda laranja → transparente),
-raio ≈ 24 px, `globalCompositeOperation = 'lighter'`. Intensidade pela idade da chama: sobe em 2 ticks e cai até 0 no
-fim (`FLAME_TICKS`). Centro (`FLAME_PIECE.CENTER`) com raio ×1,5.
+raio ≈ 22 px, opacidade 0,3, `globalCompositeOperation = 'lighter'`. Intensidade pela idade da chama: sobe em 2 ticks e cai até 0 no
+fim (`FLAME_TICKS`). Centro (`FLAME_PIECE.CENTER`) com raio ×1,25.
 
 ### 4.2 Tremor de tela
-`explosion` soma 2,5 px ao tremor (teto 6 px); decai ×0,85 por tick e zera abaixo de 0,3. Deslocamento do frame =
+`explosion` soma 1,2 px ao tremor (teto 3 px); decai ×0,85 por tick e zera abaixo de 0,3. Deslocamento do frame =
 inteiro aleatório em ±tremor (RNG do fx), sorteado no `fxUpdate`. Com `prefers-reduced-motion: reduce`, deslocamento 0.
 
 ### 4.3 Partículas
-- **Explosão:** 18 faíscas (amarelo→laranja, vida 14–24, velocidade 1,5–3 px/tick, gravidade 0,08) e 6 baforadas de
+- **Explosão:** 10 faíscas (amarelo→laranja, vida 14–24, velocidade 1–2,2 px/tick, gravidade 0,08) e 6 baforadas de
   fumaça (cinza, sobem 0,3 px/tick, crescem de 3 a 10 px, vida 36–48).
 - **Bloco quebrando:** casa que vira `CODE.BURNING` com `cellAux === BURN.SOFT` (diferença da grade entre ticks):
   8 detritos quadrados de 2–3 px, cor amostrada do canvas de base no centro da casa, saltam e caem com gravidade 0,2,
