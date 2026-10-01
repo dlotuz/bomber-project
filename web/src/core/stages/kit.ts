@@ -63,7 +63,7 @@ export function stun(s: RoundState, p: Player, ev: GameEvent[]): void { stunPlay
 export function shock(s: RoundState, p: Player, ev: GameEvent[]): void {
   if (p.state !== 'alive' || isImmune(s, p)) return;
   p.push = { vx: 0, vy: 0, left: 0 };
-  stunPlayer(s, p, ev);
+  stunPlayer(s, p, ev, true);   // $C2:319B não passa por $C2:59D6 (comportamento de antes, não conferido contra +$96)
   setAct(s, p, 'shocked', p.actLeft > 0 ? p.actLeft : STUN_TICKS);
   stageEvent(ev, 'a5_shock', { slot: p.slot });
 }

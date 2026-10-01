@@ -19,12 +19,12 @@ export function playerTick(s: RoundState, p: Player, raw: number, ev: GameEvent[
   if (!p.present || p.state === 'bad') return;   // o Bad Bomber lê a entrada em tickBadBombers
   if (p.state === 'dying') { tickDeath(s, p, ev); p.prevBtn = raw; return; }
   if (p.state !== 'alive' || s.phase === 'won') { p.prevBtn = raw; return; }   // em `won` quem está de pé congela
-  tickInv(p);
+  const invOver = tickInv(p);
   const btn = applyDiseaseInput(s, p, raw);
   playerActions(s, p, btn, btn & ~p.prevBtn, p.prevBtn & ~btn, ev);
   pickup(s, p, ev);
   tickDisease(s, p, ev);
-  checkHit(s, p, ev);
+  checkHit(s, p, ev, invOver);
   p.prevBtn = btn;
 }
 
