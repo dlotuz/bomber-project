@@ -1,11 +1,22 @@
 import { arena, put, setCell, C } from '../kit';
 import { blockedUntil, dangerMap, SAFE, kickPath, pressureCells } from '../../../src/core/ai/danger';
 import { addBomb, burnCell } from '../../../src/core/bombs';
+import { punchBomb } from '../../../src/core/flyers';
 import { step } from '../../../src/core/step';
 import { BURN_TICKS } from '../../../src/core/constants';
 import { BURN, CODE } from '../../../src/core/types';
 
 describe('mapa de perigo (offsets a partir do próximo tick)', () => {
+  it('bomba no ar que cai num bloco de pressão some ($C1:27D7): não é perigo; em piso, é', () => {
+    for (const code of [CODE.PRESSURE, CODE.FLOOR]) {
+      const s = arena(); const p = put(s, 0, 4, 1); p.punch = true; p.face = 2;
+      addBomb(s, 0, C(5, 1)); setCell(s, 8, 1, code);
+      punchBomb(s, p, []);
+      const d = dangerMap(s, 1);
+      if (code === CODE.FLOOR) expect(d[C(8, 1)]).toBeLessThan(SAFE);
+      else expect([d[C(8, 1)], d[C(9, 1)], d[C(10, 1)]]).toEqual([SAFE, SAFE, SAFE]);   // nada de quique por cima
+    }
+  });
   it('bomba recém-colocada: cruz letal a partir do offset 128; resto seguro', () => {
     const s = arena(); addBomb(s, 0, C(6, 1));
     const d = dangerMap(s);

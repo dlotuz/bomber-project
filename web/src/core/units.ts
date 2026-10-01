@@ -30,9 +30,20 @@ export const SPAWNS: readonly (readonly [number, number])[] = [[2, 1], [14, 11],
 export const spawnX = (col: number): number => 16 * col * SUB;
 export const spawnY = (lin: number): number => 16 * (lin + 2) * SUB;
 
-/** Volta pela borda: 17 colunas (272 px) e 13 linhas (208 px). */
+/** Volta pela borda: 17 colunas (272 px) e 14 linhas (224 px) — a grade da ROM tem uma linha 13 ($EC40 em todas as
+ *  arenas) abaixo da parede de baixo, fora da tela; `$C2:3221` lê a linha de (y − 24) mod 224. */
 export const WRAP_X = 272 * SUB;
-export const WRAP_Y = 208 * SUB;
+export const WRAP_Y = 224 * SUB;
+
+/** Volta pela borda dos voadores ($C1:6566), em px da ROM com a bomba no centro da casa (16·col): x < −12 → +272,
+ *  x ≥ 268 → −272; y < 12 → +224, y ≥ 244 → −224. O núcleo guarda o centro 1 px antes (16·col − 1): limiares
+ *  −13/267 e 11/243. As linhas −1 e 13 (fora de `inGrid`) são a linha 13 da ROM: parede. */
+export function wrapFlight(x: number, y: number): [number, number] {
+  const X = px(x), Y = px(y);
+  if (X < -13) x += WRAP_X; else if (X >= 267) x -= WRAP_X;
+  if (Y < 11) y += WRAP_Y; else if (Y >= 243) y -= WRAP_Y;
+  return [x, y];
+}
 
 const FACE_DCOL = [0, 0, 1, 0, 0, 0, -1, 0];
 const FACE_DLIN = [-1, 0, 0, 0, 1, 0, 0, 0];

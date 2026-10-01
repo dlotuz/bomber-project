@@ -1,8 +1,10 @@
-import { arena, put, setCell, codeAt, C } from './kit';
+import { arena, put, setCell, codeAt, run, C } from './kit';
 import { punchBomb, startLift, throwHeld, tossHeld, aimThrow, tickFlyers, spawnItemFlyer, dropHeld } from '../../src/core/flyers';
 import { addBomb, bombById } from '../../src/core/bombs';
 import { CODE, type GameEvent, type RoundState } from '../../src/core/types';
 import { itemCode } from '../../src/core/state';
+import { triggerPressure } from '../../src/core/pressure';
+import { PRESSURE_BORDER_AT } from '../../src/core/constants';
 
 function fly(s: RoundState, n: number, ev: GameEvent[] = []): GameEvent[] {
   for (let i = 0; i < n; i++) { s.tick++; tickFlyers(s, ev); }
@@ -54,22 +56,37 @@ describe('soco (t42, t43, t49)', () => {
     fly(s, 40); expect(b.state).toBe('air');
     fly(s, 1); expect([b.state, b.cell]).toEqual(['idle', C(2, 3)]);
   });
-  it('volta pela borda: da lin 2 para cima, com jogador em (2,11), pousa na lin 10 (t49)', () => {
+  // Emulador (st_arena05): a bomba sobe até y = 16 (linha −1 → linha 13 da grade da ROM, $EC40, em $C2:3221) e quica;
+  // volta pela borda em y < 12 (+224, $C1:6566), quica na parede (lin 12), no jogador (lin 11) e pousa em T+41.
+  it('volta pela borda: da lin 2 para cima, com jogador em (2,11), pousa na lin 10 em 17 + 3 × 8 (t49)', () => {
     const { s, p, b } = punchSetup([2, 2], [2, 3], 0, 4);
     put(s, 3, 2, 11);
     punchBomb(s, p, []);
-    const ev = fly(s, 33);
+    const ev = fly(s, 40);
+    expect(b.state).toBe('air');
+    ev.push(...fly(s, 1));
     expect([b.state, b.cell]).toEqual(['idle', C(2, 10)]);
-    expect(ev.filter(e => e.type === 'bomb_bounce').length).toBe(2);
+    expect(ev.filter(e => e.type === 'bomb_bounce').length).toBe(3);
   });
-  it('pouso em bloco queimando: a bomba some', () => {
+  it('volta pela borda: da lin 10 para baixo quica na linha 13 (fora da tela) e na parede; pousa na lin 1 em T+33', () => {
+    const { s, p, b } = punchSetup([2, 10], [2, 9], 4);
+    punchBomb(s, p, []);
+    const ys: number[] = [];
+    for (let i = 0; i < 32; i++) { fly(s, 1); if (s.flyers[0]) ys.push(Math.floor(s.flyers[0].y / 256)); }
+    expect(b.state).toBe('air');
+    // ROM: 240 (linha 13) no fim do soco; 241 → 246 vira 22 (−224); núcleo = ROM − 1 px
+    expect(ys.slice(14, 23)).toEqual([239, 239, 239, 237, 237, 240, 21, 26, 31]);
+    fly(s, 1);
+    expect([b.state, b.cell]).toEqual(['idle', C(2, 1)]);
+  });
+  // $C1:27F2: $EDC0 tem o bit $0800 → quica ($C1:2868). Emulador: com (8,1) = $EDC0 a bomba quica e pousa em (9,1).
+  it('pouso em bloco queimando: quica como em bloco ($EDC0 tem o bit $0800)', () => {
     const { s, p, b } = punchSetup([5, 1], [4, 1], 2);
     setCell(s, 8, 1, CODE.BURNING);
     punchBomb(s, p, []);
-    fly(s, 17);
-    expect(bombById(s, b.id)).toBeUndefined();
-    expect(s.flyers).toEqual([]);
-    expect(p.bombsFree).toBe(1);
+    const ev = fly(s, 17 + 8);
+    expect([b.state, b.cell]).toEqual(['idle', C(9, 1)]);
+    expect(ev.filter(e => e.type === 'bomb_bounce').length).toBe(1);
   });
   it('pouso em chama: vira bomba e explode em 2 ticks', () => {
     const { s, p, b } = punchSetup([5, 1], [4, 1], 2);
@@ -163,15 +180,81 @@ describe('itens voando ($C1:6715)', () => {
     expect(codeAt(s, 13, 5)).toBe(itemCode(0x03));
     expect(s.flyers).toEqual([]);
   });
-  it('casa ocupada quica; bloco queimando some', () => {
+  // $C1:66A9: casa com bit $0800 (bloco, queimando $EDC0, bomba, item) segue com o script de quique ($C1:666B)
+  it('casa ocupada quica, também bloco queimando', () => {
     const s = arena(); setCell(s, 13, 5, CODE.SOFT);
     spawnItemFlyer(s, 0x21, C(8, 5), 1);
     fly(s, 20);
     expect(codeAt(s, 14, 5)).toBe(itemCode(0x21));
     const s2 = arena(); setCell(s2, 13, 5, CODE.BURNING);
     spawnItemFlyer(s2, 0x03, C(8, 5), 1);
-    fly(s2, 12);
-    expect([s2.flyers.length, codeAt(s2, 13, 5)]).toEqual([0, CODE.BURNING]);
+    fly(s2, 20);
+    expect([s2.flyers.length, codeAt(s2, 13, 5), codeAt(s2, 14, 5)]).toEqual([0, CODE.BURNING, itemCode(0x03)]);
+  });
+  // $C1:6683: pressão ($EE80) antes de tudo → $C1:2888 → $C1:5C2F (o item some)
+  it('cair em bloco de pressão: o item some', () => {
+    const s = arena(); setCell(s, 13, 5, CODE.PRESSURE);
+    spawnItemFlyer(s, 0x03, C(8, 5), 1);
+    fly(s, 12);
+    expect([s.flyers.length, codeAt(s, 13, 5), codeAt(s, 14, 5)]).toEqual([0, CODE.PRESSURE, CODE.FLOOR]);
+  });
+});
+
+// Relato: "bomba caindo do outro lado da tela na morte súbita". A ROM testa a pressão antes de tudo no pouso
+// ($C1:27D7: [$28] & $EFC0 = $EE80 → $C1:2871): a bomba some ($C1:5C2F, nuvem $D8:D327) e volta ao dono ($C1:5588).
+// O núcleo quicava por cima dos blocos de pressão, dava a volta e pousava do outro lado.
+describe('pouso em bloco de pressão ($C1:27D7)', () => {
+  it('soco em bloco de pressão no campo: a bomba some em T+17, sem quique, e volta ao dono', () => {
+    const { s, p, b } = punchSetup([5, 1], [4, 1], 2);
+    setCell(s, 8, 1, CODE.PRESSURE);
+    p.bombsFree = 0;                             // a bomba no ar é a única dele
+    punchBomb(s, p, []);
+    fly(s, 16); expect(b.state).toBe('air');
+    const ev = fly(s, 1);
+    expect(bombById(s, b.id)).toBeUndefined();
+    expect([s.flyers.length, p.bombsFree, codeAt(s, 8, 1), codeAt(s, 9, 1)]).toEqual([0, 1, CODE.PRESSURE, CODE.FLOOR]);
+    expect(ev.filter(e => e.type === 'bomb_bounce' || e.type === 'bomb_landed')).toEqual([]);
+  });
+  it('soco para cima com a parede de baixo em pressão: quica na linha 13 e some na lin 12 em T+25 (emulador)', () => {
+    const { s, p, b } = punchSetup([2, 2], [2, 3], 0);
+    setCell(s, 2, 12, CODE.PRESSURE);
+    punchBomb(s, p, []);
+    fly(s, 24); expect(b.state).toBe('air');
+    fly(s, 1);
+    expect(bombById(s, b.id)).toBeUndefined();
+    expect(s.bombs.filter(x => x.state === 'idle')).toEqual([]);
+  });
+  it('soco para baixo com a parede de cima em pressão: quica na linha 13 e some na lin 0 em T+25 (emulador)', () => {
+    const { s, p, b } = punchSetup([2, 10], [2, 9], 4);
+    setCell(s, 2, 0, CODE.PRESSURE);
+    punchBomb(s, p, []);
+    fly(s, 24); expect(b.state).toBe('air');
+    fly(s, 1);
+    expect(bombById(s, b.id)).toBeUndefined();
+  });
+  it('quique em bloco de pressão também some (bomba que já quicou num bloco)', () => {
+    const { s, p, b } = punchSetup([5, 1], [4, 1], 2);
+    setCell(s, 8, 1, CODE.SOFT); setCell(s, 9, 1, CODE.PRESSURE);
+    punchBomb(s, p, []);
+    fly(s, 17 + 8);
+    expect(bombById(s, b.id)).toBeUndefined();
+    expect(codeAt(s, 10, 1)).toBe(CODE.FLOOR);
+  });
+  it('morte súbita real: luva para cima da lin 3, 5 casas, cai na parede de baixo (pressão desde T+192) e some', () => {
+    for (const stage of [1, 5, 9]) {
+      const s = arena({ stage, players: 2 });
+      triggerPressure(s, []);
+      run(s, PRESSURE_BORDER_AT + 1);
+      expect(codeAt(s, 4, 12)).toBe(CODE.PRESSURE);
+      const p = put(s, 0, 4, 3); p.glove = true; p.face = 0;
+      const b = addBomb(s, 0, C(4, 3)); startLift(s, p, []);
+      p.bombsFree = 0;
+      throwHeld(s, p, []);
+      run(s, 30);
+      expect(bombById(s, b.id)).toBeUndefined();
+      expect(s.bombs.some(x => x.owner === 0)).toBe(false);
+      expect([codeAt(s, 4, 11), codeAt(s, 4, 10), p.bombsFree]).toEqual([CODE.FLOOR, CODE.FLOOR, 1]);
+    }
   });
 });
 
