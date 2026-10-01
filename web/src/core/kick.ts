@@ -14,6 +14,17 @@ export const canKick = (p: Player): boolean => p.kick || !!MOUNTS.current.kicks?
 export const kickLocked = (s: RoundState, p: Player, b: Bomb): boolean =>
   b.owner !== p.slot && !!(s.players[b.owner]?.prevBtn & BTN.X);
 
+/** Jogador de pé na casa `c` (a grade de ocupação $7F:1000, bits $90/$92 do objeto do jogador, marcados em
+ *  $C2:33FC/$C2:5E84 na casa +$80 do centro). */
+export const playerOn = (s: RoundState, c: number): boolean =>
+  s.players.some(q => standing(q) && q.heldBy < 0 && !q.flying && playerCell(q) === c);
+
+/** `p` pode chutar a bomba parada `b`: pavio > 1 ($C2:43A3), dono sem X segurado (extra) e ninguém de pé na casa dela:
+ *  o deslize ($C1:34D0) chama $C1:33FD, que lê a ocupação da própria casa (AND #$3FF0) e, com jogador nela, desiste
+ *  ($C1:352A: estado 0, sem o som $0D). Medido: o dono parado sobre a bomba, o outro empurra 30 ticks e ela não sai. */
+export const kickable = (s: RoundState, p: Player, b: Bomb): boolean =>
+  b.fuse > 1 && !kickLocked(s, p, b) && !playerOn(s, b.cell);
+
 /** Chute automático ($C2:4307): depois do movimento, olhando para uma bomba parada vizinha. */
 export function tryKick(s: RoundState, p: Player, ev: GameEvent[]): boolean {
   if (!canKick(p)) return false;
@@ -22,7 +33,7 @@ export function tryKick(s: RoundState, p: Player, ev: GameEvent[]): boolean {
   const n = faceStep(here, p.face);
   if (s.grid[n] !== CODE.BOMB) return false;
   const b = bombAt(s, n);
-  if (!b || b.fuse <= 1 || kickLocked(s, p, b)) return false;
+  if (!b || !kickable(s, p, b)) return false;
   b.state = 'kicked'; b.dir = p.face; b.step = 0; b.kickedBy = p.slot; b.turn = -1;
   s.grid[n] = CODE.FLOOR;
   ev.push({ type: 'bomb_kicked', slot: p.slot });
@@ -76,7 +87,7 @@ export function slideStep(s: RoundState, b: Bomb, _ev: GameEvent[]): void {
     const v = s.grid[next] ?? CODE.HARD;
     const blocked = (v & 0x8400) !== 0 || isEggCode(v)
       || bombOccupies(s, next, b)
-      || s.players.some(q => standing(q) && q.heldBy < 0 && !q.flying && playerCell(q) === next);
+      || playerOn(s, next);
     const verdict = blocked ? 'stop' : STAGES[s.stage]?.kickedBombEnter?.(s, b, next) ?? 'go';
     if (verdict === 'stop') { park(s, b, b.cell); return; }      // sem casa para parar: tenta de novo no próximo tick
     if (typeof verdict === 'object') b.turn = verdict.turn;

@@ -5,7 +5,7 @@ import { DETONATE_TICKS, FUSE, LIFT_TICKS, P_TICKS, PUNCH_TICKS, THROW_TICKS } f
 import { cellAt, cellCenter, colOf, faceStep, inField, linOf } from '../units';
 import { playerCell, standing } from '../state';
 import { bombAt } from '../bombs';
-import { canKick, kickLocked, stopKick } from '../kick';
+import { canKick, kickable, stopKick } from '../kick';
 import { aimThrow, handFrom } from '../flyers';
 import { MOUNTS } from '../mounts';
 import { SAFE, crossCells, firstLanding, hazards, kickPath, type Hazard } from './danger';
@@ -214,7 +214,7 @@ export function kickWorth(s: RoundState, p: Player, face: number, level: AiLevel
   const n = faceStep(from, face);
   if (s.grid[n] !== CODE.BOMB) return false;
   const b = bombAt(s, n);
-  if (!b || b.fuse <= 1 || b.chainAt || kickLocked(s, p, b)) return false;
+  if (!b || b.chainAt || !kickable(s, p, b)) return false;   // inclui: ninguém em cima dela ($C1:33FD)
   const sim = fork(s);
   const sb = sim.bombs.find(x => x.id === b.id)!;
   sb.state = 'kicked'; sb.dir = face as Bomb['dir']; sb.step = 0; sb.kickedBy = p.slot; sb.turn = -1;

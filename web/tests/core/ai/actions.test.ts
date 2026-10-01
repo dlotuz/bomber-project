@@ -1,6 +1,8 @@
 import { arena, put, setCell, C, withStage, withMount } from '../kit';
 import { play } from './simkit';
 import { createAi, aiInputs } from '../../../src/core/ai';
+import { kickWorth } from '../../../src/core/ai/actions';
+import { AI_LEVELS } from '../../../src/core/ai/level';
 import { crossCells } from '../../../src/core/ai/danger';
 import { addBomb } from '../../../src/core/bombs';
 import { BTN, CODE } from '../../../src/core/types';
@@ -11,6 +13,16 @@ import { step } from '../../../src/core/step';
 const CPU0 = [true, false, false, false, false];
 
 describe('IA: ações (§9.3)', () => {
+  it('chute: não planeja chutar bomba com jogador em cima ($C1:33FD)', () => {
+    const scene = (occupied: boolean) => {
+      const s = arena({ players: 3 }); const p = put(s, 0, 4, 3); p.kick = true; p.face = 2;
+      addBomb(s, 1, C(5, 3), { fuse: 90 });
+      put(s, 1, occupied ? 5 : 9, occupied ? 3 : 9);
+      return kickWorth(s, p, 2, AI_LEVELS[2], 'rescue');
+    };
+    expect(scene(false)).toBe(true);
+    expect(scene(true)).toBe(false);
+  });
   it('soco: bomba à frente e adversário no pouso → Y', () => {
     const s = arena(); const p = put(s, 0, 4, 3); p.punch = true; p.face = 2; put(s, 1, 8, 3);
     addBomb(s, 1, C(5, 3), { fuse: 90 });

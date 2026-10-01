@@ -147,6 +147,28 @@ describe('chute (t36, t41, t91)', () => {
   });
 });
 
+describe('jogador em cima da bomba: ninguém a chuta ($C1:34F0 → $C1:33FD)', () => {
+  it('outro jogador parado na casa da bomba: o chute não sai; saiu da casa, chuta', () => {
+    const { s, p, b } = setup();                // p (slot 0) anda contra a bomba do slot 1 em (5,1)
+    const q = put(s, 1, 5, 1);                  // o dono parado sobre a própria bomba
+    const ev: GameEvent[] = [];
+    expect(tryKick(s, p, ev)).toBe(false);
+    expect([b.state, codeAt(s, 5, 1), ev]).toEqual(['idle', CODE.BOMB, []]);
+    q.x += 7 * 256;                             // fora do centro, mas ainda na casa: continua travada
+    expect(tryKick(s, p, [])).toBe(false);
+    put(s, 1, 5, 3);                            // saiu da casa
+    expect(tryKick(s, p, [])).toBe(true);
+  });
+  it('vale para qualquer ocupante (atravessa-bomba) e não para morto ou em voo', () => {
+    let k = setup(); const q = put(k.s, 2, 5, 1); q.passBomb = true;
+    expect(tryKick(k.s, k.p, [])).toBe(false);
+    k = setup(); put(k.s, 1, 5, 1).state = 'dying';
+    expect(tryKick(k.s, k.p, [])).toBe(true);
+    k = setup(); put(k.s, 1, 5, 1).flying = true;
+    expect(tryKick(k.s, k.p, [])).toBe(true);
+  });
+});
+
 describe('X segurado: minha bomba não pode ser chutada pelos outros', () => {
   it('dono segurando X: outro jogador não chuta; eu mesmo chuto; soltou X, chuta', () => {
     const { s, p, b } = setup();                // p (slot 0) chuta a bomba do slot 1
