@@ -3,7 +3,7 @@ import type { Player } from '../types';
 import { mountAiHints } from '../ai/mounts';
 import { ABILITIES } from './abilities';
 import { revealEgg, stepOnEgg, stealReserves } from './eggs';
-import { onHit, onStunLoss, tickRiders } from './rider';
+import { onHit, tickRiders } from './rider';
 import { mstate, rider, EGG_BURST_TICKS, type MountRider } from './types';
 
 function riding(p: Player): MountRider | null {
@@ -15,7 +15,6 @@ export const mountModule: MountModule = {
   revealEgg,
   stepOnEgg,
   onHit,
-  onStunLoss,
   onY(s, p, ev) {
     const r = riding(p);
     const ab = r ? ABILITIES[r.type] : undefined;

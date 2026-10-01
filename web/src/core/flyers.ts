@@ -85,7 +85,10 @@ function land(s: RoundState, f: Flyer, ev: GameEvent[]): void {
   const b = bombById(s, f.ref);
   if (!b) { drop(); return; }
   if (!out && v === CODE.BURNING) { drop(); removeBomb(s, b, true); return; }
-  const victims = out ? [] : s.players.filter(q => grounded(q) && playerCell(q) === cell);
+  // $C1:27A4: casa com bit $0800 (bomba $C900, bloco, item, caveira) ou com bomba chutada ([$38] bit $4000) quica
+  // ($C1:2868) antes do teste de jogador ($C1:280B → $C1:294D): quem está sobre uma bomba não é atordoado.
+  const blocked = out || (v & 0x0800) !== 0 || bombOccupies(s, cell);
+  const victims = blocked ? [] : s.players.filter(q => grounded(q) && playerCell(q) === cell);
   // Reflect: bomba da luva caindo em quem segura bomba com a luva volta na direção de quem jogou (só luva × luva)
   const reflector = f.glove ? victims.find(q => q.carry >= 0) : undefined;
   if (reflector) { reflect(s, f, reflector, ev); return; }
@@ -116,10 +119,12 @@ function landPlayer(s: RoundState, f: Flyer, cell: number, out: boolean, v: numb
   if (!q || !standing(q)) { settle(-1); return; }
   if (!out && v === CODE.PRESSURE) { settle(cell); hitPlayer(s, q, 'pressure', ev); return; }
   const others = out ? [] : s.players.filter(o => o !== q && grounded(o) && playerCell(o) === cell);
-  const free = !out && (v === CODE.FLOOR || v === CODE.FLAME || isItemCode(v) || isEggCode(v)) && !bombOccupies(s, cell);
+  const onBomb = !out && bombOccupies(s, cell);
+  const free = !out && (v === CODE.FLOOR || v === CODE.FLAME || isItemCode(v) || isEggCode(v)) && !onBomb;
   if (!others.length && free) { settle(cell); return; }
-  // Outro jogador na casa: quica; com Rules.throwStun, ele e o arremessado (ao pousar) ficam atordoados
-  if (others.length && s.rules.throwStun) { for (const o of others) stunPlayer(s, o, ev); f.hit = true; }
+  // Outro jogador na casa: quica; com Rules.throwStun, ele e o arremessado (ao pousar) ficam atordoados — menos quem
+  // está parado sobre uma bomba (como a bomba que cai, $C1:27A4: a casa da bomba quica antes do teste de jogador)
+  if (others.length && s.rules.throwStun && !onBomb) { for (const o of others) stunPlayer(s, o, ev); f.hit = true; }
   bounce(f, cell, ev);
   if (f.script > MAX_BOUNCES) settle(cell);
 }
