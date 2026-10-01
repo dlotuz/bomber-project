@@ -2,7 +2,7 @@ import type { App, Screen } from '../app/app';
 import { Menu, type MenuRow } from './menu';
 import { S } from '../render/text/strings';
 import { FADE_MENU } from '../app/fade';
-import { drawOptionsPage, PpuCanvas, type OptionsRow } from '../render/screens-rom/options';
+import { drawOptionsPage, type OptionsRow } from '../render/screens-rom/options';
 import { optionsScreen } from './options';
 
 /** Senha da tela PASSWORD do original que liga $7F:70BD (ovos dos 13 tipos). Aqui ela liga e desliga. */
@@ -28,7 +28,6 @@ export function passwordScreen(app: App, back: number): Screen & { readonly menu
     { id: 'back', select: () => { goBack(); } },
   ];
   const menu = new Menu(rows);
-  const canvas = new PpuCanvas();
   const label = (id: string, i: number): string => (id === 'ok' ? S.password.ok : id === 'back' ? S.options.back : S.password.digit(i + 1));
 
   return {
@@ -41,7 +40,7 @@ export function passwordScreen(app: App, back: number): Screen & { readonly menu
     },
     draw(ctx, bank) {
       const out: OptionsRow[] = rows.map((r, i) => ({ label: label(r.id, i), value: i < 4 ? String(digits[i]) : '' }));
-      drawOptionsPage(ctx, bank, canvas, S.password.title, out, menu.cursor, note || S.password.help);
+      drawOptionsPage(ctx, bank, S.password.title, out, menu.cursor, note || S.password.help);
     },
   };
 }

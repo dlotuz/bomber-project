@@ -2,15 +2,12 @@ import type { App, Screen } from '../app/app';
 import type { RuleChoices } from '../app/settings';
 import { FADE_MENU } from '../app/fade';
 import { MUSIC } from '../app/audio';
-import { romState } from '../app/rom-api';
 import { carry } from '../game/match-session';
 import { S } from '../render/text/strings';
 import { drawText } from '../render/text/text';
 import type { Tone } from '../render/text/types';
-import { PpuCanvas } from '../render/screens-rom/scene';
-import { buildRulesScene, RULES_FRAME } from '../render/screens-rom/rules';
+import { hdMenu } from '../render/hd-menu';
 import { Menu, clamp, type MenuRow } from './menu';
-import { drawFallbackFrame, drawStaticBackground, drawStaticCursor } from './ui';
 import { playersScreen } from './players';
 import { charactersScreen } from './characters';
 
@@ -68,7 +65,6 @@ export function rulesScreen(app: App): Screen & { readonly cursor: number; value
     ...TOGGLES.map(toggle),
   ];
   const menu = new Menu(rows);
-  const canvas = new PpuCanvas();
 
   return {
     id: 'rules',
@@ -79,13 +75,7 @@ export function rulesScreen(app: App): Screen & { readonly cursor: number; value
       if (menu.update(inp.any, inp.pressedAny, app.audio) === 'back') app.transition(() => playersScreen(app), FADE_MENU);
     },
     draw(ctx, bank) {
-      const a = romState.assets;
-      if (a) canvas.draw(ctx, buildRulesScene(a, { cursor: menu.cursor }));
-      else {
-        drawStaticBackground(ctx);
-        drawFallbackFrame(ctx, RULES_FRAME);
-        drawStaticCursor(ctx, 16, 56 + 24 * menu.cursor);
-      }
+      hdMenu(ctx, [16, 56 + 24 * menu.cursor], { item: 14, hand: 1.3 });
       drawText(ctx, bank, 'menuTitle', S.rules.title, RULES_TITLE.x, RULES_TITLE.y, { align: 'center' });
       const vals = values(), tn = tones();
       for (let i = 0; i < S.rules.labels.length; i++) {

@@ -1,5 +1,6 @@
 import { SCREEN_H, SCREEN_W, type Display } from '../display';
 import { drawFx } from './draw';
+import { drawHdMenu } from '../hd-menu';
 import type { FxFrame } from './state';
 
 const reduced = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
@@ -13,6 +14,7 @@ export function present(d: Display, frame: FxFrame | null, fade: number): void {
   out.globalAlpha = 1;
   out.globalCompositeOperation = 'source-over';
   if (ox || oy) { out.fillStyle = '#000'; out.fillRect(0, 0, SCREEN_W * s, SCREEN_H * s); }
+  drawHdMenu(out, s);   // menus: fundo/texto HD por baixo da base transparente
   out.drawImage(d.ctx.canvas, ox, oy, SCREEN_W * s, SCREEN_H * s);
   if (!frame) return;
   out.setTransform(s, 0, 0, s, ox, oy);   // os efeitos desenham em pixels de base, rasterizados em resolução nativa

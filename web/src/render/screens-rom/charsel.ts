@@ -140,6 +140,15 @@ export function charselFrame(a: RomAssets, chars: readonly (number | null)[], oa
   return { ...frame, cgram: withPortraitPalettes(a, g.cgram, chars.map(c => c ?? NO_CHAR), CHARSEL_PORTRAIT_PAL) };
 }
 
+/** Só os retratos (BG1) e `oam` da cena, sem corda/quebra-cabeça/sombra — para compor sobre o fundo HD. */
+export function charselSprites(a: RomAssets, chars: readonly (number | null)[], oam: ObjEntry[] = []): PpuFrame {
+  const g = sceneGfx(a, 'charsel');
+  const bg1 = newMap();
+  for (const p of charselPortraitWords(chars)) put(bg1, p.col, p.row, p.w);
+  const frame = sceneFrame(g, { bg1 }, { ...CHARSEL_SCROLL, oam });
+  return { ...frame, cgram: withPortraitPalettes(a, g.cgram, chars.map(c => c ?? NO_CHAR), CHARSEL_PORTRAIT_PAL) };
+}
+
 /** Nosso título (PT-BR) dentro do vão que a ROM deixava para "Select a character!" (`CHARSEL_TITLE_PX`, 2 linhas de
  *  16 px medidas na captura), na fonte `menuTitle` (da ROM quando carregada), centrado em x; `color` só vale sem ROM.
  *  `shift` = deslocamento tela − mapa (com ROM, `CHARSEL_BG1_SHIFT`: o vão anda junto com a corda). */

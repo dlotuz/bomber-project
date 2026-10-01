@@ -7,7 +7,7 @@ import {
 import { defaultSettings, setDevice } from '../app/settings';
 import { S } from '../render/text/strings';
 import { FADE_MENU } from '../app/fade';
-import { drawOptionsPage, PpuCanvas, type OptionsRow } from '../render/screens-rom/options';
+import { drawOptionsPage, type OptionsRow } from '../render/screens-rom/options';
 import { optionsScreen } from './options';
 
 type Capture = keyof KeyMap | 'device';
@@ -47,7 +47,6 @@ export function remapScreen(app: App, player: number): Screen & { readonly menu:
     { id: 'back', select: () => { goBack(); } },
   ];
   const menu = new Menu(rows);
-  const canvas = new PpuCanvas();
 
   const label = (id: string): string => (id === 'device' ? S.options.device : id === 'all' ? S.options.all
     : id === 'reset' ? S.options.reset : id === 'back' ? S.options.back : S.options.actions[id as keyof KeyMap]);
@@ -94,7 +93,7 @@ export function remapScreen(app: App, player: number): Screen & { readonly menu:
     draw(ctx, bank) {
       const rowsOut: OptionsRow[] = rows.map(r => ({ label: label(r.id), value: value(r.id) }));
       const footer = capturing ? S.options.pressAny : undefined;
-      drawOptionsPage(ctx, bank, canvas, S.options.controls(player + 1), rowsOut, menu.cursor, footer, 'ascii8');
+      drawOptionsPage(ctx, bank, S.options.controls(player + 1), rowsOut, menu.cursor, footer, 'ascii8');
     },
   };
 }

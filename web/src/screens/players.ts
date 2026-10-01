@@ -1,17 +1,14 @@
 import type { App, Screen } from '../app/app';
 import type { SlotKind } from '../app/settings';
 import { canStart } from '../game/config';
-import { FADE_MENU } from '../app/fade';
+import { FADE_MENU, FADE_TO_TITLE } from '../app/fade';
 import { MUSIC } from '../app/audio';
-import { romState } from '../app/rom-api';
 import { S } from '../render/text/strings';
 import { drawText } from '../render/text/text';
 import type { Tone } from '../render/text/types';
-import { PpuCanvas } from '../render/screens-rom/scene';
-import { buildPlayersScene, PLAYERS_FRAME } from '../render/screens-rom/players';
+import { hdMenu } from '../render/hd-menu';
 import { Menu, type MenuRow } from './menu';
-import { drawFallbackFrame, drawStaticBackground, drawStaticCursor } from './ui';
-import { modeScreen } from './vs';
+import { titleScreen } from './title';
 import { rulesScreen } from './rules';
 
 /** Ordem do cursor de valor [A15]: ← avança (Humano→CPU→Nenhum), → recua; os dois param no limite. */
@@ -49,23 +46,16 @@ export function playersScreen(app: App): Screen & { readonly cursor: number; val
     },
   }));
   const menu = new Menu(rows);
-  const canvas = new PpuCanvas();
 
   return {
     id: 'players',
     get cursor() { return menu.cursor; },
     value,
     update(inp) {
-      if (menu.update(inp.any, inp.pressedAny, app.audio) === 'back') app.transition(() => modeScreen(app), FADE_MENU);
+      if (menu.update(inp.any, inp.pressedAny, app.audio) === 'back') app.transition(() => titleScreen(app), FADE_TO_TITLE);
     },
     draw(ctx, bank) {
-      const a = romState.assets;
-      if (a) canvas.draw(ctx, buildPlayersScene(a, { cursor: menu.cursor }));
-      else {
-        drawStaticBackground(ctx);
-        drawFallbackFrame(ctx, PLAYERS_FRAME);
-        drawStaticCursor(ctx, 24, 48 + 32 * menu.cursor);
-      }
+      hdMenu(ctx, [24, 48 + 32 * menu.cursor]);
       drawText(ctx, bank, 'menuTitle', S.players.title, PLAYERS_TITLE.x, PLAYERS_TITLE.y, { align: 'center' });
       for (let i = 0; i < 5; i++) {
         const y = 47 + 32 * i;

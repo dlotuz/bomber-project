@@ -15,6 +15,7 @@ import { SpriteBank } from './render/sprite-bank';
 import { titleScreen } from './screens/title';
 import { battleScreen } from './screens/battle';
 import { startRomUi } from './rom/ui';
+import { hdBegin } from './render/hd-menu';
 
 const store = browserStorage();
 const params = new URLSearchParams(window.location.search);
@@ -54,6 +55,7 @@ const bank = new SpriteBank();
 // ?fx=0 desliga os efeitos nesta sessão (debug e capturas fiéis).
 const fxOff = params.get('fx') === '0';
 const render = (): void => {
+  hdBegin();
   app.draw(ctx, bank);
   present(display, fxOff ? null : app.screen.fx?.() ?? null, app.brightness() / 15);
 };

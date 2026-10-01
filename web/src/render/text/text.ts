@@ -8,6 +8,7 @@ import { GLYPH_MAPS } from './glyph-maps';
 import { EXTRA_GLYPHS } from './extra-glyphs';
 import { FALLBACK_EXTRA, fallbackPix } from './fallback-font';
 import { S } from './strings';
+import { hdText } from '../hd-menu';
 export { fallbackMissing } from './fallback-font';
 
 export interface RomFont { style: TextStyleId; def: StyleRomDef; glyphs: Map<string, IndexedImage> }
@@ -346,6 +347,8 @@ const alignX = (x: number, w: number, align: TextOpts['align']): number =>
 /** Desenha `text` no estilo e devolve a largura final (já com a escala). Com ROM usa os glifos da ROM; senão, o fallback. */
 export function drawText(ctx: CanvasRenderingContext2D, bank: SpriteBank, style: TextStyleId, text: string, x: number, y: number,
   o: TextOpts = {}): number {
+  const hd = hdText(style, text, x, y, o.tone, o.align, o.color);
+  if (hd !== null) return hd;
   const rf = romFontNow(style);
   if (rf) {
     const scale = o.scale ?? 1;

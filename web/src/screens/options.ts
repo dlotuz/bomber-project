@@ -7,7 +7,7 @@ import { romState, openRomDialog, forgetStoredRom } from '../app/rom-api';
 import { S } from '../render/text/strings';
 import { MUSIC } from '../app/audio';
 import { FADE_MENU, FADE_TO_TITLE } from '../app/fade';
-import { drawOptionsPage, PpuCanvas, type OptionsRow } from '../render/screens-rom/options';
+import { drawOptionsPage, type OptionsRow } from '../render/screens-rom/options';
 import { titleScreen } from './title';
 import { remapScreen } from './remap';
 import { passwordScreen } from './password';
@@ -34,7 +34,7 @@ export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'ma
   app.audio.ensureMenus(MUSIC.title);
 
   const goBack = (): void => {
-    if (page === 'main') app.transition(() => titleScreen(app, { cursor: 2 }), FADE_TO_TITLE);
+    if (page === 'main') app.transition(() => titleScreen(app), FADE_TO_TITLE);
     else app.transition(() => optionsScreen(app, page === 'controls' ? 0 : 1), FADE_MENU);
   };
   const open = (to: OptionsPage): void => { app.transition(() => optionsScreen(app, 0, to), FADE_MENU); };
@@ -132,7 +132,6 @@ export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'ma
   rows.push({ id: 'back', label: S.options.back, select: () => { goBack(); } });
 
   const menu = new Menu(rows, { cursor });
-  const canvas = new PpuCanvas();
 
   return {
     id: 'options',
@@ -154,7 +153,7 @@ export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'ma
       const displayRows: OptionsRow[] = rows.map(r => ({ label: r.label, value: r.value?.() ?? '', disabled: r.disabled }));
       const footer = asking ? S.options.forgetAsk : page === 'controls' && menu.cursor < 5 ? S.options.playerHelp : undefined;
       const title = page === 'controls' ? S.options.controlsTitle : page === 'gameplay' ? S.options.gameplayTitle : S.options.title;
-      drawOptionsPage(ctx, bank, canvas, title, displayRows, menu.cursor, footer);
+      drawOptionsPage(ctx, bank, title, displayRows, menu.cursor, footer);
     },
   };
 }
