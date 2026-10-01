@@ -160,9 +160,9 @@ export function aimThrow(s: RoundState, cell: number, face: number, self: number
 }
 
 /** Soco: pose de 8 ticks mesmo sem bomba; a bomba à frente sai do centro da casa com z = 0. */
-export function punchBomb(s: RoundState, p: Player, ev: GameEvent[]): boolean {
-  if (!p.punch) return false;
-  setAct(s, p, 'punch', PUNCH_TICKS);
+export function punchBomb(s: RoundState, p: Player, ev: GameEvent[], mounted = false): boolean {
+  if (!p.punch && !mounted) return false;
+  if (!mounted) setAct(s, p, 'punch', PUNCH_TICKS);   // montaria 9: soca sem a pose
   const n = faceStep(playerCell(p), p.face);
   const b = bombAt(s, n);
   if (!b) return false;

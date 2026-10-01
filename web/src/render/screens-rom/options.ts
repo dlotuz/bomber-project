@@ -6,8 +6,7 @@ import type { RomAssets, PpuFrame, ScanBand } from '../../app/rom-api';
 import type { SpriteBank } from '../sprite-bank';
 import type { TextStyleId } from '../text/types';
 import { drawText, textWidth } from '../text/text';
-import { romState } from '../../app/rom-api';
-import { drawFallbackFrame, drawStaticBackground, drawStaticCursor } from '../../screens/ui';
+import { hdMenu } from '../hd-menu';
 import { sceneGfx, sceneFrame, menuMaps, menuBg1Vofs, shadeBand, handCursor, MENU_GEO, PpuCanvas, type SceneMaps } from './scene';
 
 export { PpuCanvas };
@@ -48,17 +47,10 @@ export function optionsPpuFrame(a: RomAssets, title: string, titleStyle: TextSty
  * tecla/botão), em y = 208.
  */
 export function drawOptionsPage(
-  ctx: CanvasRenderingContext2D, bank: SpriteBank, canvas: PpuCanvas, title: string, rows: readonly OptionsRow[],
+  ctx: CanvasRenderingContext2D, bank: SpriteBank, title: string, rows: readonly OptionsRow[],
   cursor: number, footer?: string, titleStyle: TextStyleId = 'menuTitle',
 ): void {
-  const a = romState.assets;
-  const handY = ROW_Y0 + cursor * ROW_STEP;
-  if (a) canvas.draw(ctx, optionsPpuFrame(a, title, titleStyle, handY));
-  else {
-    drawStaticBackground(ctx);
-    drawFallbackFrame(ctx, OPTIONS_FRAME);
-    drawStaticCursor(ctx, HAND_X, handY);
-  }
+  hdMenu(ctx, [HAND_X, ROW_Y0 + cursor * ROW_STEP], { hand: 0.9 });
   // `bare` (M1): o `ascii8` é a fonte do HUD, com o campo da casa opaco — aqui ele fica por cima do quebra-cabeça.
   drawText(ctx, bank, titleStyle, title, TITLE_X, TITLE_Y, { align: 'center', bare: true });
   rows.forEach((r, i) => {

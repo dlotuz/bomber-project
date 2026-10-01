@@ -89,10 +89,21 @@ export function obj(x: number, y: number, tile: number, pal: number, o: { big?: 
 /** Só no navegador: um ImageData 256×224 reaproveitado, desenhado com putImageData. */
 export class PpuCanvas {
   private img: ImageData | null = null;
+  private layer: HTMLCanvasElement | null = null;
   draw(ctx: CanvasRenderingContext2D, f: PpuFrame, dy = 0): void {
     this.img ??= new ImageData(256, 224);
     renderPpu(f, this.img);
     ctx.putImageData(this.img, 0, dy);
+  }
+  /** Como `draw`, mas o fundo vira transparente (backdrop-chave magenta) e o quadro é composto por cima de `ctx`. */
+  drawOver(ctx: CanvasRenderingContext2D, f: PpuFrame): void {
+    this.img ??= new ImageData(256, 224);
+    renderPpu({ ...f, backdrop: 0x7c1f }, this.img);
+    const px = new Uint32Array(this.img.data.buffer);
+    for (let i = 0; i < px.length; i++) if (px[i] === 0xffff00ff) px[i] = 0;
+    if (!this.layer) { this.layer = document.createElement('canvas'); this.layer.width = 256; this.layer.height = 224; }
+    this.layer.getContext('2d')!.putImageData(this.img, 0, 0);
+    ctx.drawImage(this.layer, 0, 0);
   }
 }
 

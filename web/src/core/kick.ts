@@ -9,7 +9,7 @@ import { STAGES } from './stages';
 import { MOUNTS } from './mounts';
 
 /** Chuta: o item Chute vale também montado (extra: qualquer montaria), ou a montaria que chuta (A). */
-export const canKick = (p: Player): boolean => p.kick || !!MOUNTS.current.kicks?.(p);
+export const canKick = (p: Player): boolean => (p.kick || !!MOUNTS.current.kicks?.(p)) && !MOUNTS.current.passes?.(p, 0xc900);   // tipo 1 não chuta
 /** Extra: o dono segurando X (parar chute) tranca as próprias bombas contra o chute dos outros (o soco ainda vale). */
 export const kickLocked = (s: RoundState, p: Player, b: Bomb): boolean =>
   b.owner !== p.slot && !!(s.players[b.owner]?.prevBtn & BTN.X);

@@ -3,7 +3,7 @@ import ctypes as C, os
 
 SCR = os.path.dirname(os.path.abspath(__file__))
 CORE = os.environ.get("SNES9X_CORE", os.path.join(SCR, "snes9x_libretro.dylib"))
-ROMP = "/Users/dlotuz/Projetos Claude/Bomber Project/Super Bomberman 4 (USA).sfc"
+ROMP = os.environ.get("SB4_ROM", "/Users/dlotuz/Projetos Claude/Bomber Project/Super Bomberman 4 (USA).sfc")
 
 B = dict(B=0, Y=1, SELECT=2, START=3, UP=4, DOWN=5, LEFT=6, RIGHT=7, A=8, X=9, L=10, R=11)
 

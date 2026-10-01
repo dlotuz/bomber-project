@@ -4,9 +4,10 @@ import { SFX } from '../app/audio';
 import { FADE_MENU } from '../app/fade';
 import { romState, type RomAssets } from '../app/rom-api';
 import { PpuCanvas } from '../render/screens-rom/scene';
-import { CHARSEL_BG1_SHIFT, charselFrame, drawCharselTitle } from '../render/screens-rom/charsel';
+import { CHARSEL_BG1_SHIFT, charselSprites, drawCharselTitle } from '../render/screens-rom/charsel';
+import { hdMenu } from '../render/hd-menu';
 import { TEAMSEL_MARKER_X, TEAMSEL_PORTRAIT, TEAMSEL_VS } from '../render/screens-rom/teams';
-import { COLORS, PLAYER_COLORS, drawFallbackFrame, drawStaticBackground } from './ui';
+import { COLORS, PLAYER_COLORS } from './ui';
 import { drawText } from '../render/text/text';
 import { S } from '../render/text/strings';
 import { SCREEN_H } from '../render/display';
@@ -15,7 +16,6 @@ import { charactersScreen } from './characters';
 import { stageScreen } from './stage';
 
 /** Moldura do fallback (spec §6.14), a mesma da tela de personagens. */
-const FRAME = { x0: 27, y0: 35, x1: 224, y1: 188 };
 /** Cor do marcador por equipe (0 = vermelha, 1 = branca) — não existe mais em `players.ts` (T9): o time é só
  *  desta tela desde a Task 10 (comentário de `playersScreen`). */
 const TEAM_COLOR: readonly [string, string] = ['#ff5f5f', '#ffffff'];
@@ -72,12 +72,11 @@ export function teamsScreen(app: App): Screen & {
       // a coluna de retratos da ROM no BG1, com o HOFS −8), sem grade nem bonecos parados; o marcador de lado e o
       // "VS" são conteúdo nosso por cima.
       const a: RomAssets | null = romState.assets;
+      hdMenu(ctx, null, { title: 15 });
       if (a) {
-        ppu.draw(ctx, charselFrame(a, [0, 1, 2, 3, 4].map(i => (setup.slots[i] !== 'off' ? setup.chars[i] : null))));
-        drawCharselTitle(ctx, bank, S.teams.title, COLORS.title, CHARSEL_BG1_SHIFT);
+        ppu.drawOver(ctx, charselSprites(a, [0, 1, 2, 3, 4].map(i => (setup.slots[i] !== 'off' ? setup.chars[i] : null))));
+        drawCharselTitle(ctx, bank, S.teams.title, COLORS.title);
       } else {
-        drawStaticBackground(ctx);
-        drawFallbackFrame(ctx, FRAME);
         drawCharselTitle(ctx, bank, S.teams.title, COLORS.title);
       }
       // Com ROM a moldura inteira anda +8 em x junto com o BG1 (I8): marcadores e "VS" acompanham.

@@ -1,6 +1,6 @@
 import type { RoundState, Player, GameEvent } from '../types';
 import { rider, mstate, sameClass, MAX_ACTIVE, MAX_RESERVES, MOUNTING_TICKS, type MountRider, type MountState } from './types';
-import { EGG_TYPES, rnd, lockAct, isEggCode, cellAt, centerX, centerY, colOf, linOf } from './core-api';
+import { rollEggType, lockAct, isEggCode, cellAt, centerX, centerY, colOf, linOf } from './core-api';
 import { mev } from './events';
 import { dropHeld } from '../flyers';
 import { releaseGrab } from '../grab';
@@ -40,7 +40,7 @@ export function freeSlot(s: RoundState): 0 | 1 | 2 {
 
 export function revealEgg(s: RoundState, cell: number, ev: GameEvent[]): void {
   if (activeCount(s) >= MAX_ACTIVE) return;              // JML $C3:50C9: o bloco não dá nada
-  const t = EGG_TYPES[rnd(s.rng, 14)];
+  const t = rollEggType(s);
   s.grid[cell] = 0x0970 + t;
   ev.push(mev({ id: 'egg_revealed', cell, mount: t }));
 }

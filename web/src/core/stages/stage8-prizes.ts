@@ -2,7 +2,7 @@ import { type GameEvent, type RoundState } from '../types';
 import { cellAt } from '../units';
 import type { Fall, PrizeRun, Stage8State } from './state';
 import {
-  A8_BOMB_FALL, A8_COLS, A8_COLS_ALL, A8_EGGS, A8_FALL_DY, A8_FALL_PICK, A8_L149F, A8_L14A9, A8_L14B6, A8_L14BE,
+  A8_BOMB_FALL, A8_COLS, A8_COLS_ALL, A8_EGGS, A8_EGGS_ALL, A8_FALL_DY, A8_FALL_PICK, A8_L149F, A8_L14A9, A8_L14B6, A8_L14BE,
   A8_L14C1, A8_L14C5, A8_L14CE, A8_RAIN,
 } from './tables';
 import { eggsInPlay, landBomb, landItem, rnd, rnd255, stageEvent, startJackpotPressure } from './kit';
@@ -31,7 +31,7 @@ function eggs(s: RoundState, a: Stage8State, cols: readonly number[], ev: GameEv
   for (let k = 0; k < 2; k++) {
     const falling = a.falls.filter(f => f.kind === 'item' && f.id >= 0x30 && f.id <= 0x3f).length;
     if (eggsInPlay(s, falling) >= 2) return;
-    const type = A8_EGGS[rnd(s.rng, 14)];
+    const type = s.rules.allMounts ? A8_EGGS_ALL[rnd(s.rng, 26)] : A8_EGGS[rnd(s.rng, 14)];   // $C3:196F
     drop(s, a, 'item', type, cols[rnd255(s) & 3], ev);
   }
 }

@@ -11,6 +11,7 @@ import {
   charselMaps, charselFrame, charselPortraitWords,
 } from '../../src/render/screens-rom/charsel';
 import { obj } from '../../src/render/screens-rom/scene';
+import { hdBegin, hdTexts } from '../../src/render/hd-menu';
 import { createImage, renderPpu } from '../../src/render/ppu';
 import { idleInput, type MenuInput } from '../../src/input/input';
 import { loadCapturePng, pixelMatch } from './capture-png';
@@ -32,6 +33,7 @@ function recCtx() {
     fillStyle: '',
     fillRect(x: number, y: number, w: number, h: number) { fills.push(`${this.fillStyle}:${x},${y},${w},${h}`); },
     drawImage(_img: unknown, x: number, y: number) { images.push({ x, y }); },
+    clearRect() {},
   };
   return { fills, images, ctx: ctx as unknown as CanvasRenderingContext2D };
 }
@@ -105,26 +107,24 @@ describe('desenho (revisão da Task 10, rodada 2)', () => {
   it('título de personagens vai dentro do vão da corda (CHARSEL_TITLE_PX), não na barra fixa y=12', () => {
     const { app } = mkApp();
     const c = charactersScreen(app); app.go(c);
-    const { images, ctx } = recCtx();
+    const { ctx } = recCtx();
+    hdBegin();
     c.draw(ctx, fakeBank, 0);
-    // T22: 2 linhas de 16 px na fonte `menuTitle`, como "Select a" / "character!" na ROM, centradas no vão.
+    // T22: 2 linhas de 16 px na fonte `menuTitle`, centradas no vão (agora na camada HD dos menus).
     const cx = Math.floor((CHARSEL_TITLE_PX.x0 + CHARSEL_TITLE_PX.x1 + 1) / 2);
-    const x = cx - Math.floor(fakeBank.text('', '').width / 2);
-    expect(images).toContainEqual({ x, y: CHARSEL_TITLE_PX.y0 });
-    expect(images).toContainEqual({ x, y: CHARSEL_TITLE_PX.y0 + 16 });
-    expect(images.some(p => p.y === 12)).toBe(false);
+    const titles = hdTexts().filter(t => t.title).map(t => ({ x: t.x, y: t.y, align: t.align }));
+    expect(titles).toEqual([{ x: cx, y: CHARSEL_TITLE_PX.y0, align: 'center' }, { x: cx, y: CHARSEL_TITLE_PX.y0 + 16, align: 'center' }]);
   });
   it('título de equipes também vai dentro do mesmo vão', () => {
     const { app } = mkApp();
     const t = teamsScreen(app); app.go(t);
-    const { images, ctx } = recCtx();
+    const { ctx } = recCtx();
+    hdBegin();
     t.draw(ctx, fakeBank, 0);
-    // T22: 2 linhas de 16 px na fonte `menuTitle`, como "Select a" / "character!" na ROM, centradas no vão.
+    // T22: 2 linhas de 16 px na fonte `menuTitle`, centradas no vão (agora na camada HD dos menus).
     const cx = Math.floor((CHARSEL_TITLE_PX.x0 + CHARSEL_TITLE_PX.x1 + 1) / 2);
-    const x = cx - Math.floor(fakeBank.text('', '').width / 2);
-    expect(images).toContainEqual({ x, y: CHARSEL_TITLE_PX.y0 });
-    expect(images).toContainEqual({ x, y: CHARSEL_TITLE_PX.y0 + 16 });
-    expect(images.some(p => p.y === 12)).toBe(false);
+    const titles = hdTexts().filter(t => t.title).map(t => ({ x: t.x, y: t.y, align: t.align }));
+    expect(titles).toEqual([{ x: cx, y: CHARSEL_TITLE_PX.y0, align: 'center' }, { x: cx, y: CHARSEL_TITLE_PX.y0 + 16, align: 'center' }]);
   });
 });
 

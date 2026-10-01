@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import fx from '../fixtures/rom/mount-render.json';
+import fxExtra from '../fixtures/rom/mount-render-extra.json';
 import { ASSETS, stable } from './rom-helpers';
 import { mkRound, placePx, ride, run, flameAt, BTN, cx, cy } from './helpers';
 import { riderHook } from '../../src/render/rom/mounts/rider';
@@ -28,6 +29,19 @@ describe.skipIf(!ASSETS)('camada ROM das montarias × emulador', () => {
       p.face = FACE[d]; p.act = 'idle'; p.actT0 = s.tick; p.moveDir = 8;
       ride(s, 0, parseInt(t, 16));
       const exp = (fx.riders as Record<string, Record<string, { idle: { pieces: FxPiece[] }[] }>>)[t][d].idle.at(-1)!.pieces;
+      const got = riderHook(s, p, ASSETS!, s.tick, s.tick)!;
+      expect(got).not.toBeNull();
+      expect(facts(got, cx(7), cy(5))).toEqual(norm(exp));
+    });
+  }
+  // Tipos da senha 0164 (fixture de analise/investigacao/montarias-extras/fixture_extra.py; o tipo 2 dela bate com a antiga).
+  for (const t of ['1', '4', '5', '6', '9', 'b']) for (const d of DIRS) {
+    it(`montado tipo ${t} (senha) parado olhando ${d} = OAM medida`, () => {
+      const s = mkRound();
+      const p = placePx(s, 0, cx(7), cy(5));
+      p.face = FACE[d]; p.act = 'idle'; p.actT0 = s.tick; p.moveDir = 8;
+      ride(s, 0, parseInt(t, 16));
+      const exp = (fxExtra.riders as Record<string, Record<string, { idle: { pieces: FxPiece[] }[] }>>)[t][d].idle.at(-1)!.pieces;
       const got = riderHook(s, p, ASSETS!, s.tick, s.tick)!;
       expect(got).not.toBeNull();
       expect(facts(got, cx(7), cy(5))).toEqual(norm(exp));

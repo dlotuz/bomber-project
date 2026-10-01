@@ -17,7 +17,7 @@ export function fuseOf(p: Player): number {
   return p.disease === DISEASE.SHORT_FUSE ? FUSE_SHORT : p.disease === DISEASE.LONG_FUSE ? FUSE_LONG : FUSE;
 }
 export function bombFireOf(p: Player): number {
-  return p.disease === DISEASE.LOW_FIRE ? 10 : p.fullFire ? 7 : p.fire;
+  return MOUNTS.current.bombFire?.(p) ?? (p.disease === DISEASE.LOW_FIRE ? 10 : p.fullFire ? 7 : p.fire);
 }
 export function canPlaceBomb(p: Player): boolean {
   if (p.bombsFree <= 0 || p.disease === DISEASE.CONSTIPATION) return false;

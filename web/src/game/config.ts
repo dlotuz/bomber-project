@@ -17,7 +17,7 @@ export const activeCount = (slots: readonly SlotKind[]): number => slots.filter(
 export const canStart = (slots: readonly SlotKind[]): boolean => activeCount(slots) >= 2;
 
 /** Regras extras que vêm das Opções (não do menu de regras). */
-export type ExtraRules = Partial<Pick<Rules, 'gloveEscape' | 'throwStun' | 'sleepTicks'>>;
+export type ExtraRules = Partial<Pick<Rules, 'gloveEscape' | 'throwStun' | 'sleepTicks' | 'allMounts'>>;
 
 export function configFromSetup(setup: SetupLike, randomSpawns: boolean, devices: readonly DeviceId[], seed: number | null = null,
   extras: ExtraRules = {}): GameConfig {
@@ -35,7 +35,8 @@ const int = (v: string | null, def: number, min: number, max: number): number =>
   const n = v === null ? NaN : Number.parseInt(v, 10);
   return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : def;
 };
-/** Partida rápida pela URL (?quick): stage, players, matches, time, level, mode, sd, bad, racer, spawns, chars, seed, humans. */
+/** Partida rápida pela URL (?quick): stage, players, matches, time, level, mode, sd, bad, racer, spawns, chars, seed, humans,
+ *  allmounts (0 = só os 7 tipos do Battle; padrão 13). */
 export function parseConfig(search: string): GameConfig {
   const q = new URLSearchParams(search);
   const players = int(q.get('players'), 5, 2, 5);
@@ -50,5 +51,6 @@ export function parseConfig(search: string): GameConfig {
     chars: [0, 1, 2, 3, 4].map(i => (Number.isInteger(raw[i]) && raw[i] >= 0 && raw[i] <= 5 ? raw[i] : i)),
     stage: int(q.get('stage'), 1, 1, 10),
   };
-  return configFromSetup(setup, q.get('spawns') === '1', DEFAULT_DEVICES, q.has('seed') ? int(q.get('seed'), 0, 0, 0xffff) : null);
+  return configFromSetup(setup, q.get('spawns') === '1', DEFAULT_DEVICES, q.has('seed') ? int(q.get('seed'), 0, 0, 0xffff) : null,
+    { allMounts: q.get('allmounts') !== '0' });
 }

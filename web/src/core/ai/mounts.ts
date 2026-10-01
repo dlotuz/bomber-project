@@ -1,6 +1,6 @@
-import type { RoundState, Player } from '../types';
+import { CODE, type RoundState, type Player } from '../types';
 import type { AiMountHints } from './hints';
-import { rider, MAX_RESERVES } from '../mounts/types';
+import { rider, MAX_RESERVES, type MountState } from '../mounts/types';
 import { cellAt, isEnemy } from '../mounts/core-api';
 import { shotInPlay } from '../mounts/projectile';
 import { rangeOf } from '../constants';
@@ -87,6 +87,9 @@ export const mountAiHints: AiMountHints = {
   eggValue: (s, slot, cell) => eggValue(s, s.players[slot], cell) ?? 0,
   useY: (s, slot) => {
     const p = s.players[slot];
+    const r = rider(p);
+    // Tipo 5: limpa a arena enquanto houver bloco macio, uma varredura por vez.
+    if (r?.phase === 'riding' && r.type === 0x5) return !(s.mountState as MountState | null)?.sweeps?.length && s.grid.some(v => v === CODE.SOFT);
     const w = wantMountY(s, p, cells => escapeAfterLine(s, p, cells));
     return w !== null && w.dir === p.face;
   },

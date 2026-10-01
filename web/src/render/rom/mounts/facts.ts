@@ -9,6 +9,13 @@ export const RIDER_ANIMS: Record<number, DirAnims[]> = {
   0xd: [{ walk: [0xd8172c], idle: [0xd816da] }, { walk: [0xd81713], idle: [0xd816d3] }, { walk: [0xd816e1], idle: [0xd816c5] }, { walk: [0xd816fa], idle: [0xd816cc] }],
   0xe: [{ walk: [0xd8172c], idle: [0xd816da] }, { walk: [0xd81713], idle: [0xd816d3] }, { walk: [0xd816e1], idle: [0xd816c5] }, { walk: [0xd816fa], idle: [0xd816cc] }],
   0xf: [{ walk: [0xd8172c], idle: [0xd816da] }, { walk: [0xd81713], idle: [0xd816d3] }, { walk: [0xd816e1], idle: [0xd816c5] }, { walk: [0xd816fa], idle: [0xd816cc] }],
+  // tipos da senha 0164: analise/investigacao/montarias-extras/facts_extra.py (mesmo método; tipo 2 de controle confere)
+  0x1: [{ walk: [0xd8172c], idle: [0xd816da] }, { walk: [0xd81713], idle: [0xd816d3] }, { walk: [0xd816e1], idle: [0xd816c5] }, { walk: [0xd816fa], idle: [0xd816cc] }],
+  0x4: [{ walk: [0xd8172c], idle: [0xd816da] }, { walk: [0xd81713], idle: [0xd816d3] }, { walk: [0xd816e1], idle: [0xd816c5] }, { walk: [0xd816fa], idle: [0xd816cc] }],
+  0x5: [{ walk: [0xd8172c], idle: [0xd816da] }, { walk: [0xd81713], idle: [0xd816d3] }, { walk: [0xd816e1], idle: [0xd816c5] }, { walk: [0xd816fa], idle: [0xd816cc] }],
+  0x6: [{ walk: [0xd8172c], idle: [0xd816da] }, { walk: [0xd81713], idle: [0xd816d3] }, { walk: [0xd816e1], idle: [0xd816c5] }, { walk: [0xd816fa], idle: [0xd816cc] }],
+  0x9: [{ walk: [0xd8172c], idle: [0xd816da] }, { walk: [0xd81713], idle: [0xd816d3] }, { walk: [0xd816e1], idle: [0xd816c5] }, { walk: [0xd816fa], idle: [0xd816cc] }],
+  0xb: [{ walk: [0xd8172c], idle: [0xd816da] }, { walk: [0xd81713], idle: [0xd816d3] }, { walk: [0xd816e1], idle: [0xd816c5] }, { walk: [0xd816fa], idle: [0xd816cc] }],
 };
 // 2ª animação do objeto do jogador (+$38, guarda endereço + 1 como +$08): desenha a montaria (tile $008 do P1, folha MOUNT_GFX[tipo]).
 export const MOUNT_ANIMS: Record<number, DirAnims[]> = {
@@ -19,9 +26,16 @@ export const MOUNT_ANIMS: Record<number, DirAnims[]> = {
   0xd: [{ walk: [0xd87978], idle: [0xd8795c] }, { walk: [0xd87991], idle: [0xd87963] }, { walk: [0xd879aa], idle: [0xd8796a] }, { walk: [0xd879c3], idle: [0xd87971] }],
   0xe: [{ walk: [0xd897b2], idle: [0xd89796] }, { walk: [0xd897cb], idle: [0xd8979d] }, { walk: [0xd897e4], idle: [0xd897a4] }, { walk: [0xd897fd], idle: [0xd897ab] }],
   0xf: [{ walk: [0xd893f5], idle: [0xd893d9] }, { walk: [0xd8940e], idle: [0xd893e0] }, { walk: [0xd89427], idle: [0xd893e7] }, { walk: [0xd89440], idle: [0xd893ee] }],
+  // tipos da senha 0164: analise/investigacao/montarias-extras/facts_extra.py (mesmo método; tipo 2 de controle confere)
+  0x1: [{ walk: [0xd88c77], idle: [0xd88c5b] }, { walk: [0xd88c90], idle: [0xd88c62] }, { walk: [0xd88ca9], idle: [0xd88c69] }, { walk: [0xd88cc2], idle: [0xd88c70] }],
+  0x4: [{ walk: [0xd86149], idle: [0xd8612d] }, { walk: [0xd86162], idle: [0xd86134] }, { walk: [0xd8617b], idle: [0xd8613b] }, { walk: [0xd86194], idle: [0xd86142] }],
+  0x5: [{ walk: [0xd8700a], idle: [0xd86fee] }, { walk: [0xd87023], idle: [0xd86ff5] }, { walk: [0xd8703c], idle: [0xd86ffc] }, { walk: [0xd87055], idle: [0xd87003] }],
+  0x6: [{ walk: [0xd88387], idle: [0xd8836b] }, { walk: [0xd883a0], idle: [0xd88372] }, { walk: [0xd883b9], idle: [0xd88379] }, { walk: [0xd883d2], idle: [0xd88380] }],
+  0x9: [{ walk: [0xd84c74], idle: [0xd84c58] }, { walk: [0xd84c8d], idle: [0xd84c5f] }, { walk: [0xd84ca6], idle: [0xd84c66] }, { walk: [0xd84cbf], idle: [0xd84c6d] }],
+  0xb: [{ walk: [0xd85691], idle: [0xd85675] }, { walk: [0xd856aa], idle: [0xd8567c] }, { walk: [0xd856c3], idle: [0xd85683] }, { walk: [0xd856dc], idle: [0xd8568a] }],
 };
-export const MOUNTING_MOUNT_ANIMS: Record<number, number[]> = {0x2: [0xd835ec], 0x3: [0xd82e34], 0xa: [0xd83848], 0xc: [0xd85d8f], 0xd: [0xd8796a], 0xe: [0xd897a4], 0xf: [0xd893e7]};
-export const MOUNTING_ANIMS: Record<number, number[]> = {0x2: [0xd81745, 0xd816c5], 0x3: [0xd81745, 0xd816c5], 0xa: [0xd81745, 0xd816c5], 0xc: [0xd81745, 0xd816c5], 0xd: [0xd81745, 0xd816c5], 0xe: [0xd81745, 0xd816c5], 0xf: [0xd81745, 0xd816c5]};
+export const MOUNTING_MOUNT_ANIMS: Record<number, number[]> = {0x2: [0xd835ec], 0x3: [0xd82e34], 0xa: [0xd83848], 0xc: [0xd85d8f], 0xd: [0xd8796a], 0xe: [0xd897a4], 0xf: [0xd893e7], 0x1: [0xd88c69], 0x4: [0xd8613b], 0x5: [0xd86ffc], 0x6: [0xd88379], 0x9: [0xd84c66], 0xb: [0xd85683]};
+export const MOUNTING_ANIMS: Record<number, number[]> = {0x2: [0xd81745, 0xd816c5], 0x3: [0xd81745, 0xd816c5], 0xa: [0xd81745, 0xd816c5], 0xc: [0xd81745, 0xd816c5], 0xd: [0xd81745, 0xd816c5], 0xe: [0xd81745, 0xd816c5], 0xf: [0xd81745, 0xd816c5], 0x1: [0xd81745, 0xd816c5], 0x4: [0xd81745, 0xd816c5], 0x5: [0xd81745, 0xd816c5], 0x6: [0xd81745, 0xd816c5], 0x9: [0xd81745, 0xd816c5], 0xb: [0xd81745, 0xd816c5]};
 export const DISMOUNT_ANIMS: number[] = [0xd816c5, 0xd81851, 0xd81645];
 export const REMOUNT_ANIMS: number[] = [0xd818ef, 0xd816d3];
 export const REMOUNT_MOUNT_ANIMS: number[] = [0xd835e5];   // +$38 durante o remonte
@@ -60,6 +74,6 @@ export const COSTUME_ANIMS: Record<number, DirAnims[]> = {
 // folha do jogador com traje (+$A0 medido), = p24(COSTUME_SHEET_TABLE + 3·traje); mesma fórmula de quadro das folhas de personagem
 export const COSTUME_SHEET_TABLE = 0xc20718;
 export const COSTUME_SHEETS: Record<number, number> = {0: 0xca2852, 1: 0xca4852, 2: 0xca2852, 3: 0xca4852, 4: 0xca2852, 5: 0xca4852, 6: 0xca2852, 7: 0xca4852};
-export const MOUNT_GFX: Record<number, { src: number; format: 'zte' | 'raw' | 'unknown' }> = {0x2: { src: 0xd40000, format: 'raw' }, 0x3: { src: 0xd3d02b, format: 'raw' }, 0xa: { src: 0xd3e82b, format: 'raw' }, 0xc: { src: 0xd44800, format: 'raw' }, 0xd: { src: 0xd49000, format: 'raw' }, 0xe: { src: 0xd52000, format: 'raw' }, 0xf: { src: 0xd50000, format: 'raw' }};
+export const MOUNT_GFX: Record<number, { src: number; format: 'zte' | 'raw' | 'unknown' }> = {0x2: { src: 0xd40000, format: 'raw' }, 0x3: { src: 0xd3d02b, format: 'raw' }, 0xa: { src: 0xd3e82b, format: 'raw' }, 0xc: { src: 0xd44800, format: 'raw' }, 0xd: { src: 0xd49000, format: 'raw' }, 0xe: { src: 0xd52000, format: 'raw' }, 0xf: { src: 0xd50000, format: 'raw' }, 0x1: { src: 0xd4e000, format: 'raw' }, 0x4: { src: 0xd46000, format: 'raw' }, 0x5: { src: 0xd47800, format: 'raw' }, 0x6: { src: 0xd4b000, format: 'raw' }, 0x9: { src: 0xd41800, format: 'raw' }, 0xb: { src: 0xd43000, format: 'raw' }};
 export const MOUNT_SHEET_TABLE = 0xc470dc;   // MOUNT_GFX[t].src = p24(MOUNT_SHEET_TABLE + 3·t) = +$A4 do jogador montado
 export const SHEET2 = 0xd40000;   // +$A4 medido montado no tipo 2 (esperado $D4:0000; nos outros tipos +$A4 = MOUNT_GFX[t].src)

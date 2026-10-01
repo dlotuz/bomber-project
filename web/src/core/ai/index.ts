@@ -3,7 +3,7 @@ import { BTN, CODE, DIR_BTNS, DISEASE, type Player, type RoundState } from '../t
 import { FLAME_TICKS } from '../constants';
 import { standing, playerCell } from '../state';
 import { faceStep } from '../units';
-import { blockedFor } from '../movement';
+import { blockedFor, passesBomb } from '../movement';
 import { canKick } from '../kick';
 import { AI_LEVELS } from './level';
 import { centered, enterTicks, faceTo, passable, steer } from './nav';
@@ -64,7 +64,7 @@ function brake(s: RoundState, p: Player): number {
   const kicks = canKick(p);
   for (const face of [0, 2, 4, 6]) {
     const v = s.grid[faceStep(here, face)] ?? CODE.HARD;
-    if (v === CODE.BOMB ? !kicks && !p.passBomb : blockedFor(p, v)[0]) return FACE_BTN[face];
+    if (v === CODE.BOMB ? !kicks && !passesBomb(p) : blockedFor(p, v)[0]) return FACE_BTN[face];
   }
   return 0;
 }
@@ -75,7 +75,7 @@ function hold(s: RoundState, p: Player): number {
   if (p.disease !== DISEASE.NO_STOP) return 0;
   const v = s.grid[faceStep(playerCell(p), p.face)] ?? CODE.HARD;
   const kicks = canKick(p);
-  if (v === CODE.BOMB ? !kicks && !p.passBomb : blockedFor(p, v)[0]) return FACE_BTN[p.face];
+  if (v === CODE.BOMB ? !kicks && !passesBomb(p) : blockedFor(p, v)[0]) return FACE_BTN[p.face];
   return brake(s, p);
 }
 

@@ -3,14 +3,20 @@ import { setAct } from '../state';
 import { addBomb, bombAt, canPlaceBomb, bombFireOf, fuseOf, explodeBomb, bombOccupies } from '../bombs';
 import { MOUNTS } from './index';
 import { CHAIN_DELAY, FIRE_LINE, rangeOf } from '../constants';
-import { CAPSULE_TYPES } from '../tables/misc';                 // $C1:5DA4 (gerado pelo plano 6, §3.16)
+import { CAPSULE_TYPES, CAPSULE_TYPES_ALL } from '../tables/misc';   // $C1:5DA4 / $C1:5D87 (gerado pelo plano 6, §3.16)
 
-export { rnd } from '../rng';
+import { rnd } from '../rng';
+export { rnd };
 export { GRID_W, GRID_H, cellOf, colOf, linOf, cellAt, centerX, centerY } from '../units';
 export { isEggCode } from '../state';
 
 /** Tipos de montaria sorteáveis: $C1:5DA4 & $0F = [2,3,A,C,D,E,F] × 2. */
 export const EGG_TYPES: readonly number[] = CAPSULE_TYPES.map((v: number) => v & 0x0f);
+/** Com a senha 0164 ($C1:5DC0): $C1:5D87 & $0F = [1,2,3,4,5,6,9,A,B,C,D,E,F] × 2, por rnd(26). */
+export const EGG_TYPES_ALL: readonly number[] = CAPSULE_TYPES_ALL.map((v: number) => v & 0x0f);
+/** Tipo do ovo revelado: rnd(14) na tabela normal ou rnd(26) na da senha. */
+export const rollEggType = (s: RoundState): number =>
+  s.rules.allMounts ? EGG_TYPES_ALL[rnd(s.rng, 26)] : EGG_TYPES[rnd(s.rng, 14)];
 
 /** Bomba de `p` na casa `cell`, com as regras da colocação normal (decisão 13 do plano 6: $24 impede, $25 exige todas
  *  livres e dá fogo 10, fogo total dá 7, tipo = MOUNTS.current.bombType?.(p) ?? p.bombType). Gasta 1 disponível e emite

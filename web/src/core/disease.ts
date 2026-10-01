@@ -7,6 +7,7 @@ import { playerCell, standing } from './state';
 import { spawnItemFlyer } from './flyers';
 import { leakOne } from './items';
 import { STAGES } from './stages';
+import { MOUNTS } from './mounts';
 
 function swapDirs(b: number): number {
   let out = b & ~DIR_BTNS;
@@ -28,6 +29,7 @@ export function applyDiseaseInput(_s: RoundState, p: Player, btn: number): numbe
 export function speedLevel(s: RoundState, p: Player): number {
   let lv = p.disease === DISEASE.FAST ? 6 : p.disease === DISEASE.SLOW ? 7 : p.speedLv;
   if (p.effect.kind === 2) lv = 7;
+  lv = MOUNTS.current.speedLevel?.(p) ?? lv;   // tipo B: $C2:2F40 decide antes da doença
   return STAGES[s.stage]?.speedLevel?.(s, p, lv) ?? lv;   // plano 8 (D10): o nível da arena vence doença e efeito
 }
 

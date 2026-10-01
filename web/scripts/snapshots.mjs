@@ -38,7 +38,8 @@ async function session(browser, pass) {
   const h = {
     page, errors,
     async open(query) {
-      await page.goto(`${base}?debug&${query}`);
+      // Capturas fiéis por padrão (?fx=0); o cenário `effects` liga os efeitos com fx=1.
+      await page.goto(`${base}?debug&${query}${query.includes('fx=') ? '' : '&fx=0'}`);
       await page.waitForFunction(() => !!window.__crown);
       if (pass === 'rom') {
         await page.setInputFiles('input[type=file]', ROM);
@@ -173,13 +174,32 @@ async function arenas(h) {
   }
 }
 
+/** Efeitos visuais ligados (spec 2026-10-01): partida de CPUs até haver chama na arena e logo depois de um acerto. */
+async function effects(h) {
+  for (const stage of [1, 4, 9]) {
+    await h.open(`quick&fx=1&seed=5&players=5&humans=0&level=1&stage=${stage}`);
+    await h.stepUntil(c => c.ms.round.phase !== 'intro');
+    await h.stepUntil(c => c.ms.round.grid.filter(v => v === 0x1000).length >= 5, 3000);
+    await h.step(2);
+    await h.shot(`29-fx-explosao-${String(stage).padStart(2, '0')}`);
+    await h.step(8);
+    await h.shot(`29-fx-explosao-${String(stage).padStart(2, '0')}-b`);
+  }
+  // Bombas na cor de cada jogador: várias bombas paradas na arena.
+  await h.open('quick&fx=1&seed=5&players=5&humans=0&level=1&stage=1');
+  await h.stepUntil(c => c.ms.round.bombs.filter(b => b.state === 'idle').length >= 3, 3000);
+  await h.shot('30-fx-bombas-cor');
+}
+
+// SNAP_ONLY=effects,arenas roda só esses cenários.
+const ONLY = process.env.SNAP_ONLY?.split(',') ?? null;
 let browser;
 try {
   await waitServer();
   browser = await chromium.launch({ channel: 'chrome' });
   for (const pass of ROM ? ['fallback', 'rom'] : ['fallback']) {
     console.log(`passada ${pass}:`);
-    for (const scenario of [menusAndMatch, teams, options, arenas]) {
+    for (const scenario of [menusAndMatch, teams, options, arenas, effects].filter(s => !ONLY || ONLY.includes(s.name))) {
       const h = await session(browser, pass);
       try { await scenario(h); }
       catch (e) { console.error(`  FALHOU ${scenario.name}: ${e.message}`); process.exitCode = 1; }

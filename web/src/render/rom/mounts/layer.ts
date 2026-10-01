@@ -12,6 +12,8 @@ import { mountRomSprites } from './sprites';
  *  (2º jogador montado) reaproveitaria a paleta OBJ 3, que não foi medida com uma montaria ativa (ver relatório). */
 const MOUNT_PAL_ADDR: Record<number, number> = {
   0x2: 0xd7ec5c, 0x3: 0xd7ebfc, 0xa: 0xd7ec9c, 0xc: 0xd7ee7c, 0xd: 0xd7efdc, 0xe: 0xd7f89c, 0xf: 0xd7f69c,
+  // tipos da senha 0164 (montarias-extras/facts_extra.py: as 16 cores da OBJ 2 achadas uma única vez na ROM)
+  0x1: 0xd7f67c, 0x4: 0xd7eebc, 0x5: 0xd7ef7c, 0x6: 0xd7f21c, 0x9: 0xd7edbc, 0xb: 0xd7ee1c,
 };
 
 export const romMountLayer: RomBattleLayer = {

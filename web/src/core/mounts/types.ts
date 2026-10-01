@@ -15,6 +15,7 @@ export interface MountRider {
   /** Marcador do último remonte (só leitura para o render): o ovo reserva é objeto próprio da ROM que brilha na casa
    *  `origin`, anda até (x, y) e estoura em t = 31 com $D8:D327 (40 ticks), passando do fim do remonte (t = 52). */
   remountFx: RemountFx | null;
+  dash?: boolean;        // tipo 4: investida em curso
 }
 
 export interface RemountFx { t0: number; origin: number; x: number; y: number }   // x, y em 1/256 px
@@ -37,13 +38,20 @@ export interface MountProjectile {
 /** Ovo reserva queimado (L22): estoura na casa por EGG_BURST_TICKS e conta no $1ED4 até o fim ($C2:6680). */
 export interface EggBurst { cell: number; t0: number; mount: number }
 
-export interface MountState { projectiles: MountProjectile[]; nextId: number; bursts: EggBurst[] }
+/** Varredura do tipo 5 (objeto $C1:6A3F): `i` = próxima casa de SWEEP_PATH. */
+export interface Sweep { i: number; born: number }
+
+export interface MountState { projectiles: MountProjectile[]; nextId: number; bursts: EggBurst[]; sweeps?: Sweep[] }
 
 export interface MountAbility {
   type: number;
   passes?(p: Player, code: number): boolean;
   bombType?(p: Player): 0 | 1 | 2 | null;
   kicks?(p: Player): boolean;
+  fire?(p: Player): number;
+  speed?(p: Player): number;
+  /** Movimento próprio (tipo 4); true = trava o jogador neste tick. */
+  drive?(s: RoundState, p: Player, r: MountRider, ev: GameEvent[]): boolean;
   onY?(s: RoundState, p: Player, r: MountRider, ev: GameEvent[]): boolean;
   tickProjectile?(s: RoundState, pr: MountProjectile, ev: GameEvent[]): void;
 }
@@ -59,8 +67,9 @@ export const MAX_ACTIVE = 2;        // $1ED4
 export const MAX_RESERVES = 3;      // +$52/+$54/+$56
 export const EGG_BURST_TICKS = 40;  // $D8:D327: 4 quadros × 10 ticks (explosão do ovo; reserva queimada, L22)
 
-/** Ovo de máquina (metálico, gráfico $D8:D2CC), como na ROM (ids ≥ $38): chute (A), linha de bombas (C), foguete (D),
- *  tiro lento (E) e soneca (F). Ovo verde: atravessa bloco (2) e bomba perfurante (3). */
+/** Ovo de máquina (metálico, gráfico $D8:D2CC), como na ROM (ids ≥ $38): soco (9), chute (A), velocidade (B), linha de
+ *  bombas (C), foguete (D), tiro lento (E) e soneca (F). Ovo verde: atravessa bomba (1), atravessa bloco (2), bomba
+ *  perfurante (3), investida (4), varredura (5) e fogo total (6). */
 export const isMachine = (type: number): boolean => type >= 8;
 /** Ovo reserva: só segue quem está numa montaria da mesma classe (máquina × normal). */
 export const sameClass = (a: number, b: number): boolean => isMachine(a) === isMachine(b);

@@ -12,10 +12,10 @@ const until = (app: App, id: string) => { for (let n = 0; n < 5000 && app.screen
 const step = (app: App, btn: number, id: string, slot?: number) => { press(app, btn, slot); settle(app); expect(app.screen.id).toBe(id); };
 
 describe('fluxo completo com entrada simulada (aceite do plano 10)', () => {
-  it('título → VS → modo → jogadores → regras → personagens → fase → partida → placar final → vitória → fase', () => {
+  it('título → jogadores → regras → personagens → fase → partida → placar final → vitória → fase', () => {
     const { app, sink } = mkApp();
     app.go(titleScreen(app));
-    step(app, BTN.A, 'vs'); step(app, BTN.A, 'mode'); step(app, BTN.A, 'players'); step(app, BTN.A, 'rules');
+    step(app, BTN.A, 'players'); step(app, BTN.A, 'rules');
     press(app, BTN.DOWN); press(app, BTN.LEFT); press(app, BTN.LEFT);            // Coroas 3 → 1
     step(app, BTN.A, 'characters');
     press(app, BTN.A, 1); for (let k = 0; k < 4; k++) press(app, BTN.A, 0);
@@ -35,7 +35,7 @@ describe('fluxo completo com entrada simulada (aceite do plano 10)', () => {
     const { app } = mkApp();
     app.settings.setup.stage = 1;
     app.go(titleScreen(app));
-    step(app, BTN.A, 'vs'); step(app, BTN.A, 'mode'); step(app, BTN.A, 'players'); step(app, BTN.A, 'rules'); step(app, BTN.A, 'characters');
+    step(app, BTN.A, 'players'); step(app, BTN.A, 'rules'); step(app, BTN.A, 'characters');
     press(app, BTN.A, 1); for (let k = 0; k < 4; k++) press(app, BTN.A, 0);
     settle(app);
     press(app, BTN.A); until(app, 'battle');
@@ -52,7 +52,7 @@ describe('fluxo completo com entrada simulada (aceite do plano 10)', () => {
     const { app } = mkApp();
     app.settings.setup.slots = ['cpu', 'cpu', 'off', 'off', 'off'];
     app.go(titleScreen(app));
-    step(app, BTN.A, 'vs'); step(app, BTN.A, 'mode'); step(app, BTN.A, 'players'); step(app, BTN.A, 'rules'); step(app, BTN.A, 'characters');
+    step(app, BTN.A, 'players'); step(app, BTN.A, 'rules'); step(app, BTN.A, 'characters');
     press(app, BTN.A); press(app, BTN.A); settle(app);
     press(app, BTN.A); until(app, 'battle');
     const b = app.screen as ReturnType<typeof battleScreen>;

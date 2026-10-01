@@ -20,6 +20,8 @@ const FACE_TO_DIR = [1, 0, 4, 0, 2, 0, 3];      // face 0/2/4/6 → DIR da arte 
 const solid = (v: number) => v === CODE.HARD || v === CODE.SOFT || v === CODE.PRESSURE || v === CODE.BURNING;
 /** Abaixo desta linha começa o HUD; a etiqueta nunca pode subir até lá. */
 const HUD_BOTTOM = 24;
+/** Camadas que desenham atores: o quadro "sem atores" (máscara das sombras dos efeitos) as pula. */
+const ACTOR_LAYERS = new Set(['mounts', 'costume']);
 
 export function drawTextCentered(ctx: CanvasRenderingContext2D, bank: SpriteBank, text: string, color: string, y: number, scale: number): void {
   const img = bank.text(text, color);
@@ -53,7 +55,7 @@ export function drawHud(ctx: CanvasRenderingContext2D, round: RoundState, bank: 
 
 /** Desenha a arena inteira de uma rodada pela grade de códigos da ROM: tiles, itens, chamas, bombas, jogadores e HUD. */
 export function drawRound(ctx: CanvasRenderingContext2D, round: RoundState, view: ViewState, bank: SpriteBank,
-  chars: number[], frame: number, crowns: number[]): void {
+  chars: number[], frame: number, crowns: number[], opts: { actors?: boolean } = {}): void {
   const tiles = bank.tiles(round.stage);
   ctx.fillStyle = tiles.bg;
   ctx.fillRect(0, 0, SCREEN_W, SCREEN_H);
@@ -72,7 +74,13 @@ export function drawRound(ctx: CanvasRenderingContext2D, round: RoundState, view
     else if (v === CODE.FLAME) ctx.drawImage(bank.flame(flamePart(round.cellAux[c]), flameShrink(round.tick - round.cellT0[c])), x, y);
     else if (v === CODE.FALLING) { ctx.fillStyle = 'rgba(0, 0, 0, 0.35)'; ctx.fillRect(x + 2, y + 10, 12, 5); }
   }
-  for (const l of fallbackLayers) l.draw(round, ctx, bank, frame);
+  const actors = opts.actors !== false;
+  for (const l of fallbackLayers) if (actors || !ACTOR_LAYERS.has(l.id)) l.draw(round, ctx, bank, frame);
+  if (actors) drawActors(ctx, round, view, bank, chars, frame);
+  drawHud(ctx, round, bank, chars, crowns);
+}
+
+function drawActors(ctx: CanvasRenderingContext2D, round: RoundState, view: ViewState, bank: SpriteBank, chars: number[], frame: number): void {
   for (const b of round.bombs) {
     if (b.state === 'idle' || b.state === 'kicked') ctx.drawImage(bank.bomb((frame >> 3) & 1), px(b.x) - 7, px(b.y) - 7);
   }
@@ -100,5 +108,4 @@ export function drawRound(ctx: CanvasRenderingContext2D, round: RoundState, view
   for (const b of round.bad) ctx.drawImage(bank.bomber(chars[b.slot], FACE_TO_DIR[b.face], 0), b.x - 8, b.y - 12);
   ctx.globalAlpha = 1;
   for (const l of fallbackOverLayers) l.draw(round, ctx, bank, frame);   // M4: depois de bombas e jogadores
-  drawHud(ctx, round, bank, chars, crowns);
 }

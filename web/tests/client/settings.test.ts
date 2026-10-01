@@ -16,7 +16,7 @@ describe('configurações v3', () => {
     expect([s.keymaps.length, s.padmaps.length]).toEqual([5, 5]);
     expect(s.padmaps[4]).toEqual(DEFAULT_PADMAP);
     expect(s.keymaps[2].a).toBe('');
-    expect(s.options).toEqual({ randomSpawns: false, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3 });
+    expect(s.options).toEqual({ randomSpawns: false, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3, fx: true, allMounts: true });
     expect(s.setup.rules).not.toHaveProperty('randomSpawns');
   });
   it('salva e carrega de volta', () => {
@@ -54,7 +54,16 @@ describe('configurações v3', () => {
   it('valores inválidos caem no padrão', () => {
     const s = normalizeSettings({ padmaps: [{ a: -1, b: 99, x: 'q' }], options: { musicVol: 11, sfxVol: 2.5, randomSpawns: 'sim', gloveEscape: 99 } });
     expect(s.padmaps[0]).toEqual(DEFAULT_PADMAP);
-    expect(s.options).toEqual({ randomSpawns: false, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3 });
+    expect(s.options).toEqual({ randomSpawns: false, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3, fx: true, allMounts: true });
+  });
+  it('efeitos visuais: padrão ligado, campo ausente em configuração antiga vira true, lixo vira padrão', () => {
+    expect(defaultSettings().options.fx).toBe(true);
+    expect(normalizeSettings({ options: { musicVol: 3 } }).options.fx).toBe(true);
+    expect(normalizeSettings({ options: { fx: false } }).options.fx).toBe(false);
+    expect(normalizeSettings({ options: { fx: 'não' } }).options.fx).toBe(true);
+    expect(normalizeSettings({ options: { musicVol: 3 } }).options.allMounts).toBe(true);
+    expect(normalizeSettings({ options: { allMounts: false } }).options.allMounts).toBe(false);
+    expect(normalizeSettings({ options: { allMounts: 1 } }).options.allMounts).toBe(true);
   });
   it('JSON corrompido → padrão; falha ao gravar não derruba', () => {
     const st = mem();

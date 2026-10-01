@@ -34,6 +34,9 @@ export interface MountModule {
   passes?(p: Player, code: number): boolean;                                // tipo 2 atravessa soft
   bombType?(p: Player): 0 | 1 | 2 | null;                                   // tipo 3: bomba perfurante
   kicks?(p: Player): boolean;                                               // tipo A
+  bombFire?(p: Player): number | null;                                      // tipo 6: fogo da bomba
+  speedLevel?(p: Player): number | null;                                    // tipo B: nível de velocidade
+  drive?(s: RoundState, p: Player, ev: GameEvent[]): boolean;               // tipo 4: investida (true = travado)
   tick(s: RoundState, ev: GameEvent[]): void;                               // projéteis, ovo reserva
   ai?: AiMountHints;
 }

@@ -70,6 +70,7 @@ export function playerActions(s: RoundState, p: Player, btn: number, pressed: nu
     else { throwAny(s, p, ev); return; }
   }
   if (tickAct(s, p, ev)) return;
+  if (MOUNTS.current.drive?.(s, p, ev)) return;   // investida do tipo 4
   // 1º tick livre depois do levantamento ($C2:3692 → normal): a ROM olha o A *apertado* — soltou durante a pose e não
   // apertou de novo, arremessa agora; apertou de novo, continua segurando.
   if (p.throwQueued && holding(p)) {

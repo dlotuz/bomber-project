@@ -22,9 +22,9 @@ beforeEach(() => vi.clearAllMocks());
 describe('opções (§6.13)', () => {
   it('linhas na ordem: Opções, Controles e Jogabilidade', () => {
     const { app } = mkApp();
-    expect(optionsScreen(app).rowIds()).toEqual(['controls', 'gameplay', 'music', 'sfx', 'romStatus', 'romLoad', 'romForget', 'reset', 'back']);
+    expect(optionsScreen(app).rowIds()).toEqual(['controls', 'gameplay', 'fx', 'music', 'sfx', 'romStatus', 'romLoad', 'romForget', 'reset', 'back']);
     expect(optionsScreen(app, 0, 'controls').rowIds()).toEqual(['p1', 'p2', 'p3', 'p4', 'p5', 'slot', 'slotSave', 'slotLoad', 'back']);
-    expect(optionsScreen(app, 0, 'gameplay').rowIds()).toEqual(['spawns', 'escape', 'throwStun', 'sleep', 'slot', 'slotSave', 'slotLoad', 'back']);
+    expect(optionsScreen(app, 0, 'gameplay').rowIds()).toEqual(['spawns', 'escape', 'throwStun', 'sleep', 'password', 'slot', 'slotSave', 'slotLoad', 'back']);
   });
   it('slots de controles: salvar no 2 e carregar de volta; slot vazio não carrega', () => {
     const { app } = mkApp();
@@ -57,6 +57,15 @@ describe('opções (§6.13)', () => {
     app.settings.controlSlots[2] = { devices: ['none', 'none', 'none', 'none', 'none'], keymaps: app.settings.keymaps, padmaps: app.settings.padmaps };
     const o = optionsScreen(app); app.go(o); goRow(o, 'reset'); press(app, BTN.A);
     expect(app.settings.controlSlots[2]?.devices[0]).toBe('none');
+  });
+  it('EFEITOS VISUAIS: ←/→ desliga e liga, e salva', () => {
+    const { app } = mkApp();
+    const o = optionsScreen(app); app.go(o); goRow(o, 'fx');
+    expect(o.value('fx')).toBe('SIM');
+    press(app, BTN.LEFT);
+    expect([app.settings.options.fx, o.value('fx')]).toEqual([false, 'NÃO']);
+    press(app, BTN.RIGHT);
+    expect(app.settings.options.fx).toBe(true);
   });
   it('A em CONTROLES/JOGABILIDADE abre o submenu; B volta às Opções com o cursor nele', () => {
     const { app } = mkApp();
@@ -164,11 +173,11 @@ describe('opções (§6.13)', () => {
     app.go(optionsScreen(app));
     expect(sink.calls.map(c => [c.op, c.id])).toEqual([['bank', BANK.menus], ['music', MUSIC.title]]);
   });
-  it('B volta ao título com o cursor em "Opções"', () => {
+  it('B volta ao título (cursor em "BATTLE GAME", a única opção)', () => {
     const { app } = mkApp();
     app.go(optionsScreen(app));
     press(app, BTN.B); settle(app);
-    expect([app.screen.id, (app.screen as unknown as { cursor: number }).cursor]).toEqual(['title', 2]);
+    expect([app.screen.id, (app.screen as unknown as { cursor: number }).cursor]).toEqual(['title', 0]);
   });
 });
 

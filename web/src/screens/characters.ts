@@ -5,11 +5,12 @@ import { FADE_MENU } from '../app/fade';
 import { romState, type RomAssets } from '../app/rom-api';
 import { obj, PpuCanvas } from '../render/screens-rom/scene';
 import { CHARACTERS } from '../render/art/bomber';
-import { CHARSEL_BG1_SHIFT, CHARSEL_GRID, CHARSEL_PORTRAIT, CHARSEL_STANDEE, CHARSEL_STANDEE_Y, charselFrame, drawCharselTitle } from '../render/screens-rom/charsel';
+import { CHARSEL_GRID, CHARSEL_PORTRAIT, CHARSEL_STANDEE, CHARSEL_STANDEE_Y, charselSprites, drawCharselTitle } from '../render/screens-rom/charsel';
+import { hdMenu } from '../render/hd-menu';
 import { drawText } from '../render/text/text';
 import { S } from '../render/text/strings';
 import { SCREEN_H } from '../render/display';
-import { COLORS, PLAYER_COLORS, drawFallbackFrame, drawStaticBackground } from './ui';
+import { COLORS, PLAYER_COLORS } from './ui';
 import { createPickScheme } from './pick-scheme';
 import { rulesScreen } from './rules';
 import { stageScreen } from './stage';
@@ -17,7 +18,6 @@ import { teamsScreen } from './teams';
 
 const { cols: COLS, rows: ROWS } = CHARSEL_GRID;
 /** Moldura do fallback (spec §6.14), medida como as demais telas de menu. */
-const FRAME = { x0: 27, y0: 35, x1: 224, y1: 188 };
 
 /** Cursor "[ ]": 4 cantos preenchidos (`fillRect`, 2 por canto), na cor do jogador — nunca uma única moldura
  *  (brief "Fallback", §6.6). `arm`/`t` = comprimento/espessura de cada canto, em px. */
@@ -88,6 +88,7 @@ export function charactersScreen(app: App): Screen & {
     },
     draw(ctx, bank, frame) {
       const a: RomAssets | null = romState.assets;
+      hdMenu(ctx, null, { title: 15 });
       if (a) {
         // Cena real (§6.6): corda + quebra-cabeça do BG (`MAP_SOURCES.charsel`, T19), a coluna de retratos da ROM
         // no BG1 (I6: folha `$CD:E585`, cores `$C1:B3C3` por slot e personagem; "×" nos slots desligados) e os 6
@@ -95,11 +96,9 @@ export function charactersScreen(app: App): Screen & {
         // Só o título (no vão da corda) e os cursores vão por cima, depois do PPU.
         const oam = CHARSEL_STANDEE.map((s, k) =>
           obj(CHARSEL_GRID.x[k % COLS], CHARSEL_STANDEE_Y[Math.floor(k / COLS)], s.tile, s.pal, { big: true, prio: 3 }));
-        ppu.draw(ctx, charselFrame(a, [0, 1, 2, 3, 4].map(i => (setup.slots[i] !== 'off' ? setup.chars[i] : null)), oam));
-        drawCharselTitle(ctx, bank, S.chars.title, COLORS.title, CHARSEL_BG1_SHIFT);
+        ppu.drawOver(ctx, charselSprites(a, [0, 1, 2, 3, 4].map(i => (setup.slots[i] !== 'off' ? setup.chars[i] : null)), oam));
+        drawCharselTitle(ctx, bank, S.chars.title, COLORS.title);
       } else {
-        drawStaticBackground(ctx);
-        drawFallbackFrame(ctx, FRAME);
         // Grade 3×2 dos personagens (sem ROM: nossa própria arte).
         CHARACTERS.forEach((ch, k) => {
           const x = CHARSEL_GRID.x[k % COLS], y = CHARSEL_GRID.y[Math.floor(k / COLS)];
