@@ -3,6 +3,8 @@ import { cellOf, cellAt, EGG_TYPES, lockAct, placeBombAt, explodeAt, isEnemy } f
 import { MOUNTS } from '../../src/core/mounts';
 import { mountModule } from '../../src/core/mounts/module';
 import type { GameEvent } from '../../src/core/types';
+import { addBomb } from '../../src/core/bombs';
+import { CHAIN_DELAY } from '../../src/core/constants';
 
 describe('adaptador do core', () => {
   it('convenção de casas do plano 6: cellOf(col, lin) e cellAt(x, y)', () => {
@@ -50,6 +52,12 @@ describe('adaptador do core', () => {
     expect(s.grid[cellOf(9, 1)]).not.toBe(0x1000);
     expect(ev).toContainEqual({ type: 'explosion', cell: cellOf(6, 1), owner: 0 });
     expect(p.bombsFree).toBe(free);
+  });
+  it('explodeAt sobre uma bomba parada: a casa continua dela (grade C900) e ela entra na cadeia', () => {
+    const s = mkRound();
+    const b = addBomb(s, 1, cellOf(6, 1));
+    explodeAt(s, cellOf(6, 1), 2, 0, []);
+    expect([s.grid[cellOf(6, 1)], b.chainAt, s.grid[cellOf(7, 1)]]).toEqual([0xc900, s.tick + CHAIN_DELAY, 0x1000]);
   });
   it('isEnemy: outro jogador de pé é adversário; o próprio não; em times, o parceiro não', () => {
     const s = mkRound({ players: [0, 2] });
