@@ -9,6 +9,7 @@ import { ORDER_OBJ, ORDER_PLAYER, ORDER_PRESSURE, type FrameBuilder } from './bu
 import type { RomTables } from './tables';
 import { OBJ_ITEM_PAL, type RomClock, type RomMemo, type RomScene } from './scene';
 import { warnOnce } from './warn';
+import { NO_SKIP, type HdSkip } from '../hdart/cover';
 
 export interface SpriteCtx {
   s: RoundState; a: RomAssets; tb: RomTables; scene: RomScene; clock: RomClock; memo: RomMemo;
@@ -83,12 +84,13 @@ function drawFrame(b: FrameBuilder, c: SpriteCtx, p: Player, X: number, Y: numbe
   }
 }
 
-export function drawPlayers(b: FrameBuilder, c: SpriteCtx): void {
+/** `sprites` falso (arte HD desenhando os jogadores): só carrega as paletas, sem sprites. */
+export function drawPlayers(b: FrameBuilder, c: SpriteCtx, sprites = true): void {
   const { s, a, clock } = c;
   for (const p of s.players) {
     if (!p.present || p.state === 'out' || p.state === 'bad') continue;
     loadPalette(b, c, p);
-    if (invincibleHidden(p.inv)) continue;
+    if (!sprites || invincibleHidden(p.inv)) continue;
     if (p.disease === 0x29 && !invisibleVisible(p)) continue;
     const X = px(p.x);
     const Y = px(p.y) - p.z;   // na mão da luva ou arremessado: acima do chão
@@ -114,8 +116,9 @@ export function drawBadBombers(b: FrameBuilder, c: SpriteCtx): void {
   }
 }
 
-export function drawObjects(b: FrameBuilder, c: SpriteCtx): void {
+export function drawObjects(b: FrameBuilder, c: SpriteCtx, skip: HdSkip = NO_SKIP): void {
   c.scene.objs.forEach((o, i) => {
+    if (skip.has(o.kind === 'bomb' ? 'bombs' : 'items')) return;
     const y = o.y - o.z;
     const e: ObjEntry = o.kind === 'bomb'
       ? { x: o.x - 8, y: y - 8, size: 16, pal: OBJ_BOMB.pal, prio: 2, hflip: false, vflip: false, src: { tile: OBJ_BOMB.tile } }
@@ -139,9 +142,11 @@ export function drawPressure(b: FrameBuilder, c: SpriteCtx): void {
   });
 }
 
-export function drawSprites(b: FrameBuilder, c: SpriteCtx): void {
-  drawPlayers(b, c);
-  drawBadBombers(b, c);
-  drawObjects(b, c);
-  drawPressure(b, c);
+/** `skip`: categorias que a arte HD desenha neste quadro (ver hdart/cover.ts). */
+export function drawSprites(b: FrameBuilder, c: SpriteCtx, skip: HdSkip = NO_SKIP): void {
+  const players = !skip.has('players');
+  drawPlayers(b, c, players);
+  if (players) drawBadBombers(b, c);
+  drawObjects(b, c, skip);
+  if (!skip.has('arena')) drawPressure(b, c);
 }
