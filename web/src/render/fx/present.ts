@@ -1,6 +1,7 @@
 import { SCREEN_H, SCREEN_W, type Display } from '../display';
 import { drawFx } from './draw';
 import { drawHdMenu } from '../hd-menu';
+import { drawHdBattleLayer } from '../hdart/mode';
 import type { FxFrame } from './state';
 
 const reduced = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
@@ -33,11 +34,13 @@ export function present(d: Display, frame: FxFrame | null, fade: number): void {
   out.globalCompositeOperation = 'source-over';
   if (ox || oy) { out.fillStyle = '#000'; out.fillRect(0, 0, out.canvas.width, out.canvas.height); }
   drawHdMenu(out, sx, sy);   // menus: fundo/texto HD por baixo da base transparente
+  drawHdBattleLayer(out, sx, sy, ox, oy, 'under');   // partida com arte HD: o que fica por baixo da base
   const src = sharpBase(d);
   out.imageSmoothingEnabled = src !== d.ctx.canvas;
   out.imageSmoothingQuality = 'high';
   out.drawImage(src, ox, oy, SCREEN_W * sx, SCREEN_H * sy);
   out.imageSmoothingEnabled = false;
+  drawHdBattleLayer(out, sx, sy, ox, oy, 'over', fade);   // partida com arte HD: por cima da base, antes dos efeitos
   if (!frame) return;
   out.setTransform(sx, 0, 0, sy, ox, oy);   // os efeitos desenham em pixels de base, rasterizados em resolução nativa
   drawFx(out, frame, d.ctx, fade);
