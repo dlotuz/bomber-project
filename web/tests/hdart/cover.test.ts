@@ -33,7 +33,7 @@ describe('requiredKeys / hdCoverage', () => {
     expect(cov.has('eggs')).toBe(false);
   });
 
-  it('jogadores: personagem × ação atual × direção; montado precisa de montaria e cavaleiro; traje nunca cobre', () => {
+  it('jogadores: personagem × ação atual × direção; montado precisa de montaria e cavaleiro; traje como no original', () => {
     const s = fakeRound();
     s.players.forEach((p, i) => { p.present = i < 2; p.char = i; });
     s.players[0].act = 'walk'; s.players[0].face = 6;
@@ -46,7 +46,20 @@ describe('requiredKeys / hdCoverage', () => {
     expect(requiredKeys(s).players).toEqual(['rider/0/left', 'mount/a/riding/left', 'char/1/dying']);
     s.players[0].mount = null;
     s.players[0].costume = 2;
-    expect(hdCoverage(s, testPack({ 'char/0/idle/left': still(), 'char/1/dying': still() })).has('players')).toBe(false);
+    s.players[0].moveDir = 6;
+    expect(requiredKeys(s).players).toEqual(['costume/2/walk/left', 'char/1/dying']);
+    s.players[0].act = 'punch';   // sem desenho de traje no original: aparece normal
+    expect(requiredKeys(s).players).toEqual(['char/0/punch/left', 'char/1/dying']);
+  });
+
+  it('HUD: barra, relógio, algarismos do tempo atual, rosto e contador de coroas de cada presente', () => {
+    const s = fakeRound();
+    s.players.forEach((p, i) => { p.present = i < 2; p.char = i + 3; });
+    s.clock.sec = 125;
+    expect(requiredKeys(s, [2, 0]).hud).toEqual(['hud/bar', 'hud/clock', 'hud/digit/2', 'hud/colon', 'hud/digit/0', 'hud/digit/5',
+      'hud/head/3', 'hud/crown/2', 'hud/head/4', 'hud/crown/0']);
+    s.clock.sec = 9999;
+    expect(requiredKeys(s, [0, 0]).hud.slice(0, 3)).toEqual(['hud/bar', 'hud/clock', 'hud/infinity']);
   });
 
   it('categoria sem nada em campo conta como coberta (nada a desenhar)', () => {

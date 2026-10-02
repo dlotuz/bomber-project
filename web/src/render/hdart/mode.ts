@@ -46,7 +46,7 @@ export const hdBattlePlan = (): HdPlan | null => state.plan;
  *  guarda a rodada para a apresentação e devolve o que a base deve pular. Sem pacote: lista vazia, nada guardado. */
 export function hdBattleSkip(round: RoundState, crowns: readonly number[]): HdSkip {
   if (!pack) return NO_SKIP;
-  const plan = hdPlan(hdCoverage(round, pack));
+  const plan = hdPlan(hdCoverage(round, pack, crowns));
   state.on = true; state.round = round; state.crowns = [...crowns]; state.plan = plan;
   return plan.skip;
 }
