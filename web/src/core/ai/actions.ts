@@ -114,7 +114,7 @@ function afterY(s: RoundState, p: Player): { sim: RoundState; delay: number } {
   if (b) { const [x, y] = cellCenter(front); launch(sim, b.id, 'punch', dir, { x, y, z: 0 }); }
   if (!p.pItem) return { sim, delay: PUNCH_TICKS };
   for (const q of sim.players) {                           // empurrados 3 casas, parando antes de sólido
-    if (q.slot === p.slot || !standing(q) || playerCell(q) !== front) continue;
+    if (q.slot === p.slot || q.mount || !standing(q) || playerCell(q) !== front) continue;   // montado: o P não acha
     let c = front;
     for (let k = 0; k < 3; k++) { const n = faceStep(c, p.face); if (solid(sim.grid[n] ?? CODE.HARD)) break; c = n; }
     [q.x, q.y] = cellCenter(c);
@@ -142,7 +142,7 @@ function wantPunch(s: RoundState, p: Player, level: AiLevel, hz: Hazard): boolea
 function wantP(s: RoundState, p: Player, level: AiLevel): boolean {
   if (!p.pItem || p.mount) return false;
   const front = faceStep(playerCell(p), p.face);
-  const victims = s.players.filter(q => q !== p && standing(q) && playerCell(q) === front);
+  const victims = s.players.filter(q => q !== p && !q.mount && standing(q) && playerCell(q) === front);   // como startPPunch
   if (!victims.length || victims.some(q => !isFoe(s, p, q))) return false;
   const hz = hazards(s, victims[0].slot);
   let c = front, lethal = false;

@@ -38,6 +38,12 @@ describe('IA: ações (§9.3)', () => {
     addBomb(s, 1, C(9, 3), { fuse: 15 });
     expect(play(s, CPU0, 2, 10)).toContainEqual({ type: 'p_punch', slot: 0 });
   });
+  it('golpe P: não mira adversário montado (a ROM não acha montado na ocupação, $C2:499F; aj-pmount)', () => {
+    const s = arena(); const p = put(s, 0, 4, 3); p.pItem = true; p.face = 2; put(s, 1, 5, 3);
+    s.players[1].mount = { type: 2, slot: 1, phase: 'riding', t0: s.tick, reserves: [], trail: [], cooldown: 0, remount: false, remountFx: null };
+    addBomb(s, 1, C(9, 3), { fuse: 15 });
+    expect(play(s, CPU0, 2, 10)).not.toContainEqual({ type: 'p_punch', slot: 0 });
+  });
   it('X: para a própria bomba chutada quando a cruz pega um adversário', () => {
     const s = arena(); put(s, 0, 4, 3); put(s, 1, 8, 5);
     const b = addBomb(s, 0, C(5, 3), { fuse: 120, fire: 1 });
