@@ -23,6 +23,8 @@ export interface FxFrame {
   state: FxState; round: RoundState; drawNoActors(ctx: CanvasRenderingContext2D, bombs?: boolean): void;
   /** O quadro com atores saiu dos sprites da ROM (a sombra suave vai onde a ROM punha a dela); ausente = arte própria. */
   rom?: boolean;
+  /** Vagas em que a elipse do sprite da ROM ficou no último quadro (sem a suave). */
+  hardShadows?: ReadonlySet<number>;
 }
 
 export function createFx(seed = 0x5eed): FxState {

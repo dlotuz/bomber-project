@@ -42,10 +42,11 @@ function footDy(p: Player, rom: boolean): number {
 }
 
 /** Sombras sob jogadores vivos e à vista, bombas paradas/chutadas e objetos em voo. `rom`: os atores saíram dos
- *  sprites da ROM neste quadro. Pura (testes). */
-export function shadowSpots(r: RoundState, rom = false): ShadowSpot[] {
+ *  sprites da ROM neste quadro; `hard`: vagas em que a elipse do sprite da ROM ficou (rom/baked-shadow.ts) — sem
+ *  a suave, para não haver duas. Pura (testes). */
+export function shadowSpots(r: RoundState, rom = false, hard?: ReadonlySet<number>): ShadowSpot[] {
   const out: ShadowSpot[] = [];
-  for (const p of r.players) if (p.present && p.state === 'alive' && !spriteHidden(p)) out.push({ x: entX(p.x), y: entY(p.y) + footDy(p, rom), height: p.z });
+  for (const p of r.players) if (p.present && p.state === 'alive' && !spriteHidden(p) && !(rom && hard?.has(p.slot))) out.push({ x: entX(p.x), y: entY(p.y) + footDy(p, rom), height: p.z });
   for (const b of r.bombs) if (b.state === 'idle' || b.state === 'kicked') out.push({ x: entX(b.x), y: entY(b.y) + 5, height: 0 });
   for (const f of r.flyers) if (f.kind !== 'player') out.push({ x: entX(f.x), y: entY(f.y) + 5, height: -f.z });
   return out;
@@ -65,7 +66,7 @@ export function drawShadows(out: CanvasRenderingContext2D, frame: FxFrame, m: Ac
   g.globalCompositeOperation = 'source-over';
   g.clearRect(0, 0, g.canvas.width, g.canvas.height);
   g.setTransform(s, 0, 0, s, 0, 0);
-  for (const p of shadowSpots(frame.round, !!frame.rom)) blob(g, p.x, p.y, p.height);
+  for (const p of shadowSpots(frame.round, !!frame.rom, frame.hardShadows)) blob(g, p.x, p.y, p.height);
   g.globalAlpha = 1;
   g.globalCompositeOperation = 'destination-in';
   g.imageSmoothingEnabled = false;

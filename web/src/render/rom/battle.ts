@@ -35,6 +35,8 @@ export interface BuildOpts {
   skip?: HdSkip;
   /** Efeitos com a sombra suave ligados: jogadores vivos sem a sombra chapada do sprite (ver rom/baked-shadow.ts). */
   softShadows?: boolean;
+  /** Saída (com `softShadows`): vagas em que a elipse da ROM ficou neste quadro. */
+  hardShadows?: Set<number>;
 }
 
 export const HUD_HOFS = 8;
@@ -135,7 +137,7 @@ export function buildBattleFrame(s: RoundState, vis: RomBattleVis, a: RomAssets,
   bg1.set(hudWords(ar.hudMap, s.clock.sec, s.players.map(p => p.present), vis.crowns ?? NO_CROWNS, tb.crownWord), HUD_MAP_ROW * MAP_W);
   if (skip.size) skipWords(s, ar, bg1, bg2, skip, blankWord(tiles));
   const b = new FrameBuilder(bg1, bg2, cgram);
-  if (opts.sprites !== false) drawSprites(b, { s, a, tb, scene, clock, memo, tiles, softShadows: opts.softShadows }, skip);
+  if (opts.sprites !== false) drawSprites(b, { s, a, tb, scene, clock, memo, tiles, softShadows: opts.softShadows, hardShadows: opts.hardShadows }, skip);
   else if (opts.bombSprites) drawObjects(b, { s, a, tb, scene, clock, memo, tiles }, ONLY_BOMBS);
   // M1: cada camada dos planos 8/9 roda isolada — uma que lance não derruba o quadro nem alterna com o fallback;
   // fica só sem aquela camada, com aviso uma vez por (assets, id da camada).

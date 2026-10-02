@@ -52,4 +52,12 @@ describe('fx: sombra suave dos personagens', () => {
     expect(shadowSpots(r, true).find(s => s.x === entX(p.x))!.y).toBe(entY(p.y) + 4);
     expect(shadowSpots(r, false).find(s => s.x === entX(p.x))!.y).toBe(entY(p.y) + 6);   // arte própria: como sempre
   });
+
+  it('jogador cuja elipse da ROM ficou no sprite (sem encaixe certo): sem a suave, para não haver duas', () => {
+    const r = round();
+    expect(shadowSpots(r, true, new Set([0]))).toHaveLength(alive(r).length - 1);
+    const p0 = r.players[0];
+    expect(shadowSpots(r, true, new Set([0])).some(s => s.x === entX(p0.x) && s.y === entY(p0.y) + 1)).toBe(false);
+    expect(shadowSpots(r, false, new Set([0]))).toHaveLength(alive(r).length);   // arte própria: não há elipse da ROM
+  });
 });

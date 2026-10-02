@@ -38,7 +38,8 @@ export function battleScreen(app: App, ms: MatchSession): BattleScreen {
   /** O App pediu os efeitos no último quadro (Opções e `?fx`): só então a sombra suave existe e a chapada do sprite
    *  da ROM sai (uma sombra por personagem); com eles desligados, ou as sombras em pausa pelo orçamento, fica a da ROM. */
   let fxShown = false;
-  const SOFT_SHADOWS = { softShadows: true };
+  const hardShadows = new Set<number>();
+  const SOFT_SHADOWS = { softShadows: true, hardShadows };
   let last: { bank: SpriteBank; frame: number } | null = null;
   const NO_ACTORS = { sprites: false, layers: [] };
   const BOMBS_ONLY = { sprites: false, layers: [], bombSprites: true };
@@ -86,7 +87,7 @@ export function battleScreen(app: App, ms: MatchSession): BattleScreen {
   });
 
   const fxFrame: FxFrame = {
-    state: fx, round,
+    state: fx, round, hardShadows,
     drawNoActors(ctx, bombs = false) {
       if (!last) return;
       const a = romState.assets, crowns = crownsOf(ms.match);
@@ -143,6 +144,7 @@ export function battleScreen(app: App, ms: MatchSession): BattleScreen {
       const a = romState.assets;
       const crowns = crownsOf(ms.match);
       const soft = fxShown && fx.shadowsPause === 0;
+      hardShadows.clear();
       fxFrame.rom = !!a && drawRomBattle(ctx, round, { crowns }, a, frame, soft ? SOFT_SHADOWS : {});
       if (!fxFrame.rom) drawRound(ctx, round, view, bank, ms.cfg.chars, frame, [...crowns]);
       drawBombLevels(ctx, bank, round);
