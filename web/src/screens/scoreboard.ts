@@ -3,7 +3,7 @@ import type { SpriteBank } from '../render/sprite-bank';
 import type { MatchSession } from '../game/match-session';
 import { BTN } from '../game/core-api';
 import { SCORE, NEXT_ROUND } from '../game/timeline';
-import { FADE_OUT_1 } from '../app/fade';
+import { FADE_OUT_1, shortBlack } from '../app/fade';
 import { MUSIC, BANK } from '../app/audio';
 import { romState } from '../app/rom-api';
 import { battleScreen } from './battle';
@@ -43,13 +43,13 @@ export function scoreboardScreen(app: App, ms: MatchSession): Screen & {
       }
       const skip = (inp.pressedAny & (BTN.A | BTN.B | BTN.START)) !== 0;
       if ((skip && s >= SCORE.skipFrom) || (!skip && s === SCORE.autoAt)) {
-        app.transition(() => battleScreen(app, ms), {
+        app.transition(() => battleScreen(app, ms), shortBlack({
           out: FADE_OUT_1, black: NEXT_ROUND.afterScore, in: [],
           cues: [
             { at: NEXT_ROUND.bankAt, run: a => a.audio.bank(BANK.battle) },
             { at: NEXT_ROUND.musicAt, run: a => a.audio.music(MUSIC.battle) },
           ],
-        });
+        }));
       }
     },
     draw(ctx, bank) { drawScoreboard(ctx, bank, ms, s, 0); },

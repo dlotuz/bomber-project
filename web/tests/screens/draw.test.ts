@@ -46,12 +46,12 @@ describe('EMPATE (§6.11, R21)', () => {
     tap(app, BTN.START); expect(app.inTransition).toBe(false);
     tap(app, BTN.B); expect(app.inTransition).toBe(true);
   });
-  it('pular: próxima rodada depois de 15 + 385, com $2F +31 e $14 +43', () => {
+  it('pular: próxima rodada depois de 15 + 30 (ROUND_BLACK), com $2F +31 e $14 +43', () => {
     const { app, sink } = drawEnv();
     idle(app, 20); tap(app, BTN.A);
     const t0 = app.tick;
     while (app.screen.id !== 'battle') app.update(idleInput());
-    expect(app.tick - t0).toBe(400);
+    expect(app.tick - t0).toBe(45);
     expect(sink.since(t0).map(c => [c.t, c.op, c.id])).toEqual([[31, 'bank', 0x2f], [43, 'music', 0x14]]);
   });
   it('sem botão espera sem limite', () => {

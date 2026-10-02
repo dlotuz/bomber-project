@@ -3,7 +3,7 @@ import type { MatchSession } from '../game/match-session';
 import { BTN } from '../game/core-api';
 import { DRAW_SCENE, NEXT_ROUND, drawColor, drawScale } from '../game/timeline';
 import { BANK, MUSIC, VOICE } from '../app/audio';
-import { FADE_OUT_1 } from '../app/fade';
+import { FADE_OUT_1, shortBlack } from '../app/fade';
 import { romState } from '../app/rom-api';
 import { drawEmpateFallback, drawEmpateRom } from '../render/screens-rom/draw';
 import { battleScreen } from './battle';
@@ -24,13 +24,13 @@ export function drawScreen(app: App, ms: MatchSession): Screen & { readonly s: n
       s++;
       if (s === DRAW_SCENE.voiceAt) app.audio.voice(VOICE.draw);
       if (s >= DRAW_SCENE.skipFrom && (inp.pressedAny & (BTN.A | BTN.B))) {
-        app.transition(() => battleScreen(app, ms), {
+        app.transition(() => battleScreen(app, ms), shortBlack({
           out: FADE_OUT_1, black: NEXT_ROUND.afterDraw, in: [],
           cues: [
             { at: NEXT_ROUND.bankAt, run: a => a.audio.bank(BANK.battle) },
             { at: NEXT_ROUND.musicAt, run: a => a.audio.music(MUSIC.battle) },
           ],
-        });
+        }));
       }
     },
     draw(ctx, bank) {

@@ -4,7 +4,7 @@ import { LAYOUTS } from '../game/core-api';
 import { THEMES } from '../render/art/tiles';
 import { Repeater } from '../input/repeat';
 import { STAGE, STAGE_BLACK, stageScrollOffset, battleTextVisible, stageTitleDy } from '../game/timeline';
-import { FADE_OUT_1, FADE_MENU } from '../app/fade';
+import { FADE_OUT_1, FADE_MENU, shortBlack } from '../app/fade';
 import { SFX, MUSIC, VOICE, BANK } from '../app/audio';
 import { createMatchSession } from '../game/match-session';
 import { configFromSetup, canStart } from '../game/config';
@@ -72,7 +72,7 @@ export function stageScreen(app: App): Screen & {
     const cues: Cue[] = [
       { at: 32, run: fadeAudio }, { at: 233, run: bankCue(BANK.battle) }, { at: 245, run: musicCue(MUSIC.battle) },
     ];
-    app.transition(() => battleScreen(app, createMatchSession(cfg)), { out: FADE_OUT_1, black: STAGE_BLACK, in: [], cues });
+    app.transition(() => battleScreen(app, createMatchSession(cfg)), shortBlack({ out: FADE_OUT_1, black: STAGE_BLACK, in: [], cues }));
   };
 
   return {

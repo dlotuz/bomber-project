@@ -43,7 +43,7 @@ describe('placar (§6.10, R7, R8, A15)', () => {
     idle(app, 1);  expect(sb.crownCell(0, 1)).toBe('full');
     expect(sb.crownCell(1, 0)).toBe('empty');
   });
-  it('pular: A/B/START a partir de S=18; próxima rodada depois de 15 + 288, com $2F +31 e $14 +43', () => {
+  it('pular: A/B/START a partir de S=18; próxima rodada depois de 15 + 30 (ROUND_BLACK), com $2F +31 e $14 +43', () => {
     const { app, sink } = afterWin();
     idle(app, 17); tap(app, BTN.A);
     expect(app.inTransition).toBe(false);
@@ -51,7 +51,7 @@ describe('placar (§6.10, R7, R8, A15)', () => {
     expect(app.inTransition).toBe(true);
     const t0 = app.tick;
     while (app.screen.id !== 'battle') app.update(idleInput());
-    expect(app.tick - t0).toBe(303);
+    expect(app.tick - t0).toBe(45);
     expect(sink.since(t0).map(c => [c.t, c.op, c.id])).toEqual([[31, 'bank', 0x2f], [43, 'music', 0x14]]);
   });
   it('sem botão: sai sozinho em S=511', () => {

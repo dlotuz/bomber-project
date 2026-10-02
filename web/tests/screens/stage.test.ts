@@ -41,7 +41,7 @@ describe('seleção de fase (§6.7)', () => {
     press(app, BTN.UP); press(app, BTN.DOWN);
     expect([st.stage, st.scroll(), sink.calls.length]).toEqual([1, 0, 0]);
   });
-  it('A: $02 f0, $13 f48, voz $07 f208, fade-out f278, FADE f310, $2F f511, $14 f523 e partida em f646', () => {
+  it('A: $02 f0, $13 f48, voz $07 f208, fade-out f278, FADE f310, $2F e $14 junto com a partida em f323 (ROUND_BLACK)', () => {
     const { app, sink } = mkApp();
     app.settings.setup.stage = 3;
     app.go(stageScreen(app)); sink.clear();
@@ -52,9 +52,9 @@ describe('seleção de fase (§6.7)', () => {
     idle(app, 1);
     expect([app.inTransition, app.brightness()]).toEqual([true, 14]);
     while (app.screen.id !== 'battle') app.update(idleInput());
-    expect(app.tick - t0).toBe(646);
-    expect(sink.since(t0).filter(c => c.t < 646).map(c => [c.t, c.op, c.id])).toEqual([
-      [0, 'sfx', 2], [48, 'music', 0x13], [208, 'voice', 0x07], [310, 'fade', undefined], [511, 'bank', 0x2f], [523, 'music', 0x14]]);
+    expect(app.tick - t0).toBe(323);
+    expect(sink.since(t0).filter(c => c.t <= 323).map(c => [c.t, c.op, c.id])).toEqual([
+      [0, 'sfx', 2], [48, 'music', 0x13], [208, 'voice', 0x07], [310, 'fade', undefined], [323, 'bank', 0x2f], [323, 'music', 0x14]]);
     expect((app.screen as unknown as { ms: MatchSession }).ms.cfg.stage).toBe(3);
   });
   it('"BATALHA!" pisca de f65 a f207 e fica de f208 a f277; o título sobe de f48 a f64; entradas ignoradas', () => {

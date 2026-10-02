@@ -24,3 +24,10 @@ export function fadeSpec(out: readonly number[], inn: readonly number[], cues: r
 export const FADE_MENU: TransitionSpec = fadeSpec(FADE_OUT_1, FADE_IN_1);
 export const FADE_FROM_TITLE: TransitionSpec = fadeSpec(FADE_OUT_2, FADE_IN_1);
 export const FADE_TO_TITLE: TransitionSpec = fadeSpec(FADE_OUT_12, FADE_IN_2);
+/** Preto antes da rodada na versão web: a ROM espera 288–385 f (carga do SNES); aqui basta meio segundo. */
+export const ROUND_BLACK = 30;
+/** Corta o preto para `ROUND_BLACK`; cues que cairiam depois do fim disparam no último frame (com a tela nova). */
+export function shortBlack(spec: TransitionSpec): TransitionSpec {
+  const black = Math.min(spec.black, ROUND_BLACK), end = spec.out.length + black;
+  return { ...spec, black, cues: spec.cues?.map(c => (c.at > end ? { ...c, at: end } : c)) };
+}
