@@ -60,7 +60,7 @@ describe('teclado (spec §2.6, R16)', () => {
 
 describe('gamepad (standard, remapeável)', () => {
   it('padrão: A=1 B=0 Y=2 X=3 L=4 R=5 SELECT=8 START=9, direcional 12–15', () => {
-    expect(DEFAULT_PADMAP).toEqual({ a: 1, b: 0, y: 2, x: 3, l: 4, r: 5, select: 8, start: 9, up: 12, down: 13, left: 14, right: 15 });
+    expect(DEFAULT_PADMAP).toEqual({ a: 1, b: 0, y: 2, x: 3, l: 4, r: 5, select: 8, start: 9, up: 12, down: 13, left: 14, right: 15, power: -1 });
     expect(readGamepad(pad([1, 12]))).toBe(BTN.A | BTN.UP);
     expect(readGamepad(pad([0, 2, 3, 9]))).toBe(BTN.B | BTN.Y | BTN.X | BTN.START);
     expect(readGamepad(pad([4, 5, 8]))).toBe(BTN.L | BTN.R | BTN.SELECT);

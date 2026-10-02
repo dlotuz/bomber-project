@@ -234,11 +234,11 @@ describe('controles do jogador', () => {
     r.menu.cursor = row('all');
     press(app, BTN.A);
     const keys = ['KeyT', 'KeyG', 'KeyF', 'KeyH', 'KeyB', 'KeyN', 'KeyM', 'KeyV', 'KeyR', 'KeyY', 'KeyU', 'KeyO'];
-    for (const [k, f] of KEY_FIELDS.entries()) {
+    for (const [k, f] of KEY_FIELDS.filter(g => g !== 'power').entries()) {
       expect(r.capturing).toBe(f);
       app.update(inputOf(0, 0, undefined, { key: keys[k] })); app.update(idleInput());
     }
-    expect([r.capturing, Object.values(app.settings.keymaps[2])]).toEqual([null, keys]);
+    expect([r.capturing, Object.values(app.settings.keymaps[2])]).toEqual([null, [...keys, '']]);   // PODER fica de fora
     expect(app.settings.keymaps[0].select).toBe('');          // F era o SELECT do P1: fica com a tecla antiga do P3 (nenhuma)
   });
   it('dispositivo: A e depois um botão escolhe aquele controle; uma tecla escolhe o teclado', () => {

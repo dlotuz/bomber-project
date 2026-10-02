@@ -2,6 +2,7 @@ import type { Rng16 } from './rng';
 
 export const BTN = {
   UP: 1, DOWN: 2, LEFT: 4, RIGHT: 8, A: 16, B: 32, Y: 64, START: 128, X: 256, L: 512, R: 1024, SELECT: 2048,
+  POWER: 4096,   // extra, não original: tecla própria do P (só vale com `Rules.powerKey` do jogador)
 } as const;
 export const DIR_BTNS = BTN.UP | BTN.DOWN | BTN.LEFT | BTN.RIGHT;
 
@@ -48,12 +49,14 @@ export interface Rules {
   mode: 'ffa' | 'team';
   teams: number[];          // time de cada slot (0/1)
   active: boolean[];        // slot participa?
+  powerKey: boolean[];      // extra: slot tem tecla própria do P (POWER solta o P e o Y fica só com o soco)
 }
 
 export function defaultRules(): Rules {
   return {
     cpuLevel: 1, matches: 3, timeIdx: 2, suddenDeath: false, badBomber: false, racer: false,
     randomSpawns: false, gloveEscape: 10, throwStun: false, sleepTicks: 192, allMounts: false, mode: 'ffa', teams: [0, 1, 0, 1, 0], active: [true, true, true, true, true],
+    powerKey: [false, false, false, false, false],
   };
 }
 

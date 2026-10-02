@@ -11,6 +11,8 @@ import { drawOptionsPage, type OptionsRow } from '../render/screens-rom/options'
 import { optionsScreen } from './options';
 
 type Capture = keyof KeyMap | 'device';
+/** "Configurar todos" pede só as 12 ações do SNES; o PODER (opcional) fica de fora. */
+const SEQ: readonly (keyof KeyMap)[] = KEY_FIELDS.filter(f => f !== 'power');
 
 /**
  * Controles de um jogador: dispositivo (←/→ troca; A espera uma tecla ou um botão e escolhe o teclado ou aquele
@@ -31,11 +33,17 @@ export function remapScreen(app: App, player: number): Screen & { readonly menu:
   const goBack = (): void => { app.transition(() => optionsScreen(app, player, 'controls'), FADE_MENU); };
   const capture = (c: Capture): void => { capturing = c; menu.cursor = rows.findIndex(r => r.id === c); };
   const turn = (d: number): boolean => { setDevice(st.devices, player, cycle(DEVICE_IDS, dev(), d)); app.save(); return true; };
+  /** ←/→ no PODER apaga a tecla própria do P (volta ao Y fazendo P e soco, como na ROM). */
+  const clearPower = (): boolean => {
+    st.keymaps[player].power = ''; st.padmaps[player].power = -1;
+    app.applyInput(); app.save();
+    return true;
+  };
 
   const rows: MenuRow[] = [
     { id: 'device', left: () => turn(-1), right: () => turn(1), select: () => { capture('device'); } },
-    ...KEY_FIELDS.map(f => ({ id: f, select: () => { capture(f); } })),
-    { id: 'all', select: () => { seq = true; capture(KEY_FIELDS[0]); } },
+    ...KEY_FIELDS.map(f => ({ id: f, select: () => { capture(f); }, ...(f === 'power' ? { left: clearPower, right: clearPower } : {}) })),
+    { id: 'all', select: () => { seq = true; capture(SEQ[0]); } },
     {
       id: 'reset', select: () => {
         for (const f of KEY_FIELDS) assignKey(st.keymaps, player, f, DEFAULT_KEYMAPS[player][f]);
@@ -59,8 +67,8 @@ export function remapScreen(app: App, player: number): Screen & { readonly menu:
   };
 
   const done = (): void => {
-    const i = seq && capturing && capturing !== 'device' ? KEY_FIELDS.indexOf(capturing) + 1 : KEY_FIELDS.length;
-    if (i < KEY_FIELDS.length) capture(KEY_FIELDS[i]);
+    const i = seq && capturing && capturing !== 'device' ? SEQ.indexOf(capturing) + 1 : SEQ.length;
+    if (i < SEQ.length) capture(SEQ[i]);
     else { capturing = null; seq = false; }
     suppress = true; app.applyInput(); app.save();
   };
@@ -92,7 +100,7 @@ export function remapScreen(app: App, player: number): Screen & { readonly menu:
     },
     draw(ctx, bank) {
       const rowsOut: OptionsRow[] = rows.map(r => ({ label: label(r.id), value: value(r.id) }));
-      const footer = capturing ? S.options.pressAny : undefined;
+      const footer = capturing ? S.options.pressAny : rows[menu.cursor].id === 'power' ? S.options.powerHelp : undefined;
       drawOptionsPage(ctx, bank, S.options.controls(player + 1), rowsOut, menu.cursor, footer, 'ascii8');
     },
   };
