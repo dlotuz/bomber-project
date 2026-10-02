@@ -67,12 +67,12 @@ describe('opções (§6.13)', () => {
     press(app, BTN.RIGHT);
     expect(app.settings.options.fx).toBe(true);
   });
-  it('TELA: padrão HD; ←/→ troca para CLASSICA e volta, e salva; BORDAS e ARTE não existem mais', () => {
+  it('TELA: padrão HD; ←/→ troca para CLÁSSICA e volta, e salva; BORDAS e ARTE não existem mais', () => {
     const { app } = mkApp();
     const o = optionsScreen(app); app.go(o); goRow(o, 'screen');
     expect(o.value('screen')).toBe('HD');
     press(app, BTN.RIGHT);
-    expect([app.settings.options.screen, o.value('screen')]).toEqual(['classic', 'CLASSICA']);
+    expect([app.settings.options.screen, o.value('screen')]).toEqual(['classic', 'CLÁSSICA']);
     press(app, BTN.LEFT);
     expect([app.settings.options.screen, o.value('screen')]).toEqual(['hd', 'HD']);
     expect(o.rowIds()).not.toContain('borders');
