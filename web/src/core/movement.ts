@@ -1,4 +1,4 @@
-import { BTN, type GameEvent, type Player, type RoundState } from './types';
+import { BTN, type Bomb, type GameEvent, type Player, type RoundState } from './types';
 import { GRID_W, FACE_OF_DIR, cellAt } from './units';
 import { A20, DIAM, DIR_VEC, DPAD, PAR, SUBPOS, TBL, speedVec } from './tables/movement';
 import { setAct, setFace } from './state';
@@ -6,6 +6,7 @@ import { speedLevel } from './disease';
 import { STAGES } from './stages';
 import { MOUNTS } from './mounts';
 import { FOOTSTEP_EVERY } from './constants';
+import { redirectRoller, rollerAt } from './kick';
 
 /** Vizinhos N NE E SE S SW W NW, deslocamentos cumulativos em casas (NB do movesim, em unidades de casa). */
 const NB = [-GRID_W, 1, GRID_W, GRID_W, -1, -1, -GRID_W, -GRID_W];
@@ -42,8 +43,9 @@ function neigh(s: RoundState, p: Player, cell: number): [number, number] {
 }
 
 /** Um tick de movimento, idêntico a movesim.step. Devolve a direção (0..7, 8 = parado). `speed` (1/256 px por tick)
- *  substitui a velocidade do nível (investida do tipo 4). */
-export function moveStep(s: RoundState, p: Player, btn: number, level: number, speed?: number): number {
+ *  substitui a velocidade do nível (investida do tipo 4). Se esbarrou numa bomba rolando, ela vai em `hit.roller`. */
+export function moveStep(s: RoundState, p: Player, btn: number, level: number, speed?: number,
+  hit?: { roller?: Bomb }): number {
   let X = p.x, Y = p.y;
   const xp = X >> 8, yp = Y >> 8;
   const din = DPAD[nibble(btn)];
@@ -65,7 +67,14 @@ export function moveStep(s: RoundState, p: Player, btn: number, level: number, s
   const tcell = cellOfPx(txp, typ);
   // Entrar em casa com bomba zera o tick. Desvio do movesim.py: o `!p.passBomb` é nosso, porque o movesim não modela
   // o atravessa-bomba (+$4C), que no jogo deixa andar através de bombas (impossível se esta regra valesse sempre).
-  if (tcell !== cell0 && !passesBomb(p) && ((s.grid[tcell] ?? 0) & 0xefc0) === 0xc900) return d;
+  if (tcell !== cell0 && !passesBomb(p)) {
+    if (((s.grid[tcell] ?? 0) & 0xefc0) === 0xc900) return d;
+    // Bomba rolando: a casa do centro dela tem o bit $4000 na ocupação ($C1:37C4), e $C2:3287 zera o tick do mesmo jeito
+    // ($C2:3566). Medido (ajstop2/rvar.py, cross0.py): quem vem pelo lado espera em x = 55 e a bomba passa; antes, ele
+    // entrava na casa e a bomba parava sob ele. Atravessa-bomba e tipo 1 entram (e aí ela para sob eles, $C1:36AC).
+    const r = rollerAt(s, tcell);
+    if (r) { if (hit) hit.roller = r; return d; }
+  }
   let b86: number;
   [b82, b86] = neigh(s, p, tcell);
   ys = (typ - 8) & 15; xs = (txp - 8) & 15;
@@ -91,10 +100,12 @@ export function moveStep(s: RoundState, p: Player, btn: number, level: number, s
 export function movePlayer(s: RoundState, p: Player, btn: number, ev: GameEvent[]): void {
   const before = cellAt(p.x, p.y);
   const din = DPAD[nibble(btn)];
-  const d = moveStep(s, p, btn, speedLevel(s, p));
+  const hit: { roller?: Bomb } = {};
+  const d = moveStep(s, p, btn, speedLevel(s, p), undefined, hit);
   p.moveDir = d;
   const moving = din !== 8;
   if (moving) setFace(s, p, FACE_OF_DIR[d !== 8 ? d : din]);
+  if (hit.roller) redirectRoller(s, p, hit.roller, ev);   // com Chute, esbarrar desvia a bomba para a face ($C2:32FF)
   setAct(s, p, p.carry >= 0 || p.grab >= 0 ? (moving ? 'carryWalk' : 'carryIdle') : moving ? 'walk' : 'idle');
   if (moving) { if (++p.walkT % FOOTSTEP_EVERY === 0) ev.push({ type: 'footstep', slot: p.slot }); } else p.walkT = 0;
   const now = cellAt(p.x, p.y);

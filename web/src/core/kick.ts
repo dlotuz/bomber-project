@@ -10,7 +10,10 @@ import { MOUNTS } from './mounts';
 
 /** Chuta: o item Chute vale também montado (extra: qualquer montaria), ou a montaria que chuta (A). */
 export const canKick = (p: Player): boolean => (p.kick || !!MOUNTS.current.kicks?.(p)) && !MOUNTS.current.passes?.(p, 0xc900);   // tipo 1 não chuta
-/** Extra: o dono segurando X (parar chute) tranca as próprias bombas contra o chute dos outros (o soco ainda vale). */
+/** Extra: o dono segurando X (parar chute) tranca as próprias bombas contra o chute dos outros (o soco ainda vale).
+ *  Só vale para o chute de bomba parada (`tryKick`, `kickWorth`): não para bomba rolando nem impede o desvio
+ *  (`redirectRoller`). O efeito é o mesmo da ROM, por outro caminho: lá o chute sai e o X do dono o desfaz no mesmo tick
+ *  ($C1:38CE; aj-stop/stophold*.py), e a bomba nem sai da casa. */
 export const kickLocked = (s: RoundState, p: Player, b: Bomb): boolean =>
   b.owner !== p.slot && !!(s.players[b.owner]?.prevBtn & BTN.X);
 
@@ -79,6 +82,26 @@ function movingAt(s: RoundState, b: Bomb, c: number): Bomb | undefined {
  *  abaixo do nosso centro (a partida $C2:3260 o põe em 16·col, 16·(lin+2)), por isso a troca de casa cai no 4º passo
  *  para a direita/baixo e no 5º para a esquerda/cima. */
 const romCell = (b: Bomb): number => cellAt(b.x + SUB, b.y + SUB);
+
+/** Bomba rolando (já fora da grade) cuja casa do centro, na conta da ROM, é `c`: a ocupação $4000 que o deslize grava
+ *  na casa +$2A ($C1:37C4). Quem anda para essa casa esbarra nela ($C2:3287, `moveStep`). */
+export function rollerAt(s: RoundState, c: number): Bomb | undefined {
+  return s.bombs.find(b => b.state === 'kicked' && !kickPending(s, b) && romCell(b) === c);
+}
+
+/** Andou contra a bomba rolando `b` ($C2:3287, depois do movimento): com o item Chute (+$4A; a montaria A sem o item
+ *  não, e o tipo 1 atravessa) e olhando para outro lado que não o do deslize ($C2:32FB), a bomba vira para a face de
+ *  `p` ($C2:32FF), volta ao centro da casa ($C2:330D) e recomeça o deslize ($C1:3467: os mesmos testes da partida — casa
+ *  da frente bloqueada, jogador — e o som $0D). Medido (ajstop2/rvar.py): vira no tick em que ele esbarra e anda 2 px no
+ *  mesmo tick. Sem o item, só esbarra (o tick de movimento é zerado, $C2:3566) e a bomba segue. */
+export function redirectRoller(s: RoundState, p: Player, b: Bomb, ev: GameEvent[]): void {
+  if (!p.kick || b.dir === p.face) return;
+  const c = romCell(b);
+  if (c < 0) return;
+  b.dir = p.face; b.turn = -1; b.step = 0; b.cell = c; b.kickedBy = p.slot;
+  [b.x, b.y] = cellCenter(c);
+  ev.push({ type: 'bomb_kicked', slot: p.slot });
+}
 
 /** $C1:3403: jogador de pé na casa da frente de `at` a menos de 20 px da bomba no eixo do deslize (tabela $C1:35D1:
  *  cima Y+20 ≥ y, direita X−20 < x, baixo Y−20 < y, esquerda X+20 ≥ x; x/y da bomba na conta da ROM, +1 px). Sobre

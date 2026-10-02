@@ -89,10 +89,13 @@ function wantB(s: RoundState, p: Player, level: AiLevel, brain: Brain): boolean 
 
 // ---------------------------------------------------------------------------------------------------------------- X
 
-/** X: uma bomba da CPU rolando (chutada por qualquer um: o X vale para o dono, $C1:38CE), parada agora, pegaria um
- *  adversário (e não a CPU nem um colega). */
+/** X: uma bomba da CPU que ela mesma chutou, rolando e parada agora, pegaria um adversário (e não a CPU nem um
+ *  colega). O X vale para todas as bombas do dono que rolam ($C1:38CE), então a CPU não aperta X enquanto rola uma bomba
+ *  dela chutada por outro: a CPU original nunca aperta X (emulador, ajstop2/cpux.py: 30 000 quadros só de CPUs com
+ *  Chute, 14 chutes, +$30 bit $0040 nunca ligado) e parar o chute alheio era a parada "sem motivo" que o jogador via. */
 function wantX(s: RoundState, p: Player, level: AiLevel): boolean {
   const mine = s.bombs.filter(b => b.state === 'kicked' && b.owner === p.slot);
+  if (mine.some(b => b.kickedBy !== p.slot)) return false;
   if (!mine.some(b => {
     const c = cellAt(b.x, b.y);
     if (c < 0) return false;
