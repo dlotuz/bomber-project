@@ -1,5 +1,5 @@
 import { fromRows, makePix, flipH, setPx, alphaAt, blit } from '../../src/render/art/pix';
-import { CHARACTERS, bomberFrame, headIcon } from '../../src/render/art/bomber';
+import { CHARACTERS, bomberFrame, headCryIcon, headIcon } from '../../src/render/art/bomber';
 import { bombPix, itemIcon } from '../../src/render/art/items';
 import { flamePiece, type FlamePart } from '../../src/render/art/flames';
 import { THEMES, stageTiles } from '../../src/render/art/tiles';
@@ -58,6 +58,17 @@ describe('personagens', () => {
   it('ícone de cabeça 16×14', () => {
     const h = headIcon(2);
     expect([h.w, h.h]).toEqual([16, 14]);
+  });
+  it('rosto chorando 16×14: mesmo contorno do normal, olhos fechados e lágrimas', () => {
+    for (let c = 0; c < CHARACTERS.length; c++) {
+      const n = headIcon(c), k = headCryIcon(c);
+      expect([k.w, k.h]).toEqual([16, 14]);
+      expect(opaque(k)).toBe(opaque(n));
+      expect(Buffer.from(k.data).equals(Buffer.from(n.data))).toBe(false);
+      let tears = 0;
+      for (let i = 0; i < k.data.length; i += 4) if (k.data[i] === 0x8e && k.data[i + 1] === 0xe6 && k.data[i + 2] === 0xff) tears++;
+      expect(tears).toBeGreaterThanOrEqual(4);
+    }
   });
 });
 

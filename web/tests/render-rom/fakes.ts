@@ -83,6 +83,7 @@ export function fakeCharacter(c: number): CharacterAssets {
     palettes: [0, 1, 2, 3, 4].map(slot => Uint16Array.from({ length: 16 }, (_, i) => (c << 12) | (slot << 8) | i)),
     victoryFrame: () => new Uint8Array(1024),
     hudHead: (_slot: number) => fakeTiles(6, t => 0x40 + 8 * c + t),
+    hudCry: (_slot: number) => fakeTiles(6, t => 0x80 + 8 * c + t),
   } as unknown as CharacterAssets;
 }
 

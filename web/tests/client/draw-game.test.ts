@@ -1,4 +1,5 @@
-import { drawRound, PLAYER_COLORS } from '../../src/render/draw-game';
+import { drawHud, drawRound, PLAYER_COLORS } from '../../src/render/draw-game';
+import { nextPlayRefresh } from '../../src/render/hud-cry';
 import { createView, updateView } from '../../src/render/view';
 import { createRound, makeRng, defaultRules, CODE, cellOf } from '../../src/core';
 import { registerFallbackLayer, fallbackLayers, fallbackOverLayers } from '../../src/render/battle-layers';
@@ -11,7 +12,8 @@ function fakeBank(): SpriteBank {
   const tiles = { floor: plain, floorAlt: plain, hard: plain, wall: plain, soft: plain, burning: [plain, plain], bg: '#000' };
   const bank = {
     bomber: () => ({ width: 16, height: 24 }),
-    head: () => ({ width: 16, height: 16 }),
+    head: (ch: number) => ({ width: 16, height: 16, tag: `head:${ch}` }),
+    headCry: (ch: number) => ({ width: 16, height: 16, tag: `cry:${ch}` }),
     bomb: () => ({ width: 16, height: 16 }),
     item: () => ({ width: 16, height: 16 }),
     flame: () => ({ width: 16, height: 16 }),
@@ -162,5 +164,28 @@ describe('drawRound: grade de códigos', () => {
     const ctx = fakeCtx();
     drawRound(ctx, round, view, fakeBank(), [0, 1, 2, 3, 4], 0, [0, 0, 0, 0, 0]);
     expect(ctx.calls.some(c => c.x === 16 * 4 - 8 && c.y === 16 * 1 + 24)).toBe(true);
+  });
+});
+
+describe('drawHud: rosto chorando do jogador morto (arte própria)', () => {
+  function hudAt(tickOffset: number) {
+    const round = createRound(1, defaultRules(), makeRng());
+    const r = nextPlayRefresh(200);
+    round.phase = 'play'; round.tick = r - 10;
+    round.players[1].state = 'dying'; round.players[1].hitT0 = r - 10;
+    round.tick = r + tickOffset;
+    const ctx = fakeCtx();
+    const alphas: number[] = [];
+    const draw = ctx.drawImage.bind(ctx);
+    ctx.drawImage = ((img: CanvasImageSource, x: number, y: number) => { alphas.push(ctx.globalAlpha); draw(img, x, y); }) as typeof ctx.drawImage;
+    drawHud(ctx, round, fakeBank(), [3, 4, 0, 1, 2], [0, 0, 0, 0, 0]);
+    const heads = ctx.calls.map((c, i) => ({ tag: (c.img as TagImg).tag ?? '', a: alphas[i] })).filter(c => /^(head|cry):/.test(c.tag));
+    return heads;
+  }
+  it('antes da atualização do HUD o rosto segue normal; nela troca para o chorando, opaco', () => {
+    expect(hudAt(-1).map(h => h.tag)).toEqual(['head:3', 'head:4', 'head:0', 'head:1', 'head:2']);
+    const after = hudAt(0);
+    expect(after.map(h => h.tag)).toEqual(['head:3', 'cry:4', 'head:0', 'head:1', 'head:2']);
+    expect(after.every(h => h.a === 1)).toBe(true);
   });
 });

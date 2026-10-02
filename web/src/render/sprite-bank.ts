@@ -1,5 +1,5 @@
 import type { Pix } from './art/pix';
-import { bomberFrame, headIcon } from './art/bomber';
+import { bomberFrame, headCryIcon, headIcon } from './art/bomber';
 import { bombPix, itemIcon } from './art/items';
 import { flamePiece, type FlamePart } from './art/flames';
 import { stageTiles } from './art/tiles';
@@ -30,6 +30,8 @@ export class SpriteBank {
 
   bomber(ch: number, dir: number, frame: number): Img { return this.get(`b${ch}:${dir}:${frame}`, () => bomberFrame(ch, dir, frame)); }
   head(ch: number): Img { return this.get(`h${ch}`, () => headIcon(ch)); }
+  /** Rosto chorando do HUD (jogador morto). */
+  headCry(ch: number): Img { return this.get(`hc${ch}`, () => headCryIcon(ch)); }
   bomb(frame: number): Img { return this.get(`bomb${frame}`, () => bombPix(frame)); }
   item(item: number): Img { return this.get(`i${item}`, () => itemIcon(item)); }
   flame(part: FlamePart, shrink: number): Img { return this.get(`f${part}${shrink}`, () => flamePiece(part, shrink)); }
