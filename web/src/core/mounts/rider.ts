@@ -6,6 +6,7 @@ import { mev } from './events';
 export function loseMount(s: RoundState, p: Player, r: MountRider, ev: GameEvent[], cause: 'hit' | 'launch'): void {
   const old = r.type;
   r.t0 = s.tick;
+  r.dash = false;                                          // o desmonte ($C2:105E) substitui a investida
   r.phase = 'dismount';
   if (r.reserves.length > 0) {
     r.type = r.reserves.shift()!;
