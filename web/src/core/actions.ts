@@ -96,8 +96,11 @@ export function playerActions(s: RoundState, p: Player, btn: number, pressed: nu
     detonateRemote(s, p, ev); setAct(s, p, 'detonate', DETONATE_TICKS);
   }
   // X (parar o chute) não é ação do jogador: o deslize da bomba lê o X segurado do dono (kick.ts, `ownerHoldsX`).
+  // Tecla própria do P (extra): com ela o P sai só no POWER e o Y fica só com o soco; sem ela, Y faz os dois (ROM).
+  const ownP = s.rules.powerKey?.[p.slot] ?? false;
+  if (ownP && pressed & BTN.POWER && onFoot && p.pItem) startPPunch(s, p, ev);
   if (pressed & BTN.Y && !MOUNTS.current.onY(s, p, ev) && onFoot) {
-    if (p.pItem) startPPunch(s, p, ev);
+    if (p.pItem && !ownP) startPPunch(s, p, ev);
     else if (p.punch) punchBomb(s, p, ev);
   }
 }

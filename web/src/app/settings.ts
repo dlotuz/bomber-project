@@ -119,7 +119,7 @@ function normalizePadMap(v: unknown): PadMap {
   const m = { ...DEFAULT_PADMAP };
   for (const f of PAD_FIELDS) {
     const k = o[f];
-    if (typeof k === 'number' && Number.isInteger(k) && k >= 0 && k <= 31) m[f] = k;
+    if (typeof k === 'number' && Number.isInteger(k) && k >= (f === 'power' ? -1 : 0) && k <= 31) m[f] = k;
   }
   return m;
 }

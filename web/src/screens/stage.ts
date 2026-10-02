@@ -3,6 +3,7 @@ import type { App, Screen, Cue } from '../app/app';
 import { LAYOUTS } from '../game/core-api';
 import { THEMES } from '../render/art/tiles';
 import { Repeater } from '../input/repeat';
+import { hasPowerKey } from '../input/input';
 import { STAGE, STAGE_BLACK, stageScrollOffset, battleTextVisible, stageTitleDy } from '../game/timeline';
 import { FADE_OUT_1, FADE_MENU, shortBlack } from '../app/fade';
 import { SFX, MUSIC, VOICE, BANK } from '../app/audio';
@@ -68,6 +69,7 @@ export function stageScreen(app: App): Screen & {
     const cfg = configFromSetup(setup, app.settings.options.randomSpawns, app.settings.devices, null, {
       gloveEscape: app.settings.options.gloveEscape, throwStun: app.settings.options.throwStun,
       sleepTicks: app.settings.options.sleepSec * 60, allMounts: app.settings.options.allMounts,
+      powerKey: app.settings.devices.map((d, i) => hasPowerKey(d, app.settings.keymaps[i], app.settings.padmaps[i])),
     });
     const cues: Cue[] = [
       { at: 32, run: fadeAudio }, { at: 233, run: bankCue(BANK.battle) }, { at: 245, run: musicCue(MUSIC.battle) },

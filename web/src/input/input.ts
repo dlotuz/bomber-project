@@ -3,21 +3,22 @@ import { BTN } from '../game/core-api';
 export interface KeyMap {
   up: string; down: string; left: string; right: string; a: string; b: string; x: string; y: string;
   l: string; r: string; start: string; select: string;
+  power: string;   // tecla própria do P (extra); '' = sem tecla, o Y faz P e soco como na ROM
 }
 
-export const KEY_FIELDS: readonly (keyof KeyMap)[] = ['up', 'down', 'left', 'right', 'a', 'b', 'x', 'y', 'l', 'r', 'start', 'select'];
+export const KEY_FIELDS: readonly (keyof KeyMap)[] = ['up', 'down', 'left', 'right', 'a', 'b', 'x', 'y', 'l', 'r', 'start', 'select', 'power'];
 
 /** Spec §11/R16: P1 = WASD + J/K/L/I + Enter + Q/E/F; P2 = setas + Numpad1/2/3/5 + NumpadEnter + 7/9/0.
  *  P3–P5 começam sem teclas (''): quem passar para o teclado configura as suas. */
-const NO_KEYS: KeyMap = { up: '', down: '', left: '', right: '', a: '', b: '', x: '', y: '', l: '', r: '', start: '', select: '' };
+const NO_KEYS: KeyMap = { up: '', down: '', left: '', right: '', a: '', b: '', x: '', y: '', l: '', r: '', start: '', select: '', power: '' };
 export const DEFAULT_KEYMAPS: readonly KeyMap[] = [
   {
     up: 'KeyW', down: 'KeyS', left: 'KeyA', right: 'KeyD', a: 'KeyJ', b: 'KeyK', y: 'KeyL', x: 'KeyI',
-    start: 'Enter', l: 'KeyQ', r: 'KeyE', select: 'KeyF',
+    start: 'Enter', l: 'KeyQ', r: 'KeyE', select: 'KeyF', power: '',
   },
   {
     up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', a: 'Numpad1', b: 'Numpad2',
-    y: 'Numpad3', x: 'Numpad5', start: 'NumpadEnter', l: 'Numpad7', r: 'Numpad9', select: 'Numpad0',
+    y: 'Numpad3', x: 'Numpad5', start: 'NumpadEnter', l: 'Numpad7', r: 'Numpad9', select: 'Numpad0', power: '',
   },
   NO_KEYS, NO_KEYS, NO_KEYS,
 ];
@@ -35,7 +36,7 @@ export function emptyDevices(): DeviceState {
 
 const FIELD_BTN: Record<keyof KeyMap, number> = {
   up: BTN.UP, down: BTN.DOWN, left: BTN.LEFT, right: BTN.RIGHT, a: BTN.A, b: BTN.B, x: BTN.X, y: BTN.Y,
-  l: BTN.L, r: BTN.R, start: BTN.START, select: BTN.SELECT,
+  l: BTN.L, r: BTN.R, start: BTN.START, select: BTN.SELECT, power: BTN.POWER,
 };
 
 export function readKeyMap(down: ReadonlySet<string>, m: KeyMap): number {
@@ -50,13 +51,14 @@ export interface GamepadLike { buttons: ReadonlyArray<{ pressed: boolean }>; axe
 export interface PadMap {
   up: number; down: number; left: number; right: number; a: number; b: number; x: number; y: number;
   l: number; r: number; start: number; select: number;
+  power: number;   // -1 = sem botão
 }
 
 export const PAD_FIELDS: readonly (keyof PadMap)[] = KEY_FIELDS;
 
 /** Layout "standard" da Gamepad API: A = 1, B = 0, Y = 2, X = 3, L = 4, R = 5, SELECT = 8, START = 9, d-pad 12–15. */
 export const DEFAULT_PADMAP: PadMap = {
-  a: 1, b: 0, y: 2, x: 3, l: 4, r: 5, select: 8, start: 9, up: 12, down: 13, left: 14, right: 15,
+  a: 1, b: 0, y: 2, x: 3, l: 4, r: 5, select: 8, start: 9, up: 12, down: 13, left: 14, right: 15, power: -1,
 };
 
 const DEAD_ZONE = 0.5;
@@ -78,6 +80,7 @@ export function readGamepad(gp: GamepadLike | null, map: PadMap = DEFAULT_PADMAP
   if (b(map.r)) v |= BTN.R;
   if (b(map.select)) v |= BTN.SELECT;
   if (b(map.start)) v |= BTN.START;
+  if (map.power >= 0 && b(map.power)) v |= BTN.POWER;
   return v;
 }
 
@@ -88,7 +91,14 @@ export const PAD_NAMES: readonly string[] = [
 
 /** Nome legível de um índice de botão bruto (Gamepad API) para a tela de controles. */
 export function padLabel(i: number): string {
+  if (i < 0) return '---';
   return PAD_NAMES[i] ?? `BOTÃO ${i}`;
+}
+
+/** O jogador configurou a tecla própria do P no dispositivo que usa? (sem ela, o Y faz P e soco, como na ROM) */
+export function hasPowerKey(d: DeviceId, k: KeyMap | undefined, p: PadMap | undefined): boolean {
+  if (d === 'none') return false;
+  return d === 'kb' ? !!k?.power : (p?.power ?? -1) >= 0;
 }
 
 export function readDevices(

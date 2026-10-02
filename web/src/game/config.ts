@@ -17,7 +17,7 @@ export const activeCount = (slots: readonly SlotKind[]): number => slots.filter(
 export const canStart = (slots: readonly SlotKind[]): boolean => activeCount(slots) >= 2;
 
 /** Regras extras que vêm das Opções (não do menu de regras). */
-export type ExtraRules = Partial<Pick<Rules, 'gloveEscape' | 'throwStun' | 'sleepTicks' | 'allMounts'>>;
+export type ExtraRules = Partial<Pick<Rules, 'gloveEscape' | 'throwStun' | 'sleepTicks' | 'allMounts' | 'powerKey'>>;
 
 export function configFromSetup(setup: SetupLike, randomSpawns: boolean, devices: readonly DeviceId[], seed: number | null = null,
   extras: ExtraRules = {}): GameConfig {
