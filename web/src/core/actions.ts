@@ -39,13 +39,15 @@ export function tickAct(s: RoundState, p: Player, ev: GameEvent[]): boolean {
   return true;
 }
 
-/** Golpe P: avanço de 16 px (4 ticks), 35 ticks na ação; quem está na casa da frente é empurrado 48 px (12 ticks). */
+/** Golpe P: avanço de 16 px (4 ticks), 35 ticks na ação; quem está a pé na casa da frente é empurrado 48 px (12 ticks).
+ *  Montado (qualquer fase) não é alvo: $C2:499F procura na ocupação $7F:1000 com a máscara $01F0, só os bits "a pé"
+ *  (+$90); montado a casa tem +$92 ($C2:33FC) e, montando/desmontando, nenhum bit ($C2:3419). Medido: aj-pmount. */
 export function startPPunch(s: RoundState, p: Player, ev: GameEvent[]): void {
   const front = faceStep(playerCell(p), p.face);
   const vx = faceDcol(p.face) * P_SPEED, vy = faceDlin(p.face) * P_SPEED;
   if (p.punch) punchBomb(s, p, ev);
   for (const q of s.players) {
-    if (q === p || !standing(q) || airborne(q) || isImmune(s, q) || playerCell(q) !== front) continue;
+    if (q === p || q.mount || !standing(q) || airborne(q) || isImmune(s, q) || playerCell(q) !== front) continue;
     q.push = { vx, vy, left: P_PUSH_TICKS };
     setAct(s, q, 'pushed', P_PUSH_TICKS);
   }
