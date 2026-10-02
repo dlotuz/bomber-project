@@ -4,17 +4,23 @@
 import type { TextStyleId, Tone } from './text/types';
 import menuBgUrl from '../assets/menu-bg.jpg';
 import handUrl from '../assets/hand.png';
+import titleUrl from '../assets/title.jpg';
 
-interface HdText { text: string; x: number; y: number; size: number; row: number; tone: Tone; align: 'left' | 'center' | 'right'; title: boolean; color?: string }
+interface HdText { text: string; x: number; y: number; size: number; row: number; tone: Tone; align: 'left' | 'center' | 'right'; title: boolean; art: boolean; color?: string }
 /** Tamanhos por tela (px da base): `item` = `menuItem`, `title` = `menuTitle`, `hand` = escala da luva. */
 export interface HdSizes { item?: number; title?: number; hand?: number }
 
-const state = { on: false, cursor: null as null | [number, number], texts: [] as HdText[], sizes: {} as HdSizes };
+const state = { on: false, cursor: null as null | [number, number], texts: [] as HdText[], sizes: {} as HdSizes, bg: 'menu' as HdBg };
+/** Fundo: `menu` = quebra-cabeça com corda; `title` = arte do título (4:3) centrada no preto. */
+export type HdBg = 'menu' | 'title';
 
 /** Altura da linha da fonte da ROM (o texto HD fica centrado nela) e tamanho padrão do texto HD, por estilo desviado;
  *  os outros estilos seguem na base. */
-const ROW: Partial<Record<TextStyleId, number>> = { menuTitle: 16, menuItem: 16, ascii8: 8 };
-const SIZE: Partial<Record<TextStyleId, number>> = { menuTitle: 18, menuItem: 15, ascii8: 9 };
+const ROW: Partial<Record<TextStyleId, number>> = { menuTitle: 16, menuItem: 16, ascii8: 8, titleMenu: 16 };
+const SIZE: Partial<Record<TextStyleId, number>> = { menuTitle: 18, menuItem: 15, ascii8: 9, titleMenu: 14 };
+/** Itálico pesado do menu da arte do título ("BATTLE GAME"). */
+const ART_FONT = '"Exo 2", "Arial Black", system-ui, sans-serif';
+const ART_GRAD: readonly [string, string, string] = ['#f0ffff', '#62e4ff', '#1e8cff'];
 const FONT = '"Fredoka", "Arial Rounded MT Bold", system-ui, sans-serif';
 
 /** Degradê (topo → base) por tom, nas cores da arte de referência. */
@@ -38,6 +44,14 @@ const bgImg = (): HTMLImageElement | null => {
   }
   return bg?.complete ? bg : null;
 };
+let titleArt: HTMLImageElement | null = null;
+const titleImg = (): HTMLImageElement | null => {
+  if (!titleArt && typeof Image !== 'undefined') {
+    titleArt = new Image(); titleArt.src = titleUrl;
+    void document.fonts?.load(`italic 800 20px ${ART_FONT}`);
+  }
+  return titleArt?.complete ? titleArt : null;
+};
 let hand: HTMLImageElement | null = null;
 const handImg = (): HTMLImageElement | null => {
   if (!hand && typeof Image !== 'undefined') { hand = new Image(); hand.src = handUrl; }
@@ -45,16 +59,18 @@ const handImg = (): HTMLImageElement | null => {
 };
 
 /** Zera o quadro (chamado antes de cada `app.draw`). */
-export function hdBegin(): void { state.on = false; state.cursor = null; state.texts.length = 0; state.sizes = {}; }
+export function hdBegin(): void { state.on = false; state.cursor = null; state.texts.length = 0; state.sizes = {}; state.bg = 'menu'; }
 export const hdActive = (): boolean => state.on;
 /** Textos guardados neste quadro (testes). */
 export const hdTexts = (): readonly HdText[] => state.texts;
 
 /** Tela de menu: base transparente, fundo HD e mão em (x, y) da base (mesma âncora da mão 16×16 da ROM). */
-export function hdMenu(ctx: CanvasRenderingContext2D, cursor?: readonly [number, number] | null, sizes: HdSizes = {}): void {
+export function hdMenu(ctx: CanvasRenderingContext2D, cursor?: readonly [number, number] | null, sizes: HdSizes = {},
+  bg: HdBg = 'menu'): void {
   ctx.clearRect(0, 0, 256, 224);
   state.on = true;
   state.sizes = sizes;
+  state.bg = bg;
   state.cursor = cursor ? [cursor[0], cursor[1]] : null;
 }
 
@@ -64,8 +80,25 @@ export function hdText(style: TextStyleId, text: string, x: number, y: number, t
   const row = ROW[style];
   if (!state.on || !row) return null;
   const size = (style === 'menuItem' ? state.sizes.item : style === 'menuTitle' ? state.sizes.title : undefined) ?? SIZE[style]!;
-  state.texts.push({ text, x, y, size, row, tone, align, title: style === 'menuTitle', color: style === 'menuTitle' ? undefined : color });
+  state.texts.push({ text, x, y, size, row, tone, align, title: style === 'menuTitle', art: style === 'titleMenu', color: style === 'menuTitle' ? undefined : color });
   return text.length * size * 0.52;
+}
+
+/** Texto no estilo do menu da arte do título: itálico pesado, degradê ciano, contorno azul-escuro e brilho azul. */
+function drawArtLabel(out: CanvasRenderingContext2D, t: HdText, s: number): void {
+  out.font = `italic 800 ${t.size}px ${ART_FONT}`;
+  out.textAlign = t.align;
+  out.textBaseline = 'middle';
+  const cy = t.y + t.row / 2;
+  const g = out.createLinearGradient(0, cy - t.size * 0.4, 0, cy + t.size * 0.4);
+  g.addColorStop(0, ART_GRAD[0]); g.addColorStop(0.5, ART_GRAD[1]); g.addColorStop(1, ART_GRAD[2]);
+  out.lineJoin = 'round';
+  out.shadowColor = 'rgba(40,150,255,0.95)'; out.shadowBlur = 6 * s;
+  out.strokeStyle = '#06124a'; out.lineWidth = t.size * 0.2;
+  out.strokeText(t.text, t.x, cy);
+  out.shadowBlur = 0;
+  out.fillStyle = g;
+  out.fillText(t.text, t.x, cy);
 }
 
 function drawLabel(out: CanvasRenderingContext2D, t: HdText): void {
@@ -113,10 +146,16 @@ export function drawHdMenu(out: CanvasRenderingContext2D, s: number): boolean {
   out.setTransform(s, 0, 0, s, 0, 0);
   out.imageSmoothingEnabled = true;
   out.imageSmoothingQuality = 'high';
-  const img = bgImg();
-  if (img) out.drawImage(img, 0, 0, 256, 224);
-  else { out.fillStyle = '#d8a83a'; out.fillRect(0, 0, 256, 224); }
-  for (const t of state.texts) drawLabel(out, t);
+  if (state.bg === 'title') {
+    out.fillStyle = '#000000'; out.fillRect(0, 0, 256, 224);
+    const img = titleImg();
+    if (img) out.drawImage(img, 0, 16, 256, 192);
+  } else {
+    const img = bgImg();
+    if (img) out.drawImage(img, 0, 0, 256, 224);
+    else { out.fillStyle = '#d8a83a'; out.fillRect(0, 0, 256, 224); }
+  }
+  for (const t of state.texts) if (t.art) drawArtLabel(out, t, s); else drawLabel(out, t);
   if (state.cursor) drawHand(out, state.cursor[0], state.cursor[1], state.sizes.hand ?? 1.6);
   out.setTransform(1, 0, 0, 1, 0, 0);
   out.imageSmoothingEnabled = false;

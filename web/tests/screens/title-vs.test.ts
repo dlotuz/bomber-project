@@ -11,17 +11,26 @@ type Title = ReturnType<typeof titleScreen>;
 const calls = (sink: { since(t: number): { t: number; op: string; id?: number }[] }, t0: number) => sink.since(t0).map(c => [c.t, c.op, c.id]);
 
 describe('título (§6.2, R22)', () => {
-  it('ao entrar: banco $30 e música $01; cursor em "BATTLE GAME", a única opção', () => {
+  it('ao entrar: banco $30 e música $01; cursor em "BATTLE GAME"', () => {
     const { app, sink } = mkApp();
     app.go(titleScreen(app));
     expect(sink.calls.map(c => [c.op, c.id])).toEqual([['bank', 0x30], ['music', 0x01]]);
     expect((app.screen as Title).cursor).toBe(0);
   });
-  it('↑/↓ tocam $01 e o cursor fica em "BATTLE GAME"', () => {
+  it('↑/↓ com volta entre "BATTLE GAME" e "OPTIONS"; SFX $01', () => {
     const { app, sink } = mkApp();
     const t = titleScreen(app); app.go(t); sink.clear();
-    press(app, BTN.DOWN); press(app, BTN.UP);
-    expect([t.cursor, sink.of('sfx').map(c => c.id)]).toEqual([0, [1, 1]]);
+    press(app, BTN.DOWN); expect(t.cursor).toBe(1);
+    press(app, BTN.DOWN); expect(t.cursor).toBe(0);
+    press(app, BTN.UP); expect(t.cursor).toBe(1);
+    expect(sink.of('sfx').map(c => c.id)).toEqual([1, 1, 1]);
+  });
+  it('START em "OPTIONS" abre as opções sem trocar a música', () => {
+    const { app, sink } = mkApp();
+    app.go(titleScreen(app)); press(app, BTN.DOWN); sink.clear();
+    tap(app, BTN.START); settle(app);
+    expect(app.screen.id).toBe('options');
+    expect(sink.of('music')).toEqual([]);
   });
   it('B, ←, →, X, Y, L, R e SELECT não fazem nada', () => {
     const { app, sink } = mkApp();

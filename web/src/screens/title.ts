@@ -2,34 +2,29 @@ import type { App, Screen } from '../app/app';
 import type { MenuInput } from '../input/input';
 import { BTN } from '../game/core-api';
 import { Menu, type MenuRow } from './menu';
-import { drawStaticCursor } from './ui';
 import { pressStartVisible } from '../game/timeline';
 import { FADE_FROM_TITLE } from '../app/fade';
 import { MUSIC } from '../app/audio';
-import titleUrl from '../assets/title.png';
+import { drawText } from '../render/text/text';
+import { hdMenu } from '../render/hd-menu';
 import { playersScreen } from './players';
+import { optionsScreen } from './options';
 
-/** Arte do título (256×192, com o menu já desenhado), centrada na vertical sobre o preto da própria arte. */
-const ART_Y = 16;
-/** Cursor à esquerda de "BATTLE GAME", a única linha do menu da arte (medido na arte reduzida). */
-const CURSOR = [73, 151] as const;
-let art: HTMLImageElement | null = null;
-const artImg = (): HTMLImageElement | null => {
-  if (!art && typeof Image !== 'undefined') { art = new Image(); art.src = titleUrl; }
-  return art?.complete ? art : null;
-};
+/** Menu desenhado sobre a arte (o texto dela foi apagado), alinhado à esquerda, à direita da mão do mascote (a luva não some atrás dela). */
+const TEXT_X = 94, ROWS_Y = [140, 157] as const, ITEMS = ['BATTLE GAME', 'OPTIONS'] as const;
 
 export type TitleScreen = Screen & { readonly cursor: number; pressStartVisible(): boolean };
 
-/** Tela de título [spec §6.2, R22]: arte própria só com "BATTLE GAME" e cursor parado. B e o resto não fazem nada (B não é passado à `Menu`,
+/** Tela de título [spec §6.2, R22]: arte própria com "BATTLE GAME" e "OPTIONS" e a luva parada. B e o resto não fazem nada (B não é passado à `Menu`,
  *  que devolveria 'back' com SFX — o título não tem "voltar"). */
-export function titleScreen(app: App): TitleScreen {
+export function titleScreen(app: App, o: { cursor?: 0 | 1 } = {}): TitleScreen {
   app.audio.ensureMenus(MUSIC.title);
   const rows: MenuRow[] = [
     // Sempre "Todos contra Todos": a escolha de modo não é mostrada.
     { id: 'battle', select: () => { app.settings.setup.mode = 'ffa'; app.save(); app.transition(() => playersScreen(app), FADE_FROM_TITLE); } },
+    { id: 'options', select: () => { app.transition(() => optionsScreen(app), FADE_FROM_TITLE); } },
   ];
-  const menu = new Menu(rows);
+  const menu = new Menu(rows, { cursor: o.cursor ?? 0 });
   // M12: o pisca conta a partir da entrada no título (não do `app.frame` global), aceso no 1º quadro.
   let t = 0;
   const visible = (): boolean => pressStartVisible(t);
@@ -42,12 +37,9 @@ export function titleScreen(app: App): TitleScreen {
       t++;
       menu.update(inp.any, inp.pressedAny & ~BTN.B, app.audio);
     },
-    draw(ctx) {
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(0, 0, 256, 224);
-      const img = artImg();
-      if (img) ctx.drawImage(img, 0, ART_Y);
-      drawStaticCursor(ctx, CURSOR[0], CURSOR[1], '#ffffff');
+    draw(ctx, bank) {
+      hdMenu(ctx, [TEXT_X - 16, ROWS_Y[menu.cursor]], { hand: 1.1 }, 'title');
+      ITEMS.forEach((t, i) => drawText(ctx, bank, 'titleMenu', t, TEXT_X, ROWS_Y[i]));
     },
   };
 }

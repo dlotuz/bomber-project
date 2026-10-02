@@ -173,11 +173,11 @@ describe('opções (§6.13)', () => {
     app.go(optionsScreen(app));
     expect(sink.calls.map(c => [c.op, c.id])).toEqual([['bank', BANK.menus], ['music', MUSIC.title]]);
   });
-  it('B volta ao título (cursor em "BATTLE GAME", a única opção)', () => {
+  it('B volta ao título com o cursor em "OPTIONS"', () => {
     const { app } = mkApp();
     app.go(optionsScreen(app));
     press(app, BTN.B); settle(app);
-    expect([app.screen.id, (app.screen as unknown as { cursor: number }).cursor]).toEqual(['title', 0]);
+    expect([app.screen.id, (app.screen as unknown as { cursor: number }).cursor]).toEqual(['title', 1]);
   });
 });
 

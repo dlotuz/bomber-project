@@ -34,7 +34,7 @@ export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'ma
   app.audio.ensureMenus(MUSIC.title);
 
   const goBack = (): void => {
-    if (page === 'main') app.transition(() => titleScreen(app), FADE_TO_TITLE);
+    if (page === 'main') app.transition(() => titleScreen(app, { cursor: 1 }), FADE_TO_TITLE);
     else app.transition(() => optionsScreen(app, page === 'controls' ? 0 : 1), FADE_MENU);
   };
   const open = (to: OptionsPage): void => { app.transition(() => optionsScreen(app, 0, to), FADE_MENU); };
