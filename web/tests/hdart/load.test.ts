@@ -1,5 +1,5 @@
 import { loadHdPack, manifestProblem } from '../../src/render/hdart/load';
-import { hdArtName, hdPackUrl, startHdArt, hdPack, setHdPack } from '../../src/render/hdart/mode';
+import { hdArtName, hdArtFromUrl, hdPackUrl, resolveHdArt, startHdArt, hdPack, setHdPack, useHdArt } from '../../src/render/hdart/mode';
 import { frameAt } from '../../src/render/hdart/types';
 import { anim, manifest, still } from './helpers';
 
@@ -106,6 +106,33 @@ describe('modo HD pela URL', () => {
     const p = await startHdArt('?arte=hd', './', { fetch: f, loadImage: okImage });
     expect(seen).toEqual(['./arte-hd/provisorio/pacote.json']);
     expect(hdPack()).toBe(p);
+    setHdPack(null);
+    info.mockRestore();
+  });
+  it('a URL manda; sem ?arte vale a opção ARTE (HD → provisório)', () => {
+    expect(hdArtFromUrl('?quick')).toBeUndefined();
+    expect(hdArtFromUrl('?arte=hd')).toBe('provisorio');
+    expect(hdArtFromUrl('?arte=rom')).toBeNull();
+    expect(resolveHdArt(undefined, false)).toBeNull();
+    expect(resolveHdArt(undefined, true)).toBe('provisorio');
+    expect(resolveHdArt(null, true)).toBeNull();
+    expect(resolveHdArt('meu', false)).toBe('meu');
+  });
+  it('useHdArt: carrega uma vez por pacote, desliga com null e ignora carga que chega depois de desligar', async () => {
+    const { f, seen } = fakeFetch({ './arte-hd/x/pacote.json': manifest({ 'item/01': still() }) });
+    const info = vi.spyOn(console, 'info').mockImplementation(() => {});
+    setHdPack(null);
+    useHdArt('x', './', { fetch: f, loadImage: okImage });
+    useHdArt(null);   // desligou antes de chegar
+    await new Promise(r => setTimeout(r, 0));
+    expect(hdPack()).toBeNull();
+    useHdArt('x', './', { fetch: f, loadImage: okImage });
+    useHdArt('x', './', { fetch: f, loadImage: okImage });   // a cada quadro: nada de novo
+    await new Promise(r => setTimeout(r, 0));
+    expect(hdPack()).not.toBeNull();
+    expect(seen).toEqual(['./arte-hd/x/pacote.json']);
+    useHdArt(null);
+    expect(hdPack()).toBeNull();
     setHdPack(null);
     info.mockRestore();
   });

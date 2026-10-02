@@ -1,4 +1,4 @@
-// Modo de arte HD (opção 5): pacote escolhido pela URL e o estado do quadro da partida, no estilo de hd-menu.ts.
+// Modo de arte HD (opção 5): pacote escolhido pela URL (ou pela opção ARTE) e o estado do quadro da partida, no estilo de hd-menu.ts.
 // Sem `?arte=…` nada é carregado e `hdBattleSkip` devolve sempre a lista vazia: o desenho base fica exatamente como
 // antes. Com o pacote carregado, o desenho base da partida (ROM ou arte simples) chama `hdBattleSkip` para saber o que
 // pular e registra a rodada; `present` chama `drawHdBattleLayer` por baixo e por cima da base.
@@ -20,10 +20,43 @@ export function hdArtName(search: string): string | null {
 /** Pasta do pacote servido em `web/public/arte-hd/<nome>/`. */
 export const hdPackUrl = (name: string, base = './'): string => `${base}arte-hd/${name}/`;
 
+/** Pacote da opção ARTE = HD (o provisório, enquanto não houver o definitivo). */
+export const HD_DEFAULT_PACK = 'provisorio';
+
+/** O que a URL pede: `undefined` sem `?arte` (vale a opção ARTE); senão o pacote (`hdArtName`) ou `null` (desligado,
+ *  também para nomes inválidos). */
+export function hdArtFromUrl(search: string): string | null | undefined {
+  return new URLSearchParams(search).has('arte') ? hdArtName(search) : undefined;
+}
+
+/** Pacote efetivo: a URL manda; sem ela, a opção ARTE (HD → `HD_DEFAULT_PACK`, ORIGINAL → nenhum). */
+export const resolveHdArt = (url: string | null | undefined, optHd: boolean): string | null =>
+  url !== undefined ? url : optHd ? HD_DEFAULT_PACK : null;
+
 let pack: HdPack | null = null;
 export const hdPack = (): HdPack | null => pack;
 /** Troca o pacote (testes; `null` desliga o modo HD). */
-export function setHdPack(p: HdPack | null): void { pack = p; }
+export function setHdPack(p: HdPack | null): void { pack = p; wanted = undefined; }
+
+/** Pacote pedido por último a `useHdArt` (`undefined` = nenhum pedido ainda) e as cargas já feitas, por nome — uma
+ *  carga por pacote na sessão, mesmo indo e voltando na opção (e uma que falhou não é refeita a cada quadro). */
+let wanted: string | null | undefined;
+const loads = new Map<string, Promise<HdPack | null>>();
+
+/** Liga o pacote `name` (ou desliga com `null`); chamado a cada quadro, só age quando o pedido muda. O pacote chega
+ *  em segundo plano e só entra se ainda for o pedido; até lá (ou se falhar) a partida usa a ROM/arte simples. */
+export function useHdArt(name: string | null, base = './', deps?: HdLoadDeps): void {
+  if (name === wanted) return;
+  wanted = name;
+  if (!name) { pack = null; return; }
+  let p = loads.get(name);
+  if (!p) {
+    p = loadHdPack(hdPackUrl(name, base), deps);
+    loads.set(name, p);
+    void p.then(r => { if (r) console.info(`Crown Blast: arte HD "${r.manifest.name}" (${r.manifest.credits}).`); });
+  }
+  void p.then(r => { if (wanted === name) pack = r; });
+}
 
 /** Lê `?arte=` e carrega o pacote em segundo plano (a partida começa com a base e passa ao HD quando ele chega). */
 export async function startHdArt(search: string, base = './', deps?: HdLoadDeps): Promise<HdPack | null> {

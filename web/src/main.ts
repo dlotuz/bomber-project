@@ -16,7 +16,7 @@ import { titleScreen } from './screens/title';
 import { battleScreen } from './screens/battle';
 import { startRomUi } from './rom/ui';
 import { hdBegin } from './render/hd-menu';
-import { hdBattleBegin, startHdArt } from './render/hdart/mode';
+import { hdArtFromUrl, hdBattleBegin, resolveHdArt, useHdArt } from './render/hdart/mode';
 
 const store = browserStorage();
 const params = new URLSearchParams(window.location.search);
@@ -50,9 +50,10 @@ const audioStart = createAudioStarter({
 for (const ev of ['keydown', 'pointerdown', 'pointerup', 'click'] as const) window.addEventListener(ev, () => audioStart.gesture());
 onRomChange(() => audioStart.romChanged());
 
-// Arte HD (opção 5): `?arte=hd` (pacote provisório) ou `?arte=<nome>` carrega web/public/arte-hd/<nome>/; sem o
-// parâmetro nada muda. O pacote chega em segundo plano; até lá (ou se falhar) a partida usa a ROM/arte simples.
-void startHdArt(location.search, import.meta.env.BASE_URL);
+// Arte HD (opção 5): `?arte=hd` (pacote provisório) ou `?arte=<nome>` carrega web/public/arte-hd/<nome>/ e
+// `?arte=rom` desliga; sem o parâmetro vale a opção ARTE (lida a cada quadro). O pacote chega em segundo plano; até
+// lá (ou se falhar) a partida usa a ROM/arte simples.
+const urlArt = hdArtFromUrl(location.search);
 
 const display = createDisplay(document.getElementById('screen') as HTMLCanvasElement, fitOptionsFromUrl(location.search));
 const ctx = display.ctx;
@@ -62,6 +63,7 @@ const fxOff = params.get('fx') === '0';
 // ?bordas=preto|borrado e ?filtro=suave|nitido forçam a apresentação; sem eles, valem as opções (lidas a cada quadro).
 const urlMode = screenModeFromUrl(location.search);
 const render = (): void => {
+  useHdArt(resolveHdArt(urlArt, app.settings.options.hdArt), import.meta.env.BASE_URL);
   hdBegin();
   hdBattleBegin();
   app.draw(ctx, bank);

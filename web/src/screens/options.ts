@@ -116,6 +116,11 @@ export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'ma
       left: () => { const changed = opt().smooth; opt().smooth = false; app.save(); return changed; },
       right: () => { const changed = !opt().smooth; opt().smooth = true; app.save(); return changed; },
     });
+    rows.push({   // arte da partida: a original (ROM ou simples) ou o pacote HD; ?arte= na URL tem prioridade
+      id: 'art', label: S.options.art, value: () => (opt().hdArt ? S.options.artHd : S.options.artOriginal),
+      left: () => { const changed = opt().hdArt; opt().hdArt = false; app.save(); return changed; },
+      right: () => { const changed = !opt().hdArt; opt().hdArt = true; app.save(); return changed; },
+    });
     rows.push({
       id: 'music', label: S.options.music, value: () => String(opt().musicVol),
       left: () => { const b = opt().musicVol; opt().musicVol = clamp(opt().musicVol - 1, 0, 10); app.save(); setVol(); return opt().musicVol !== b; },

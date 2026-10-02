@@ -22,10 +22,11 @@ export interface Options {
   allMounts: boolean;    // ovos dos 13 tipos (senha 0164 do original); padrão SIM, a senha desliga e liga
   blurBorders: boolean;  // bordas da tela (16:9) com a imagem do jogo borrada; NÃO = faixas pretas
   smooth: boolean;       // filtro suave (pixel art ampliada com bordas lisas); padrão NÃO (nítido)
+  hdArt: boolean;        // arte HD da partida (pacote web/public/arte-hd/provisorio); padrão NÃO (a da ROM/simples)
 }
 
 export function defaultOptions(): Options {
-  return { randomSpawns: false, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3, fx: true, allMounts: true, blurBorders: true, smooth: false };
+  return { randomSpawns: false, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3, fx: true, allMounts: true, blurBorders: true, smooth: false, hdArt: false };
 }
 
 /** Slots de Opções → Controles: dispositivo, teclas e botões dos 5 jogadores. */
@@ -176,6 +177,7 @@ export function normalizeSettings(raw: unknown): Settings {
       allMounts: bool(ro.allMounts, d.options.allMounts),
       blurBorders: bool(ro.blurBorders, d.options.blurBorders),
       smooth: bool(ro.smooth, d.options.smooth),
+      hdArt: bool(ro.hdArt, d.options.hdArt),
     },
     setup: {
       mode: oneOf(s.mode, ['ffa', 'team'] as const, ds.mode),
