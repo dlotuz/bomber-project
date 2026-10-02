@@ -1,4 +1,4 @@
-import { newMatch, startRound, finishRoundInfo, createAi, matchRngState, type MatchState, type RoundState, type AiState, type MatchCarry } from './core-api';
+import { newMatch, devMountHumans, startRound, finishRoundInfo, createAi, matchRngState, type MatchState, type RoundState, type AiState, type MatchCarry } from './core-api';
 import type { GameConfig } from './config';
 
 export interface MatchSession {
@@ -22,6 +22,7 @@ export function createMatchSession(cfg: GameConfig): MatchSession {
 }
 export function beginRound(ms: MatchSession): RoundState {
   ms.round = startRound(ms.match);
+  if (ms.cfg.devMount) devMountHumans(ms.round, ms.cfg.devMount, ms.cfg.humans);
   ms.ai = createAi();
   ms.roundNo++;
   return ms.round;

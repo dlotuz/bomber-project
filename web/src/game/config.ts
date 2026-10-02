@@ -10,6 +10,8 @@ export interface SetupLike {
 }
 export interface GameConfig {
   rules: Rules; stage: number; chars: number[]; humans: boolean[]; devices: DeviceId[]; seed: number | null;
+  /** Teste (?montaria=N, N em hexa 1–F): os jogadores humanos começam cada rodada montados nesse tipo. */
+  devMount?: number;
 }
 const DEFAULT_DEVICES: DeviceId[] = ['kb', 'kb', 'gp0', 'gp1', 'gp2'];
 
@@ -36,7 +38,7 @@ const int = (v: string | null, def: number, min: number, max: number): number =>
   return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : def;
 };
 /** Partida rápida pela URL (?quick): stage, players, matches, time, level, mode, sd, bad, racer, spawns, chars, seed, humans,
- *  allmounts (0 = só os 7 tipos do Battle; padrão 13). */
+ *  allmounts (0 = só os 7 tipos do Battle; padrão 13), montaria (tipo em hexa: humanos começam montados, para testes). */
 export function parseConfig(search: string): GameConfig {
   const q = new URLSearchParams(search);
   const players = int(q.get('players'), 5, 2, 5);
@@ -51,6 +53,9 @@ export function parseConfig(search: string): GameConfig {
     chars: [0, 1, 2, 3, 4].map(i => (Number.isInteger(raw[i]) && raw[i] >= 0 && raw[i] <= 5 ? raw[i] : i)),
     stage: int(q.get('stage'), 1, 1, 10),
   };
-  return configFromSetup(setup, q.get('spawns') === '1', DEFAULT_DEVICES, q.has('seed') ? int(q.get('seed'), 0, 0, 0xffff) : null,
+  const cfg = configFromSetup(setup, q.get('spawns') === '1', DEFAULT_DEVICES, q.has('seed') ? int(q.get('seed'), 0, 0, 0xffff) : null,
     { allMounts: q.get('allmounts') !== '0' });
+  const m = Number.parseInt(q.get('montaria') ?? '', 16);
+  if (m >= 1 && m <= 15) cfg.devMount = m;
+  return cfg;
 }
