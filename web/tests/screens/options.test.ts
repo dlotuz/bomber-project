@@ -22,7 +22,7 @@ beforeEach(() => vi.clearAllMocks());
 describe('opções (§6.13)', () => {
   it('linhas na ordem: Opções, Controles e Jogabilidade', () => {
     const { app } = mkApp();
-    expect(optionsScreen(app).rowIds()).toEqual(['controls', 'gameplay', 'fx', 'borders', 'music', 'sfx', 'romStatus', 'romLoad', 'romForget', 'reset', 'back']);
+    expect(optionsScreen(app).rowIds()).toEqual(['controls', 'gameplay', 'fx', 'borders', 'smooth', 'music', 'sfx', 'romStatus', 'romLoad', 'romForget', 'reset', 'back']);
     expect(optionsScreen(app, 0, 'controls').rowIds()).toEqual(['p1', 'p2', 'p3', 'p4', 'p5', 'slot', 'slotSave', 'slotLoad', 'back']);
     expect(optionsScreen(app, 0, 'gameplay').rowIds()).toEqual(['spawns', 'escape', 'throwStun', 'sleep', 'password', 'slot', 'slotSave', 'slotLoad', 'back']);
   });
@@ -75,6 +75,15 @@ describe('opções (§6.13)', () => {
     expect([app.settings.options.blurBorders, o.value('borders')]).toEqual([false, 'PRETAS']);
     press(app, BTN.RIGHT);
     expect(app.settings.options.blurBorders).toBe(true);
+  });
+  it('FILTRO SUAVE: padrão NÃO; ←/→ liga e desliga, e salva', () => {
+    const { app } = mkApp();
+    const o = optionsScreen(app); app.go(o); goRow(o, 'smooth');
+    expect(o.value('smooth')).toBe('NÃO');
+    press(app, BTN.RIGHT);
+    expect([app.settings.options.smooth, o.value('smooth')]).toEqual([true, 'SIM']);
+    press(app, BTN.LEFT);
+    expect(app.settings.options.smooth).toBe(false);
   });
   it('A em CONTROLES/JOGABILIDADE abre o submenu; B volta às Opções com o cursor nele', () => {
     const { app } = mkApp();

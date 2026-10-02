@@ -1,6 +1,7 @@
 import {
   fitScale, fitOptionsFromUrl, screenLayout, coverRect, screenModeFromUrl, resolveScreenMode, SCREEN_W, SCREEN_H, TV_ASPECT,
 } from '../../src/render/display';
+import { smoothFactor } from '../../src/render/fx/smooth-gl';
 
 describe('tamanho da imagem na tela', () => {
   it('Full HD (1920×1080), padrão: ocupa a altura toda (escala quebrada) e alarga para 4:3 como a TV', () => {
@@ -52,8 +53,21 @@ describe('janela inteira: imagem centrada e bordas', () => {
     expect(screenModeFromUrl('?bordas=preto')).toEqual({ blur: false });
     expect(screenModeFromUrl('?bordas=borrado')).toEqual({ blur: true });
     expect(screenModeFromUrl('?quick')).toEqual({});
-    expect(resolveScreenMode({}, { blurBorders: true })).toEqual({ blur: true });
-    expect(resolveScreenMode({}, { blurBorders: false })).toEqual({ blur: false });
-    expect(resolveScreenMode({ blur: false }, { blurBorders: true })).toEqual({ blur: false });
+    expect(resolveScreenMode({}, { blurBorders: true, smooth: false })).toEqual({ blur: true, smooth: false });
+    expect(resolveScreenMode({}, { blurBorders: false, smooth: false })).toEqual({ blur: false, smooth: false });
+    expect(resolveScreenMode({ blur: false }, { blurBorders: true, smooth: false })).toEqual({ blur: false, smooth: false });
+  });
+  it('?filtro=suave liga o filtro suave (padrão: nítido); ?filtro=nitido força o nítido', () => {
+    expect(screenModeFromUrl('?quick&filtro=suave')).toEqual({ smooth: true });
+    expect(screenModeFromUrl('?filtro=nitido&bordas=preto')).toEqual({ smooth: false, blur: false });
+    expect(resolveScreenMode({ smooth: true }, { blurBorders: true, smooth: false })).toEqual({ blur: true, smooth: true });
+    expect(resolveScreenMode({ smooth: false }, { blurBorders: true, smooth: true }).smooth).toBe(false);
+    expect(resolveScreenMode({}, { blurBorders: true, smooth: true }).smooth).toBe(true);
+  });
+  it('fator inteiro do filtro suave: o inteiro logo acima da escala vertical, entre 2 e 8', () => {
+    expect(smoothFactor(1080 / 224)).toBe(5);   // Full HD: 1280×1120, reduzido de leve para 1440×1080
+    expect(smoothFactor(4)).toBe(4);
+    expect(smoothFactor(1)).toBe(2);
+    expect(smoothFactor(12)).toBe(8);
   });
 });

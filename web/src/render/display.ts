@@ -49,21 +49,24 @@ export function coverRect(w: number, h: number, gw: number, gh: number): { x: nu
   return { x: (w - cw) / 2, y: (h - ch) / 2, w: cw, h: ch };
 }
 
-/** Como a tela é apresentada: `blur` = bordas com a imagem do jogo borrada e escurecida (senão, pretas). */
-export interface ScreenMode { blur: boolean }
+/** Como a tela é apresentada: `blur` = bordas com a imagem do jogo borrada e escurecida (senão, pretas); `smooth` =
+ *  filtro suave (pixel art ampliada com bordas lisas, em WebGL) no lugar da ampliação nítida. */
+export interface ScreenMode { blur: boolean; smooth: boolean }
 
-/** O que a URL força: `?bordas=preto|borrado` (sem o parâmetro, valem as Opções). */
+/** O que a URL força: `?bordas=preto|borrado` e `?filtro=suave|nitido` (sem o parâmetro, valem as Opções). */
 export function screenModeFromUrl(search: string): Partial<ScreenMode> {
   const q = new URLSearchParams(search), r: Partial<ScreenMode> = {};
-  const b = q.get('bordas');
+  const b = q.get('bordas'), f = q.get('filtro');
   if (b === 'preto' || b === 'preta' || b === 'pretas') r.blur = false;
   else if (b === 'borrado' || b === 'borradas') r.blur = true;
+  if (f === 'suave') r.smooth = true;
+  else if (f === 'nitido' || f === 'nítido') r.smooth = false;
   return r;
 }
 
 /** Modo efetivo: a URL manda; sem ela, as Opções. */
-export function resolveScreenMode(url: Partial<ScreenMode>, opts: { blurBorders: boolean }): ScreenMode {
-  return { blur: url.blur ?? opts.blurBorders };
+export function resolveScreenMode(url: Partial<ScreenMode>, opts: { blurBorders: boolean; smooth: boolean }): ScreenMode {
+  return { blur: url.blur ?? opts.blurBorders, smooth: url.smooth ?? opts.smooth };
 }
 
 let base: CanvasRenderingContext2D | null = null;

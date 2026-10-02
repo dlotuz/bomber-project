@@ -54,7 +54,7 @@ const ctx = display.ctx;
 const bank = new SpriteBank();
 // ?fx=0 desliga os efeitos nesta sessão (debug e capturas fiéis).
 const fxOff = params.get('fx') === '0';
-// ?bordas=preto|borrado força as bordas da tela; sem ele, vale a opção (lida a cada quadro: muda na hora).
+// ?bordas=preto|borrado e ?filtro=suave|nitido forçam a apresentação; sem eles, valem as opções (lidas a cada quadro).
 const urlMode = screenModeFromUrl(location.search);
 const render = (): void => {
   hdBegin();

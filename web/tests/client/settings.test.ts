@@ -16,7 +16,7 @@ describe('configurações v3', () => {
     expect([s.keymaps.length, s.padmaps.length]).toEqual([5, 5]);
     expect(s.padmaps[4]).toEqual(DEFAULT_PADMAP);
     expect(s.keymaps[2].a).toBe('');
-    expect(s.options).toEqual({ randomSpawns: false, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3, fx: true, allMounts: true, blurBorders: true });
+    expect(s.options).toEqual({ randomSpawns: false, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3, fx: true, allMounts: true, blurBorders: true, smooth: false });
     expect(s.setup.rules).not.toHaveProperty('randomSpawns');
   });
   it('salva e carrega de volta', () => {
@@ -54,7 +54,7 @@ describe('configurações v3', () => {
   it('valores inválidos caem no padrão', () => {
     const s = normalizeSettings({ padmaps: [{ a: -1, b: 99, x: 'q' }], options: { musicVol: 11, sfxVol: 2.5, randomSpawns: 'sim', gloveEscape: 99 } });
     expect(s.padmaps[0]).toEqual(DEFAULT_PADMAP);
-    expect(s.options).toEqual({ randomSpawns: false, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3, fx: true, allMounts: true, blurBorders: true });
+    expect(s.options).toEqual({ randomSpawns: false, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3, fx: true, allMounts: true, blurBorders: true, smooth: false });
   });
   it('efeitos visuais: padrão ligado, campo ausente em configuração antiga vira true, lixo vira padrão', () => {
     expect(defaultSettings().options.fx).toBe(true);
