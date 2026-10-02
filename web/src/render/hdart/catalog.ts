@@ -194,7 +194,7 @@ export const HD_TILES = Object.keys(TILE_INFO) as HdTile[];
  *  SOMBRA SOB OS PÉS (o ponto em que o desenho toca o chão), não o centro do quadro. O desenho do pacote alinha esse
  *  ponto `FEET_BELOW_CENTER` px do original abaixo do centro da casa. Quadro recomendado 96×128 com apoio (48, 108)
  *  (o mesmo do pacote provisório): 1,5 casa de largura, 2 de altura, 20 px livres sob os pés para a sombra. */
-export const FEET_BELOW_CENTER = 9;
+export const FEET_BELOW_CENTER = 4;
 const BOX_CHAR = [hd(24), hd(32)] as const;
 const ANCHOR_CHAR = [hd(12), hd(27)] as const;
 /** Montaria: mais larga (2 casas), mesmo apoio nos pés/base. */

@@ -51,7 +51,7 @@ O pacote pode ser **parcial**: o que não estiver nele continua vindo do desenho
   Os tamanhos abaixo já estão nessa escala. Se usar outra escala, declare em `cell` e mude tudo na mesma proporção.
 - **Ponto de apoio** (`anchor`): o pixel do quadro que vai exatamente no ponto do jogo.
   - Personagens, cavaleiros, trajes e montarias: o **centro da sombra sob os pés** (o ponto em que o desenho toca o
-    chão), não o centro do quadro. O jogo alinha esse ponto 9 px do original (36 px nesta escala) abaixo do
+    chão), não o centro do quadro. O jogo alinha esse ponto 4 px do original (16 px nesta escala) abaixo do
     centro da casa. Personagem: quadro 96×128 com apoio (48, 108); montaria: 128×128 com apoio (64, 108).
     O corpo pode passar da casa para cima; o cavaleiro usa o mesmo apoio no chão e é desenhado já na altura do assento.
   - Bombas, chamas, itens, ovos, peças de arena e efeitos: o **centro da casa**.
@@ -112,8 +112,8 @@ Uma pasta com `pacote.json` na raiz e as imagens (PNG ou WebP) ao lado (subpasta
 
 ## Como testar
 
-1. Copie a pasta do pacote para `web/public/arte/<nome>/` (fica `web/public/arte/<nome>/pacote.json`).
-2. Confira o pacote: `cd web && node scripts/arte-hd/validar.ts public/arte/<nome>` (use `--tudo` para listar tudo o
+1. Copie a pasta do pacote para `web/public/arte-hd/<nome>/` (fica `web/public/arte-hd/<nome>/pacote.json`).
+2. Confira o pacote: `cd web && node scripts/arte-hd/validar.ts public/arte-hd/<nome>` (use `--tudo` para listar tudo o
    que falta). O relatório mostra erros (recorte fora da imagem, apoio fora do recorte, ticks inválidos, chaves
    desconhecidas…) e a cobertura por grupo e prioridade.
 3. Rode o jogo (`cd web && npm run dev`) e abra o endereço que ele mostrar com `?arte=<nome>` no fim

@@ -19,7 +19,7 @@ const PLAYER_COLORS = ['#ff5f5f', '#5fa8ff', '#ffd23f', '#5fe07a', '#c77dff'];
 const TEAM_TAG_COLORS = ['#ff5f5f', '#ffffff'];
 /** Pés do personagem/montaria abaixo do ponto do núcleo (px da base): = `FEET_BELOW_CENTER` do catálogo (um teste
  *  garante; o catálogo não entra no jogo para não levar as tabelas dele junto). */
-export const FOOT_DY = 9;
+export const FOOT_DY = 4;
 /** A etiqueta nunca sobe até o HUD. */
 const HUD_BOTTOM = 24;
 

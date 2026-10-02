@@ -16,7 +16,7 @@ interface Catalog {
 }
 
 /** Onde o jogo procura os pacotes para `?arte=<nome>` (carregador da frente de render/carregamento). */
-const PASTA_PACOTES = 'web/public/arte';
+const PASTA_PACOTES = 'web/public/arte-hd';
 const DOCS = WEB + '../docs/arte-hd/';
 const DIR_ARROW: Record<string, string> = { up: '↑', right: '→', down: '↓', left: '←' };
 
@@ -195,7 +195,7 @@ function render(cat: Catalog, chars: readonly { name: string }[], sha1: string |
 
   p('## Como testar', '',
     `1. Copie a pasta do pacote para \`${PASTA_PACOTES}/<nome>/\` (fica \`${PASTA_PACOTES}/<nome>/pacote.json\`).`,
-    '2. Confira o pacote: `cd web && node scripts/arte-hd/validar.ts public/arte/<nome>` (use `--tudo` para listar tudo o',
+    '2. Confira o pacote: `cd web && node scripts/arte-hd/validar.ts public/arte-hd/<nome>` (use `--tudo` para listar tudo o',
     '   que falta). O relatório mostra erros (recorte fora da imagem, apoio fora do recorte, ticks inválidos, chaves',
     '   desconhecidas…) e a cobertura por grupo e prioridade.',
     '3. Rode o jogo (`cd web && npm run dev`) e abra o endereço que ele mostrar com `?arte=<nome>` no fim',
