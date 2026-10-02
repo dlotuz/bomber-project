@@ -52,13 +52,31 @@ describe('IA: ações (§9.3)', () => {
     expect(b.state).toBe('idle');
     expect(crossCells(s, b.cell, b.fire, false).cells).toContain(C(8, 5));
   });
-  it('X: para a bomba DELA chutada pelo adversário (a ROM lê o X do dono, $C1:38CE)', () => {
+  it('X: não para a bomba DELA chutada pelo adversário (a CPU original nunca aperta X: ajstop2/cpux.py)', () => {
     const s = arena(); put(s, 0, 4, 3); put(s, 1, 8, 5);
     const b = addBomb(s, 0, C(5, 3), { fuse: 120, fire: 1 });
     s.grid[C(5, 3)] = CODE.FLOOR; b.state = 'kicked'; b.dir = 2; b.step = 0; b.kickedBy = 1;
-    play(s, CPU0, 2, 60);
-    expect(b.state).toBe('idle');
-    expect(crossCells(s, b.cell, b.fire, false).cells).toContain(C(8, 5));
+    const ai = createAi(); let x = false;
+    for (let i = 0; i < 100 && b.state === 'kicked'; i++) {
+      const inp = aiInputs(s, ai, CPU0, 2); x ||= !!(inp[0] & BTN.X);
+      step(s, inp);
+    }
+    expect([x, b.cell]).toEqual([false, C(14, 3)]);
+  });
+  it('X: nem a dela que ela chutou, enquanto rola outra dela chutada pelo adversário (o X pararia as duas)', () => {
+    const scene = (other: boolean): boolean => {
+      const s = arena({ players: 3 }); put(s, 0, 4, 3); put(s, 1, 8, 5); put(s, 2, 12, 11);
+      const b = addBomb(s, 0, C(5, 3), { fuse: 120, fire: 1 });
+      s.grid[C(5, 3)] = CODE.FLOOR; b.state = 'kicked'; b.dir = 2; b.step = 0; b.kickedBy = 0;
+      if (other) {
+        const o = addBomb(s, 0, C(14, 1), { fuse: 120, fire: 1 });
+        s.grid[C(14, 1)] = CODE.FLOOR; o.state = 'kicked'; o.dir = 4; o.step = 0; o.kickedBy = 2;
+      }
+      const ai = createAi(); let x = false;
+      for (let i = 0; i < 40 && b.state === 'kicked'; i++) { const inp = aiInputs(s, ai, CPU0, 2); x ||= !!(inp[0] & BTN.X); step(s, inp); }
+      return x;
+    };
+    expect([scene(false), scene(true)]).toEqual([true, false]);
   });
   it('X: a bomba do adversário chutada pela CPU não para com o X dela (nem tenta)', () => {
     const s = arena(); put(s, 0, 4, 3); put(s, 1, 8, 5);

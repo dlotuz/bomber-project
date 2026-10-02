@@ -1,7 +1,7 @@
 import { SCREEN_H, SCREEN_W, type Display, type ScreenMode } from '../display';
 import { drawBackdrop } from './backdrop';
 import { smoothFactor, smoothUpscale } from './smooth-gl';
-import { drawFx } from './draw';
+import { drawFx, prepareFx } from './draw';
 import { drawHdMenu } from '../hd-menu';
 import { drawHdBattleLayer } from '../hdart/mode';
 import type { FxFrame } from './state';
@@ -35,12 +35,14 @@ export function present(d: Display, frame: FxFrame | null, fade: number, mode: S
   const { out } = d, L = d.layout(), { sx, sy } = L;
   const shake = frame && !reduced?.matches;
   const ox = L.ox + (shake ? frame.state.dx * sx : 0), oy = L.oy + (shake ? frame.state.dy * sy : 0);
+  // cor das bombas na própria base (antes de ampliar/suavizar) e máscara das sombras
+  const prep = frame ? prepareFx(frame, d.ctx, fade) : null;
   out.setTransform(1, 0, 0, 1, 0, 0);
   out.globalAlpha = 1;
   out.globalCompositeOperation = 'source-over';
   out.fillStyle = '#000'; out.fillRect(0, 0, L.w, L.h);
   drawHdMenu(out, sx, sy, ox, oy);   // menus: fundo/texto HD por baixo da base transparente
-  drawHdBattleLayer(out, sx, sy, ox, oy, 'under');   // partida com arte HD: o que fica por baixo da base
+  drawHdBattleLayer(out, sx, sy, ox, oy, 'under', 1, !!frame);   // partida com arte HD: o que fica por baixo da base (bombas HD na cor do dono com os efeitos ligados)
   out.setTransform(1, 0, 0, 1, 0, 0);
   // filtro suave: amplia por um inteiro com bordas lisas (WebGL); sem WebGL, a ampliação nítida
   const src = (mode.smooth && smoothUpscale(d.ctx.canvas, smoothFactor(sy))) || sharpBase(d);
@@ -48,12 +50,12 @@ export function present(d: Display, frame: FxFrame | null, fade: number, mode: S
   out.imageSmoothingQuality = 'high';
   out.drawImage(src, ox, oy, L.gw, L.gh);
   out.imageSmoothingEnabled = false;
-  drawHdBattleLayer(out, sx, sy, ox, oy, 'over', fade);   // partida com arte HD: por cima da base, antes dos efeitos
-  if (frame) {
+  drawHdBattleLayer(out, sx, sy, ox, oy, 'over', fade, !!frame);   // partida com arte HD: por cima da base, antes dos efeitos
+  if (frame && prep) {
     out.setTransform(sx, 0, 0, sy, ox, oy);   // os efeitos desenham em pixels de base, rasterizados em resolução nativa
     out.save();
     out.beginPath(); out.rect(0, 0, SCREEN_W, SCREEN_H); out.clip();   // partículas e sombras não vazam para as bordas
-    drawFx(out, frame, d.ctx, fade);
+    drawFx(out, frame, prep, fade);
     out.restore();
   }
   out.setTransform(1, 0, 0, 1, 0, 0);

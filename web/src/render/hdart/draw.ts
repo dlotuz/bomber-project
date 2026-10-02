@@ -12,6 +12,7 @@ import { LIFT_Z, readScene } from '../rom/adapt';
 import { newMemo, type RomMemo } from '../rom/scene';
 import { pressureSprite } from '../anim/effects';
 import { charKey, faceToHdDir, frameAt, itemKey, stageKey, type HdAnim, type HdFrame, type HdKey, type HdPack, type HdTile } from './types';
+import { bombColor } from '../fx/bomb-tint';
 import { bombKey, bombTypeOf, eggKey, fieldPlayers, flameKey, hudClockGlyphs, hudCrownKey, hudHeadKey, playerKeys, type HdCategory } from './cover';
 
 /** Cores das etiquetas nP (mesmas de draw-game.ts; time 0 vermelho, time 1 branco). */
@@ -59,6 +60,9 @@ export interface HdDrawOpts {
   crowns?: readonly number[];
   /** Brilho 0..1 (fade do App); a passada por cima da base precisa aplicá-lo ela mesma. */
   fade?: number;
+  /** Cor da bomba por jogador (fx): devolve o recorte `rect` de `img` com o corpo na cor `color` (imagem do tamanho
+   *  do recorte) ou null (sem como pintar: desenha a arte como está). Ausente = bombas na arte do pacote. */
+  bombTint?: (img: CanvasImageSource, rect: readonly [number, number, number, number], color: number) => CanvasImageSource | null;
 }
 
 /** Item da lista ordenada por y (sprites do original). */
@@ -73,13 +77,16 @@ export function drawHdBattle(out: CanvasRenderingContext2D, round: RoundState, p
   const { tick, bombTick } = clock;
   let drawn = 0;
   /** Quadro de `key` no tempo `t` com o apoio em (x, y); devolve o quadro (topo = y − ay·k) ou null. */
-  const put = (key: HdKey, t: number, x: number, y: number): HdFrame | null => {
+  const put = (key: HdKey, t: number, x: number, y: number, owner = -1): HdFrame | null => {
     const a = pack.anim(key);
     if (!a) return null;
     const f = frameAt(a, t);
-    const img = pack.images.get(f.img);
+    let img = pack.images.get(f.img);
     if (!img) return null;
-    const [rx, ry, rw, rh] = f.rect;
+    let [rx, ry] = f.rect;
+    const [, , rw, rh] = f.rect;
+    const tinted = owner >= 0 && opts.bombTint ? opts.bombTint(img, f.rect, bombColor(owner)) : null;   // bomba do dono
+    if (tinted) { img = tinted; rx = 0; ry = 0; }
     out.drawImage(img, rx, ry, rw, rh, x - f.anchor[0] * k, y - f.anchor[1] * k, rw * k, rh * k);
     drawn++;
     return f;
@@ -114,7 +121,7 @@ export function drawHdBattle(out: CanvasRenderingContext2D, round: RoundState, p
   // ---- itens, chamas e bombas paradas (BG do original: sempre por baixo dos sprites)
   if (cats.has('items')) s.grid.forEach((v, c) => { if (isItemCode(v) && !isEggCode(v)) put(itemKey(itemOfCode(v)), tick, cx(c), cy(c)); });
   if (cats.has('flames')) s.grid.forEach((v, c) => { if (v === CODE.FLAME) put(flameKey(s.cellAux[c]), tick - s.cellT0[c], cx(c), cy(c)); });
-  if (cats.has('bombs')) for (const b of s.bombs) if (b.state === 'idle') put(bombKey(b.type), bombTick - b.born, px(b.x), px(b.y));
+  if (cats.has('bombs')) for (const b of s.bombs) if (b.state === 'idle') put(bombKey(b.type), bombTick - b.born, px(b.x), px(b.y), b.owner);
 
   // ---- sprites, ordenados por y como na OAM (maior y na frente; empate: menor `order` na frente)
   const spr: Spr[] = [];
@@ -130,7 +137,7 @@ export function drawHdBattle(out: CanvasRenderingContext2D, round: RoundState, p
   if (cats.has('bombs')) {
     let i = 0;
     for (const b of s.bombs) {
-      if (b.state === 'kicked') { const x = px(b.x), y = px(b.y); spr.push({ sortY: y, order: 100 + i++, draw: () => put(bombKey(b.type), bombTick - b.born, x, y) }); }
+      if (b.state === 'kicked') { const x = px(b.x), y = px(b.y); spr.push({ sortY: y, order: 100 + i++, draw: () => put(bombKey(b.type), bombTick - b.born, x, y, b.owner) }); }
       else if (b.state === 'held') {
         const p = s.players.find(q => q.present && q.carry === b.id);
         const bb = p ? null : s.bad.find(q => q.slot === b.owner);
@@ -142,7 +149,7 @@ export function drawHdBattle(out: CanvasRenderingContext2D, round: RoundState, p
     }
     for (const f of s.flyers) if (f.kind === 'bomb') {
       const x = px(f.x), y = px(f.y) - Math.max(0, -f.z), b = s.bombs.find(q => q.id === f.ref);
-      spr.push({ sortY: y, order: 100 + i++, draw: () => put(bombKey(bombTypeOf(s, f.ref)), bombTick - (b?.born ?? 0), x, y) });
+      spr.push({ sortY: y, order: 100 + i++, draw: () => put(bombKey(bombTypeOf(s, f.ref)), bombTick - (b?.born ?? 0), x, y, b?.owner ?? -1) });
     }
   }
   if (cats.has('items')) s.flyers.forEach((f, i) => {

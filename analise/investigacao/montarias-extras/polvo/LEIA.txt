@@ -1,0 +1,12 @@
+Medições da investida do polvo (tipo 4), frente aj-polvo. Rodar daqui com
+  "../../../extraido/cores/venv/bin/python" mN.py
+Estados: analise/estados/st_arena01.bin e st_arena09.bin (fora do git). O ovo tipo 4 é escrito direto na grade
+(0x0940 + 0x34), então não precisa da senha 0164.
+  m2/m3   investida até a parede; o que vale depois (andar, virar, Y, A)
+  m4/m15  investida contra bomba parada (para em x=50) e o que vale depois
+  m6/m9   investida atrás da própria bomba chutada (para em x=52; ocupação $4000 na $7F:1000)
+  m8      core rom-arenas (debug): quem zera $64/$66 ($C2:3566 → $C2:3589) e o caminho em $C2:3287
+  m10     o mesmo com e sem o item chute
+  m11     teto de 56 ticks (teleporte de −64 px para caber na arena)
+  m13     arena 9 atravessando a gangorra na horizontal (pivô → $C2:2026), andando e em investida
+  m14     arena 9 entrando de cima na ponta alta (vira a gangorra, a investida segue)

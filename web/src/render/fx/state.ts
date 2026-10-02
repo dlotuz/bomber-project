@@ -12,11 +12,14 @@ export interface FxState {
   size: Float32Array; grow: Float32Array; ground: Float32Array;
   shake: number; dx: number; dy: number; flash: number;
   round: RoundState | null; prevGrid: Int32Array | null;
-  shadowsOff: boolean; costSum: number; costN: number;
+  /** Quadros que faltam com as sombras em pausa (orçamento estourado; voltam a ser tentadas depois). */
+  shadowsPause: number; costSum: number; costN: number;
 }
 
-/** O que a tela de batalha entrega ao `present()` (spec §3.3). */
-export interface FxFrame { state: FxState; round: RoundState; drawNoActors(ctx: CanvasRenderingContext2D): void }
+/** O que a tela de batalha entrega ao `present()` (spec §3.3). `drawNoActors` desenha o quadro sem atores (sem
+ *  jogadores, montarias, trajes nem bombas); com `bombs`, o mesmo quadro só com as bombas (paradas, chutadas e voando)
+ *  — a diferença entre os dois é a bomba inteira, e o quadro completo diz que parte dela está à vista. */
+export interface FxFrame { state: FxState; round: RoundState; drawNoActors(ctx: CanvasRenderingContext2D, bombs?: boolean): void }
 
 export function createFx(seed = 0x5eed): FxState {
   const f32 = () => new Float32Array(MAX_PARTS);
@@ -24,7 +27,7 @@ export function createFx(seed = 0x5eed): FxState {
     seed, next: 0,
     kind: new Uint8Array(MAX_PARTS), color: new Uint32Array(MAX_PARTS), age: new Int16Array(MAX_PARTS), life: new Int16Array(MAX_PARTS),
     x: f32(), y: f32(), vx: f32(), vy: f32(), g: f32(), size: f32(), grow: f32(), ground: f32(),
-    shake: 0, dx: 0, dy: 0, flash: 0, round: null, prevGrid: null, shadowsOff: false, costSum: 0, costN: 0,
+    shake: 0, dx: 0, dy: 0, flash: 0, round: null, prevGrid: null, shadowsPause: 0, costSum: 0, costN: 0,
   };
 }
 
@@ -55,5 +58,5 @@ export function liveCount(fx: FxState): number {
 
 export function clearFx(fx: FxState): void {
   fx.life.fill(0); fx.age.fill(0); fx.next = 0;
-  fx.shake = 0; fx.dx = 0; fx.dy = 0; fx.flash = 0; fx.shadowsOff = false; fx.costSum = 0; fx.costN = 0;
+  fx.shake = 0; fx.dx = 0; fx.dy = 0; fx.flash = 0; fx.shadowsPause = 0; fx.costSum = 0; fx.costN = 0;
 }

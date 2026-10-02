@@ -2,12 +2,14 @@ import { CODE, FLAME_PIECE, FLAME_TICKS, ITEM, isEggCode, isItemCode, itemOfCode
 import { SCREEN_H, SCREEN_W } from '../display';
 import { ambientFill } from './ambient';
 import { FIELD_TOP, cellX, cellY, entX, entY } from './coords';
-import { tintBomb } from './bomb-tint';
+import { bombColor, bombMask, tintBombsInPlace } from './bomb-tint';
 import { actorMask, drawShadows, type ActorMask } from './shadows';
 import { flameLight, halo, puff, rgb } from './sprites';
 import { MAX_PARTS, PART, type FxFrame, type FxState } from './state';
 
-const SHADOW_BUDGET_MS = 12, SHADOW_WINDOW = 60;
+/** Orçamento das sombras (média de uma janela de 60 quadros); estourado, elas param por `SHADOW_PAUSE` quadros e
+ *  voltam a ser tentadas — um pico (troca de aba, coleta de lixo, máquina ocupada) não as desliga para sempre. */
+export const SHADOW_BUDGET_MS = 12, SHADOW_WINDOW = 60, SHADOW_PAUSE = 600;
 const LIGHT_R = 22, LIGHT_ALPHA = 0.3, HALO_R = 14;
 
 function itemColor(v: number): number {
@@ -58,45 +60,75 @@ function particles(out: CanvasRenderingContext2D, fx: FxState, fade: number): vo
   }
 }
 
-/** Cor da bomba por jogador (as cores dos bombers no Battle): P1 branco, P2 preto (cinza-escuro, para o sombreado
- *  aparecer), P3 vermelho, P4 azul, P5 verde. */
-export const BOMB_COLORS = [0xf0f0f0, 0x3a3a44, 0xe83030, 0x3070ff, 0x30c040];
+export { BOMB_COLORS } from './bomb-tint';
 
-let tintCtx: CanvasRenderingContext2D | null = null;
-
-/** Corpo de cada bomba (parada, chutada ou em voo) na cor do dono; contorno, brilho e pavio ficam como na arte. */
-function bombColors(out: CanvasRenderingContext2D, frame: FxFrame, m: ActorMask, fade: number): void {
-  const r = frame.round, at: [number, number, number][] = [];
-  for (const b of r.bombs) if (b.state === 'idle' || b.state === 'kicked') at.push([entX(b.x), entY(b.y), b.owner]);
+/** Centro (px de base) e cor do dono de cada bomba parada, chutada ou em voo. */
+export function bombSpots(r: FxFrame['round']): [number, number, number][] {
+  const at: [number, number, number][] = [];
+  for (const b of r.bombs) if (b.state === 'idle' || b.state === 'kicked') at.push([entX(b.x), entY(b.y), bombColor(b.owner)]);
   for (const f of r.flyers) {
     const b = f.kind === 'bomb' ? r.bombs.find(q => q.id === f.ref) : undefined;
-    if (b) at.push([entX(f.x), entY(f.y) + f.z, b.owner]);
+    if (b) at.push([entX(f.x), entY(f.y) + f.z, bombColor(b.owner)]);
   }
-  if (!at.length) return;
-  if (!tintCtx) { const c = document.createElement('canvas'); c.width = c.height = 16; tintCtx = c.getContext('2d')!; }
-  const img = tintCtx.createImageData(16, 16);
-  out.globalCompositeOperation = 'source-over';
-  out.globalAlpha = fade;
-  for (const [x, y, owner] of at) {
-    img.data.set(tintBomb(m.base, m.ground, SCREEN_W, x, y, BOMB_COLORS[owner] ?? BOMB_COLORS[0]));
-    tintCtx.putImageData(img, 0, 0);
-    out.drawImage(tintCtx.canvas, x - 8, y - 8);
-  }
+  return at;
 }
 
-/** Ordem da spec §4.8: sombras → cor das bombas → clima → luzes/halo → partículas → flash; tudo abaixo do HUD. */
-export function drawFx(out: CanvasRenderingContext2D, frame: FxFrame, base: CanvasRenderingContext2D, fade: number): void {
+/** Conta o custo das sombras de um quadro; ao fim de cada janela, média acima do orçamento → pausa. */
+export function chargeShadows(fx: FxState, ms: number): void {
+  fx.costSum += ms;
+  if (++fx.costN < SHADOW_WINDOW) return;
+  if (fx.costSum / SHADOW_WINDOW > SHADOW_BUDGET_MS) fx.shadowsPause = SHADOW_PAUSE;
+  fx.costSum = 0; fx.costN = 0;
+}
+
+/** O que `prepareFx` deixa para `drawFx`: a máscara das sombras (null = sem sombras neste quadro) e o custo já gasto. */
+export interface FxPrep { mask: ActorMask | null; ms: number }
+
+let refNone: CanvasRenderingContext2D | null = null, refBombs: CanvasRenderingContext2D | null = null;
+let visible: Uint8ClampedArray | null = null;
+const refCtx = () => {
+  const c = document.createElement('canvas'); c.width = SCREEN_W; c.height = SCREEN_H;
+  return c.getContext('2d', { willReadFrequently: true })!;
+};
+/** Quadro de referência escurecido como a base (o App escurece a base com preto de alfa 1 − brilho/15 = 1 − fade). */
+function refFrame(ctx: CanvasRenderingContext2D, frame: FxFrame, bombs: boolean, fade: number): Uint8ClampedArray {
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  ctx.clearRect(0, 0, SCREEN_W, SCREEN_H);
+  frame.drawNoActors(ctx, bombs);
+  if (fade < 1) { ctx.fillStyle = `rgba(0,0,0,${1 - fade})`; ctx.fillRect(0, 0, SCREEN_W, SCREEN_H); }
+  return ctx.getImageData(0, 0, SCREEN_W, SCREEN_H).data;
+}
+
+/**
+ * Antes da ampliação (spec §4.4/§4.8): pinta o corpo à vista de cada bomba na cor do dono DENTRO da base — assim a
+ * ampliação nítida, o filtro suave, a arte HD por cima e o fundo borrado veem a bomba já colorida, e o que está na
+ * frente dela (montaria, cavaleiro, moita) continua por cima — e calcula a máscara de chão das sombras. A cor não
+ * entra no orçamento: só as sombras pausam.
+ */
+export function prepareFx(frame: FxFrame, base: CanvasRenderingContext2D, fade: number): FxPrep {
+  const fx = frame.state, shadows = fx.shadowsPause === 0;
+  if (!shadows) fx.shadowsPause--;
+  const spots = bombSpots(frame.round);
+  if (!shadows && !spots.length) return { mask: null, ms: 0 };
+  const t0 = performance.now();
+  const img = base.getImageData(0, 0, SCREEN_W, SCREEN_H);
+  const none = refFrame(refNone ??= refCtx(), frame, false, fade);
+  const mask = shadows ? actorMask(img.data, none) : null;
+  if (spots.length) {
+    visible ??= new Uint8ClampedArray(SCREEN_W * SCREEN_H * 4);
+    bombMask(img.data, refFrame(refBombs ??= refCtx(), frame, true, fade), none, visible);
+    for (const [x, y] of tintBombsInPlace(img.data, visible, SCREEN_W, spots)) base.putImageData(img, 0, 0, x, y, 16, 16);
+  }
+  return { mask, ms: performance.now() - t0 };
+}
+
+/** Ordem da spec §4.8: (cor das bombas já na base, `prepareFx`) sombras → clima → luzes/halo → partículas → flash; tudo abaixo do HUD. */
+export function drawFx(out: CanvasRenderingContext2D, frame: FxFrame, prep: FxPrep, fade: number): void {
   const fx = frame.state, s = out.getTransform().a;
-  if (!fx.shadowsOff) {
+  if (prep.mask) {
     const t0 = performance.now();
-    const m = actorMask(frame, base);
-    drawShadows(out, frame, m, fade, s);
-    bombColors(out, frame, m, fade);
-    fx.costSum += performance.now() - t0;
-    if (++fx.costN === SHADOW_WINDOW) {
-      if (fx.costSum / SHADOW_WINDOW > SHADOW_BUDGET_MS) fx.shadowsOff = true;
-      fx.costSum = 0; fx.costN = 0;
-    }
+    drawShadows(out, frame, prep.mask, fade, s);
+    chargeShadows(fx, prep.ms + performance.now() - t0);
   }
   out.save();
   out.beginPath();

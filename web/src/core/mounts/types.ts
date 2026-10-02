@@ -16,6 +16,8 @@ export interface MountRider {
    *  `origin`, anda até (x, y) e estoura em t = 31 com $D8:D327 (40 ticks), passando do fim do remonte (t = 52). */
   remountFx: RemountFx | null;
   dash?: boolean;        // tipo 4: investida em curso
+  dashLeft?: number;     // tipo 4: ticks que faltam do teto ($58)
+  dashT?: number;        // tipo 4: último tick da investida (um tick sem ela = rotina substituída)
 }
 
 export interface RemountFx { t0: number; origin: number; x: number; y: number }   // x, y em 1/256 px

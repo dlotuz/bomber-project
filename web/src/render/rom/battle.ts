@@ -11,7 +11,7 @@ import { headOverrides, headTiles, hudWords, infinityOverrides } from './hud';
 import { CLOCK_FROZEN_FROM } from '../../core/constants';
 import { hudCrying } from '../hud-cry';
 import { sceneryCgram, sceneryTiles } from './scenery';
-import { drawSprites } from './sprites';
+import { drawObjects, drawSprites } from './sprites';
 import { MAP_W, newMemo, type RomClock, type RomMemo } from './scene';
 import { warnOnce } from './warn';
 import { cellCategory, NO_SKIP, type HdSkip } from '../hdart/cover';
@@ -22,6 +22,9 @@ export interface RomBattleVis { crowns: readonly number[] }
 
 export interface BuildOpts {
   sprites?: boolean;                               // padrão true
+  /** Com `sprites: false`: ainda desenha as bombas que são objeto (chutadas/voando) — o quadro "só bombas" da cor
+   *  das bombas (fx); as paradas já vêm no BG2. */
+  bombSprites?: boolean;
   hudHeads?: boolean;                              // padrão true; false = tiles de rosto da ROM (golden)
   blink?: boolean;                                 // padrão true; false = cor 79 da ROM (golden)
   layers?: readonly RomBattleLayer[];              // padrão romLayers
@@ -83,6 +86,8 @@ function freeColor(cg: Uint16Array): number {
   return 0;
 }
 const NO_CROWNS: readonly number[] = [0, 0, 0, 0, 0];
+/** `drawObjects` pulando os itens voando: só as bombas-objeto. */
+const ONLY_BOMBS: HdSkip = new Set(['items']);
 
 const memos = new WeakMap<RoundState, RomMemo>();
 export function romMemo(s: RoundState): RomMemo {
@@ -129,6 +134,7 @@ export function buildBattleFrame(s: RoundState, vis: RomBattleVis, a: RomAssets,
   if (skip.size) skipWords(s, ar, bg1, bg2, skip, blankWord(tiles));
   const b = new FrameBuilder(bg1, bg2, cgram);
   if (opts.sprites !== false) drawSprites(b, { s, a, tb, scene, clock, memo, tiles }, skip);
+  else if (opts.bombSprites) drawObjects(b, { s, a, tb, scene, clock, memo, tiles }, ONLY_BOMBS);
   // M1: cada camada dos planos 8/9 roda isolada — uma que lance não derruba o quadro nem alterna com o fallback;
   // fica só sem aquela camada, com aviso uma vez por (assets, id da camada).
   for (const l of opts.layers ?? romLayers) {
