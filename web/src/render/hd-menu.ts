@@ -6,7 +6,7 @@ import menuBgUrl from '../assets/menu-bg.jpg';
 import handUrl from '../assets/hand.png';
 import titleUrl from '../assets/title.jpg';
 
-interface HdText { text: string; x: number; y: number; size: number; row: number; tone: Tone; align: 'left' | 'center' | 'right'; title: boolean; art: boolean; color?: string }
+export interface HdText { text: string; x: number; y: number; size: number; row: number; tone: Tone; align: 'left' | 'center' | 'right'; title: boolean; art: boolean; color?: string }
 /** Tamanhos por tela (px da base): `item` = `menuItem`, `title` = `menuTitle`, `hand` = escala da luva. */
 export interface HdSizes { item?: number; title?: number; hand?: number }
 
@@ -130,14 +130,36 @@ function drawLabel(out: CanvasRenderingContext2D, t: HdText): void {
   out.fillText(t.text, t.x, cy, max);
 }
 
-/** Luva apontando para a direita (arte 256×181): ponta do indicador em (x + 13, y + 8), 3 px antes do texto, como a
- *  mão 16×16 da ROM; `k` = escala (1 ≈ 17 px de largura). */
-const HAND_TIP_Y = 0.376;   // altura da ponta do indicador na arte (fração)
-function drawHand(out: CanvasRenderingContext2D, x: number, y: number, k: number): void {
+/** Luva apontando para a direita (arte 256×181): ponta do indicador em x + 13, 3 px antes do texto, como a mão 16×16
+ *  da ROM, e o dedo na altura `tipY` (centro visual da palavra apontada); `k` = escala (1 ≈ 17 px de largura). */
+const HAND_TIP_Y = 0.442;   // centro do indicador na arte (fração da altura, medido no PNG: linhas 54–105 de 181)
+function drawHand(out: CanvasRenderingContext2D, x: number, tipY: number, k: number): void {
   const img = handImg();
   if (!img) return;
   const w = 17 * k, h = (w * img.height) / img.width;
-  out.drawImage(img, x + 13 - w, y + 8 - HAND_TIP_Y * h, w, h);
+  out.drawImage(img, x + 13 - w, tipY - HAND_TIP_Y * h, w, h);
+}
+
+/** Item apontado pela mão em (x, y): o texto (fora o título) da mesma linha — centro da linha mais perto de y + 8 —
+ *  à direita da mão. `null` se nenhum texto estiver a menos de meia linha. */
+export function handTarget(texts: readonly HdText[], x: number, y: number): HdText | null {
+  let best: HdText | null = null, dist = Infinity;
+  for (const t of texts) {
+    if (t.title || t.x < x) continue;
+    const d = Math.abs(t.y + t.row / 2 - (y + 8));
+    if (d < dist && d <= t.row / 2) { best = t; dist = d; }
+  }
+  return best;
+}
+
+/** Centro visual (px da base) da palavra `t` como ela é desenhada: a fonte HD não fica exatamente no meio da linha da
+ *  ROM, então mede a tinta real com `measureText` (ascendente/descendente a partir da linha de base `middle`). */
+function inkCenterY(out: CanvasRenderingContext2D, t: HdText): number {
+  out.font = t.art ? `italic 800 ${t.size}px ${ART_FONT}` : `700 ${t.size}px ${FONT}`;
+  out.textBaseline = 'middle';
+  const m = out.measureText(t.text);
+  const cy = t.y + t.row / 2;
+  return Number.isFinite(m.actualBoundingBoxAscent) ? cy + (m.actualBoundingBoxDescent - m.actualBoundingBoxAscent) / 2 : cy;
 }
 
 /** Desenha a camada HD em `out` (escala `s`); depois o chamador põe a base por cima. Sem menu HD, não faz nada. */
@@ -156,7 +178,11 @@ export function drawHdMenu(out: CanvasRenderingContext2D, s: number): boolean {
     else { out.fillStyle = '#d8a83a'; out.fillRect(0, 0, 256, 224); }
   }
   for (const t of state.texts) if (t.art) drawArtLabel(out, t, s); else drawLabel(out, t);
-  if (state.cursor) drawHand(out, state.cursor[0], state.cursor[1], state.sizes.hand ?? 1.6);
+  if (state.cursor) {
+    const [hx, hy] = state.cursor;
+    const t = handTarget(state.texts, hx, hy);
+    drawHand(out, hx, t ? inkCenterY(out, t) : hy + 8, state.sizes.hand ?? 1.6);
+  }
   out.setTransform(1, 0, 0, 1, 0, 0);
   out.imageSmoothingEnabled = false;
   return true;
