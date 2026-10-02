@@ -4,7 +4,8 @@
 //  - peças da arena, itens, chamas e ovos: centro da casa (16·col, 16·lin + 32);
 //  - bombas: centro da bomba (px(b.x), px(b.y)), subindo z quando na mão/voando;
 //  - jogadores e montarias: pés em (px(p.x), px(p.y) + FOOT_DY − z) — o ponto do núcleo é o centro da casa quando
-//    parado e os pés ficam FOOT_DY px abaixo dele (ROM: quadro de 32 px em dy −24; arte simples: 16×20 em y − 11);
+//    parado e a sola fica FOOT_DY px abaixo dele (medido na ROM: o pixel mais baixo dos 5 personagens parados, já
+//    com a sombra, fica em y + 4);
 //  - HUD: centro de cada elemento na barra de 24 px (`HUD_AT`).
 import { CODE, clockText, CLOCK_FROZEN_FROM, invisibleVisible, isEggCode, isItemCode, itemOfCode, px, type RoundState } from '../../core';
 import { rider } from '../../core/mounts/types';
@@ -17,8 +18,9 @@ import { bombKey, bombTypeOf, eggKey, fieldPlayers, flameKey, hudHeadKey, player
 /** Cores das etiquetas nP (mesmas de draw-game.ts; time 0 vermelho, time 1 branco). */
 const PLAYER_COLORS = ['#ff5f5f', '#5fa8ff', '#ffd23f', '#5fe07a', '#c77dff'];
 const TEAM_TAG_COLORS = ['#ff5f5f', '#ffffff'];
-/** Pés do personagem/montaria abaixo do ponto do núcleo (px da base). */
-export const FOOT_DY = 8;
+/** Sola do personagem/montaria abaixo do ponto do núcleo (px da base): a sombra da arte ainda desce ~1,5 px e acaba
+ *  onde acaba a da ROM (y + 4). */
+export const FOOT_DY = 3;
 /** A etiqueta nunca sobe até o HUD. */
 const HUD_BOTTOM = 24;
 
