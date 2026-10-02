@@ -1,0 +1,6515 @@
+{
+ "format": 1,
+ "name": "Provisório (gerado por código)",
+ "credits": "Crown Blast — arte provisória gerada por código",
+ "license": "a do projeto",
+ "cell": 64,
+ "images": {
+  "arenas": "arenas.png",
+  "objetos": "objetos.png",
+  "personagem-0": "personagem-0.png",
+  "personagem-1": "personagem-1.png",
+  "personagem-2": "personagem-2.png",
+  "personagem-3": "personagem-3.png",
+  "personagem-4": "personagem-4.png",
+  "personagem-5": "personagem-5.png"
+ },
+ "anims": {
+  "stage/1/floor": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      0,
+      0,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/1/floorAlt": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      66,
+      0,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/1/hard": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      132,
+      0,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/1/wall": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      198,
+      0,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/1/soft": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      264,
+      0,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/1/burning": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      330,
+      0,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "arenas",
+     "rect": [
+      396,
+      0,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "arenas",
+     "rect": [
+      462,
+      0,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8,
+    8
+   ],
+   "loop": false
+  },
+  "stage/1/pressure": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      528,
+      0,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/2/floor": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      0,
+      66,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/2/floorAlt": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      66,
+      66,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/2/hard": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      132,
+      66,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/2/wall": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      198,
+      66,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/2/soft": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      264,
+      66,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/2/burning": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      330,
+      66,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "arenas",
+     "rect": [
+      396,
+      66,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "arenas",
+     "rect": [
+      462,
+      66,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8,
+    8
+   ],
+   "loop": false
+  },
+  "stage/2/pressure": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      528,
+      66,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/3/floor": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      0,
+      132,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/3/floorAlt": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      66,
+      132,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/3/hard": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      132,
+      132,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/3/wall": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      198,
+      132,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/3/soft": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      264,
+      132,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/3/burning": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      330,
+      132,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "arenas",
+     "rect": [
+      396,
+      132,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "arenas",
+     "rect": [
+      462,
+      132,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8,
+    8
+   ],
+   "loop": false
+  },
+  "stage/3/pressure": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      528,
+      132,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/4/floor": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      0,
+      198,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/4/floorAlt": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      66,
+      198,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/4/hard": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      132,
+      198,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/4/wall": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      198,
+      198,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/4/soft": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      264,
+      198,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/4/burning": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      330,
+      198,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "arenas",
+     "rect": [
+      396,
+      198,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "arenas",
+     "rect": [
+      462,
+      198,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8,
+    8
+   ],
+   "loop": false
+  },
+  "stage/4/pressure": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      528,
+      198,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/5/floor": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      0,
+      264,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/5/floorAlt": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      66,
+      264,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/5/hard": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      132,
+      264,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/5/wall": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      198,
+      264,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/5/soft": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      264,
+      264,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/5/burning": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      330,
+      264,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "arenas",
+     "rect": [
+      396,
+      264,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "arenas",
+     "rect": [
+      462,
+      264,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8,
+    8
+   ],
+   "loop": false
+  },
+  "stage/5/pressure": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      528,
+      264,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/6/floor": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      0,
+      330,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/6/floorAlt": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      66,
+      330,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/6/hard": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      132,
+      330,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/6/wall": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      198,
+      330,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/6/soft": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      264,
+      330,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/6/burning": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      330,
+      330,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "arenas",
+     "rect": [
+      396,
+      330,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "arenas",
+     "rect": [
+      462,
+      330,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8,
+    8
+   ],
+   "loop": false
+  },
+  "stage/6/pressure": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      528,
+      330,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/7/floor": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      0,
+      396,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/7/floorAlt": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      66,
+      396,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/7/hard": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      132,
+      396,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/7/wall": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      198,
+      396,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/7/soft": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      264,
+      396,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/7/burning": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      330,
+      396,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "arenas",
+     "rect": [
+      396,
+      396,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "arenas",
+     "rect": [
+      462,
+      396,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8,
+    8
+   ],
+   "loop": false
+  },
+  "stage/7/pressure": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      528,
+      396,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/8/floor": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      0,
+      462,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/8/floorAlt": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      66,
+      462,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/8/hard": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      132,
+      462,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/8/wall": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      198,
+      462,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/8/soft": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      264,
+      462,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/8/burning": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      330,
+      462,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "arenas",
+     "rect": [
+      396,
+      462,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "arenas",
+     "rect": [
+      462,
+      462,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8,
+    8
+   ],
+   "loop": false
+  },
+  "stage/8/pressure": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      528,
+      462,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/9/floor": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      0,
+      528,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/9/floorAlt": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      66,
+      528,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/9/hard": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      132,
+      528,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/9/wall": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      198,
+      528,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/9/soft": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      264,
+      528,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/9/burning": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      330,
+      528,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "arenas",
+     "rect": [
+      396,
+      528,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "arenas",
+     "rect": [
+      462,
+      528,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8,
+    8
+   ],
+   "loop": false
+  },
+  "stage/9/pressure": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      528,
+      528,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/10/floor": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      0,
+      594,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/10/floorAlt": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      66,
+      594,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/10/hard": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      132,
+      594,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/10/wall": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      198,
+      594,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/10/soft": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      264,
+      594,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "stage/10/burning": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      330,
+      594,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "arenas",
+     "rect": [
+      396,
+      594,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "arenas",
+     "rect": [
+      462,
+      594,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8,
+    8
+   ],
+   "loop": false
+  },
+  "stage/10/pressure": {
+   "frames": [
+    {
+     "img": "arenas",
+     "rect": [
+      528,
+      594,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "bomb/0": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      0,
+      0,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      36
+     ]
+    },
+    {
+     "img": "objetos",
+     "rect": [
+      66,
+      0,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      36
+     ]
+    },
+    {
+     "img": "objetos",
+     "rect": [
+      132,
+      0,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      36
+     ]
+    },
+    {
+     "img": "objetos",
+     "rect": [
+      198,
+      0,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      36
+     ]
+    }
+   ],
+   "ticks": [
+    20,
+    20,
+    20,
+    20
+   ],
+   "loop": true
+  },
+  "bomb/1": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      264,
+      0,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      36
+     ]
+    },
+    {
+     "img": "objetos",
+     "rect": [
+      330,
+      0,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      36
+     ]
+    },
+    {
+     "img": "objetos",
+     "rect": [
+      396,
+      0,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      36
+     ]
+    },
+    {
+     "img": "objetos",
+     "rect": [
+      462,
+      0,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      36
+     ]
+    }
+   ],
+   "ticks": [
+    20,
+    20,
+    20,
+    20
+   ],
+   "loop": true
+  },
+  "bomb/2": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      528,
+      0,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      36
+     ]
+    },
+    {
+     "img": "objetos",
+     "rect": [
+      594,
+      0,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      36
+     ]
+    },
+    {
+     "img": "objetos",
+     "rect": [
+      660,
+      0,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      36
+     ]
+    },
+    {
+     "img": "objetos",
+     "rect": [
+      726,
+      0,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      36
+     ]
+    }
+   ],
+   "ticks": [
+    20,
+    20,
+    20,
+    20
+   ],
+   "loop": true
+  },
+  "flame/center": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      792,
+      0,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "objetos",
+     "rect": [
+      858,
+      0,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "objetos",
+     "rect": [
+      924,
+      0,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "objetos",
+     "rect": [
+      990,
+      0,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    6,
+    6,
+    7,
+    6
+   ],
+   "loop": false
+  },
+  "flame/h": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      0,
+      66,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "objetos",
+     "rect": [
+      66,
+      66,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "objetos",
+     "rect": [
+      132,
+      66,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "objetos",
+     "rect": [
+      198,
+      66,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    6,
+    6,
+    7,
+    6
+   ],
+   "loop": false
+  },
+  "flame/v": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      264,
+      66,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "objetos",
+     "rect": [
+      330,
+      66,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "objetos",
+     "rect": [
+      396,
+      66,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "objetos",
+     "rect": [
+      462,
+      66,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    6,
+    6,
+    7,
+    6
+   ],
+   "loop": false
+  },
+  "flame/up": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      528,
+      66,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "objetos",
+     "rect": [
+      594,
+      66,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "objetos",
+     "rect": [
+      660,
+      66,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "objetos",
+     "rect": [
+      726,
+      66,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    6,
+    6,
+    7,
+    6
+   ],
+   "loop": false
+  },
+  "flame/down": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      792,
+      66,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "objetos",
+     "rect": [
+      858,
+      66,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "objetos",
+     "rect": [
+      924,
+      66,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "objetos",
+     "rect": [
+      990,
+      66,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    6,
+    6,
+    7,
+    6
+   ],
+   "loop": false
+  },
+  "flame/left": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      0,
+      132,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "objetos",
+     "rect": [
+      66,
+      132,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "objetos",
+     "rect": [
+      132,
+      132,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "objetos",
+     "rect": [
+      198,
+      132,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    6,
+    6,
+    7,
+    6
+   ],
+   "loop": false
+  },
+  "flame/right": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      264,
+      132,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "objetos",
+     "rect": [
+      330,
+      132,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "objetos",
+     "rect": [
+      396,
+      132,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    },
+    {
+     "img": "objetos",
+     "rect": [
+      462,
+      132,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    6,
+    6,
+    7,
+    6
+   ],
+   "loop": false
+  },
+  "item/01": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      528,
+      132,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "item/02": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      594,
+      132,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "item/03": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      660,
+      132,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "item/04": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      726,
+      132,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "item/05": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      792,
+      132,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "item/06": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      858,
+      132,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "item/07": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      924,
+      132,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "item/08": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      990,
+      132,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "item/09": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      0,
+      198,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "item/0a": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      66,
+      198,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "item/0b": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      132,
+      198,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "item/0c": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      198,
+      198,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "item/0d": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      264,
+      198,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "item/0e": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      330,
+      198,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "item/0f": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      396,
+      198,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "item/11": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      462,
+      198,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "item/12": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      528,
+      198,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "item/21": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      594,
+      198,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "item/30": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      660,
+      198,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "egg/1": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      726,
+      198,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "egg/2": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      792,
+      198,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "egg/3": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      858,
+      198,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "egg/4": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      924,
+      198,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "egg/5": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      990,
+      198,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "egg/6": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      0,
+      264,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "egg/9": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      66,
+      264,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "egg/a": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      132,
+      264,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "egg/b": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      198,
+      264,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "egg/c": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      264,
+      264,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "egg/d": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      330,
+      264,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "egg/e": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      396,
+      264,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "egg/f": {
+   "frames": [
+    {
+     "img": "objetos",
+     "rect": [
+      462,
+      264,
+      64,
+      64
+     ],
+     "anchor": [
+      32,
+      32
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "char/0/idle/up": {
+   "frames": [
+    {
+     "img": "personagem-0",
+     "rect": [
+      0,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "char/0/walk/up": {
+   "frames": [
+    {
+     "img": "personagem-0",
+     "rect": [
+      98,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-0",
+     "rect": [
+      196,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-0",
+     "rect": [
+      294,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-0",
+     "rect": [
+      392,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "loop": true
+  },
+  "char/0/stunned/up": {
+   "frames": [
+    {
+     "img": "personagem-0",
+     "rect": [
+      490,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-0",
+     "rect": [
+      588,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8
+   ],
+   "loop": true
+  },
+  "char/0/idle/right": {
+   "frames": [
+    {
+     "img": "personagem-0",
+     "rect": [
+      686,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "char/0/walk/right": {
+   "frames": [
+    {
+     "img": "personagem-0",
+     "rect": [
+      0,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-0",
+     "rect": [
+      98,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-0",
+     "rect": [
+      196,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-0",
+     "rect": [
+      294,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "loop": true
+  },
+  "char/0/stunned/right": {
+   "frames": [
+    {
+     "img": "personagem-0",
+     "rect": [
+      392,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-0",
+     "rect": [
+      490,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8
+   ],
+   "loop": true
+  },
+  "char/0/idle/down": {
+   "frames": [
+    {
+     "img": "personagem-0",
+     "rect": [
+      588,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "char/0/walk/down": {
+   "frames": [
+    {
+     "img": "personagem-0",
+     "rect": [
+      686,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-0",
+     "rect": [
+      0,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-0",
+     "rect": [
+      98,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-0",
+     "rect": [
+      196,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "loop": true
+  },
+  "char/0/stunned/down": {
+   "frames": [
+    {
+     "img": "personagem-0",
+     "rect": [
+      294,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-0",
+     "rect": [
+      392,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8
+   ],
+   "loop": true
+  },
+  "char/0/idle/left": {
+   "frames": [
+    {
+     "img": "personagem-0",
+     "rect": [
+      490,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "char/0/walk/left": {
+   "frames": [
+    {
+     "img": "personagem-0",
+     "rect": [
+      588,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-0",
+     "rect": [
+      686,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-0",
+     "rect": [
+      0,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-0",
+     "rect": [
+      98,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "loop": true
+  },
+  "char/0/stunned/left": {
+   "frames": [
+    {
+     "img": "personagem-0",
+     "rect": [
+      196,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-0",
+     "rect": [
+      294,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8
+   ],
+   "loop": true
+  },
+  "char/0/dying": {
+   "frames": [
+    {
+     "img": "personagem-0",
+     "rect": [
+      392,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-0",
+     "rect": [
+      490,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-0",
+     "rect": [
+      588,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-0",
+     "rect": [
+      686,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    10,
+    10,
+    12,
+    30
+   ],
+   "loop": false
+  },
+  "char/0/victory": {
+   "frames": [
+    {
+     "img": "personagem-0",
+     "rect": [
+      0,
+      520,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-0",
+     "rect": [
+      98,
+      520,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    12,
+    12
+   ],
+   "loop": true
+  },
+  "char/1/idle/up": {
+   "frames": [
+    {
+     "img": "personagem-1",
+     "rect": [
+      0,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "char/1/walk/up": {
+   "frames": [
+    {
+     "img": "personagem-1",
+     "rect": [
+      98,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-1",
+     "rect": [
+      196,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-1",
+     "rect": [
+      294,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-1",
+     "rect": [
+      392,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "loop": true
+  },
+  "char/1/stunned/up": {
+   "frames": [
+    {
+     "img": "personagem-1",
+     "rect": [
+      490,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-1",
+     "rect": [
+      588,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8
+   ],
+   "loop": true
+  },
+  "char/1/idle/right": {
+   "frames": [
+    {
+     "img": "personagem-1",
+     "rect": [
+      686,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "char/1/walk/right": {
+   "frames": [
+    {
+     "img": "personagem-1",
+     "rect": [
+      0,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-1",
+     "rect": [
+      98,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-1",
+     "rect": [
+      196,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-1",
+     "rect": [
+      294,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "loop": true
+  },
+  "char/1/stunned/right": {
+   "frames": [
+    {
+     "img": "personagem-1",
+     "rect": [
+      392,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-1",
+     "rect": [
+      490,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8
+   ],
+   "loop": true
+  },
+  "char/1/idle/down": {
+   "frames": [
+    {
+     "img": "personagem-1",
+     "rect": [
+      588,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "char/1/walk/down": {
+   "frames": [
+    {
+     "img": "personagem-1",
+     "rect": [
+      686,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-1",
+     "rect": [
+      0,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-1",
+     "rect": [
+      98,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-1",
+     "rect": [
+      196,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "loop": true
+  },
+  "char/1/stunned/down": {
+   "frames": [
+    {
+     "img": "personagem-1",
+     "rect": [
+      294,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-1",
+     "rect": [
+      392,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8
+   ],
+   "loop": true
+  },
+  "char/1/idle/left": {
+   "frames": [
+    {
+     "img": "personagem-1",
+     "rect": [
+      490,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "char/1/walk/left": {
+   "frames": [
+    {
+     "img": "personagem-1",
+     "rect": [
+      588,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-1",
+     "rect": [
+      686,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-1",
+     "rect": [
+      0,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-1",
+     "rect": [
+      98,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "loop": true
+  },
+  "char/1/stunned/left": {
+   "frames": [
+    {
+     "img": "personagem-1",
+     "rect": [
+      196,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-1",
+     "rect": [
+      294,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8
+   ],
+   "loop": true
+  },
+  "char/1/dying": {
+   "frames": [
+    {
+     "img": "personagem-1",
+     "rect": [
+      392,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-1",
+     "rect": [
+      490,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-1",
+     "rect": [
+      588,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-1",
+     "rect": [
+      686,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    10,
+    10,
+    12,
+    30
+   ],
+   "loop": false
+  },
+  "char/1/victory": {
+   "frames": [
+    {
+     "img": "personagem-1",
+     "rect": [
+      0,
+      520,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-1",
+     "rect": [
+      98,
+      520,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    12,
+    12
+   ],
+   "loop": true
+  },
+  "char/2/idle/up": {
+   "frames": [
+    {
+     "img": "personagem-2",
+     "rect": [
+      0,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "char/2/walk/up": {
+   "frames": [
+    {
+     "img": "personagem-2",
+     "rect": [
+      98,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-2",
+     "rect": [
+      196,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-2",
+     "rect": [
+      294,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-2",
+     "rect": [
+      392,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "loop": true
+  },
+  "char/2/stunned/up": {
+   "frames": [
+    {
+     "img": "personagem-2",
+     "rect": [
+      490,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-2",
+     "rect": [
+      588,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8
+   ],
+   "loop": true
+  },
+  "char/2/idle/right": {
+   "frames": [
+    {
+     "img": "personagem-2",
+     "rect": [
+      686,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "char/2/walk/right": {
+   "frames": [
+    {
+     "img": "personagem-2",
+     "rect": [
+      0,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-2",
+     "rect": [
+      98,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-2",
+     "rect": [
+      196,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-2",
+     "rect": [
+      294,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "loop": true
+  },
+  "char/2/stunned/right": {
+   "frames": [
+    {
+     "img": "personagem-2",
+     "rect": [
+      392,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-2",
+     "rect": [
+      490,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8
+   ],
+   "loop": true
+  },
+  "char/2/idle/down": {
+   "frames": [
+    {
+     "img": "personagem-2",
+     "rect": [
+      588,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "char/2/walk/down": {
+   "frames": [
+    {
+     "img": "personagem-2",
+     "rect": [
+      686,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-2",
+     "rect": [
+      0,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-2",
+     "rect": [
+      98,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-2",
+     "rect": [
+      196,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "loop": true
+  },
+  "char/2/stunned/down": {
+   "frames": [
+    {
+     "img": "personagem-2",
+     "rect": [
+      294,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-2",
+     "rect": [
+      392,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8
+   ],
+   "loop": true
+  },
+  "char/2/idle/left": {
+   "frames": [
+    {
+     "img": "personagem-2",
+     "rect": [
+      490,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "char/2/walk/left": {
+   "frames": [
+    {
+     "img": "personagem-2",
+     "rect": [
+      588,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-2",
+     "rect": [
+      686,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-2",
+     "rect": [
+      0,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-2",
+     "rect": [
+      98,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "loop": true
+  },
+  "char/2/stunned/left": {
+   "frames": [
+    {
+     "img": "personagem-2",
+     "rect": [
+      196,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-2",
+     "rect": [
+      294,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8
+   ],
+   "loop": true
+  },
+  "char/2/dying": {
+   "frames": [
+    {
+     "img": "personagem-2",
+     "rect": [
+      392,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-2",
+     "rect": [
+      490,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-2",
+     "rect": [
+      588,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-2",
+     "rect": [
+      686,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    10,
+    10,
+    12,
+    30
+   ],
+   "loop": false
+  },
+  "char/2/victory": {
+   "frames": [
+    {
+     "img": "personagem-2",
+     "rect": [
+      0,
+      520,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-2",
+     "rect": [
+      98,
+      520,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    12,
+    12
+   ],
+   "loop": true
+  },
+  "char/3/idle/up": {
+   "frames": [
+    {
+     "img": "personagem-3",
+     "rect": [
+      0,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "char/3/walk/up": {
+   "frames": [
+    {
+     "img": "personagem-3",
+     "rect": [
+      98,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-3",
+     "rect": [
+      196,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-3",
+     "rect": [
+      294,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-3",
+     "rect": [
+      392,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "loop": true
+  },
+  "char/3/stunned/up": {
+   "frames": [
+    {
+     "img": "personagem-3",
+     "rect": [
+      490,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-3",
+     "rect": [
+      588,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8
+   ],
+   "loop": true
+  },
+  "char/3/idle/right": {
+   "frames": [
+    {
+     "img": "personagem-3",
+     "rect": [
+      686,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "char/3/walk/right": {
+   "frames": [
+    {
+     "img": "personagem-3",
+     "rect": [
+      0,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-3",
+     "rect": [
+      98,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-3",
+     "rect": [
+      196,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-3",
+     "rect": [
+      294,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "loop": true
+  },
+  "char/3/stunned/right": {
+   "frames": [
+    {
+     "img": "personagem-3",
+     "rect": [
+      392,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-3",
+     "rect": [
+      490,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8
+   ],
+   "loop": true
+  },
+  "char/3/idle/down": {
+   "frames": [
+    {
+     "img": "personagem-3",
+     "rect": [
+      588,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "char/3/walk/down": {
+   "frames": [
+    {
+     "img": "personagem-3",
+     "rect": [
+      686,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-3",
+     "rect": [
+      0,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-3",
+     "rect": [
+      98,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-3",
+     "rect": [
+      196,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "loop": true
+  },
+  "char/3/stunned/down": {
+   "frames": [
+    {
+     "img": "personagem-3",
+     "rect": [
+      294,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-3",
+     "rect": [
+      392,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8
+   ],
+   "loop": true
+  },
+  "char/3/idle/left": {
+   "frames": [
+    {
+     "img": "personagem-3",
+     "rect": [
+      490,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "char/3/walk/left": {
+   "frames": [
+    {
+     "img": "personagem-3",
+     "rect": [
+      588,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-3",
+     "rect": [
+      686,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-3",
+     "rect": [
+      0,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-3",
+     "rect": [
+      98,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "loop": true
+  },
+  "char/3/stunned/left": {
+   "frames": [
+    {
+     "img": "personagem-3",
+     "rect": [
+      196,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-3",
+     "rect": [
+      294,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8
+   ],
+   "loop": true
+  },
+  "char/3/dying": {
+   "frames": [
+    {
+     "img": "personagem-3",
+     "rect": [
+      392,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-3",
+     "rect": [
+      490,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-3",
+     "rect": [
+      588,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-3",
+     "rect": [
+      686,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    10,
+    10,
+    12,
+    30
+   ],
+   "loop": false
+  },
+  "char/3/victory": {
+   "frames": [
+    {
+     "img": "personagem-3",
+     "rect": [
+      0,
+      520,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-3",
+     "rect": [
+      98,
+      520,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    12,
+    12
+   ],
+   "loop": true
+  },
+  "char/4/idle/up": {
+   "frames": [
+    {
+     "img": "personagem-4",
+     "rect": [
+      0,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "char/4/walk/up": {
+   "frames": [
+    {
+     "img": "personagem-4",
+     "rect": [
+      98,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-4",
+     "rect": [
+      196,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-4",
+     "rect": [
+      294,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-4",
+     "rect": [
+      392,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "loop": true
+  },
+  "char/4/stunned/up": {
+   "frames": [
+    {
+     "img": "personagem-4",
+     "rect": [
+      490,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-4",
+     "rect": [
+      588,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8
+   ],
+   "loop": true
+  },
+  "char/4/idle/right": {
+   "frames": [
+    {
+     "img": "personagem-4",
+     "rect": [
+      686,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "char/4/walk/right": {
+   "frames": [
+    {
+     "img": "personagem-4",
+     "rect": [
+      0,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-4",
+     "rect": [
+      98,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-4",
+     "rect": [
+      196,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-4",
+     "rect": [
+      294,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "loop": true
+  },
+  "char/4/stunned/right": {
+   "frames": [
+    {
+     "img": "personagem-4",
+     "rect": [
+      392,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-4",
+     "rect": [
+      490,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8
+   ],
+   "loop": true
+  },
+  "char/4/idle/down": {
+   "frames": [
+    {
+     "img": "personagem-4",
+     "rect": [
+      588,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "char/4/walk/down": {
+   "frames": [
+    {
+     "img": "personagem-4",
+     "rect": [
+      686,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-4",
+     "rect": [
+      0,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-4",
+     "rect": [
+      98,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-4",
+     "rect": [
+      196,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "loop": true
+  },
+  "char/4/stunned/down": {
+   "frames": [
+    {
+     "img": "personagem-4",
+     "rect": [
+      294,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-4",
+     "rect": [
+      392,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8
+   ],
+   "loop": true
+  },
+  "char/4/idle/left": {
+   "frames": [
+    {
+     "img": "personagem-4",
+     "rect": [
+      490,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "char/4/walk/left": {
+   "frames": [
+    {
+     "img": "personagem-4",
+     "rect": [
+      588,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-4",
+     "rect": [
+      686,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-4",
+     "rect": [
+      0,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-4",
+     "rect": [
+      98,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "loop": true
+  },
+  "char/4/stunned/left": {
+   "frames": [
+    {
+     "img": "personagem-4",
+     "rect": [
+      196,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-4",
+     "rect": [
+      294,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8
+   ],
+   "loop": true
+  },
+  "char/4/dying": {
+   "frames": [
+    {
+     "img": "personagem-4",
+     "rect": [
+      392,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-4",
+     "rect": [
+      490,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-4",
+     "rect": [
+      588,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-4",
+     "rect": [
+      686,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    10,
+    10,
+    12,
+    30
+   ],
+   "loop": false
+  },
+  "char/4/victory": {
+   "frames": [
+    {
+     "img": "personagem-4",
+     "rect": [
+      0,
+      520,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-4",
+     "rect": [
+      98,
+      520,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    12,
+    12
+   ],
+   "loop": true
+  },
+  "char/5/idle/up": {
+   "frames": [
+    {
+     "img": "personagem-5",
+     "rect": [
+      0,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "char/5/walk/up": {
+   "frames": [
+    {
+     "img": "personagem-5",
+     "rect": [
+      98,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-5",
+     "rect": [
+      196,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-5",
+     "rect": [
+      294,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-5",
+     "rect": [
+      392,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "loop": true
+  },
+  "char/5/stunned/up": {
+   "frames": [
+    {
+     "img": "personagem-5",
+     "rect": [
+      490,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-5",
+     "rect": [
+      588,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8
+   ],
+   "loop": true
+  },
+  "char/5/idle/right": {
+   "frames": [
+    {
+     "img": "personagem-5",
+     "rect": [
+      686,
+      0,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "char/5/walk/right": {
+   "frames": [
+    {
+     "img": "personagem-5",
+     "rect": [
+      0,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-5",
+     "rect": [
+      98,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-5",
+     "rect": [
+      196,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-5",
+     "rect": [
+      294,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "loop": true
+  },
+  "char/5/stunned/right": {
+   "frames": [
+    {
+     "img": "personagem-5",
+     "rect": [
+      392,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-5",
+     "rect": [
+      490,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8
+   ],
+   "loop": true
+  },
+  "char/5/idle/down": {
+   "frames": [
+    {
+     "img": "personagem-5",
+     "rect": [
+      588,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "char/5/walk/down": {
+   "frames": [
+    {
+     "img": "personagem-5",
+     "rect": [
+      686,
+      130,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-5",
+     "rect": [
+      0,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-5",
+     "rect": [
+      98,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-5",
+     "rect": [
+      196,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "loop": true
+  },
+  "char/5/stunned/down": {
+   "frames": [
+    {
+     "img": "personagem-5",
+     "rect": [
+      294,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-5",
+     "rect": [
+      392,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8
+   ],
+   "loop": true
+  },
+  "char/5/idle/left": {
+   "frames": [
+    {
+     "img": "personagem-5",
+     "rect": [
+      490,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    60
+   ],
+   "loop": true
+  },
+  "char/5/walk/left": {
+   "frames": [
+    {
+     "img": "personagem-5",
+     "rect": [
+      588,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-5",
+     "rect": [
+      686,
+      260,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-5",
+     "rect": [
+      0,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-5",
+     "rect": [
+      98,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "loop": true
+  },
+  "char/5/stunned/left": {
+   "frames": [
+    {
+     "img": "personagem-5",
+     "rect": [
+      196,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-5",
+     "rect": [
+      294,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    8,
+    8
+   ],
+   "loop": true
+  },
+  "char/5/dying": {
+   "frames": [
+    {
+     "img": "personagem-5",
+     "rect": [
+      392,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-5",
+     "rect": [
+      490,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-5",
+     "rect": [
+      588,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-5",
+     "rect": [
+      686,
+      390,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    10,
+    10,
+    12,
+    30
+   ],
+   "loop": false
+  },
+  "char/5/victory": {
+   "frames": [
+    {
+     "img": "personagem-5",
+     "rect": [
+      0,
+      520,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    },
+    {
+     "img": "personagem-5",
+     "rect": [
+      98,
+      520,
+      96,
+      128
+     ],
+     "anchor": [
+      48,
+      108
+     ]
+    }
+   ],
+   "ticks": [
+    12,
+    12
+   ],
+   "loop": true
+  }
+ }
+}
