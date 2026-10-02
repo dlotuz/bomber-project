@@ -7,6 +7,8 @@ import { hudCrying } from './hud-cry';
 import './layers-index';
 import { NO_SKIP, type HdSkip } from './hdart/cover';
 import { hdBattleSkip } from './hdart/mode';
+import { heldBombZ } from './rom/adapt';
+import { visualTick } from './rom/battle';
 
 export { SCREEN_W, SCREEN_H };
 
@@ -102,7 +104,7 @@ export function drawRound(ctx: CanvasRenderingContext2D, round: RoundState, view
   }
   for (const l of fallbackLayers) if (!ACTOR_LAYERS.has(l.id)) l.draw(round, ctx, bank, frame);
   if (actors) drawActors(ctx, round, view, bank, chars, frame, skip);
-  else if (opts.bombs) { drawGroundBombs(ctx, round, bank, frame); drawFlyers(ctx, round, bank, skip, true); }
+  else if (opts.bombs) { drawGroundBombs(ctx, round, bank, frame); drawFlyers(ctx, round, bank, skip, true); drawHeldBombs(ctx, round, bank); }
   if (!skip.has('hud')) drawHud(ctx, round, bank, chars, crowns);
   else ctx.clearRect(0, 0, SCREEN_W, HUD_BOTTOM);
 }
@@ -111,6 +113,19 @@ export function drawRound(ctx: CanvasRenderingContext2D, round: RoundState, view
 function drawGroundBombs(ctx: CanvasRenderingContext2D, round: RoundState, bank: SpriteBank, frame: number): void {
   for (const b of round.bombs) {
     if (b.state === 'idle' || b.state === 'kicked') ctx.drawImage(bank.bomb((frame >> 3) & 1), px(b.x) - 7, px(b.y) - 7);
+  }
+}
+
+/** Canto do sprite 16×16 da bomba na mão de `p`: acima da cabeça, na altura do levantar da ROM (`heldBombZ`) — o
+ *  mesmo lugar do ponto de cor da bomba (fx `bombSpots`). */
+function heldBombAt(round: RoundState, p: RoundState['players'][number]): [number, number] {
+  return [px(p.x) - 7, px(p.y) - 7 - p.z - heldBombZ(p, visualTick(round))];
+}
+
+/** Bombas na mão da luva de quem está em campo (no quadro "só bombas" e quando o HD desenha só os jogadores). */
+function drawHeldBombs(ctx: CanvasRenderingContext2D, round: RoundState, bank: SpriteBank): void {
+  for (const p of round.players) {
+    if (p.present && (p.state === 'alive' || p.state === 'dying') && p.carry >= 0) ctx.drawImage(bank.bomb(0), ...heldBombAt(round, p));
   }
 }
 
@@ -137,9 +152,7 @@ function drawActors(ctx: CanvasRenderingContext2D, round: RoundState, view: View
   }
   drawFlyers(ctx, round, bank, skip);
   if (!skip.has('players')) drawPlayersFb(ctx, round, view, bank, chars, bombs);
-  else if (bombs) {   // a bomba na mão continua da base quando só os jogadores são HD
-    for (const p of round.players) if (p.present && p.state === 'alive' && p.carry >= 0) ctx.drawImage(bank.bomb(0), px(p.x) - 7, px(p.y) - 23 - p.z);
-  }
+  else if (bombs) drawHeldBombs(ctx, round, bank);   // a bomba na mão continua da base quando só os jogadores são HD
   for (const l of fallbackOverLayers) if (!(skip.has('players') && PLAYER_LAYERS.has(l.id))) l.draw(round, ctx, bank, frame);   // M4: depois de bombas e jogadores
 }
 
@@ -151,12 +164,15 @@ function drawPlayersFb(ctx: CanvasRenderingContext2D, round: RoundState, view: V
     const sx = px(p.x) - 7, sy = px(p.y) - 11 - p.z;
     const frameIdx = p.state === 'dying' ? 0 : walkFrame(view.walk[p.slot]);
     ctx.drawImage(bank.bomber(chars[p.slot], FACE_TO_DIR[p.face], frameIdx), sx, sy);
-    if (p.carry >= 0 && bombs) ctx.drawImage(bank.bomb(0), sx, sy - 12);
-    // "NP" acima da cabeça: distingue bombers idênticos (mesmo personagem). Some durante a morte.
+    const held = p.carry >= 0 ? heldBombAt(round, p) : null;
+    if (held && bombs) ctx.drawImage(bank.bomb(0), ...held);
+    // "NP" acima da cabeça: distingue bombers idênticos (mesmo personagem). Some durante a morte. Com a bomba na mão,
+    // vai para cima dela (por cima, escondia a bomba e a cor do dono).
     if (p.state === 'alive') {
       const color = round.rules.mode === 'team' ? TEAM_TAG_COLORS[p.team] : PLAYER_COLORS[p.slot];
       const tag = bank.text(`${p.slot + 1}P`, color);
-      ctx.drawImage(tag, sx + 8 - Math.floor(tag.width / 2), Math.max(HUD_BOTTOM, sy - 9));
+      const top = held ? Math.min(sy - 9, held[1] + 1 - tag.height) : sy - 9;
+      ctx.drawImage(tag, sx + 8 - Math.floor(tag.width / 2), Math.max(HUD_BOTTOM, top));
     }
   }
   ctx.globalAlpha = 0.7;

@@ -1,16 +1,18 @@
-import { BURN, px, type RoundState } from '../../core';
+import { BURN, px, type Player, type RoundState } from '../../core';
 import type { FlamePieceName, GridBomb, PressureDrop, RomMemo, RomScene, SceneObj } from './scene';
 
 /** Índice = valor de FLAME_PIECE do núcleo (plano 6). */
 export const FLAME_NAMES: readonly FlamePieceName[] = ['center', 'armU', 'armR', 'armD', 'armL', 'tipU', 'tipR', 'tipD', 'tipL'];
 /** Altura da bomba nos 4 ticks do levantamento da luva (ANI §5.2). */
 export const LIFT_Z = [6, 10, 14, 16] as const;
+/** Altura (px) da bomba na mão de `p` no tick `tick`: sobe no levantar (LIFT_Z), depois 16. Usada por todos os desenhos
+ *  (ROM, fallback, arte HD) e pela cor da bomba (fx), para a bomba e o ponto de cor caírem no mesmo lugar. */
+export const heldBombZ = (p: Player, tick: number): number => (p.act === 'lift' ? LIFT_Z[Math.min(3, Math.max(0, tick - p.actT0))] : 16);
 
 function heldAt(s: RoundState, id: number, owner: number, tick: number): SceneObj | null {
   const p = s.players.find(q => q.present && q.carry === id);
   if (p) {
-    const z = p.act === 'lift' ? LIFT_Z[Math.min(3, Math.max(0, tick - p.actT0))] : 16;
-    return { kind: 'bomb', item: 0, x: px(p.x), y: px(p.y), z };
+    return { kind: 'bomb', item: 0, x: px(p.x), y: px(p.y), z: heldBombZ(p, tick) };
   }
   const b = s.bad.find(q => q.slot === owner);
   return b ? { kind: 'bomb', item: 0, x: b.x, y: b.y, z: 16 } : null;
