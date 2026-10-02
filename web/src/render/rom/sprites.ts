@@ -10,10 +10,14 @@ import type { RomTables } from './tables';
 import { OBJ_ITEM_PAL, type RomClock, type RomMemo, type RomScene } from './scene';
 import { warnOnce } from './warn';
 import { NO_SKIP, type HdSkip } from '../hdart/cover';
+import { withoutBakedShadow } from './baked-shadow';
 
 export interface SpriteCtx {
   s: RoundState; a: RomAssets; tb: RomTables; scene: RomScene; clock: RomClock; memo: RomMemo;
   tiles: Tiles;   // tiles de BG do quadro (itens voando, D12)
+  /** Efeitos com a sombra suave ligados: o jogador vivo (e a montaria dele) sai sem a sombra chapada do sprite
+   *  (baked-shadow.ts) — uma sombra por personagem. Ausente/false = como na ROM. */
+  softShadows?: boolean;
 }
 
 export const PLAYER_OBJ_PAL = [0, 1, 4, 5, 6] as const;   // P1..P5 (ANI §2.5)
@@ -70,7 +74,7 @@ function loadPalette(b: FrameBuilder, c: SpriteCtx, p: Player): void {
 }
 
 function drawFrame(b: FrameBuilder, c: SpriteCtx, p: Player, X: number, Y: number, act: Player['act'], face: number,
-  moving: boolean, t: number): void {
+  moving: boolean, t: number, noShadow = false): void {
   const { ref, t: at } = playerAnimRef({ act, face, char: p.char, moving }, t);
   const anim = resolveAnim(c.a, ref, p.char);
   if (act === 'dying' && at >= animCycle(anim)) return;
@@ -79,8 +83,9 @@ function drawFrame(b: FrameBuilder, c: SpriteCtx, p: Player, X: number, Y: numbe
   const pal = PLAYER_OBJ_PAL[p.slot];
   for (const pc of sm.frame.pieces) {
     const full = ch.frame(pc.tile);
-    b.sprite({ x: X + pc.dx + sm.ox, y: Y + pc.dy + sm.oy, size: pc.big ? 32 : 16, pal: (pal + pc.palAdd) & 7, prio: 2,
-      hflip: pc.hflip, vflip: pc.vflip, src: { px: pc.big ? full : smallFramePx(full) } }, Y + p.z + (p.z ? 1 : 0), ORDER_PLAYER + p.slot);   // no alto: na frente de quem está embaixo
+    const e: ObjEntry = { x: X + pc.dx + sm.ox, y: Y + pc.dy + sm.oy, size: pc.big ? 32 : 16, pal: (pal + pc.palAdd) & 7, prio: 2,
+      hflip: pc.hflip, vflip: pc.vflip, src: { px: pc.big ? full : smallFramePx(full) } };
+    b.sprite(noShadow ? withoutBakedShadow(e) : e, Y + p.z + (p.z ? 1 : 0), ORDER_PLAYER + p.slot);   // no alto: na frente de quem está embaixo
   }
 }
 
@@ -94,15 +99,16 @@ export function drawPlayers(b: FrameBuilder, c: SpriteCtx, sprites = true): void
     if (p.disease === 0x29 && !invisibleVisible(p)) continue;
     const X = px(p.x);
     const Y = px(p.y) - p.z;   // na mão da luva ou arremessado: acima do chão
+    const noShadow = !!c.softShadows && p.state === 'alive';   // a sombra suave dos efeitos fica no lugar desta
     let hooked = false;
     for (let i = 0; i < romPlayerHooks.length; i++) {
       let r: ObjEntry[] | null;
       // M1: um gancho do plano 9 que lance não deve tirar o jogador da tela — cai para o desenho padrão.
       try { r = romPlayerHooks[i](s, p, a, clock.frame, clock.tick); }
       catch (e) { warnOnce(a, 'hook:' + i, `Crown Blast: gancho de jogador #${i} falhou; usando o desenho padrão.`, e); continue; }
-      if (r) { for (const e of r) b.sprite(e, Y + p.z + (p.z ? 1 : 0), ORDER_PLAYER + p.slot); hooked = true; break; }
+      if (r) { for (const e of r) b.sprite(noShadow ? withoutBakedShadow(e) : e, Y + p.z + (p.z ? 1 : 0), ORDER_PLAYER + p.slot); hooked = true; break; }
     }
-    if (!hooked) drawFrame(b, c, p, X, Y, p.act, p.face, p.moveDir !== 8, clock.tick - p.actT0);
+    if (!hooked) drawFrame(b, c, p, X, Y, p.act, p.face, p.moveDir !== 8, clock.tick - p.actT0, noShadow);
   }
 }
 

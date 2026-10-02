@@ -35,6 +35,10 @@ export function battleScreen(app: App, ms: MatchSession): BattleScreen {
   const view = createView();
   // Efeitos visuais (spec 2026-10-01): estado próprio, avançado a cada tick; o quadro "sem atores" alimenta a sombra.
   const fx = createFx();
+  /** O App pediu os efeitos no último quadro (Opções e `?fx`): só então a sombra suave existe e a chapada do sprite
+   *  da ROM sai (uma sombra por personagem); com eles desligados, ou as sombras em pausa pelo orçamento, fica a da ROM. */
+  let fxShown = false;
+  const SOFT_SHADOWS = { softShadows: true };
   let last: { bank: SpriteBank; frame: number } | null = null;
   const NO_ACTORS = { sprites: false, layers: [] };
   const BOMBS_ONLY = { sprites: false, layers: [], bombSprites: true };
@@ -100,7 +104,7 @@ export function battleScreen(app: App, ms: MatchSession): BattleScreen {
     banners,
     brightness: () => (round.phase === 'intro' ? introBrightness(phaseElapsed(round)) : 15),
     frozen: () => paused,
-    fx: () => (app.settings.options.fx ? fxFrame : null),
+    fx: () => { fxShown = app.settings.options.fx; return fxShown ? fxFrame : null; },
     update(inp) {
       if (ended) return;
       // Só a borda conectado → desconectado de um humano com gamepad pausa (R19); quem já começa desligado, não.
@@ -138,9 +142,9 @@ export function battleScreen(app: App, ms: MatchSession): BattleScreen {
       last = { bank, frame };
       const a = romState.assets;
       const crowns = crownsOf(ms.match);
-      if (!(a && drawRomBattle(ctx, round, { crowns }, a, frame))) {
-        drawRound(ctx, round, view, bank, ms.cfg.chars, frame, [...crowns]);
-      }
+      const soft = fxShown && fx.shadowsPause === 0;
+      fxFrame.rom = !!a && drawRomBattle(ctx, round, { crowns }, a, frame, soft ? SOFT_SHADOWS : {});
+      if (!fxFrame.rom) drawRound(ctx, round, view, bank, ms.cfg.chars, frame, [...crowns]);
       drawBombLevels(ctx, bank, round);
       drawBattleOverlays(ctx, bank, { paused, disconnected, ...banners() });
     },
