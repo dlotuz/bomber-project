@@ -9,7 +9,7 @@ import { onRomChange, romState } from './app/rom-api';
 import { parseConfig } from './game/config';
 import { createMatchSession, carry, type MatchSession } from './game/match-session';
 import { InputManager, buildInput, emptyDevices, idleInput, withEscapeAsBack } from './input/input';
-import { createDisplay } from './render/display';
+import { createDisplay, fitOptionsFromUrl } from './render/display';
 import { present } from './render/fx/present';
 import { SpriteBank } from './render/sprite-bank';
 import { titleScreen } from './screens/title';
@@ -49,7 +49,7 @@ const audioStart = createAudioStarter({
 for (const ev of ['keydown', 'pointerdown', 'pointerup', 'click'] as const) window.addEventListener(ev, () => audioStart.gesture());
 onRomChange(() => audioStart.romChanged());
 
-const display = createDisplay(document.getElementById('screen') as HTMLCanvasElement);
+const display = createDisplay(document.getElementById('screen') as HTMLCanvasElement, fitOptionsFromUrl(location.search));
 const ctx = display.ctx;
 const bank = new SpriteBank();
 // ?fx=0 desliga os efeitos nesta sessão (debug e capturas fiéis).

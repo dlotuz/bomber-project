@@ -162,10 +162,12 @@ function inkCenterY(out: CanvasRenderingContext2D, t: HdText): number {
   return Number.isFinite(m.actualBoundingBoxAscent) ? cy + (m.actualBoundingBoxDescent - m.actualBoundingBoxAscent) / 2 : cy;
 }
 
-/** Desenha a camada HD em `out` (escala `s`); depois o chamador põe a base por cima. Sem menu HD, não faz nada. */
-export function drawHdMenu(out: CanvasRenderingContext2D, s: number): boolean {
+/** Desenha a camada HD em `out` (escalas `sx` × `sy`; `sx` maior com a proporção 4:3 da TV); depois o chamador põe a
+ *  base por cima. Sem menu HD, não faz nada. */
+export function drawHdMenu(out: CanvasRenderingContext2D, sx: number, sy = sx): boolean {
   if (!state.on) return false;
-  out.setTransform(s, 0, 0, s, 0, 0);
+  const s = sy;   // brilho/sombra do texto em px de dispositivo seguem a escala vertical
+  out.setTransform(sx, 0, 0, sy, 0, 0);
   out.imageSmoothingEnabled = true;
   out.imageSmoothingQuality = 'high';
   if (state.bg === 'title') {
