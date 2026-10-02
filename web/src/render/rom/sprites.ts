@@ -124,7 +124,7 @@ export function drawObjects(b: FrameBuilder, c: SpriteCtx, skip: HdSkip = NO_SKI
       ? { x: o.x - 8, y: y - 8, size: 16, pal: OBJ_BOMB.pal, prio: 2, hflip: false, vflip: false, src: { tile: OBJ_BOMB.tile } }
       : { x: o.x - 8, y: y - 8, size: 16, pal: OBJ_ITEM_PAL, prio: 2, hflip: false, vflip: false,
         src: { px: itemTilePx(c.tiles, c.tb.itemWord(o.item)) } };
-    b.sprite(e, y, ORDER_OBJ + i);
+    b.sprite(e, o.sortY ?? y, ORDER_OBJ + i);   // bomba na mão: chave de quem segura ± 8 (adapt.ts)
   });
 }
 

@@ -7,7 +7,7 @@ import { hudCrying } from './hud-cry';
 import './layers-index';
 import { NO_SKIP, type HdSkip } from './hdart/cover';
 import { hdBattleSkip } from './hdart/mode';
-import { heldBombZ } from './rom/adapt';
+import { heldBombPose } from './rom/adapt';
 import { visualTick } from './rom/battle';
 
 export { SCREEN_W, SCREEN_H };
@@ -116,16 +116,18 @@ function drawGroundBombs(ctx: CanvasRenderingContext2D, round: RoundState, bank:
   }
 }
 
-/** Canto do sprite 16×16 da bomba na mão de `p`: acima da cabeça, na altura do levantar da ROM (`heldBombZ`) — o
- *  mesmo lugar do ponto de cor da bomba (fx `bombSpots`). */
-function heldBombAt(round: RoundState, p: RoundState['players'][number]): [number, number] {
-  return [px(p.x) - 7, px(p.y) - 7 - p.z - heldBombZ(p, visualTick(round))];
+/** Bomba na mão de `p`: canto do sprite 16×16 e se fica na frente de quem segura, na pose da ROM (`heldBombPose`) — o
+ *  mesmo lugar do ponto de cor da bomba (fx `bombSpots`); null no tick do A (a bomba ainda não aparece). */
+function heldBombAt(round: RoundState, p: RoundState['players'][number]): [number, number, boolean] | null {
+  const pose = heldBombPose(p, visualTick(round));
+  return pose && [px(p.x) + pose.dx - 7, px(p.y) - 7 - p.z - pose.z, pose.front];
 }
 
 /** Bombas na mão da luva de quem está em campo (no quadro "só bombas" e quando o HD desenha só os jogadores). */
 function drawHeldBombs(ctx: CanvasRenderingContext2D, round: RoundState, bank: SpriteBank): void {
   for (const p of round.players) {
-    if (p.present && (p.state === 'alive' || p.state === 'dying') && p.carry >= 0) ctx.drawImage(bank.bomb(0), ...heldBombAt(round, p));
+    const at = p.present && (p.state === 'alive' || p.state === 'dying') && p.carry >= 0 ? heldBombAt(round, p) : null;
+    if (at) ctx.drawImage(bank.bomb(0), at[0], at[1]);
   }
 }
 
@@ -163,9 +165,10 @@ function drawPlayersFb(ctx: CanvasRenderingContext2D, round: RoundState, view: V
     if (p.state === 'alive' && (!invisibleVisible(p) || (p.inv & 2) !== 0)) continue;
     const sx = px(p.x) - 7, sy = px(p.y) - 11 - p.z;
     const frameIdx = p.state === 'dying' ? 0 : walkFrame(view.walk[p.slot]);
-    ctx.drawImage(bank.bomber(chars[p.slot], FACE_TO_DIR[p.face], frameIdx), sx, sy);
     const held = p.carry >= 0 ? heldBombAt(round, p) : null;
-    if (held && bombs) ctx.drawImage(bank.bomb(0), ...held);
+    if (held && bombs && !held[2]) ctx.drawImage(bank.bomb(0), held[0], held[1]);   // olhando para cima: atrás (ROM)
+    ctx.drawImage(bank.bomber(chars[p.slot], FACE_TO_DIR[p.face], frameIdx), sx, sy);
+    if (held && bombs && held[2]) ctx.drawImage(bank.bomb(0), held[0], held[1]);
     // "NP" acima da cabeça: distingue bombers idênticos (mesmo personagem). Some durante a morte. Com a bomba na mão,
     // vai para cima dela (por cima, escondia a bomba e a cor do dono).
     if (p.state === 'alive') {

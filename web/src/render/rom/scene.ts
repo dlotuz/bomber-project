@@ -2,8 +2,9 @@ import type { PlayerAct } from '../../core';
 
 /** Bomba parada na grade: palavra do BG2 pelo script do tipo, desde `born`. */
 export interface GridBomb { type: number; born: number }
-/** OBJ de objeto: bomba em movimento/na mão/voando ou item voando. px de tela; (x, y) = centro no chão; z = altura (≥ 0). */
-export interface SceneObj { kind: 'bomb' | 'item'; item: number; x: number; y: number; z: number }
+/** OBJ de objeto: bomba em movimento/na mão/voando ou item voando. px de tela; (x, y) = centro no chão; z = altura (≥ 0).
+ *  `sortY`: chave de ordem própria (bomba na mão: a de quem segura ± 8); sem ela, y − z. */
+export interface SceneObj { kind: 'bomb' | 'item'; item: number; x: number; y: number; z: number; sortY?: number }
 /** Passo da pressão com bloco (Falling do núcleo). */
 export interface PressureDrop { cell: number; t0: number; land: number }
 export type FlamePieceName = 'center' | 'armU' | 'armR' | 'armD' | 'armL' | 'tipU' | 'tipR' | 'tipD' | 'tipL';

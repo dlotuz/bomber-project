@@ -8,7 +8,7 @@
 //  - HUD: canto de cima à esquerda de cada elemento no lugar do original (`HUD_AT`).
 import { BURN, CODE, invisibleVisible, isEggCode, isItemCode, itemOfCode, px, type RoundState } from '../../core';
 import { rider } from '../../core/mounts/types';
-import { heldBombZ, readScene } from '../rom/adapt';
+import { heldBombPose, heldSortY, readScene } from '../rom/adapt';
 import { newMemo, type RomMemo } from '../rom/scene';
 import { pressureSprite } from '../anim/effects';
 import { charKey, faceToHdDir, frameAt, itemKey, stageKey, type HdAnim, type HdFrame, type HdKey, type HdPack, type HdTile } from './types';
@@ -142,10 +142,12 @@ export function drawHdBattle(out: CanvasRenderingContext2D, round: RoundState, p
         const p = s.players.find(q => q.present && q.carry === b.id);
         const bb = p ? null : s.bad.find(q => q.slot === b.owner);
         if (!p && !bb) continue;
-        const x = p ? px(p.x) : bb!.x, y = p ? px(p.y) - p.z : bb!.y;
-        const z = p ? heldBombZ(p, tick) : 16;
+        const pose = p ? heldBombPose(p, tick) : { dx: 0, z: 16, front: false };
+        if (!pose) continue;   // o tick do A: a bomba ainda não aparece (ROM)
+        const x = (p ? px(p.x) : bb!.x) + pose.dx, y = p ? px(p.y) - p.z : bb!.y;
+        const sortY = p ? heldSortY(p, pose) : y - pose.z;   // na frente de quem segura, atrás olhando para cima (ROM)
         // na mão de qualquer um, a cor é a do dono (quem pôs a bomba), não a de quem segura
-        spr.push({ sortY: y - z, order: 100 + i++, draw: () => put(bombKey(b.type), bombTick - b.born, x, y - z, b.owner) });
+        spr.push({ sortY, order: 100 + i++, draw: () => put(bombKey(b.type), bombTick - b.born, x, y - pose.z, b.owner) });
       }
     }
     for (const f of s.flyers) if (f.kind === 'bomb') {

@@ -4,7 +4,6 @@ import { cellOf, px, type RoundState } from '../../src/core';
 import { placeBombAt } from '../../src/core/mounts/core-api';
 import { bombSpots } from '../../src/render/fx/draw';
 import { BOMB_COLORS } from '../../src/render/fx/bomb-tint';
-import { LIFT_Z } from '../../src/render/rom/adapt';
 import { drawRound } from '../../src/render/draw-game';
 import { createView, updateView } from '../../src/render/view';
 import type { SpriteBank } from '../../src/render/sprite-bank';
@@ -26,13 +25,16 @@ function onP3Bomb(): RoundState {
 }
 
 describe('cor da bomba na mão: a do dono', () => {
-  it('P1 levanta a bomba do P3: no levantar (altura da ROM) e segurando, o ponto de cor é vermelho, na mão do P1', () => {
+  it('P1 (olhando para a direita) levanta a bomba do P3: ponto vermelho na pose medida no emulador, na mão do P1', () => {
     const s = onP3Bomb(), p1 = s.players[0];
+    // k = tick − início do levantar → [dx, altura] do centro da bomba (emulador, olhando para a direita); k = 0 não aparece
+    const ROM: ([number, number] | null)[] = [null, [4, 6], [8, 10], [4, 14], [0, 16], [4, 16], [4, 16], [4, 16], [4, 16], [4, 16]];
     for (let k = 0; k < 10; k++) {
       run(s, 1, { 0: BTN.A });
       expect(s.bombs[0].state).toBe('held');
-      const z = p1.act === 'lift' ? LIFT_Z[Math.min(3, s.tick - p1.actT0)] : 16;
-      expect(bombSpots(s)).toEqual([[px(p1.x), px(p1.y) - z, RED]]);
+      expect(s.tick - p1.actT0 === k || p1.act !== 'lift').toBe(true);
+      const at = ROM[k];
+      expect(bombSpots(s)).toEqual(at ? [[px(p1.x) + at[0], px(p1.y) - at[1], RED]] : []);
     }
     expect(p1.act).not.toBe('lift');
   });
@@ -86,7 +88,7 @@ function rec() {
 }
 
 describe('fallback (sem ROM): a bomba na mão entra no quadro "só bombas"', () => {
-  for (const ticks of [1, 2, 10]) it(`${ticks} tick(s) de A: mesma posição no quadro completo, no "só bombas" e no ponto de cor`, () => {
+  for (const ticks of [2, 3, 10]) it(`${ticks} tick(s) de A: mesma posição no quadro completo, no "só bombas" e no ponto de cor`, () => {
     const s = onP3Bomb();
     run(s, ticks, { 0: BTN.A });
     const view = createView(); updateView(view, s, []);
@@ -101,6 +103,21 @@ describe('fallback (sem ROM): a bomba na mão entra no quadro "só bombas"', () 
     // a etiqueta "1P" não cobre a bomba na mão (senão a cor do dono nem aparece)
     const tag = full.calls.find(c => c.tag === 'text:1P')!;
     expect(tag.y + tag.h).toBeLessThanOrEqual(fb[0].y + 2);
+  });
+});
+
+describe('fallback (sem ROM): ordem da bomba na mão como na ROM', () => {
+  for (const face of [0, 2, 4, 6] as const) it(`olhando para ${face}: ${face ? 'na frente' : 'atrás'} de quem segura`, () => {
+    const s = onP3Bomb();
+    s.players[0].face = face;
+    run(s, 10, { 0: BTN.A });
+    const view = createView(); updateView(view, s, []);
+    const full = rec();
+    drawRound(full, s, view, fakeBank(), [0, 1, 2, 3, 4], 0, [0, 0, 0, 0, 0]);
+    const order = full.calls.map(c => c.tag);
+    const bomb = order.indexOf('bomb'), body = full.calls.findIndex(c => c.tag === 'player' && c.x === px(s.players[0].x) - 7);
+    expect(bomb).toBeGreaterThanOrEqual(0);
+    expect(bomb > body).toBe(face !== 0);
   });
 });
 

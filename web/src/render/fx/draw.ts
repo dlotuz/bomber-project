@@ -3,7 +3,7 @@ import { SCREEN_H, SCREEN_W } from '../display';
 import { ambientFill } from './ambient';
 import { FIELD_TOP, cellX, cellY, entX, entY } from './coords';
 import { bombColor, bombMask, tintBombsInPlace } from './bomb-tint';
-import { heldBombZ } from '../rom/adapt';
+import { heldBombPose } from '../rom/adapt';
 import { visualTick } from '../rom/battle';
 import { actorMask, drawShadows, type ActorMask } from './shadows';
 import { flameLight, halo, puff, rgb } from './sprites';
@@ -67,7 +67,7 @@ export { BOMB_COLORS } from './bomb-tint';
 /** Centro (px de base) e cor do DONO (quem pôs a bomba) de cada bomba parada, chutada, na mão ou em voo — nunca a de
  *  quem segura, chuta ou arremessa. A parada é tile da casa (`entX/entY`); as outras são objeto 16×16 em (px − 8) na
  *  ROM e em (px − 7) no fallback (corpo da arte em px − 6…px + 5), então o centro é o próprio px. Na mão: acima da cabeça
- *  de quem segura, na altura do levantar (`heldBombZ`, no tick visual da ROM, congelado no TIME UP), no mesmo lugar em
+ *  de quem segura, na pose do levantar (`heldBombPose`, no tick visual da ROM, congelado no TIME UP), no mesmo lugar em
  *  que a ROM (`readScene`), o fallback (`drawHeldBombs`) e a arte HD a desenham. */
 export function bombSpots(r: FxFrame['round']): [number, number, number][] {
   const at: [number, number, number][] = [];
@@ -78,7 +78,8 @@ export function bombSpots(r: FxFrame['round']): [number, number, number][] {
     else if (b.state === 'held') {
       const p = r.players.find(q => q.present && q.carry === b.id);
       const bb = p ? null : r.bad.find(q => q.slot === b.owner);
-      if (p) at.push([px(p.x), px(p.y) - p.z - heldBombZ(p, tick), bombColor(b.owner)]);
+      const pose = p && heldBombPose(p, tick);   // null: o tick do A, em que a bomba ainda não aparece
+      if (p && pose) at.push([px(p.x) + pose.dx, px(p.y) - p.z - pose.z, bombColor(b.owner)]);
       else if (bb) at.push([bb.x, bb.y - 16, bombColor(b.owner)]);
     }
   }

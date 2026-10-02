@@ -25,14 +25,27 @@ describe('readScene', () => {
       { kind: 'bomb', item: 0, x: 100, y: 80, z: 0 },
       { kind: 'bomb', item: 0, x: 60, y: 70, z: 9 }]);
   });
-  it('bomba na mão: sobe 6, 10, 14, 16 no levantamento e fica a 16 (D13)', () => {
+  it('bomba na mão: no tick do A não aparece; depois sobe 6, 10, 14, 16 e fica a 16 (D13; emulador, scratchpad bombmao/emu)', () => {
     const s = fakeRound();
     const p = s.players[0];
-    p.carry = 5; p.act = 'lift'; p.actT0 = 200; p.x = 64 * 256; p.y = 96 * 256;
+    p.carry = 5; p.act = 'lift'; p.actT0 = 200; p.x = 64 * 256; p.y = 96 * 256; p.face = 4;
     s.bombs.push(bomb({ id: 5, state: 'held' }));
-    expect([200, 201, 202, 203, 204].map(t => readScene(s, t, newMemo()).objs[0].z)).toEqual([6, 10, 14, 16, 16]);
+    expect(readScene(s, 200, newMemo()).objs).toEqual([]);
+    expect([201, 202, 203, 204, 205].map(t => readScene(s, t, newMemo()).objs[0].z)).toEqual([6, 10, 14, 16, 16]);
     p.act = 'carryWalk';
-    expect(readScene(s, 300, newMemo()).objs[0]).toEqual({ kind: 'bomb', item: 0, x: 64, y: 96, z: 16 });
+    // olhando para baixo: na frente de quem segura (chave Y + 8)
+    expect(readScene(s, 300, newMemo()).objs[0]).toEqual({ kind: 'bomb', item: 0, x: 64, y: 96, z: 16, sortY: 104 });
+  });
+  it('bomba na mão olhando para o lado: 4 px para esse lado (8 no meio do levantar); para cima: atrás de quem segura', () => {
+    const s = fakeRound();
+    const p = s.players[0];
+    p.carry = 5; p.act = 'lift'; p.actT0 = 200; p.x = 64 * 256; p.y = 96 * 256; p.face = 6;
+    s.bombs.push(bomb({ id: 5, state: 'held' }));
+    expect([201, 202, 203, 204, 205, 209].map(t => readScene(s, t, newMemo()).objs[0].x)).toEqual([60, 56, 60, 64, 60, 60]);
+    p.face = 2;
+    expect(readScene(s, 202, newMemo()).objs[0].x).toBe(72);
+    p.act = 'carryIdle'; p.face = 0;
+    expect(readScene(s, 300, newMemo()).objs[0]).toEqual({ kind: 'bomb', item: 0, x: 64, y: 96, z: 16, sortY: 88 });
   });
   it('bomba na mão do Bad Bomber: na posição dele', () => {
     const s = fakeRound();

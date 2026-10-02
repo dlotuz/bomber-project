@@ -8,6 +8,7 @@ import { renderPpu } from '../../src/render/ppu';
 import { BOMB_COLORS, bombMask, isBombBody, tintBombsInPlace } from '../../src/render/fx/bomb-tint';
 import { bombSpots } from '../../src/render/fx/draw';
 import { ASSETS } from '../mounts/rom-helpers';
+import { OBJ_BOMB } from '../../src/render/rom/sprites';
 import { BTN, mkRound, placePx, run, cx, cy } from '../mounts/helpers';
 
 const W = 256, H = 224;
@@ -20,7 +21,8 @@ function render(s: RoundState, opts: BuildOpts = {}): Uint8ClampedArray {
 const withoutBombs = (s: RoundState): RoundState => ({ ...s, grid: s.grid.map(v => (v === CODE.BOMB ? CODE.FLOOR : v)), bombs: [] });
 const same = (a: Uint8ClampedArray, b: Uint8ClampedArray, i: number) => a[i] === b[i] && a[i + 1] === b[i + 1] && a[i + 2] === b[i + 2];
 
-/** P1 (branco) segura a bomba do P3 (vermelho) em (8, 5); P2 (preto) a do P1 em (4, 5); P3 a própria em (11, 5). */
+/** P1 (branco, olhando para baixo) segura a bomba do P3 (vermelho) em (8, 5); P2 (preto, olhando para cima) a do P1 em
+ *  (4, 5); P3 (olhando para a direita) a própria em (11, 5). */
 function scene(ticks: number) {
   const s = mkRound({ players: [0, 1, 2] });
   const [p1, p2, p3] = [0, 1, 2].map(i => s.players[i]);
@@ -29,7 +31,7 @@ function scene(ticks: number) {
   placePx(s, 2, cx(8), cy(5)); expect(placeBombAt(s, p3, cellOf(8, 5), [])).toBe(true);
   placePx(s, 2, cx(11), cy(5)); expect(placeBombAt(s, p3, cellOf(11, 5), [])).toBe(true);
   placePx(s, 0, cx(8), cy(5)); placePx(s, 1, cx(4), cy(5));
-  p1.face = 4; p2.face = 4; p3.face = 4;
+  p1.face = 4; p2.face = 0; p3.face = 2;
   run(s, ticks, { 0: BTN.A, 1: BTN.A, 2: BTN.A });
   expect(s.bombs.map(b => b.state)).toEqual(['held', 'held', 'held']);
   const base = render(s);
@@ -41,7 +43,7 @@ function scene(ticks: number) {
   tintBombsInPlace(tinted, vis, W, bombSpots(s));
   const spot = (slot: number) => {
     const p = s.players[slot];
-    return bombSpots(s).find(([x]) => Math.abs(x - (p.x >> 8)) <= 1)!;
+    return bombSpots(s).find(([x]) => Math.abs(x - (p.x >> 8)) <= 8)!;
   };
   return { s, base, only, none, tinted, spot };
 }
@@ -53,18 +55,53 @@ function count(x: number, y: number, f: (i: number) => boolean): number {
   return n;
 }
 
+/** Medido no emulador (scratchpad bombmao/emu/lift4b.py, `st_arena05`, jogador em (95, 79)): canto do sprite da bomba
+ *  em relação ao centro de quem segura, por tick k do levantar (k = 0, o tick do A: não aparece), e a ordem na OAM. */
+const EMU: Record<number, ([number, number] | null)[]> = {
+  0: [null, [-8, -14], [-8, -18], [-8, -22], [-8, -24], [-8, -24], [-8, -24], [-8, -24], [-8, -24], [-8, -24], [-8, -24]],
+  2: [null, [-4, -14], [0, -18], [-4, -22], [-8, -24], [-4, -24], [-4, -24], [-4, -24], [-4, -24], [-4, -24], [-4, -24]],
+  4: [null, [-8, -14], [-8, -18], [-8, -22], [-8, -24], [-8, -24], [-8, -24], [-8, -24], [-8, -24], [-8, -24], [-8, -24]],
+  6: [null, [-12, -14], [-16, -18], [-12, -22], [-8, -24], [-12, -24], [-12, -24], [-12, -24], [-12, -24], [-12, -24], [-12, -24]],
+};
+
+describe.skipIf(!ASSETS)('ROM: bomba na mão na pose e na ordem do SB4 (emulador)', () => {
+  for (const face of [0, 2, 4, 6] as const) it(`olhando para ${['cima', '', 'a direita', '', 'baixo', '', 'a esquerda'][face]}: posição tick a tick e ${face ? 'na frente' : 'atrás'} de quem segura`, () => {
+    const s = mkRound({ players: [0, 1] });
+    const p = placePx(s, 0, cx(8), cy(5));
+    p.glove = true;
+    expect(placeBombAt(s, p, cellOf(8, 5), [])).toBe(true);
+    p.face = face;
+    for (let k = 0; k < EMU[face].length; k++) {
+      run(s, 1, { 0: BTN.A });
+      expect(s.bombs[0].state).toBe('held');
+      const oam = buildBattleFrame(s, { crowns: [0, 0, 0, 0, 0] }, ASSETS!, s.tick).oam;
+      const bi = oam.findIndex(e => 'tile' in e.src && e.src.tile === OBJ_BOMB.tile);
+      const pi = oam.findIndex(e => e.size === 32 && Math.abs(e.x + 16 - (p.x >> 8)) <= 8);
+      expect(pi).toBeGreaterThanOrEqual(0);
+      const want = EMU[face][k];
+      if (!want) { expect(bi).toBe(-1); continue; }
+      expect(bi).toBeGreaterThanOrEqual(0);
+      expect([oam[bi].x - (p.x >> 8), oam[bi].y - (p.y >> 8)]).toEqual(want);
+      expect(bi < pi).toBe(face !== 0);   // índice menor = na frente
+    }
+  });
+});
+
 describe.skipIf(!ASSETS)('ROM: cor da bomba na mão', () => {
   for (const ticks of [1, 2, 3, 10]) {
     it(`${ticks} tick(s) de A (levantar → segurando): só pixel de bomba à vista muda; quem segura nunca é pintado`, () => {
-      const { base, only, none, tinted, spot } = scene(ticks);
-      expect(spot(0)[2]).toBe(RED);     // P1 com a bomba do P3
-      expect(spot(1)[2]).toBe(WHITE);   // P2 com a bomba do P1
-      expect(spot(2)[2]).toBe(RED);     // P3 com a própria
+      const { s, base, only, none, tinted, spot } = scene(ticks);
+      if (ticks === 1) expect(bombSpots(s)).toEqual([]);   // o tick do A: a bomba ainda não aparece (ROM)
+      else {
+        expect(spot(0)[2]).toBe(RED);     // P1 com a bomba do P3
+        expect(spot(1)[2]).toBe(WHITE);   // P2 com a bomba do P1
+        expect(spot(2)[2]).toBe(RED);     // P3 com a própria
+      }
       for (let i = 0; i < base.length; i += 4) if (!same(tinted, base, i)) expect(same(base, only, i) && !same(only, none, i)).toBe(true);
     });
   }
 
-  it('segurando: todo o corpo à vista sai na cor do dono (P3 vermelho na mão do P1, P1 branco na mão do P2); mão e cabeça por cima ficam intactas', () => {
+  it('segurando: todo o corpo à vista sai na cor do dono (P3 vermelho na mão do P1, P1 branco na mão do P2); quem segura nunca é pintado', () => {
     const { base, only, none, tinted, spot } = scene(10);
     const vis = new Uint8ClampedArray(W * H * 4);
     bombMask(base, only, none, vis);
@@ -74,12 +111,18 @@ describe.skipIf(!ASSETS)('ROM: cor da bomba na mão', () => {
       const [x, y] = spot(slot);
       expect(count(x, y, i => !same(only, none, i))).toBeGreaterThan(40);      // a ROM desenha a bomba ali (objeto)
       const body = (i: number) => vis[i + 3] === 255 && isBombBody(base[i], base[i + 1], base[i + 2]);
-      expect(count(x, y, body)).toBeGreaterThan(4);                             // parte do corpo à vista, acima da cabeça
-      expect(count(x, y, i => body(i) && !(slot === 1 ? white : red)(i))).toBe(0);   // e toda ela na cor do dono
-      // pixels de bomba com o jogador na frente (mão/cabeça): existem e nenhum foi pintado
+      expect(count(x, y, i => body(i) && !(slot === 1 ? white : red)(i))).toBe(0);   // corpo à vista: todo na cor do dono
       const covered = (i: number) => !same(only, none, i) && !same(base, only, i);
-      expect(count(x, y, covered)).toBeGreaterThan(20);
-      expect(count(x, y, i => covered(i) && !same(tinted, base, i))).toBe(0);
+      if (slot === 1) {
+        // olhando para cima a bomba fica ATRÁS da cabeça (ROM): há pixels cobertos, e nenhum deles é pintado
+        expect(count(x, y, covered)).toBeGreaterThan(20);
+        expect(count(x, y, i => covered(i) && !same(tinted, base, i))).toBe(0);
+        expect(count(x, y, body)).toBeGreaterThan(0);
+      } else {
+        // olhando para baixo/lado ela fica NA FRENTE (ROM): nada a cobre e o corpo inteiro sai na cor do dono
+        expect(count(x, y, covered)).toBe(0);
+        expect(count(x, y, body)).toBeGreaterThan(40);
+      }
     }
   });
 
