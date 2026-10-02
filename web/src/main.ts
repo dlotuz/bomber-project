@@ -9,7 +9,7 @@ import { onRomChange, romState } from './app/rom-api';
 import { parseConfig } from './game/config';
 import { createMatchSession, carry, type MatchSession } from './game/match-session';
 import { InputManager, buildInput, emptyDevices, idleInput, withEscapeAsBack } from './input/input';
-import { createDisplay, fitOptionsFromUrl } from './render/display';
+import { createDisplay, fitOptionsFromUrl, resolveScreenMode, screenModeFromUrl } from './render/display';
 import { present } from './render/fx/present';
 import { SpriteBank } from './render/sprite-bank';
 import { titleScreen } from './screens/title';
@@ -54,10 +54,12 @@ const ctx = display.ctx;
 const bank = new SpriteBank();
 // ?fx=0 desliga os efeitos nesta sessão (debug e capturas fiéis).
 const fxOff = params.get('fx') === '0';
+// ?bordas=preto|borrado força as bordas da tela; sem ele, vale a opção (lida a cada quadro: muda na hora).
+const urlMode = screenModeFromUrl(location.search);
 const render = (): void => {
   hdBegin();
   app.draw(ctx, bank);
-  present(display, fxOff ? null : app.screen.fx?.() ?? null, app.brightness() / 15);
+  present(display, fxOff ? null : app.screen.fx?.() ?? null, app.brightness() / 15, resolveScreenMode(urlMode, app.settings.options));
 };
 // ?quick abre direto numa partida com as regras da URL (ver parseConfig); sem ele, começa no título.
 if (params.has('quick')) app.go(battleScreen(app, createMatchSession(parseConfig(window.location.search))));

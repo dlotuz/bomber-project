@@ -162,23 +162,47 @@ function inkCenterY(out: CanvasRenderingContext2D, t: HdText): number {
   return Number.isFinite(m.actualBoundingBoxAscent) ? cy + (m.actualBoundingBoxDescent - m.actualBoundingBoxAscent) / 2 : cy;
 }
 
-/** Desenha a camada HD em `out` (escalas `sx` × `sy`; `sx` maior com a proporção 4:3 da TV); depois o chamador põe a
- *  base por cima. Sem menu HD, não faz nada. */
-export function drawHdMenu(out: CanvasRenderingContext2D, sx: number, sy = sx): boolean {
-  if (!state.on) return false;
-  const s = sy;   // brilho/sombra do texto em px de dispositivo seguem a escala vertical
-  out.setTransform(sx, 0, 0, sy, 0, 0);
-  out.imageSmoothingEnabled = true;
-  out.imageSmoothingQuality = 'high';
+/** Fundo HD da tela atual, nas coordenadas da base (256×224; o chamador põe a escala no transform). */
+function drawBg(out: CanvasRenderingContext2D): boolean {
   if (state.bg === 'title') {
     out.fillStyle = '#000000'; out.fillRect(0, 0, 256, 224);
     const img = titleImg();
     if (img) out.drawImage(img, 0, 16, 256, 192);
-  } else {
-    const img = bgImg();
-    if (img) out.drawImage(img, 0, 0, 256, 224);
-    else { out.fillStyle = '#d8a83a'; out.fillRect(0, 0, 256, 224); }
+    return !!img;
   }
+  const img = bgImg();
+  if (img) out.drawImage(img, 0, 0, 256, 224);
+  else { out.fillStyle = '#d8a83a'; out.fillRect(0, 0, 256, 224); }
+  return !!img;
+}
+
+/** Miniatura do fundo HD da tela atual (`w × h`), para o fundo borrado das bordas; guardada por fundo, então reduzir
+ *  a arte grande só acontece uma vez. `null` sem menu HD. */
+const thumbs = new Map<string, HTMLCanvasElement>();
+export function hdBgThumb(w: number, h: number): HTMLCanvasElement | null {
+  if (!state.on || typeof document === 'undefined') return null;
+  const key = `${state.bg}|${w}|${h}`;
+  let c = thumbs.get(key);
+  if (!c) {
+    c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const t = c.getContext('2d')!;
+    t.imageSmoothingEnabled = true; t.imageSmoothingQuality = 'high';
+    t.setTransform(w / 256, 0, 0, h / 224, 0, 0);
+    if (drawBg(t)) thumbs.set(key, c);   // a arte ainda carregando: tenta de novo no próximo quadro
+  }
+  return c;
+}
+
+/** Desenha a camada HD em `out` (escalas `sx` × `sy`; `sx` maior com a proporção 4:3 da TV; a imagem do jogo começa
+ *  em (`ox`, `oy`) do canvas); depois o chamador põe a base por cima. Sem menu HD, não faz nada. */
+export function drawHdMenu(out: CanvasRenderingContext2D, sx: number, sy = sx, ox = 0, oy = 0): boolean {
+  if (!state.on) return false;
+  const s = sy;   // brilho/sombra do texto em px de dispositivo seguem a escala vertical
+  out.setTransform(sx, 0, 0, sy, ox, oy);
+  out.imageSmoothingEnabled = true;
+  out.imageSmoothingQuality = 'high';
+  drawBg(out);
   for (const t of state.texts) if (t.art) drawArtLabel(out, t, s); else drawLabel(out, t);
   if (state.cursor) {
     const [hx, hy] = state.cursor;

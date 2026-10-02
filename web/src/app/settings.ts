@@ -20,10 +20,11 @@ export interface Options {
   sleepSec: number;      // duração do soneca (montaria F), segundos (1..10); a ROM usa 3,2 s
   fx: boolean;           // efeitos visuais da batalha (luz, partículas, sombras…)
   allMounts: boolean;    // ovos dos 13 tipos (senha 0164 do original); padrão SIM, a senha desliga e liga
+  blurBorders: boolean;  // bordas da tela (16:9) com a imagem do jogo borrada; NÃO = faixas pretas
 }
 
 export function defaultOptions(): Options {
-  return { randomSpawns: false, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3, fx: true, allMounts: true };
+  return { randomSpawns: false, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3, fx: true, allMounts: true, blurBorders: true };
 }
 
 /** Slots de Opções → Controles: dispositivo, teclas e botões dos 5 jogadores. */
@@ -172,6 +173,7 @@ export function normalizeSettings(raw: unknown): Settings {
       sleepSec: intIn(ro.sleepSec, 1, 10, d.options.sleepSec),
       fx: bool(ro.fx, d.options.fx),
       allMounts: bool(ro.allMounts, d.options.allMounts),
+      blurBorders: bool(ro.blurBorders, d.options.blurBorders),
     },
     setup: {
       mode: oneOf(s.mode, ['ffa', 'team'] as const, ds.mode),

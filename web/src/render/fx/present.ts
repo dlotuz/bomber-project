@@ -1,4 +1,5 @@
-import { SCREEN_H, SCREEN_W, type Display } from '../display';
+import { SCREEN_H, SCREEN_W, type Display, type ScreenMode } from '../display';
+import { drawBackdrop } from './backdrop';
 import { drawFx } from './draw';
 import { drawHdMenu } from '../hd-menu';
 import type { FxFrame } from './state';
@@ -23,24 +24,29 @@ function sharpBase(d: Display): CanvasImageSource {
   return mid.canvas;
 }
 
-/** Base ampliada (com tremor) e, na batalha, os efeitos por cima (spec §3.1). `fade` = brilho do App / 15. */
-export function present(d: Display, frame: FxFrame | null, fade: number): void {
-  const { out } = d, sy = d.scale(), sx = d.scaleX();
+/** Base ampliada (com tremor) centrada na janela e, na batalha, os efeitos por cima (spec §3.1); nas bordas, o fundo
+ *  borrado ou preto (`mode`). `fade` = brilho do App / 15. */
+export function present(d: Display, frame: FxFrame | null, fade: number, mode: ScreenMode = { blur: true }): void {
+  const { out } = d, L = d.layout(), { sx, sy } = L;
   const shake = frame && !reduced?.matches;
-  const ox = shake ? frame.state.dx * sx : 0, oy = shake ? frame.state.dy * sy : 0;
+  const ox = L.ox + (shake ? frame.state.dx * sx : 0), oy = L.oy + (shake ? frame.state.dy * sy : 0);
   out.setTransform(1, 0, 0, 1, 0, 0);
   out.globalAlpha = 1;
   out.globalCompositeOperation = 'source-over';
-  if (ox || oy) { out.fillStyle = '#000'; out.fillRect(0, 0, out.canvas.width, out.canvas.height); }
-  drawHdMenu(out, sx, sy);   // menus: fundo/texto HD por baixo da base transparente
+  out.fillStyle = '#000'; out.fillRect(0, 0, L.w, L.h);
+  if (mode.blur) drawBackdrop(out, d.ctx.canvas, L);
+  drawHdMenu(out, sx, sy, ox, oy);   // menus: fundo/texto HD por baixo da base transparente
   const src = sharpBase(d);
   out.imageSmoothingEnabled = src !== d.ctx.canvas;
   out.imageSmoothingQuality = 'high';
-  out.drawImage(src, ox, oy, SCREEN_W * sx, SCREEN_H * sy);
+  out.drawImage(src, ox, oy, L.gw, L.gh);
   out.imageSmoothingEnabled = false;
   if (!frame) return;
   out.setTransform(sx, 0, 0, sy, ox, oy);   // os efeitos desenham em pixels de base, rasterizados em resolução nativa
+  out.save();
+  out.beginPath(); out.rect(0, 0, SCREEN_W, SCREEN_H); out.clip();   // partículas e sombras não vazam para as bordas
   drawFx(out, frame, d.ctx, fade);
+  out.restore();
   out.setTransform(1, 0, 0, 1, 0, 0);
   out.globalAlpha = 1;
   out.globalCompositeOperation = 'source-over';

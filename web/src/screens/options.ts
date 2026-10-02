@@ -106,6 +106,11 @@ export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'ma
       left: () => { const changed = opt().fx; opt().fx = false; app.save(); return changed; },
       right: () => { const changed = !opt().fx; opt().fx = true; app.save(); return changed; },
     });
+    rows.push({   // bordas do 16:9: imagem do jogo borrada (padrão) ou faixas pretas; ?bordas= na URL tem prioridade
+      id: 'borders', label: S.options.borders, value: () => (opt().blurBorders ? S.options.blurred : S.options.black),
+      left: () => { const changed = opt().blurBorders; opt().blurBorders = false; app.save(); return changed; },
+      right: () => { const changed = !opt().blurBorders; opt().blurBorders = true; app.save(); return changed; },
+    });
     rows.push({
       id: 'music', label: S.options.music, value: () => String(opt().musicVol),
       left: () => { const b = opt().musicVol; opt().musicVol = clamp(opt().musicVol - 1, 0, 10); app.save(); setVol(); return opt().musicVol !== b; },
