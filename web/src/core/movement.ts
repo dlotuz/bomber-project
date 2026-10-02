@@ -6,6 +6,7 @@ import { speedLevel } from './disease';
 import { STAGES } from './stages';
 import { MOUNTS } from './mounts';
 import { FOOTSTEP_EVERY } from './constants';
+import { slideOccupies } from './kick';
 
 /** Vizinhos N NE E SE S SW W NW, deslocamentos cumulativos em casas (NB do movesim, em unidades de casa). */
 const NB = [-GRID_W, 1, GRID_W, GRID_W, -1, -1, -GRID_W, -GRID_W];
@@ -65,7 +66,9 @@ export function moveStep(s: RoundState, p: Player, btn: number, level: number, s
   const tcell = cellOfPx(txp, typ);
   // Entrar em casa com bomba zera o tick. Desvio do movesim.py: o `!p.passBomb` é nosso, porque o movesim não modela
   // o atravessa-bomba (+$4C), que no jogo deixa andar através de bombas (impossível se esta regra valesse sempre).
-  if (tcell !== cell0 && !passesBomb(p) && ((s.grid[tcell] ?? 0) & 0xefc0) === 0xc900) return d;
+  // A bomba deslizando vale o mesmo ($C2:32A1: bit $4000 da ocupação), com ou sem chute; com o chute e outra direção a
+  // ROM ainda redireciona a bomba ($C2:32F1), o que não modelamos.
+  if (tcell !== cell0 && !passesBomb(p) && (((s.grid[tcell] ?? 0) & 0xefc0) === 0xc900 || slideOccupies(s, tcell))) return d;
   let b86: number;
   [b82, b86] = neigh(s, p, tcell);
   ys = (typ - 8) & 15; xs = (txp - 8) & 15;

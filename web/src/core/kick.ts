@@ -80,6 +80,13 @@ function movingAt(s: RoundState, b: Bomb, c: number): Bomb | undefined {
  *  para a direita/baixo e no 5º para a esquerda/cima. */
 const romCell = (b: Bomb): number => cellAt(b.x + SUB, b.y + SUB);
 
+/** Ocupação do deslize: a bomba em movimento marca o bit $4000 da $7F:1000 na casa do próprio centro ($C1:37C4, na conta
+ *  da ROM) e o movimento do jogador ($C2:3287 → $C2:32A1) zera a velocidade de quem tenta entrar nessa casa, como na
+ *  bomba parada ($C900). Medido (aj-polvo): o polvo em investida atrás da própria bomba chutada para a 20 px dela.
+ *  O chute que ainda não saiu continua $C900 na grade e é tratado por ela. */
+export const slideOccupies = (s: RoundState, c: number): boolean =>
+  s.bombs.some(b => b.state === 'kicked' && !kickPending(s, b) && romCell(b) === c);
+
 /** $C1:3403: jogador de pé na casa da frente de `at` a menos de 20 px da bomba no eixo do deslize (tabela $C1:35D1:
  *  cima Y+20 ≥ y, direita X−20 < x, baixo Y−20 < y, esquerda X+20 ≥ x; x/y da bomba na conta da ROM, +1 px). Sobre
  *  as setas (código $0040/$00C0 na casa do centro) a ROM pula este teste ($C1:36B9). */
