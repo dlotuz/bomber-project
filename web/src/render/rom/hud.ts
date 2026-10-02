@@ -71,9 +71,10 @@ export function faceTileIds(slot: number): number[] {
   return [b, b + 1, b + 16, b + 17, b + 32, b + 33];
 }
 
-/** Os 6 tiles 8×8 do rosto do personagem no slot (TL, TR, ML, MR, BL, BR; plano 5 D3). */
-export function headTiles(ch: CharacterAssets, slot: number): Uint8Array[] {
-  const px = ch.hudHead(slot).px;
+/** Os 6 tiles 8×8 do rosto do personagem no slot (TL, TR, ML, MR, BL, BR; plano 5 D3); `crying` = rosto chorando
+ *  do jogador morto (`hudCrying`, entrada c·5+slot de $C4:617F). */
+export function headTiles(ch: CharacterAssets, slot: number, crying = false): Uint8Array[] {
+  const px = (crying ? ch.hudCry(slot) : ch.hudHead(slot)).px;
   return [0, 1, 2, 3, 4, 5].map(i => px.subarray(i * 64, i * 64 + 64));
 }
 

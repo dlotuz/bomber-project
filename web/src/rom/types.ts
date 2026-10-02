@@ -45,6 +45,7 @@ export interface CharacterAssets {
   palettes: Uint16Array[];              // 5 × 16 cores, p24($C2:779D + 32c + 4slot)
   victoryFrame(g: number): Uint8Array;  // folha p24($C2:8EBF+3c), mesmo layout
   hudHead(slot: number): Tiles;         // 6 tiles 8×8 (2 × 3) do rosto do HUD, entrada (6+c)·5+slot de $C4:617F
+  hudCry(slot: number): Tiles;          // rosto chorando (jogador morto), entrada c·5+slot de $C4:617F ($C4:58DE)
 }
 
 export type SceneId = 'title' | 'vsmode' | 'ffa' | 'players' | 'rules' | 'charsel' | 'stagesel' | 'scoreboard' | 'victory' | 'draw1' | 'draw2';

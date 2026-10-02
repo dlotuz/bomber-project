@@ -1,0 +1,17 @@
+{
+  "fonte": "emulador (core rom-graficos/rom-mecanicas), st_arena05; scratchpad hudcry/cap.py, cap3.py, m2.py, m4.py",
+  "vram": "6 tiles do rosto do slot k na VRAM: palavras $2010+$20·k (+$100 por linha), 64 B por linha, 3 linhas = 192 B crus 4bpp",
+  "faces": [
+    { "char": 1, "slot": 1, "normalSha1": "0b75025b506e7bed2be6948d5c994461ac0f3ce1", "crySha1": "5ccde2369da8ce540a27c32ff8941892bba96c56" },
+    { "char": 2, "slot": 2, "normalSha1": "589b753a6440e9c4c0a552b0f0fb29df56a29483", "crySha1": "63097d66d4d1d8514809acab333fbc625d87a6d9" },
+    { "char": 3, "slot": 3, "normalSha1": "224f30530ff9f64449c91e1d596c09cdaa38c168", "crySha1": "b423f1a1e80a0079d7f807c65330cd81cefd5c9b" },
+    { "char": 4, "slot": 4, "normalSha1": "2c5d758bd264d9d5b00c72cff5dc45e03abf9677", "crySha1": "3ea5e692f9784e204a049ed5ea53206b792ad9e5" }
+  ],
+  "survivor": { "char": 0, "slot": 0, "normalSha1": "006372393515b00aab944afef7af405eee7ce577" },
+  "timing": {
+    "hitClockCall": 126,
+    "refreshClockCalls": [2, 62, 122, 182],
+    "crySwapClockCall": 182,
+    "clockAtSwap": "2:56"
+  }
+}

@@ -64,11 +64,21 @@ const SIDE_TOP: Record<string, string[] | null> = {
 const MONOCLE: [number, number][] = [[8, 9], [8, 10], [8, 11], [9, 9], [9, 11], [10, 9], [10, 11], [11, 9], [11, 10], [11, 11]];
 
 function palette(c: CharacterDef): Palette {
-  return { '.': null, k: '#141018', h: c.helmet, H: c.helmetShade, s: '#ffe7c7', b: c.body, g: c.gloves, p: c.accent, w: '#ffffff' };
+  return { '.': null, k: '#141018', h: c.helmet, H: c.helmetShade, s: '#ffe7c7', b: c.body, g: c.gloves, p: c.accent, w: '#ffffff', t: '#8ee6ff' };
 }
 
-function assemble(base: string[], top: string[] | null, legs: string[], monocle: boolean): string[] {
+/** Rosto chorando (HUD do jogador morto): linha → [coluna inicial, trecho]. Olhos fechados, boca aberta no meio e
+ *  lágrimas descendo pelo visor até a borda do capacete. Arte própria, só troca pixels já opacos. */
+const CRY: readonly (readonly [number, number, string])[] = [
+  [9, 4, 'skksskks'],
+  [10, 4, 'stskksts'],
+  [11, 4, 'tsskksst'],
+  [12, 3, 't'], [12, 12, 't'],
+];
+
+function assemble(base: string[], top: string[] | null, legs: string[], monocle: boolean, crying = false): string[] {
   const rows = [...(top ?? base.slice(0, 6)), ...base.slice(6), ...legs].map(r => r.split(''));
+  if (crying) for (const [r, c0, seg] of CRY) [...seg].forEach((ch, i) => { rows[r][c0 + i] = ch; });
   if (monocle) for (const [r, c] of MONOCLE) rows[r][c] = 'p';
   return rows.map(r => r.join(''));
 }
@@ -85,10 +95,19 @@ export function bomberFrame(charIndex: number, dir: number, frame: number): Pix 
   return fromRows(assemble(FRONT, TOP[c.id], LEGS_FRONT[frame], c.id === 'gear'), pal);
 }
 
-/** Ícone de cabeça 16×14 para HUD e placar. */
-export function headIcon(charIndex: number): Pix {
-  const full = bomberFrame(charIndex, 2, 0);
+function headOf(full: Pix): Pix {
   const p = makePix(16, 14);
   blit(p, full, 0, 0);
   return p;
+}
+
+/** Ícone de cabeça 16×14 para HUD e placar. */
+export function headIcon(charIndex: number): Pix {
+  return headOf(bomberFrame(charIndex, 2, 0));
+}
+
+/** Ícone de cabeça 16×14 chorando: o HUD troca para ele quando o jogador morre (como o rosto c·5+slot da ROM). */
+export function headCryIcon(charIndex: number): Pix {
+  const c = CHARACTERS[charIndex];
+  return headOf(fromRows(assemble(FRONT, TOP[c.id], LEGS_FRONT[0], c.id === 'gear', true), palette(c)));
 }

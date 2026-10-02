@@ -3,6 +3,7 @@ import type { SpriteBank } from './sprite-bank';
 import { SCREEN_W, SCREEN_H } from './display';
 import { flameShrink, flamePart, walkFrame, dyingVisible, type ViewState } from './view';
 import { fallbackLayers, fallbackOverLayers } from './battle-layers';
+import { hudCrying } from './hud-cry';
 import './layers-index';
 import { NO_SKIP, type HdSkip } from './hdart/cover';
 import { hdBattleSkip } from './hdart/mode';
@@ -61,9 +62,8 @@ export function drawHud(ctx: CanvasRenderingContext2D, round: RoundState, bank: 
   let x = 82;
   round.players.forEach((p, i) => {
     if (!p.present) return;
-    ctx.globalAlpha = p.state === 'alive' ? 1 : 0.35;
-    ctx.drawImage(bank.head(chars[i]), x, 5);
-    ctx.globalAlpha = 1;
+    // morto: rosto chorando a partir da atualização do HUD que vê a morte, como na ROM (`hudCrying`)
+    ctx.drawImage(hudCrying(round, p) ? bank.headCry(chars[i]) : bank.head(chars[i]), x, 5);
     ctx.drawImage(bank.text(String(crowns[i]), '#ffffff'), x + 17, 6);
     x += 35;
   });
