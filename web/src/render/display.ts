@@ -9,6 +9,8 @@ export const TV_ASPECT = (SCREEN_H * 4) / 3 / SCREEN_W;
  *  `layout()` = onde a imagem do jogo fica no #screen. */
 export interface Display {
   ctx: CanvasRenderingContext2D; out: CanvasRenderingContext2D; scale(): number; scaleX(): number; layout(): ScreenLayout;
+  /** Recalcula o layout se o modo de tela (Opções/URL) mudou desde a última vez; barato, pode ser chamado a cada quadro. */
+  refit(): void;
 }
 
 /** Como a base vira imagem na tela: `fill` ocupa a janela com escala quebrada; `int` só usa múltiplos inteiros (como
@@ -24,10 +26,30 @@ export function fitScale(w: number, h: number, o: FitOptions): { sx: number; sy:
   return { sx: sy * ax, sy };
 }
 
-/** Opções vindas da URL: `?tela=inteiro` volta aos múltiplos inteiros; `?proporcao=pixel` desliga o 4:3. */
-export function fitOptionsFromUrl(search: string): FitOptions {
-  const q = new URLSearchParams(search);
-  return { fill: q.get('tela') !== 'inteiro', tv: q.get('proporcao') !== 'pixel' };
+/** Modo de tela das Opções: `hd` = imagem na altura toda (escala quebrada) em 4:3 como a TV, laterais com o fundo
+ *  borrado; `classic` = como o SNES: só múltiplos inteiros, pixel quadrado (8:7) e bordas pretas. */
+export type ScreenKind = 'hd' | 'classic';
+export const SCREEN_KINDS: readonly ScreenKind[] = ['hd', 'classic'];
+
+/** O que a URL força na tela: `?tela=hd|classica` escolhe o modo; `?tela=inteiro` e `?proporcao=pixel` ajustam só o
+ *  encaixe; `?bordas=preto|borrado` só o fundo. Pura (testes). */
+export function screenFromUrl(search: string): { kind?: ScreenKind; fill?: false; tv?: false } {
+  const q = new URLSearchParams(search), t = q.get('tela'), r: { kind?: ScreenKind; fill?: false; tv?: false } = {};
+  if (t === 'hd') r.kind = 'hd';
+  else if (t === 'classica' || t === 'clássica' || t === 'classico') r.kind = 'classic';
+  else if (t === 'inteiro') r.fill = false;
+  if (q.get('proporcao') === 'pixel') r.tv = false;
+  return r;
+}
+
+/** Modo efetivo: a URL manda; sem ela, as Opções. */
+export const resolveScreenKind = (search: string, opt: ScreenKind): ScreenKind => screenFromUrl(search).kind ?? opt;
+
+/** Encaixe do modo (`?tela=inteiro` / `?proporcao=pixel` ainda afinam o HD para testes). */
+export function fitOptionsFor(kind: ScreenKind, search = ''): FitOptions {
+  const u = screenFromUrl(search), k = u.kind ?? kind;
+  if (k === 'classic') return { fill: false, tv: false };
+  return { fill: u.fill ?? true, tv: u.tv ?? true };
 }
 
 /** O #screen ocupa a janela toda (`w × h` px de dispositivo); a imagem do jogo (`gw × gh`, escalas `sx`/`sy`) fica
@@ -49,7 +71,7 @@ export function coverRect(w: number, h: number, gw: number, gh: number): { x: nu
   return { x: (w - cw) / 2, y: (h - ch) / 2, w: cw, h: ch };
 }
 
-/** Como a tela é apresentada: `blur` = bordas com a imagem do jogo borrada e escurecida (senão, pretas); `smooth` =
+/** Como a tela é apresentada: `blur` = laterais com a imagem do jogo borrada e escurecida (modo HD; senão, pretas); `smooth` =
  *  filtro suave (pixel art ampliada com bordas lisas, em WebGL) no lugar da ampliação nítida. */
 export interface ScreenMode { blur: boolean; smooth: boolean }
 
@@ -65,23 +87,25 @@ export function screenModeFromUrl(search: string): Partial<ScreenMode> {
 }
 
 /** Modo efetivo: a URL manda; sem ela, as Opções. */
-export function resolveScreenMode(url: Partial<ScreenMode>, opts: { blurBorders: boolean; smooth: boolean }): ScreenMode {
-  return { blur: url.blur ?? opts.blurBorders, smooth: url.smooth ?? opts.smooth };
+export function resolveScreenMode(url: Partial<ScreenMode>, opts: { screen: ScreenKind; smooth: boolean }, kind: ScreenKind = opts.screen): ScreenMode {
+  return { blur: url.blur ?? kind === 'hd', smooth: url.smooth ?? opts.smooth };
 }
 
 let base: CanvasRenderingContext2D | null = null;
 
 /** Canvas visível = a janela inteira (× DPR); a base ampliada por `fitScale` fica centrada nele (`present()`). */
-export function createDisplay(canvas: HTMLCanvasElement, opts: FitOptions = { fill: true, tv: true }): Display {
+export function createDisplay(canvas: HTMLCanvasElement, getOpts: () => FitOptions = () => ({ fill: true, tv: true })): Display {
   const b = document.createElement('canvas');
   b.width = SCREEN_W; b.height = SCREEN_H;
   const ctx = b.getContext('2d', { willReadFrequently: true })!;
   ctx.imageSmoothingEnabled = false;
   base = ctx;
   const out = canvas.getContext('2d')!;
+  let opts = getOpts();
   let lay = screenLayout(SCREEN_W, SCREEN_H, opts);
   const fit = () => {
     const dpr = window.devicePixelRatio || 1;
+    opts = getOpts();
     lay = screenLayout(window.innerWidth * dpr, window.innerHeight * dpr, opts);
     canvas.width = lay.w;
     canvas.height = lay.h;
@@ -98,7 +122,8 @@ export function createDisplay(canvas: HTMLCanvasElement, opts: FitOptions = { fi
   };
   window.addEventListener('keydown', e => { if (e.key === 'Enter' && e.altKey) { e.preventDefault(); toggleFull(); } });
   canvas.addEventListener('dblclick', toggleFull);
-  return { ctx, out, scale: () => lay.sy, scaleX: () => lay.sx, layout: () => lay };
+  const refit = () => { const n = getOpts(); if (n.fill !== opts.fill || n.tv !== opts.tv) fit(); };
+  return { ctx, out, scale: () => lay.sy, scaleX: () => lay.sx, layout: () => lay, refit };
 }
 
 /** Cor 0xRRGGBB de um pixel do canvas de base (`dflt` fora do navegador). */

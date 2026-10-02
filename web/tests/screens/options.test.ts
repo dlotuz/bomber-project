@@ -22,7 +22,7 @@ beforeEach(() => vi.clearAllMocks());
 describe('opções (§6.13)', () => {
   it('linhas na ordem: Opções, Controles e Jogabilidade', () => {
     const { app } = mkApp();
-    expect(optionsScreen(app).rowIds()).toEqual(['controls', 'gameplay', 'fx', 'borders', 'smooth', 'art', 'music', 'sfx', 'romStatus', 'romLoad', 'romForget', 'reset', 'back']);
+    expect(optionsScreen(app).rowIds()).toEqual(['controls', 'gameplay', 'fx', 'screen', 'smooth', 'music', 'sfx', 'romStatus', 'romLoad', 'romForget', 'reset', 'back']);
     expect(optionsScreen(app, 0, 'controls').rowIds()).toEqual(['p1', 'p2', 'p3', 'p4', 'p5', 'slot', 'slotSave', 'slotLoad', 'back']);
     expect(optionsScreen(app, 0, 'gameplay').rowIds()).toEqual(['spawns', 'escape', 'throwStun', 'sleep', 'password', 'slot', 'slotSave', 'slotLoad', 'back']);
   });
@@ -67,14 +67,16 @@ describe('opções (§6.13)', () => {
     press(app, BTN.RIGHT);
     expect(app.settings.options.fx).toBe(true);
   });
-  it('BORDAS DA TELA: ←/→ troca entre PRETAS e BORRADAS (padrão), e salva', () => {
+  it('TELA: padrão HD; ←/→ troca para CLASSICA e volta, e salva; BORDAS e ARTE não existem mais', () => {
     const { app } = mkApp();
-    const o = optionsScreen(app); app.go(o); goRow(o, 'borders');
-    expect(o.value('borders')).toBe('BORRADAS');
-    press(app, BTN.LEFT);
-    expect([app.settings.options.blurBorders, o.value('borders')]).toEqual([false, 'PRETAS']);
+    const o = optionsScreen(app); app.go(o); goRow(o, 'screen');
+    expect(o.value('screen')).toBe('HD');
     press(app, BTN.RIGHT);
-    expect(app.settings.options.blurBorders).toBe(true);
+    expect([app.settings.options.screen, o.value('screen')]).toEqual(['classic', 'CLASSICA']);
+    press(app, BTN.LEFT);
+    expect([app.settings.options.screen, o.value('screen')]).toEqual(['hd', 'HD']);
+    expect(o.rowIds()).not.toContain('borders');
+    expect(o.rowIds()).not.toContain('art');
   });
   it('FILTRO SUAVE: padrão NÃO; ←/→ liga e desliga, e salva', () => {
     const { app } = mkApp();
@@ -84,15 +86,6 @@ describe('opções (§6.13)', () => {
     expect([app.settings.options.smooth, o.value('smooth')]).toEqual([true, 'SIM']);
     press(app, BTN.LEFT);
     expect(app.settings.options.smooth).toBe(false);
-  });
-  it('ARTE: padrão ORIGINAL; ←/→ troca para HD e volta, e salva', () => {
-    const { app } = mkApp();
-    const o = optionsScreen(app); app.go(o); goRow(o, 'art');
-    expect(o.value('art')).toBe('ORIGINAL');
-    press(app, BTN.RIGHT);
-    expect([app.settings.options.hdArt, o.value('art')]).toEqual([true, 'HD']);
-    press(app, BTN.LEFT);
-    expect([app.settings.options.hdArt, o.value('art')]).toEqual([false, 'ORIGINAL']);
   });
   it('A em CONTROLES/JOGABILIDADE abre o submenu; B volta às Opções com o cursor nele', () => {
     const { app } = mkApp();

@@ -3,6 +3,7 @@ import {
   DEFAULT_KEYMAPS, DEFAULT_PADMAP, DEVICE_IDS, KEY_FIELDS, PAD_FIELDS,
   type DeviceId, type KeyMap, type PadMap,
 } from '../input/input';
+import { SCREEN_KINDS, type ScreenKind } from '../render/display';
 import { CHARACTERS } from '../render/art/bomber';
 
 export type SlotKind = 'human' | 'cpu' | 'off';
@@ -20,13 +21,12 @@ export interface Options {
   sleepSec: number;      // duração do soneca (montaria F), segundos (1..10); a ROM usa 3,2 s
   fx: boolean;           // efeitos visuais da batalha (luz, partículas, sombras…)
   allMounts: boolean;    // ovos dos 13 tipos (senha 0164 do original); padrão SIM, a senha desliga e liga
-  blurBorders: boolean;  // bordas da tela (16:9) com a imagem do jogo borrada; NÃO = faixas pretas
+  screen: ScreenKind;    // 'hd' (padrão): altura toda em 4:3 + laterais borradas; 'classic': inteiros, pixel 8:7, bordas pretas
   smooth: boolean;       // filtro suave (pixel art ampliada com bordas lisas); padrão NÃO (nítido)
-  hdArt: boolean;        // arte HD da partida (pacote web/public/arte-hd/provisorio); padrão NÃO (a da ROM/simples)
 }
 
 export function defaultOptions(): Options {
-  return { randomSpawns: false, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3, fx: true, allMounts: true, blurBorders: true, smooth: false, hdArt: false };
+  return { randomSpawns: false, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3, fx: true, allMounts: true, screen: 'hd', smooth: false };
 }
 
 /** Slots de Opções → Controles: dispositivo, teclas e botões dos 5 jogadores. */
@@ -175,9 +175,8 @@ export function normalizeSettings(raw: unknown): Settings {
       sleepSec: intIn(ro.sleepSec, 1, 10, d.options.sleepSec),
       fx: bool(ro.fx, d.options.fx),
       allMounts: bool(ro.allMounts, d.options.allMounts),
-      blurBorders: bool(ro.blurBorders, d.options.blurBorders),
+      screen: oneOf(ro.screen, SCREEN_KINDS, d.options.screen),
       smooth: bool(ro.smooth, d.options.smooth),
-      hdArt: bool(ro.hdArt, d.options.hdArt),
     },
     setup: {
       mode: oneOf(s.mode, ['ffa', 'team'] as const, ds.mode),

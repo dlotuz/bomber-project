@@ -9,7 +9,7 @@ import { onRomChange, romState } from './app/rom-api';
 import { parseConfig } from './game/config';
 import { createMatchSession, carry, type MatchSession } from './game/match-session';
 import { InputManager, buildInput, emptyDevices, idleInput, withEscapeAsBack } from './input/input';
-import { createDisplay, fitOptionsFromUrl, resolveScreenMode, screenModeFromUrl } from './render/display';
+import { createDisplay, fitOptionsFor, resolveScreenKind, resolveScreenMode, screenModeFromUrl } from './render/display';
 import { present } from './render/fx/present';
 import { SpriteBank } from './render/sprite-bank';
 import { titleScreen } from './screens/title';
@@ -51,11 +51,11 @@ for (const ev of ['keydown', 'pointerdown', 'pointerup', 'click'] as const) wind
 onRomChange(() => audioStart.romChanged());
 
 // Arte HD (opção 5): `?arte=hd` (pacote provisório) ou `?arte=<nome>` carrega web/public/arte-hd/<nome>/ e
-// `?arte=rom` desliga; sem o parâmetro vale a opção ARTE (lida a cada quadro). O pacote chega em segundo plano; até
+// `?arte=rom` desliga; sem o parâmetro, a arte HD fica desligada. O pacote chega em segundo plano; até
 // lá (ou se falhar) a partida usa a ROM/arte simples.
 const urlArt = hdArtFromUrl(location.search);
 
-const display = createDisplay(document.getElementById('screen') as HTMLCanvasElement, fitOptionsFromUrl(location.search));
+const display = createDisplay(document.getElementById('screen') as HTMLCanvasElement, () => fitOptionsFor(app.settings.options.screen, location.search));
 const ctx = display.ctx;
 const bank = new SpriteBank();
 // ?fx=0 desliga os efeitos nesta sessão (debug e capturas fiéis).
@@ -63,11 +63,12 @@ const fxOff = params.get('fx') === '0';
 // ?bordas=preto|borrado e ?filtro=suave|nitido forçam a apresentação; sem eles, valem as opções (lidas a cada quadro).
 const urlMode = screenModeFromUrl(location.search);
 const render = (): void => {
-  useHdArt(resolveHdArt(urlArt, app.settings.options.hdArt), import.meta.env.BASE_URL);
+  display.refit();   // trocar TELA nas Opções vale na hora
+  useHdArt(resolveHdArt(urlArt), import.meta.env.BASE_URL);
   hdBegin();
   hdBattleBegin();
   app.draw(ctx, bank);
-  present(display, fxOff ? null : app.screen.fx?.() ?? null, app.brightness() / 15, resolveScreenMode(urlMode, app.settings.options));
+  present(display, fxOff ? null : app.screen.fx?.() ?? null, app.brightness() / 15, resolveScreenMode(urlMode, app.settings.options, resolveScreenKind(location.search, app.settings.options.screen)));
 };
 // ?quick abre direto numa partida com as regras da URL (ver parseConfig); sem ele, começa no título.
 if (params.has('quick')) app.go(battleScreen(app, createMatchSession(parseConfig(window.location.search))));

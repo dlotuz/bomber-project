@@ -113,10 +113,9 @@ describe('modo HD pela URL', () => {
     expect(hdArtFromUrl('?quick')).toBeUndefined();
     expect(hdArtFromUrl('?arte=hd')).toBe('provisorio');
     expect(hdArtFromUrl('?arte=rom')).toBeNull();
-    expect(resolveHdArt(undefined, false)).toBeNull();
-    expect(resolveHdArt(undefined, true)).toBe('provisorio');
-    expect(resolveHdArt(null, true)).toBeNull();
-    expect(resolveHdArt('meu', false)).toBe('meu');
+    expect(resolveHdArt(undefined)).toBeNull();
+    expect(resolveHdArt(null)).toBeNull();
+    expect(resolveHdArt('meu')).toBe('meu');
   });
   it('useHdArt: carrega uma vez por pacote, desliga com null e ignora carga que chega depois de desligar', async () => {
     const { f, seen } = fakeFetch({ './arte-hd/x/pacote.json': manifest({ 'item/01': still() }) });

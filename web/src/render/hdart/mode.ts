@@ -23,15 +23,14 @@ export const hdPackUrl = (name: string, base = './'): string => `${base}arte-hd/
 /** Pacote da opção ARTE = HD (o provisório, enquanto não houver o definitivo). */
 export const HD_DEFAULT_PACK = 'provisorio';
 
-/** O que a URL pede: `undefined` sem `?arte` (vale a opção ARTE); senão o pacote (`hdArtName`) ou `null` (desligado,
+/** O que a URL pede: `undefined` sem `?arte` (sem arte HD); senão o pacote (`hdArtName`) ou `null` (desligado,
  *  também para nomes inválidos). */
 export function hdArtFromUrl(search: string): string | null | undefined {
   return new URLSearchParams(search).has('arte') ? hdArtName(search) : undefined;
 }
 
-/** Pacote efetivo: a URL manda; sem ela, a opção ARTE (HD → `HD_DEFAULT_PACK`, ORIGINAL → nenhum). */
-export const resolveHdArt = (url: string | null | undefined, optHd: boolean): string | null =>
-  url !== undefined ? url : optHd ? HD_DEFAULT_PACK : null;
+/** Pacote efetivo: só a URL liga a arte HD (não há mais opção nas Opções); sem `?arte`, nenhum. */
+export const resolveHdArt = (url: string | null | undefined): string | null => url ?? null;
 
 let pack: HdPack | null = null;
 export const hdPack = (): HdPack | null => pack;

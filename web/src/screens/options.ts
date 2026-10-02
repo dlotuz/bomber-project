@@ -106,20 +106,15 @@ export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'ma
       left: () => { const changed = opt().fx; opt().fx = false; app.save(); return changed; },
       right: () => { const changed = !opt().fx; opt().fx = true; app.save(); return changed; },
     });
-    rows.push({   // bordas do 16:9: imagem do jogo borrada (padrão) ou faixas pretas; ?bordas= na URL tem prioridade
-      id: 'borders', label: S.options.borders, value: () => (opt().blurBorders ? S.options.blurred : S.options.black),
-      left: () => { const changed = opt().blurBorders; opt().blurBorders = false; app.save(); return changed; },
-      right: () => { const changed = !opt().blurBorders; opt().blurBorders = true; app.save(); return changed; },
+    rows.push({   // modo de tela: HD (padrão, 16:9 com 4:3 centrado) ou CLÁSSICA (inteiros, bordas pretas); ?tela= na URL manda
+      id: 'screen', label: S.options.screen, value: () => (opt().screen === 'hd' ? S.options.screenHd : S.options.screenClassic),
+      left: () => { const changed = opt().screen !== 'hd'; opt().screen = 'hd'; app.save(); return changed; },
+      right: () => { const changed = opt().screen !== 'classic'; opt().screen = 'classic'; app.save(); return changed; },
     });
     rows.push({   // filtro suave (bordas lisas na pixel art); ?filtro= na URL tem prioridade
       id: 'smooth', label: S.options.smooth, value: () => (opt().smooth ? S.options.yes : S.options.no),
       left: () => { const changed = opt().smooth; opt().smooth = false; app.save(); return changed; },
       right: () => { const changed = !opt().smooth; opt().smooth = true; app.save(); return changed; },
-    });
-    rows.push({   // arte da partida: a original (ROM ou simples) ou o pacote HD; ?arte= na URL tem prioridade
-      id: 'art', label: S.options.art, value: () => (opt().hdArt ? S.options.artHd : S.options.artOriginal),
-      left: () => { const changed = opt().hdArt; opt().hdArt = false; app.save(); return changed; },
-      right: () => { const changed = !opt().hdArt; opt().hdArt = true; app.save(); return changed; },
     });
     rows.push({
       id: 'music', label: S.options.music, value: () => String(opt().musicVol),
