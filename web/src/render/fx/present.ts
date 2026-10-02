@@ -3,6 +3,7 @@ import { drawBackdrop } from './backdrop';
 import { smoothFactor, smoothUpscale } from './smooth-gl';
 import { drawFx } from './draw';
 import { drawHdMenu } from '../hd-menu';
+import { drawHdBattleLayer } from '../hdart/mode';
 import type { FxFrame } from './state';
 
 const reduced = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
@@ -25,8 +26,11 @@ function sharpBase(d: Display): CanvasImageSource {
   return mid.canvas;
 }
 
-/** Base ampliada (com tremor) centrada na janela e, na batalha, os efeitos por cima (spec §3.1); nas bordas, o fundo
- *  borrado ou preto (`mode`). `fade` = brilho do App / 15. */
+/** Base ampliada (com tremor) centrada na janela e, por cima/por baixo dela, as camadas em resolução nativa: menus HD
+ *  e arte HD da partida por baixo (a base fica transparente onde eles entram), arte HD por cima e, na batalha, os
+ *  efeitos (spec §3.1) — tudo deslocado junto com a imagem do jogo (centralização + tremor) e recortado na área dela.
+ *  O filtro suave só passa pela base (a arte HD já é nativa). Por último as bordas: o fundo borrado, feito da imagem
+ *  final da área do jogo, ou preto (`mode`). `fade` = brilho do App / 15. */
 export function present(d: Display, frame: FxFrame | null, fade: number, mode: ScreenMode = { blur: true, smooth: false }): void {
   const { out } = d, L = d.layout(), { sx, sy } = L;
   const shake = frame && !reduced?.matches;
@@ -35,21 +39,25 @@ export function present(d: Display, frame: FxFrame | null, fade: number, mode: S
   out.globalAlpha = 1;
   out.globalCompositeOperation = 'source-over';
   out.fillStyle = '#000'; out.fillRect(0, 0, L.w, L.h);
-  if (mode.blur) drawBackdrop(out, d.ctx.canvas, L);
   drawHdMenu(out, sx, sy, ox, oy);   // menus: fundo/texto HD por baixo da base transparente
+  drawHdBattleLayer(out, sx, sy, ox, oy, 'under');   // partida com arte HD: o que fica por baixo da base
+  out.setTransform(1, 0, 0, 1, 0, 0);
   // filtro suave: amplia por um inteiro com bordas lisas (WebGL); sem WebGL, a ampliação nítida
   const src = (mode.smooth && smoothUpscale(d.ctx.canvas, smoothFactor(sy))) || sharpBase(d);
   out.imageSmoothingEnabled = src !== d.ctx.canvas;
   out.imageSmoothingQuality = 'high';
   out.drawImage(src, ox, oy, L.gw, L.gh);
   out.imageSmoothingEnabled = false;
-  if (!frame) return;
-  out.setTransform(sx, 0, 0, sy, ox, oy);   // os efeitos desenham em pixels de base, rasterizados em resolução nativa
-  out.save();
-  out.beginPath(); out.rect(0, 0, SCREEN_W, SCREEN_H); out.clip();   // partículas e sombras não vazam para as bordas
-  drawFx(out, frame, d.ctx, fade);
-  out.restore();
+  drawHdBattleLayer(out, sx, sy, ox, oy, 'over', fade);   // partida com arte HD: por cima da base, antes dos efeitos
+  if (frame) {
+    out.setTransform(sx, 0, 0, sy, ox, oy);   // os efeitos desenham em pixels de base, rasterizados em resolução nativa
+    out.save();
+    out.beginPath(); out.rect(0, 0, SCREEN_W, SCREEN_H); out.clip();   // partículas e sombras não vazam para as bordas
+    drawFx(out, frame, d.ctx, fade);
+    out.restore();
+  }
   out.setTransform(1, 0, 0, 1, 0, 0);
   out.globalAlpha = 1;
   out.globalCompositeOperation = 'source-over';
+  if (mode.blur) drawBackdrop(out, L, ox, oy);
 }
