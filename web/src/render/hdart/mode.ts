@@ -7,6 +7,31 @@ import type { HdPack } from './types';
 import { hdCoverage, hdPlan, NO_SKIP, type HdPlan, type HdSkip } from './cover';
 import { drawHdBattle, hdClock } from './draw';
 import { loadHdPack, type HdLoadDeps } from './load';
+import { tintBodyPixels } from '../fx/bomb-tint';
+
+/** Recortes de bomba já pintados na cor do dono, por imagem do pacote e (recorte, cor). */
+const tinted = new WeakMap<object, Map<string, HTMLCanvasElement>>();
+/** Bomba HD na cor do dono (mesma regra da base: só o corpo; contorno, brilho e pavio ficam). Sem DOM: null. */
+export function canvasBombTint(img: CanvasImageSource, rect: readonly [number, number, number, number], color: number): CanvasImageSource | null {
+  if (typeof document === 'undefined') return null;
+  let m = tinted.get(img as object);
+  if (!m) { m = new Map(); tinted.set(img as object, m); }
+  const key = `${rect.join(',')}|${color}`;
+  let c = m.get(key);
+  if (!c) {
+    const [rx, ry, rw, rh] = rect;
+    c = document.createElement('canvas'); c.width = Math.max(1, rw); c.height = Math.max(1, rh);
+    const g = c.getContext('2d', { willReadFrequently: true })!;
+    g.drawImage(img, rx, ry, rw, rh, 0, 0, rw, rh);
+    try {
+      const d = g.getImageData(0, 0, c.width, c.height);
+      tintBodyPixels(d.data, color);
+      g.putImageData(d, 0, 0);
+    } catch { return null; }   // imagem de outra origem: fica a arte do pacote
+    m.set(key, c);
+  }
+  return c;
+}
 
 /** Nome do pacote pedido na URL: `?arte=hd` → `provisorio`; `?arte=<nome>` → `<nome>` (letras, dígitos, - e _);
  *  sem o parâmetro (ou `?arte=0`/`rom`) → `null`, modo HD desligado. */
@@ -86,10 +111,10 @@ export function hdBattleSkip(round: RoundState, crowns: readonly number[]): HdSk
 /** Gancho da apresentação: `under` por baixo da base (que fica transparente onde pulou), `over` por cima dela e antes
  *  dos efeitos. `fade` (brilho 0..1) só importa em `over` — a passada `under` já escurece com a base. */
 export function drawHdBattleLayer(out: CanvasRenderingContext2D, sx: number, sy: number, ox: number, oy: number,
-  pass: 'under' | 'over', fade = 1): boolean {
+  pass: 'under' | 'over', fade = 1, bombTint = false): boolean {
   if (!state.on || !pack || !state.round || !state.plan) return false;
   const cats = new Set(pass === 'under' ? state.plan.under : state.plan.over);
   if (!cats.size) return false;
-  drawHdBattle(out, state.round, pack, sx, sy, ox, oy, hdClock(state.round), { cats, crowns: state.crowns, fade: pass === 'over' ? fade : 1 });
+  drawHdBattle(out, state.round, pack, sx, sy, ox, oy, hdClock(state.round), { cats, crowns: state.crowns, fade: pass === 'over' ? fade : 1, bombTint: bombTint ? canvasBombTint : undefined });
   return true;
 }

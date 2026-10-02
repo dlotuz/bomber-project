@@ -4,27 +4,23 @@ import { groundMask } from './mask';
 import { shadowBlob } from './sprites';
 import type { FxFrame } from './state';
 
-/** Quadro de base e máscara de chão (alfa 0 onde há ator) do quadro atual, em pixels de base. */
-export interface ActorMask { base: Uint8ClampedArray; ground: Uint8ClampedArray; canvas: HTMLCanvasElement }
+/** Máscara de chão do quadro atual (alfa 0 onde há ator), em pixels de base, num canvas para recortar as sombras. */
+export interface ActorMask { canvas: HTMLCanvasElement }
 
-let noAct: CanvasRenderingContext2D | null = null, mask: CanvasRenderingContext2D | null = null, maskImg: ImageData | null = null;
+let mask: CanvasRenderingContext2D | null = null, maskImg: ImageData | null = null;
 let layer: CanvasRenderingContext2D | null = null;
-const canvas2d = (w: number, h: number, read = false) => {
+const canvas2d = (w: number, h: number) => {
   const c = document.createElement('canvas'); c.width = w; c.height = h;
-  return c.getContext('2d', { willReadFrequently: read })!;
+  return c.getContext('2d')!;
 };
 
 /** Compara o quadro atual com o "sem atores" (spec §4.4): onde batem é chão à vista. */
-export function actorMask(frame: FxFrame, base: CanvasRenderingContext2D): ActorMask {
-  noAct ??= canvas2d(SCREEN_W, SCREEN_H, true);
+export function actorMask(base: Uint8ClampedArray, noActors: Uint8ClampedArray): ActorMask {
   mask ??= canvas2d(SCREEN_W, SCREEN_H);
   maskImg ??= mask.createImageData(SCREEN_W, SCREEN_H);
-  noAct.clearRect(0, 0, SCREEN_W, SCREEN_H);
-  frame.drawNoActors(noAct);
-  const baseData = base.getImageData(0, 0, SCREEN_W, SCREEN_H).data;
-  groundMask(baseData, noAct.getImageData(0, 0, SCREEN_W, SCREEN_H).data, maskImg.data);
+  groundMask(base, noActors, maskImg.data);
   mask.putImageData(maskImg, 0, 0);
-  return { base: baseData, ground: maskImg.data, canvas: mask.canvas };
+  return { canvas: mask.canvas };
 }
 
 function blob(g: CanvasRenderingContext2D, x: number, y: number, height: number): void {
