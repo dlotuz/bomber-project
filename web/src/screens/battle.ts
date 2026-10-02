@@ -37,6 +37,7 @@ export function battleScreen(app: App, ms: MatchSession): BattleScreen {
   const fx = createFx();
   let last: { bank: SpriteBank; frame: number } | null = null;
   const NO_ACTORS = { sprites: false, layers: [] };
+  const BOMBS_ONLY = { sprites: false, layers: [], bombSprites: true };
   // Na ROM a bomba parada é tile de fundo: o quadro "sem atores" usa uma cópia da rodada sem bombas (objeto estável,
   // para a memória de congelamento por rodada do render da ROM continuar valendo).
   const bombless = { ...round };
@@ -82,12 +83,12 @@ export function battleScreen(app: App, ms: MatchSession): BattleScreen {
 
   const fxFrame: FxFrame = {
     state: fx, round,
-    drawNoActors(ctx) {
+    drawNoActors(ctx, bombs = false) {
       if (!last) return;
       const a = romState.assets, crowns = crownsOf(ms.match);
-      if (!(a && drawRomBattle(ctx, withoutBombs(), { crowns }, a, last.frame, NO_ACTORS))) {
-        drawRound(ctx, round, view, last.bank, ms.cfg.chars, last.frame, [...crowns], { actors: false });
-      }
+      // só bombas: a rodada de verdade (na ROM a parada é BG2) sem sprites, mas com as bombas-objeto
+      const rom = a && (bombs ? drawRomBattle(ctx, round, { crowns }, a, last.frame, BOMBS_ONLY) : drawRomBattle(ctx, withoutBombs(), { crowns }, a, last.frame, NO_ACTORS));
+      if (!rom) drawRound(ctx, round, view, last.bank, ms.cfg.chars, last.frame, [...crowns], { actors: false, bombs });
       drawBombLevels(ctx, last.bank, round);
       drawBattleOverlays(ctx, last.bank, { paused, disconnected, ...banners() });
     },

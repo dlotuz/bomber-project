@@ -23,7 +23,9 @@ const FACE_TO_DIR = [1, 0, 4, 0, 2, 0, 3];      // face 0/2/4/6 → DIR da arte 
 const solid = (v: number) => v === CODE.HARD || v === CODE.SOFT || v === CODE.PRESSURE || v === CODE.BURNING;
 /** Abaixo desta linha começa o HUD; a etiqueta nunca pode subir até lá. */
 const HUD_BOTTOM = 24;
-/** Camadas que desenham atores: o quadro "sem atores" (máscara das sombras dos efeitos) as pula. */
+/** Camadas que desenham atores: o quadro "sem atores" (máscara das sombras dos efeitos) as pula, e no quadro com
+ *  atores elas saem depois das bombas (sprites por cima da bomba, que na ROM é tile de fundo: a montaria esconde a
+ *  bomba que o montado põe, em vez de a bomba passar por cima dela). */
 const ACTOR_LAYERS = new Set(['mounts', 'costume']);
 /** Camadas que desenham o próprio jogador (traje, frente da montaria): saem junto quando o HD desenha os jogadores. */
 const PLAYER_LAYERS = new Set(['costume', 'mounts-front']);
@@ -72,8 +74,9 @@ export function drawHud(ctx: CanvasRenderingContext2D, round: RoundState, bank: 
 /** Desenha a arena inteira de uma rodada pela grade de códigos da ROM: tiles, itens, chamas, bombas, jogadores e HUD.
  *  `skip`: categorias que a arte HD desenha neste quadro (a base fica transparente nelas); sem `skip`, o quadro com
  *  atores pergunta ao modo HD (lista vazia sem pacote — saída idêntica à de sempre). */
+/** `opts.bombs` (só com `actors: false`): o quadro sem atores com as bombas — paradas, chutadas e voando (fx). */
 export function drawRound(ctx: CanvasRenderingContext2D, round: RoundState, view: ViewState, bank: SpriteBank,
-  chars: number[], frame: number, crowns: number[], opts: { actors?: boolean; skip?: HdSkip } = {}): void {
+  chars: number[], frame: number, crowns: number[], opts: { actors?: boolean; bombs?: boolean; skip?: HdSkip } = {}): void {
   const actors = opts.actors !== false;
   const skip = opts.skip ?? (actors ? hdBattleSkip(round, crowns) : NO_SKIP);
   const arena = !skip.has('arena');
@@ -97,29 +100,42 @@ export function drawRound(ctx: CanvasRenderingContext2D, round: RoundState, view
     else if (v === CODE.FLAME) { if (!skip.has('flames')) ctx.drawImage(bank.flame(flamePart(round.cellAux[c]), flameShrink(round.tick - round.cellT0[c])), x, y); }
     else if (v === CODE.FALLING) { if (arena) { ctx.fillStyle = 'rgba(0, 0, 0, 0.35)'; ctx.fillRect(x + 2, y + 10, 12, 5); } }
   }
-  const mountView = mountLayerView(round, skip);
-  for (const l of fallbackLayers) {
-    if (!actors && ACTOR_LAYERS.has(l.id)) continue;
-    if (skip.has('players') && PLAYER_LAYERS.has(l.id)) continue;
-    l.draw(l.id === 'mounts' ? mountView : round, ctx, bank, frame);
-  }
+  for (const l of fallbackLayers) if (!ACTOR_LAYERS.has(l.id)) l.draw(round, ctx, bank, frame);
   if (actors) drawActors(ctx, round, view, bank, chars, frame, skip);
+  else if (opts.bombs) { drawGroundBombs(ctx, round, bank, frame); drawFlyers(ctx, round, bank, skip, true); }
   if (!skip.has('hud')) drawHud(ctx, round, bank, chars, crowns);
   else ctx.clearRect(0, 0, SCREEN_W, HUD_BOTTOM);
+}
+
+/** Bombas paradas e chutadas (na ROM, a parada é tile de fundo: por baixo de todo sprite). */
+function drawGroundBombs(ctx: CanvasRenderingContext2D, round: RoundState, bank: SpriteBank, frame: number): void {
+  for (const b of round.bombs) {
+    if (b.state === 'idle' || b.state === 'kicked') ctx.drawImage(bank.bomb((frame >> 3) & 1), px(b.x) - 7, px(b.y) - 7);
+  }
+}
+
+/** Bombas e itens voando (`onlyBombs`: só as bombas). */
+function drawFlyers(ctx: CanvasRenderingContext2D, round: RoundState, bank: SpriteBank, skip: HdSkip, onlyBombs = false): void {
+  for (const f of round.flyers) {
+    if (f.kind === 'player') continue;   // o próprio jogador é desenhado com a altura p.z
+    if (onlyBombs && f.kind !== 'bomb') continue;
+    if (skip.has(f.kind === 'bomb' ? 'bombs' : 'items')) continue;
+    const img = f.kind === 'bomb' ? bank.bomb(0) : bank.item(f.ref);
+    ctx.drawImage(img, px(f.x) - 7, px(f.y) + f.z - 7);
+  }
 }
 
 function drawActors(ctx: CanvasRenderingContext2D, round: RoundState, view: ViewState, bank: SpriteBank, chars: number[], frame: number,
   skip: HdSkip): void {
   const bombs = !skip.has('bombs');
-  for (const b of round.bombs) {
-    if (bombs && (b.state === 'idle' || b.state === 'kicked')) ctx.drawImage(bank.bomb((frame >> 3) & 1), px(b.x) - 7, px(b.y) - 7);
+  if (bombs) drawGroundBombs(ctx, round, bank, frame);
+  // montaria (com ovos, reservas e tiros) e traje: por cima das bombas, por baixo do cavaleiro/jogador
+  const mountView = mountLayerView(round, skip);
+  for (const l of fallbackLayers) {
+    if (!ACTOR_LAYERS.has(l.id) || (skip.has('players') && PLAYER_LAYERS.has(l.id))) continue;
+    l.draw(l.id === 'mounts' ? mountView : round, ctx, bank, frame);
   }
-  for (const f of round.flyers) {
-    if (f.kind === 'player') continue;   // o próprio jogador é desenhado com a altura p.z
-    if (skip.has(f.kind === 'bomb' ? 'bombs' : 'items')) continue;
-    const img = f.kind === 'bomb' ? bank.bomb(0) : bank.item(f.ref);
-    ctx.drawImage(img, px(f.x) - 7, px(f.y) + f.z - 7);
-  }
+  drawFlyers(ctx, round, bank, skip);
   if (!skip.has('players')) drawPlayersFb(ctx, round, view, bank, chars, bombs);
   else if (bombs) {   // a bomba na mão continua da base quando só os jogadores são HD
     for (const p of round.players) if (p.present && p.state === 'alive' && p.carry >= 0) ctx.drawImage(bank.bomb(0), px(p.x) - 7, px(p.y) - 23 - p.z);
