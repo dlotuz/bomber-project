@@ -8,8 +8,8 @@ import { STAGES } from '../stages';
 import { MOUNTS } from '../mounts';
 import { canKick } from '../kick';
 import { SAFE, crossCells, hazards, pressureCells, type Extra, type Hazard } from './danger';
-import { kickWorth } from './actions';
-import { centered, escape, hasRefuge, lockOf, route, search, ticksPerCell, walkBlocked, type Route } from './nav';
+import { kickWorth, punchKill } from './actions';
+import { centered, escape, hasRefuge, lockOf, route, search, ticksPerCell, walkBlocked, type Route, type Search } from './nav';
 import { aiRoll, type AiLevel } from './level';
 
 export { walkBlocked } from './nav';
@@ -36,6 +36,10 @@ const PRESS_NEAR = 3;
 const KICK_WALK = 4;
 /** Chegando atrás da bomba para chutá-la, folga mínima (ticks) antes de a casa explodir. */
 const KICK_SLACK = 24;
+/** Até quantas casas a CPU anda para socar uma bomba na cabeça de um adversário. */
+const PUNCH_WALK = 4;
+/** Chegando atrás da bomba para socá-la, pavio mínimo que ainda deve restar (tempo de virar e socar). */
+const PUNCH_MIN_FUSE = 12;
 /** Na pressão, folga máxima exigida na fuga da própria bomba (arrisca mais para decidir a rodada). */
 const LATE_MARGIN = 2;
 
@@ -146,6 +150,23 @@ const EGG_TICKS = 16;
 /** Na pressão, uma casa cujo bloco pousa mais de 120 ticks depois da chegada ainda serve de destino (§9.8). */
 const PRESSURE_DEST = 120;
 
+/** Casa atrás de uma bomba parada (a até PUNCH_WALK casas, chegando com folga) de onde o soco cai na cabeça de um
+ *  adversário com o pavio no ponto de matar ou ainda acima dele; −1 = nenhuma. A mais rápida de alcançar. */
+function punchSpot(s: RoundState, p: Player, hz: Hazard, sr: Search): number {
+  const here = playerCell(p);
+  let best = -1;
+  for (const b of s.bombs) {
+    if (b.state !== 'idle' || b.chainAt || b.bad || s.grid[b.cell] !== CODE.BOMB) continue;
+    for (const face of [0, 2, 4, 6]) {
+      const k = faceStep(b.cell, (face + 4) & 7);
+      if (k === here || sr.time[k] < 0 || sr.dist[k] > PUNCH_WALK || hz.at[k] - sr.time[k] < KICK_SLACK
+        || (best >= 0 && sr.time[k] >= sr.time[best])) continue;
+      if (punchKill(s, p, b, face) >= 0 && b.fuse - sr.time[k] >= PUNCH_MIN_FUSE) best = k;
+    }
+  }
+  return best;
+}
+
 /** Decide o que fazer: caminho a seguir e se coloca bomba agora. */
 export function think(s: RoundState, p: Player, level: AiLevel, brain: Brain, _ai?: unknown): void {
   brain.bomb = false; brain.push = -1;
@@ -175,6 +196,13 @@ export function think(s: RoundState, p: Player, level: AiLevel, brain: Brain, _a
       for (const aim of ['trap', 'hit'] as const) {
         for (const face of [0, 2, 4, 6]) if (kickWorth(s, p, face, level, aim)) { follow(null); brain.push = face; return; }
       }
+    }
+    // na cruz de uma bomba que dá para socar na cabeça de alguém: vai para trás dela em vez de fugir (também no meio
+    // do passo, senão alterna entre ir e fugir a cada casa)
+    if (foes.size && p.punch && !p.mount && !canKick(p) && !lock) {
+      const sr0 = search(s, p, hz, blocked, level.margin, lock);
+      const k = punchSpot(s, p, hz, sr0);
+      if (k >= 0) { follow(route(sr0, k)); return; }
     }
     const out = escape(s, p, hz, blocked, level, true, lock);
     // fugindo, mais uma bomba aqui se for útil (ou encurralar) e a fuga continuar garantida com ela
@@ -290,6 +318,11 @@ export function think(s: RoundState, p: Player, level: AiLevel, brain: Brain, _a
         }
       }
       if (best >= 0) { follow(route(sr, best)); return; }
+    }
+    // 3d) ir até atrás de uma bomba cujo soco cai na cabeça de um adversário (lá, decideActions vira e espera o pavio)
+    if (p.punch && !p.mount && !canKick(p) && !lock) {
+      const k = punchSpot(s, p, hz, sr);
+      if (k >= 0) { follow(route(sr, k)); return; }
     }
   }
 

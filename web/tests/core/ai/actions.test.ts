@@ -23,15 +23,15 @@ describe('IA: ações (§9.3)', () => {
     expect(scene(false)).toBe(true);
     expect(scene(true)).toBe(false);
   });
-  it('soco: bomba à frente e adversário no pouso → Y', () => {
+  it('soco: bomba à frente e adversário no pouso → Y (pavio já no ponto)', () => {
     const s = arena(); const p = put(s, 0, 4, 3); p.punch = true; p.face = 2; put(s, 1, 8, 3);
-    addBomb(s, 1, C(5, 3), { fuse: 90 });
+    addBomb(s, 1, C(5, 3), { fuse: 40 });
     expect(play(s, CPU0, 2, 12)).toContainEqual({ type: 'punch', slot: 0 });
   });
-  it('luva: levanta a própria bomba e arremessa no adversário a 3 casas', () => {
+  it('luva: levanta a própria bomba e arremessa no adversário a 3 casas (depois de carregar o pavio)', () => {
     const s = arena(); const p = put(s, 0, 4, 3); p.glove = true; p.face = 2; put(s, 1, 7, 3);
     addBomb(s, 0, C(4, 3));
-    expect(play(s, CPU0, 2, 40)).toContainEqual({ type: 'throw', slot: 0 });
+    expect(play(s, CPU0, 2, 120)).toContainEqual({ type: 'throw', slot: 0 });
   });
   it('golpe P: empurra o adversário para dentro de uma explosão', () => {
     const s = arena(); const p = put(s, 0, 4, 3); p.pItem = true; p.face = 2; put(s, 1, 5, 3);

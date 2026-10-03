@@ -3,12 +3,14 @@ import { step } from '../../../src/core/step';
 import { aiInputs, createAi } from '../../../src/core/ai';
 import { CODE, type RoundState, type Rules } from '../../../src/core/types';
 import { CELLS } from '../../../src/core/units';
+import { kickPending } from '../../../src/core/bombs';
 import { rules } from '../kit';
 
-/** Grade `BOMB` ⇔ exatamente uma bomba parada na casa (sem bombas "fantasma" empilhadas). */
+/** Grade `BOMB` ⇔ exatamente uma bomba dona da casa (sem bombas "fantasma" empilhadas): parada, ou chutada que ainda
+ *  não saiu (`kickPending` — a colocada e chutada no mesmo tick só desliza no seguinte, como o núcleo trata). */
 function bombGridErrors(s: RoundState): string[] {
   const idle = new Array<number>(CELLS).fill(0);
-  for (const b of s.bombs) if (b.state === 'idle') idle[b.cell]++;
+  for (const b of s.bombs) if (b.state === 'idle' || kickPending(s, b)) idle[b.cell]++;
   const out: string[] = [];
   for (let c = 0; c < CELLS; c++) {
     if ((s.grid[c] === CODE.BOMB) !== (idle[c] === 1) || idle[c] > 1) {
