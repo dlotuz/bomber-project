@@ -21,6 +21,7 @@ const FACE_BTN = [BTN.UP, 0, BTN.RIGHT, 0, BTN.DOWN, 0, BTN.LEFT];
  *    um tick sem `drive` (trava de `tickAct`, desmonte, mão da luva) encerra a investida. */
 export const ABILITY_4: MountAbility = {
   type: 0x4,
+  yEndsTick: true,   // $C2:46AD: SEC — sem chute no tick do Y
   onY(s, _p, r) { r.dash = true; r.dashLeft = DASH_TICKS; r.dashT = s.tick; return true; },
   drive(s, p, r, ev) {
     if (!r.dash) return false;

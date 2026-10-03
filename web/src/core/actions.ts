@@ -86,8 +86,9 @@ export function playerActions(s: RoundState, p: Player, btn: number, pressed: nu
   // Montado (qualquer fase): nada de luva, soco nem P — só o poder da própria montaria (Y) e as bombas.
   const onFoot = !p.mount;
   // Chute só andando contra a bomba (direcional apertado); parado olhando para ela, o Y do soco ainda a alcança.
-  // No mesmo tick, Y com Soco vence o chute.
-  const punching = pressed & BTN.Y && onFoot && p.punch;
+  // No mesmo tick, Y com Soco vence o chute. Montado, a ROM ($C2:141C) roda o soco do tipo 9 ($C2:48E1) e o Y por tipo
+  // ($C2:4625) antes do chute ($C2:4307); os tipos 9, 4 e D saem com SEC e o chute não acontece neste tick.
+  const punching = pressed & BTN.Y && (onFoot ? p.punch : !!MOUNTS.current.yEndsTick?.(p));
   if (btn & DIR_BTNS && !punching) tryKick(s, p, ev);
   if (pressed & BTN.A) { if (!holding(p) && !(onFoot && p.glove && liftAny(s, p, ev))) placeBomb(s, p, ev); }
   else if (p.disease === DISEASE.DIARRHEA && !holding(p)) placeBomb(s, p, ev);

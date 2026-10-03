@@ -21,6 +21,7 @@ export const mountModule: MountModule = {
     const ab = r ? ABILITIES[r.type] : undefined;
     return r && ab?.onY ? ab.onY(s, p, r, ev) : false;
   },
+  yEndsTick(p) { const r = riding(p); return !!(r && ABILITIES[r.type]?.yEndsTick); },
   passes(p, code) { const r = riding(p); return !!(r && ABILITIES[r.type]?.passes?.(p, code)); },
   bombType(p) { const r = riding(p); return r ? ABILITIES[r.type]?.bombType?.(p) ?? null : null; },
   kicks(p) { const r = riding(p); return !!(r && ABILITIES[r.type]?.kicks?.(p)); },
