@@ -1,6 +1,6 @@
 // npm run sala — sobe a sala online na sua máquina: gera o build do jogo (web/dist), roda o servidor da sala
 // (server/sala.mjs, porta 8787) e abre um túnel público do Cloudflare (cloudflared, sem conta), mostrando a URL para
-// mandar aos outros. Ctrl+C encerra tudo.
+// mandar aos outros (no jogo: SALA ONLINE na tela inicial). Ctrl+C encerra tudo.
 //   SALA_NO_BUILD=1   usa o web/dist que já existe
 //   SALA_NO_TUNNEL=1  só na rede local (http://<seu-ip>:8787)
 //   PORT=<n>          outra porta
@@ -42,7 +42,7 @@ if (process.env.SALA_NO_TUNNEL) {
     shown = true;
     console.log(`\n==============================================================`);
     console.log(` Sala online: ${m[0]}`);
-    console.log(` Mande esse link; no jogo, clique em "Sala online" (canto de cima).`);
+    console.log(` Mande esse link; no jogo, escolha SALA ONLINE na tela inicial.`);
     console.log(` Você também pode abrir em http://localhost:${PORT}/`);
     console.log(`==============================================================\n`);
   };
