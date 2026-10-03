@@ -10,10 +10,19 @@ import type { RomTables } from './tables';
 import { OBJ_ITEM_PAL, type RomClock, type RomMemo, type RomScene } from './scene';
 import { warnOnce } from './warn';
 import { NO_SKIP, type HdSkip } from '../hdart/cover';
+import { CHAR_SHADOW, COSTUME_SHADOW, MOUNT_SHADOW, withoutBakedShadow, type ShadowFamily, type ShadowStatus } from './baked-shadow';
+import { costumeHook } from './mounts/costume';
+import { rider } from '../../core/mounts/types';
 
 export interface SpriteCtx {
   s: RoundState; a: RomAssets; tb: RomTables; scene: RomScene; clock: RomClock; memo: RomMemo;
   tiles: Tiles;   // tiles de BG do quadro (itens voando, D12)
+  /** Efeitos com a sombra suave ligados: o jogador vivo (e a montaria dele) sai sem a elipse chapada do sprite
+   *  (baked-shadow.ts) — uma sombra por personagem. Ausente/false = como na ROM. */
+  softShadows?: boolean;
+  /** Saída: vagas dos jogadores em que a elipse da ROM ficou neste quadro (sem encaixe certo) — o fx não desenha a
+   *  sombra suave deles. */
+  hardShadows?: Set<number>;
 }
 
 export const PLAYER_OBJ_PAL = [0, 1, 4, 5, 6] as const;   // P1..P5 (ANI §2.5)
@@ -21,6 +30,7 @@ export const OBJ_BOMB = { tile: 0x180, pal: 7 } as const;  // anim $D8:D3A8: pe�
 export const OBJ_SHADOW = 0x04e;
 export const OBJ_FALLING = 0x04c;
 export const OBJ_PRESSURE_PAL = 7;                          // attr $2E
+const OBJ_COMMON_PAL = 7;                                   // ovos, notas, brilho do remonte (mounts/rider.ts)
 
 const BLACK = new Uint16Array(16);
 
@@ -69,8 +79,29 @@ function loadPalette(b: FrameBuilder, c: SpriteCtx, p: Player): void {
   for (let i = 0; i < 16; i++) b.cgram(base + i, src[i] ?? 0);
 }
 
+/** Põe a peça do jogador sem a elipse da família `fam` (null = peça sem elipse: cavaleiro, objeto comum); marca o
+ *  jogador em `hardShadows` quando a elipse dela tem de ficar. */
+function put(b: FrameBuilder, c: SpriteCtx, p: Player, e: ObjEntry, fam: ShadowFamily | null | 'kept', sortY: number, order: number): void {
+  let status: ShadowStatus = 'none';
+  if (fam === 'kept') status = 'kept';
+  else if (fam) ({ e, status } = withoutBakedShadow(e, fam));
+  if (status === 'kept') c.hardShadows?.add(p.slot);
+  b.sprite(e, sortY, order);
+}
+
+/** Família da elipse de uma peça devolvida por um gancho (montaria, traje, cavaleiro…). */
+function hookFamily(p: Player, e: ObjEntry, hook: unknown): ShadowFamily | null | 'kept' {
+  if (e.pal === OBJ_COMMON_PAL) return null;
+  const r = rider(p);
+  if (r) {
+    if (e.pal !== 1 + (r.slot || 1)) return null;   // só a montaria (paleta da vaga, mounts/rider.ts); o cavaleiro sentado não tem elipse
+    return MOUNT_SHADOW[r.type] ?? 'kept';               // tipo sem elipse separável: fica a da ROM
+  }
+  return hook === costumeHook ? COSTUME_SHADOW : CHAR_SHADOW;
+}
+
 function drawFrame(b: FrameBuilder, c: SpriteCtx, p: Player, X: number, Y: number, act: Player['act'], face: number,
-  moving: boolean, t: number): void {
+  moving: boolean, t: number, noShadow = false): void {
   const { ref, t: at } = playerAnimRef({ act, face, char: p.char, moving }, t);
   const anim = resolveAnim(c.a, ref, p.char);
   if (act === 'dying' && at >= animCycle(anim)) return;
@@ -79,8 +110,9 @@ function drawFrame(b: FrameBuilder, c: SpriteCtx, p: Player, X: number, Y: numbe
   const pal = PLAYER_OBJ_PAL[p.slot];
   for (const pc of sm.frame.pieces) {
     const full = ch.frame(pc.tile);
-    b.sprite({ x: X + pc.dx + sm.ox, y: Y + pc.dy + sm.oy, size: pc.big ? 32 : 16, pal: (pal + pc.palAdd) & 7, prio: 2,
-      hflip: pc.hflip, vflip: pc.vflip, src: { px: pc.big ? full : smallFramePx(full) } }, Y + p.z + (p.z ? 1 : 0), ORDER_PLAYER + p.slot);   // no alto: na frente de quem está embaixo
+    const e: ObjEntry = { x: X + pc.dx + sm.ox, y: Y + pc.dy + sm.oy, size: pc.big ? 32 : 16, pal: (pal + pc.palAdd) & 7, prio: 2,
+      hflip: pc.hflip, vflip: pc.vflip, src: { px: pc.big ? full : smallFramePx(full) } };
+    put(b, c, p, e, noShadow ? CHAR_SHADOW : null, Y + p.z + (p.z ? 1 : 0), ORDER_PLAYER + p.slot);   // no alto: na frente de quem está embaixo
   }
 }
 
@@ -94,15 +126,19 @@ export function drawPlayers(b: FrameBuilder, c: SpriteCtx, sprites = true): void
     if (p.disease === 0x29 && !invisibleVisible(p)) continue;
     const X = px(p.x);
     const Y = px(p.y) - p.z;   // na mão da luva ou arremessado: acima do chão
+    const noShadow = !!c.softShadows && p.state === 'alive';   // a sombra suave dos efeitos fica no lugar desta
     let hooked = false;
     for (let i = 0; i < romPlayerHooks.length; i++) {
       let r: ObjEntry[] | null;
       // M1: um gancho do plano 9 que lance não deve tirar o jogador da tela — cai para o desenho padrão.
       try { r = romPlayerHooks[i](s, p, a, clock.frame, clock.tick); }
       catch (e) { warnOnce(a, 'hook:' + i, `Crown Blast: gancho de jogador #${i} falhou; usando o desenho padrão.`, e); continue; }
-      if (r) { for (const e of r) b.sprite(e, Y + p.z + (p.z ? 1 : 0), ORDER_PLAYER + p.slot); hooked = true; break; }
+      if (r) {
+        for (const e of r) put(b, c, p, e, noShadow ? hookFamily(p, e, romPlayerHooks[i]) : null, Y + p.z + (p.z ? 1 : 0), ORDER_PLAYER + p.slot);
+        hooked = true; break;
+      }
     }
-    if (!hooked) drawFrame(b, c, p, X, Y, p.act, p.face, p.moveDir !== 8, clock.tick - p.actT0);
+    if (!hooked) drawFrame(b, c, p, X, Y, p.act, p.face, p.moveDir !== 8, clock.tick - p.actT0, noShadow);
   }
 }
 
@@ -124,7 +160,7 @@ export function drawObjects(b: FrameBuilder, c: SpriteCtx, skip: HdSkip = NO_SKI
       ? { x: o.x - 8, y: y - 8, size: 16, pal: OBJ_BOMB.pal, prio: 2, hflip: false, vflip: false, src: { tile: OBJ_BOMB.tile } }
       : { x: o.x - 8, y: y - 8, size: 16, pal: OBJ_ITEM_PAL, prio: 2, hflip: false, vflip: false,
         src: { px: itemTilePx(c.tiles, c.tb.itemWord(o.item)) } };
-    b.sprite(e, y, ORDER_OBJ + i);
+    b.sprite(e, o.sortY ?? y, ORDER_OBJ + i);   // bomba na mão: chave de quem segura ± 8 (adapt.ts)
   });
 }
 

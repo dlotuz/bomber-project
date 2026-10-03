@@ -6,6 +6,7 @@ export type { StageModule, MountModule } from './hooks';
 export type { AiStageHints, AiMountHints } from './ai/hints';
 export { STAGES } from './stages';
 export { MOUNTS, NO_MOUNT } from './mounts';
+export { freeSlot as freeMountSlot } from './mounts/eggs';   // teste (?montaria): vaga de sprite livre
 export { emptyRound, itemCode, itemOfCode, isItemCode, isEggCode, standing, playerCell } from './state';
 export { createRound, type RoundOptions } from './setup';
 export { step } from './step';

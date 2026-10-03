@@ -10,6 +10,7 @@ export const D_RANGE = rangeOf(FIRE_LINE);   // a linha inteira, independente do
 /** Tipo D: Y lança a própria montaria ($C1:3238 → $C1:32EA). */
 export const ABILITY_D: MountAbility = {
   type: 0xd,
+  yEndsTick: true,   // $C2:47BF: SEC — sem chute no tick do lançamento
   onY(s, p, r, ev) {
     const slot = r.slot;
     spawnProjectile(s, p, 0xd, slot);

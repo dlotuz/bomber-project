@@ -1,5 +1,6 @@
-/** Raio (px de base) em volta do centro da bomba em que o corpo é repintado. */
-const R = 7;
+/** Raio (px de base) em volta do centro da bomba em que o corpo é repintado (7,5: a bola do corpo tem raio ~7 em volta
+ *  de um centro que cai entre pixels; só pixel de bomba à vista com cor de corpo é pintado). */
+const R = 7.5;
 
 /** Cor da bomba por jogador (as cores dos bombers no Battle): P1 branco, P2 preto (cinza-escuro, para o sombreado
  *  aparecer), P3 vermelho, P4 azul, P5 verde. */

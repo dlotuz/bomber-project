@@ -55,6 +55,9 @@ export interface MountAbility {
   /** Movimento próprio (tipo 4); true = trava o jogador neste tick. */
   drive?(s: RoundState, p: Player, r: MountRider, ev: GameEvent[]): boolean;
   onY?(s: RoundState, p: Player, r: MountRider, ev: GameEvent[]): boolean;
+  /** O handler do Y sai com SEC na ROM e encerra a rotina montada ($C2:141C) antes do chute ($C2:4307): 9 ($C2:4939),
+   *  4 ($C2:46AD) e D ($C2:47BF). C, E e F saem com CLC e o chute ainda acontece no mesmo tick. */
+  yEndsTick?: boolean;
   tickProjectile?(s: RoundState, pr: MountProjectile, ev: GameEvent[]): void;
 }
 

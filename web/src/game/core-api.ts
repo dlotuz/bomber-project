@@ -16,6 +16,16 @@ const RACER_KEYS: readonly RacerPrizeKey[] = ['bomb+1', 'pierce', 'fire+1', 'ful
   'glove', 'kick', 'none', 'none', 'passBomb', 'passSoft', 'speed-1', 'punch', 'heart', 'p'];
 export function racerPrizeKey(i: number): RacerPrizeKey { return RACER_KEYS[i]; }
 
+/** Teste (?montaria): os humanos vivos começam a rodada já montados no tipo `type` (até as 2 vagas de sprite). */
+export function devMountHumans(s: RoundState, type: number, humans: readonly boolean[]): void {
+  for (const p of s.players) {
+    if (!humans[p.slot] || p.state !== 'alive' || p.mount) continue;
+    const slot = core.freeMountSlot(s);
+    if (!slot) break;
+    p.mount = { type, slot, phase: 'riding', t0: s.tick, reserves: [], trail: [], cooldown: 0, remount: false, remountFx: null };
+  }
+}
+
 export function newMatch(rules: Rules, stage: number, seed: number, prize: RacerPrize | null,
   chars: readonly number[] = [0, 1, 2, 3, 4]): MatchState {
   const m = core.createMatch(rules, stage, seed, chars);
