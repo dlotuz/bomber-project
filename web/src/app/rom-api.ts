@@ -5,7 +5,7 @@ import { decodeZte } from '../rom/decode/zte';
 import type { RomAssets, SceneId, Tiles } from '../rom/types';
 
 // forgetStoredRom já existe no plano 5 (forgetRom() + assets = null + status 'vazio' + avisa onRomChange).
-export { romState, onRomChange, openRomDialog, forgetStoredRom, useRomBytes } from '../rom/state';
+export { romState, onRomChange, openRomDialog, forgetStoredRom, useRomBytes, bootPack, bootTrace } from '../rom/state';
 export type { RomState, RomStatus } from '../rom/state';
 export type { RomAssets, SceneId, Tiles, Anim, AnimFrame, Piece } from '../rom/types';
 export { renderPpu } from '../render/ppu';

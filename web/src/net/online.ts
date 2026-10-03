@@ -1,0 +1,214 @@
+// Cliente da sala online (server/sala.mjs). A tela é screens/online.ts (criar/entrar, vagas, personagens, regras do
+// anfitrião); aqui ficam a conexão, o estado da sala e, na partida, o lockstep — o App inteiro (batalha, placar, empate,
+// vitória, pausa) roda com a entrada combinada de todos, tick a tick, em cada navegador. Quando a partida termina (tela
+// de fase ou título), todo mundo volta para a tela da sala.
+import type { App } from '../app/app';
+import type { MenuInput } from '../input/input';
+import type { SpriteBank } from '../render/sprite-bank';
+import { configFromSetup, type SetupLike, type SlotKind } from '../game/config';
+import { createMatchSession, type MatchSession } from '../game/match-session';
+import { battleScreen } from '../screens/battle';
+import { onlineScreen } from '../screens/online';
+import { BANK, MUSIC } from '../app/audio';
+import { hashState } from '../core/hash';
+import { drawText } from '../render/text/text';
+import { S } from '../render/text/strings';
+import { Lockstep } from './lockstep';
+
+export interface Lobby {
+  stage: number; mode: 'ffa' | 'team'; teams: number[]; slots: SlotKind[]; chars: number[]; names: string[];
+  rules: { cpuLevel: 0 | 1 | 2; matches: number; timeIdx: number; suddenDeath: boolean; badBomber: boolean };
+}
+export interface Room { code: string; you: number; host: boolean; lobby: Lobby; playing: boolean }
+interface Extras { gloveEscape: number; throwStun: boolean; sleepTicks: number; allMounts: boolean; randomSpawns: boolean }
+type ServerMsg =
+  | ({ t: 'room' } & Room)
+  | { t: 'start'; lobby: Lobby; seed: number; delay: number; you: number; extras: Extras }
+  | { t: 'in'; s: number; k: number; b: number }
+  | { t: 'drop'; s: number; k: number }
+  | { t: 'hash'; s: number; k: number; h: string }
+  | { t: 'pong'; c: number }
+  | { t: 'error'; msg: string }
+  | { t: 'closed'; msg: string };
+
+/** A cada quantos ticks da batalha os navegadores conferem o estado (hash) entre si. */
+const HASH_EVERY = 120;
+const NAME_KEY = 'crown-sala-nome';
+
+export class OnlineClient {
+  /** Sala em que este navegador está (null = fora de sala). */
+  room: Room | null = null;
+  /** Conectando ao servidor (antes da 1ª resposta). */
+  connecting = false;
+  /** Última mensagem para o jogador (erro, sala fechada, conexão caiu); a tela mostra no rodapé. */
+  message = '';
+  desync: string | null = null;
+  private ws: WebSocket | null = null;
+  private ls: Lockstep | null = null;
+  private ms: MatchSession | null = null;
+  private stalled = 0;
+  private waitingFor: string[] = [];
+  private readonly myHashes = new Map<number, string>();
+  private hashed: { round: object | null; tick: number } = { round: null, tick: -1 };   // a pausa repete o tick
+
+  constructor(private readonly app: App) {}
+
+  get playing(): boolean { return this.ls !== null; }
+  /** Tick do lockstep (−1 fora da partida). */
+  get tick(): number { return this.ls?.tick ?? -1; }
+
+  get name(): string { try { return localStorage.getItem(NAME_KEY) ?? ''; } catch { return ''; } }
+  set name(n: string) { try { localStorage.setItem(NAME_KEY, n); } catch { /* sem storage */ } }
+
+  /** Link de convite da sala atual. */
+  invite(): string { return this.room ? `${location.origin}${location.pathname}?sala=${this.room.code}` : ''; }
+
+  create(): void { this.connect({ t: 'create', name: this.name }); }
+  join(code: string): void { this.connect({ t: 'join', code, name: this.name }); }
+  setChar(c: number): void { this.send({ t: 'char', c }); }
+  setLobby(patch: Partial<Lobby>): void { if (this.room) this.send({ t: 'lobby', lobby: { ...this.room.lobby, ...patch } }); }
+  leave(): void { this.send({ t: 'leave' }); this.ws?.close(); this.ws = null; this.room = null; this.connecting = false; }
+  /** Só o anfitrião: começa a partida com as regras extras das Opções dele (iguais para todos). */
+  start(): void {
+    const o = this.app.settings.options;
+    this.send({ t: 'start', extras: { gloveEscape: o.gloveEscape, throwStun: o.throwStun, sleepTicks: o.sleepSec * 60, allMounts: o.allMounts, randomSpawns: o.randomSpawns } });
+  }
+
+  // ---------------------------------------------------------------------------------------------------- conexão
+  private send(m: object): void { if (this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify(m)); }
+
+  private connect(first: object): void {
+    this.message = '';
+    this.ws?.close();
+    this.connecting = true;
+    const sock = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`);
+    this.ws = sock;
+    sock.onopen = () => {
+      sock.send(JSON.stringify(first));
+      // ping até a sala (fora da partida): o servidor escolhe o atraso do lockstep pelo pior par de jogadores
+      const ping = (): void => {
+        if (this.ws !== sock || sock.readyState !== WebSocket.OPEN) return;
+        if (!this.ls) this.send({ t: 'ping', c: performance.now() });
+        setTimeout(ping, 1500);
+      };
+      ping();
+    };
+    sock.onmessage = e => this.receive(JSON.parse(String(e.data)) as ServerMsg);
+    sock.onclose = () => {
+      if (this.ws !== sock) return;
+      this.ws = null; this.connecting = false;
+      const was = this.room !== null || this.ls !== null;
+      this.room = null;
+      if (this.ls) this.finish(S.online.lost);
+      else if (was) this.message = S.online.lost;
+    };
+    sock.onerror = () => { if (this.ws === sock && !this.room) { this.message = S.online.noServer; this.connecting = false; } };
+  }
+
+  private receive(m: ServerMsg): void {
+    switch (m.t) {
+      case 'room': this.room = { code: m.code, you: m.you, host: m.host, lobby: m.lobby, playing: m.playing }; this.connecting = false; break;
+      case 'pong': this.send({ t: 'rtt', ms: performance.now() - m.c }); break;
+      case 'error': this.message = m.msg.toUpperCase(); this.connecting = false; break;
+      case 'closed': this.room = null; this.message = m.msg.toUpperCase(); if (this.ls) this.finish(this.message); break;
+      case 'start': this.begin(m); break;
+      case 'in': this.ls?.remote(m.s, m.k, m.b); break;
+      case 'drop': this.ls?.drop(m.s, m.k); break;
+      case 'hash': {
+        const mine = this.myHashes.get(m.k);
+        if (mine !== undefined && mine !== m.h && !this.desync) {
+          this.desync = S.online.desync;
+          console.warn(`Crown Blast (sala): estados diferentes no tick ${m.k} (jogador ${m.s + 1}).`);
+        }
+        break;
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------------------------------- partida
+  private begin(m: Extract<ServerMsg, { t: 'start' }>): void {
+    const L = m.lobby, x = m.extras;
+    const setup: SetupLike = { mode: L.mode, slots: L.slots, teams: L.teams, chars: L.chars, stage: L.stage, rules: { ...L.rules, racer: false } };
+    // todos com a mesma configuração: semente do servidor, dispositivos neutros (sem pausa por controle desconectado)
+    const cfg = configFromSetup(setup, x.randomSpawns, ['kb', 'kb', 'kb', 'kb', 'kb'], m.seed, {
+      gloveEscape: x.gloveEscape, throwStun: x.throwStun, sleepTicks: x.sleepTicks, allMounts: x.allMounts,
+      powerKey: [false, false, false, false, false],
+    });
+    this.ls = new Lockstep(m.delay, m.you, cfg.humans);
+    this.ms = createMatchSession(cfg);
+    this.myHashes.clear(); this.desync = null; this.stalled = 0; this.hashed = { round: null, tick: -1 };
+    this.app.audio.bank(BANK.battle);
+    this.app.audio.music(MUSIC.battle);
+    this.app.go(battleScreen(this.app, this.ms));
+  }
+
+  private finish(why: string | null): void {
+    if (this.room?.host && this.ws) this.send({ t: 'end' });
+    this.ls = null; this.ms = null; this.waitingFor = [];
+    if (why) this.message = why;
+    this.app.audio.fade();
+    this.app.go(onlineScreen(this.app));
+  }
+
+  /** Um passo do loop na partida: manda o botão local e roda o tick quando os de todos chegaram. */
+  step(local: MenuInput): void {
+    const ls = this.ls;
+    if (!ls) return;
+    // até 2 ticks por passo: o 2º só se este navegador ficou para trás de todos os outros (alcança sem passar dos 60 Hz)
+    for (let n = 0; n < 2; n++) {
+      const out = ls.local(local.any);
+      if (out) this.send({ t: 'in', k: out.k, b: out.b });
+      const t = ls.next();
+      if (!t) {
+        if (n === 0 && ++this.stalled > 20) this.waitingFor = ls.missing().map(s => this.room?.lobby.names[s] || `${s + 1}P`);
+        return;
+      }
+      this.stalled = 0; this.waitingFor = [];
+      if (this.ms) for (const s of t.dropped) this.ms.cfg.humans[s] = false;   // saiu: a CPU assume a vaga (mesmo tick em todos)
+      this.app.update(t.input);
+      const round = this.ms?.round;
+      if (this.app.screen.id === 'battle' && round && round.tick % HASH_EVERY === 0
+        && (round !== this.hashed.round || round.tick !== this.hashed.tick)) {
+        this.hashed = { round, tick: round.tick };
+        const h = hashState(round);
+        this.myHashes.set(ls.tick, h);
+        this.send({ t: 'hash', k: ls.tick, h });
+      }
+      if (this.app.screen.id === 'stage' || this.app.screen.id === 'title') { this.finish(null); return; }
+      if (!ls.behind()) return;
+    }
+  }
+
+  /** Avisos da partida por cima do jogo: esperando alguém (rede) ou dessincronização. */
+  drawOverlay(ctx: CanvasRenderingContext2D, bank: SpriteBank): void {
+    if (!this.ls) return;
+    const text = this.waitingFor.length ? S.online.waiting(this.waitingFor.join(', ')) : this.desync;
+    if (!text) return;
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(0, 0, 256, 11);
+    drawText(ctx, bank, 'ascii8', text, 128, 2, { align: 'center', bare: true });
+  }
+
+  /** Diagnóstico (scripts/sala-e2e.mjs e console). */
+  hash(k: number): string | null { return this.myHashes.get(k) ?? null; }
+  hashes(): number[] { return [...this.myHashes.keys()]; }
+}
+
+let client: OnlineClient | null = null;
+/** Cria o cliente da sala (main.ts, uma vez). */
+export function initOnline(app: App): OnlineClient {
+  const c = new OnlineClient(app);
+  client = c;
+  if (typeof window === 'undefined') return c;   // testes no Node
+  (window as unknown as { __sala: unknown }).__sala = {
+    get tick() { return c.tick; }, get screen() { return app.screen.id; }, get desync() { return c.desync; },
+    get code() { return c.room?.code ?? null; }, hash: (k: number) => c.hash(k), get hashes() { return c.hashes(); },
+    get message() { return c.message; },
+  };
+  return c;
+}
+/** O cliente da sala (as telas usam). */
+export function online(): OnlineClient {
+  if (!client) throw new Error('sala online sem initOnline');
+  return client;
+}

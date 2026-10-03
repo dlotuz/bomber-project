@@ -45,6 +45,17 @@ export const S = {
     pressKey: 'NOVA TECLA? (ESC CANCELA)', pressPad: 'NOVO BOTÃO? (ESC CANCELA)', actions: ACTIONS,
     button: (n: number) => `BOTÃO ${n}`,
   },
+  online: {
+    menu: 'SALA ONLINE', title: 'Sala online',
+    name: 'NOME', create: 'CRIAR SALA', code: 'CÓDIGO', join: 'ENTRAR NA SALA', back: 'VOLTAR', empty: '---',
+    you: 'VOCÊ', cpu: 'CPU', off: 'NENHUM', stage: 'FASE', crowns: 'COROAS', time: 'TEMPO', level: 'FORÇA DA CPU',
+    sudden: 'MORTE SÚBITA', bad: 'BOMBER VINGADOR', invite: 'CONVIDAR', copy: 'COPIAR LINK', copied: 'LINK COPIADO!',
+    start: 'INICIAR PARTIDA', waitHost: 'AGUARDANDO O ANFITRIÃO', playing: 'PARTIDA EM ANDAMENTO', leave: 'SAIR DA SALA',
+    connecting: 'CONECTANDO...', typing: 'DIGITE E APERTE ENTER (ESC CANCELA)', needName: 'DIGITE UM NOME PRIMEIRO',
+    needCode: 'DIGITE O CÓDIGO DA SALA', help: 'ESQ/DIR: MUDA   A: OK', guestHelp: 'ESQ/DIR: SEU PERSONAGEM',
+    lost: 'A CONEXÃO COM A SALA CAIU', noServer: 'SEM SERVIDOR DA SALA (NPM RUN SALA)', desync: 'DESSINCRONIZOU! TERMINE E RECOMECE',
+    waiting: (names: string) => `AGUARDANDO ${names.toUpperCase()}...`, slot: (s: number) => `${s + 1}P`,
+  },
   password: {
     title: 'Senha', menu: 'SENHA', active: 'LIGADA', digit: (n: number) => `NÚMERO ${n}`, ok: 'CONFIRMAR',
     help: 'ESQ/DIR: MUDA O NÚMERO', wrong: 'SENHA ERRADA', on: 'TODAS AS MONTARIAS: SIM', off: 'TODAS AS MONTARIAS: NÃO',
@@ -58,7 +69,7 @@ const uniq = (u: Use[]): Use[] => [...new Map(u.map(x => [`${x.style}|${x.text}`
 /** Todo par (estilo, texto) que o jogo desenha. Base dos testes de cobertura (T4, T16–T18, T22). */
 export const STRING_USES: readonly Use[] = uniq([
   ...as('titleMenu', [S.title.normal, S.title.battle, S.title.options, S.title.pressStart]),
-  ...as('menuTitle', [S.vs.title, S.players.title, S.rules.title, S.chars.title, S.teams.title, S.options.title, S.options.controlsTitle, S.options.gameplayTitle, S.password.title]),
+  ...as('menuTitle', [S.vs.title, S.players.title, S.rules.title, S.chars.title, S.teams.title, S.options.title, S.options.controlsTitle, S.options.gameplayTitle, S.password.title, S.online.title]),
   ...as('menuItem', [S.vs.royale, S.vs.champ, S.vs.mania, S.vs.ffa, S.vs.team, ...S.players.row, S.players.human, S.players.cpu,
     S.players.off, ...S.rules.labels, ...S.rules.cpu, ...S.rules.crowns, ...S.rules.time, S.rules.no, S.rules.yes, S.teams.vs]),
   ...as('spriteBlue', [S.stage.title, ...Array.from({ length: 10 }, (_, i) => S.stage.stage(i + 1)), ...STAGE_NAMES_PT]),
@@ -74,6 +85,11 @@ export const STRING_USES: readonly Use[] = uniq([
     'ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789 -+.:!?', 'ESPAÇO', '0 1 2 3 4 5 6 7 8 9 10',
     S.password.menu, S.password.active, ...[1, 2, 3, 4].map(S.password.digit), S.password.ok, S.password.help,
     S.password.wrong, S.password.on, S.password.off,
+    S.online.name, S.online.create, S.online.code, S.online.join, S.online.back, S.online.empty, S.online.you, S.online.cpu,
+    S.online.off, S.online.stage, S.online.crowns, S.online.time, S.online.level, S.online.sudden, S.online.bad,
+    S.online.invite, S.online.copy, S.online.copied, S.online.start, S.online.waitHost, S.online.playing, S.online.leave,
+    S.online.connecting, S.online.typing, S.online.needName, S.online.needCode, S.online.help, S.online.guestHelp,
+    S.online.lost, S.online.noServer, S.online.desync, S.online.waiting('ANA, BETO'), ...[0, 1, 2, 3, 4].map(S.online.slot),
   ]),
   ...as('bigBattle', [S.stage.battle]),
   ...as('bigScore', [S.score.title]),

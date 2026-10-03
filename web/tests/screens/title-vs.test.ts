@@ -1,3 +1,4 @@
+import { initOnline } from '../../src/net/online';
 import { titleScreen } from '../../src/screens/title';
 import { modeScreen } from '../../src/screens/vs';
 import { buildTitleScene, TITLE_TEXT_RECTS } from '../../src/render/screens-rom/title';
@@ -17,17 +18,25 @@ describe('título (§6.2, R22)', () => {
     expect(sink.calls.map(c => [c.op, c.id])).toEqual([['bank', 0x30], ['music', 0x01]]);
     expect((app.screen as Title).cursor).toBe(0);
   });
-  it('↑/↓ com volta entre "BATTLE GAME" e "OPTIONS"; SFX $01', () => {
+  it('↑/↓ com volta entre "BATTLE GAME", "SALA ONLINE" e "OPTIONS"; SFX $01', () => {
     const { app, sink } = mkApp();
     const t = titleScreen(app); app.go(t); sink.clear();
     press(app, BTN.DOWN); expect(t.cursor).toBe(1);
+    press(app, BTN.DOWN); expect(t.cursor).toBe(2);
     press(app, BTN.DOWN); expect(t.cursor).toBe(0);
-    press(app, BTN.UP); expect(t.cursor).toBe(1);
-    expect(sink.of('sfx').map(c => c.id)).toEqual([1, 1, 1]);
+    press(app, BTN.UP); expect(t.cursor).toBe(2);
+    expect(sink.of('sfx').map(c => c.id)).toEqual([1, 1, 1, 1]);
+  });
+  it('START em "SALA ONLINE" abre a sala online', () => {
+    const { app } = mkApp();
+    initOnline(app);
+    app.go(titleScreen(app)); press(app, BTN.DOWN);
+    tap(app, BTN.START); settle(app);
+    expect(app.screen.id).toBe('online');
   });
   it('START em "OPTIONS" abre as opções sem trocar a música', () => {
     const { app, sink } = mkApp();
-    app.go(titleScreen(app)); press(app, BTN.DOWN); sink.clear();
+    app.go(titleScreen(app)); press(app, BTN.DOWN); press(app, BTN.DOWN); sink.clear();
     tap(app, BTN.START); settle(app);
     expect(app.screen.id).toBe('options');
     expect(sink.of('music')).toEqual([]);

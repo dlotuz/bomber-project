@@ -1,7 +1,6 @@
 vi.mock('../../src/app/rom-api', async orig => ({
   ...(await orig<typeof import('../../src/app/rom-api')>()), openRomDialog: vi.fn(), forgetStoredRom: vi.fn(async () => {}),
 }));
-import * as romApi from '../../src/app/rom-api';
 import { optionsScreen } from '../../src/screens/options';
 import { remapScreen } from '../../src/screens/remap';
 import { KEY_FIELDS, DEFAULT_PADMAP } from '../../src/input/input';
@@ -22,7 +21,7 @@ beforeEach(() => vi.clearAllMocks());
 describe('opções (§6.13)', () => {
   it('linhas na ordem: Opções, Controles e Jogabilidade', () => {
     const { app } = mkApp();
-    expect(optionsScreen(app).rowIds()).toEqual(['controls', 'gameplay', 'fx', 'screen', 'smooth', 'music', 'sfx', 'romStatus', 'romLoad', 'romForget', 'reset', 'back']);
+    expect(optionsScreen(app).rowIds()).toEqual(['controls', 'gameplay', 'fx', 'screen', 'smooth', 'music', 'sfx', 'reset', 'back']);
     expect(optionsScreen(app, 0, 'controls').rowIds()).toEqual(['p1', 'p2', 'p3', 'p4', 'p5', 'slot', 'slotSave', 'slotLoad', 'back']);
     expect(optionsScreen(app, 0, 'gameplay').rowIds()).toEqual(['spawns', 'escape', 'throwStun', 'sleep', 'password', 'slot', 'slotSave', 'slotLoad', 'back']);
   });
@@ -146,19 +145,6 @@ describe('opções (§6.13)', () => {
     for (let k = 0; k < 9; k++) press(app, BTN.LEFT);
     expect([app.settings.options.sfxVol, got.at(-1)]).toEqual([0, [1, 0]]);
   });
-  it('ROM: estado; carregar abre o painel; esquecer pede confirmação', async () => {
-    const { app } = mkApp();
-    const o = optionsScreen(app); app.go(o);
-    expect(o.value('romStatus')).toBe('NÃO CARREGADA');
-    goRow(o, 'romLoad'); press(app, BTN.A);
-    expect(romApi.openRomDialog).toHaveBeenCalledTimes(1);
-    goRow(o, 'romForget'); press(app, BTN.A);
-    expect([o.asking, (romApi.forgetStoredRom as ReturnType<typeof vi.fn>).mock.calls.length]).toEqual([true, 0]);
-    press(app, BTN.B);
-    expect([o.asking, app.screen.id]).toEqual([false, 'options']);
-    press(app, BTN.A); press(app, BTN.A);
-    expect(romApi.forgetStoredRom).toHaveBeenCalledTimes(1);
-  });
   it('restaurar padrão', () => {
     const { app } = mkApp();
     Object.assign(app.settings, { devices: ['gp3', 'gp3', 'none', 'none', 'none'] });
@@ -197,7 +183,7 @@ describe('opções (§6.13)', () => {
     const { app } = mkApp();
     app.go(optionsScreen(app));
     press(app, BTN.B); settle(app);
-    expect([app.screen.id, (app.screen as unknown as { cursor: number }).cursor]).toEqual(['title', 1]);
+    expect([app.screen.id, (app.screen as unknown as { cursor: number }).cursor]).toEqual(['title', 2]);
   });
 });
 

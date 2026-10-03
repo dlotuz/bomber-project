@@ -9,8 +9,9 @@ não a revisão final da branch.
   por risco concreto que você nomear.
 - Só leitura: não altere árvore, índice, HEAD nem branches. Não dispare subagentes.
 - Restrições globais que valem para toda tarefa: a spec
-  `docs/superpowers/specs/2026-09-25-crown-blast-fidelidade-design.md` é a autoridade; nunca versionar bytes da ROM,
-  imagens extraídas, áudio ou textos da ROM (fixtures só números/endereços/SHA-1); núcleo determinístico (sem
+  `docs/superpowers/specs/2026-09-25-crown-blast-fidelidade-design.md` é a autoridade; os gráficos e o som da ROM
+  vão no pacote embutido `web/public/rom-pack.dat` (regerado por `web/scripts/rom-pack/`, nunca editado à mão) — não
+  versionar a ROM inteira (`.sfc`/`.smc`) nem estados do emulador; núcleo determinístico (sem
   Math.random/Date, sem iteração dependente de ordem de Set/Map); o núcleo não importa `render/`, `audio/`, `input/`,
   `rom/`; cada tarefa só mexe nos arquivos que possui; comentários e textos visíveis em PT-BR.
   Linha de atribuição dos commits com o nome do modelo do implementador é aceitável (decisão já registrada).

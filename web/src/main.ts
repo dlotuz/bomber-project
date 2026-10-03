@@ -1,11 +1,13 @@
 import { App } from './app/app';
 import { browserStorage, defaultSettings, loadSettings, saveSettings } from './app/settings';
 import { startLoop } from './app/loop';
+import { initOnline } from './net/online';
+import { onlineScreen } from './screens/online';
 import { FADE_IN_1 } from './app/fade';
 import { startRealAudio } from './app/audio';
 import { resumeAudio } from './audio/register';
 import { createAudioStarter } from './audio/starter';
-import { onRomChange, romState } from './app/rom-api';
+import { bootPack, bootTrace, onRomChange, romState } from './app/rom-api';
 import { parseConfig } from './game/config';
 import { createMatchSession, carry, type MatchSession } from './game/match-session';
 import { InputManager, buildInput, emptyDevices, idleInput, withEscapeAsBack } from './input/input';
@@ -14,7 +16,6 @@ import { present } from './render/fx/present';
 import { SpriteBank } from './render/sprite-bank';
 import { titleScreen } from './screens/title';
 import { battleScreen } from './screens/battle';
-import { startRomUi } from './rom/ui';
 import { hdBegin } from './render/hd-menu';
 import { hdArtFromUrl, hdBattleBegin, resolveHdArt, useHdArt } from './render/hdart/mode';
 
@@ -37,8 +38,12 @@ const app = new App(settings, {
 });
 app.audio.setVolume(settings.options.musicVol / 10, settings.options.sfxVol / 10);
 
-// Painel da ROM (plano 5): usa a ROM guardada ou, sem ela, pede o arquivo (não abre sozinho em ?debug/?quick).
-void startRomUi(document, { autoShow: !params.has('debug') && !params.has('quick') });
+// Gráficos e som originais embutidos (public/rom-pack.dat): ninguém precisa carregar a ROM. Até o pacote chegar (ou
+// se ele falhar), as telas usam a arte por código. Em dev, ?romtrace=<url da ROM> usa a ROM real rastreando o que é
+// lido (scripts/snapshots.mjs com SB4_TRACE, para regerar o pacote).
+const romTraceUrl = import.meta.env.DEV ? params.get('romtrace') : null;
+const romRanges = romTraceUrl ? bootTrace(romTraceUrl) : null;
+if (!romTraceUrl) void bootPack(`${import.meta.env.BASE_URL}rom-pack.dat`);
 
 // Áudio só depois do 1º gesto (§6.1); trocar de ROM recria o sink (os samples vêm da ROM). Cada gesto
 // (tecla, ponteiro, toque/clique ou botão do controle, no loop) também pede resume() ao AudioContext.
@@ -68,10 +73,14 @@ const render = (): void => {
   hdBegin();
   hdBattleBegin();
   app.draw(ctx, bank);
+  online.drawOverlay(ctx, bank);
   present(display, fxOff ? null : app.screen.fx?.() ?? null, app.brightness() / 15, resolveScreenMode(urlMode, app.settings.options, resolveScreenKind(location.search, app.settings.options.screen)));
 };
 // ?quick abre direto numa partida com as regras da URL (ver parseConfig); sem ele, começa no título.
+// Sala online: o cliente (net/online.ts) e a tela (screens/online.ts); ?sala=<código> (link de convite) abre direto nela.
+const online = initOnline(app);
 if (params.has('quick')) app.go(battleScreen(app, createMatchSession(parseConfig(window.location.search))));
+else if (params.has('sala')) app.transition(() => onlineScreen(app, { code: params.get('sala') ?? '' }), { out: [], black: 0, in: FADE_IN_1 });
 else app.transition(() => titleScreen(app), { out: [], black: 0, in: FADE_IN_1 });
 
 // Gancho para as screenshots automáticas (web/scripts/snapshots.mjs); só existe em dev com ?debug.
@@ -81,6 +90,8 @@ let held = false;
 if (import.meta.env.DEV && params.has('debug')) {
   (window as unknown as { __crown: unknown }).__crown = {
     app, rom: romState,
+    /** Faixas da ROM lidas até agora (só com ?romtrace). */
+    async romRanges(): Promise<[number, number][] | null> { return (await romRanges)?.() ?? null; },
     get ms(): MatchSession | null { return (app.screen as Partial<{ ms: MatchSession }>).ms ?? null; },
     hold(on: boolean): void { held = on; },
     step(n = 1, btn = 0, slot = 0): void {
@@ -104,6 +115,7 @@ if (import.meta.env.DEV && params.has('debug')) {
   });
 }
 
+
 let prev = emptyDevices();
 startLoop(() => {
   if (held) return;
@@ -111,6 +123,7 @@ startLoop(() => {
   const inp = withEscapeAsBack(buildInput(cur, prev, app.settings.devices, input.takeLastKey(),
     { connected: input.connected(), esc: input.escHeld(), padButton: input.takePadButton() }));
   if (inp.pressedAny) audioStart.gesture();        // botão do controle também conta como gesto (M6)
-  app.update(inp);
+  if (online.playing) online.step(inp);            // partida online: a entrada local vai para o lockstep
+  else app.update(inp);
   prev = cur;
 }, render);

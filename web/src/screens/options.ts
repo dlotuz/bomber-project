@@ -3,7 +3,6 @@ import { BTN } from '../game/core-api';
 import { Menu, clamp, cycle, type MenuRow } from './menu';
 import { DEVICE_IDS } from '../input/input';
 import { SLOT_COUNT, controlsOf, defaultSettings, gameplayOf, setDevice } from '../app/settings';
-import { romState, openRomDialog, forgetStoredRom } from '../app/rom-api';
 import { S } from '../render/text/strings';
 import { MUSIC } from '../app/audio';
 import { FADE_MENU, FADE_TO_TITLE } from '../app/fade';
@@ -18,23 +17,22 @@ interface Row extends MenuRow { label: string; value?: () => string }
 export type OptionsPage = 'main' | 'controls' | 'gameplay';
 
 /**
- * Opções (§6.13, R15, R25). Principal: submenus, volume de música/efeitos e o painel da ROM (carregar/esquecer).
+ * Opções (§6.13, R15, R25). Principal: submenus, volume de música/efeitos (a ROM vem embutida: rom/pack.ts).
  * Controles: por jogador, dispositivo (←/→) e controles próprios (A abre). Jogabilidade: spawns aleatórios e as
  * regras extras (luva, arremesso de jogador, soneca). `back` (linha e B): do submenu volta às Opções; das Opções, ao
  * título na "Opções".
  */
-export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'main'): Screen & { readonly menu: Menu; readonly page: OptionsPage; rowIds(): string[]; value(id: string): string; readonly asking: boolean } {
+export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'main'): Screen & { readonly menu: Menu; readonly page: OptionsPage; rowIds(): string[]; value(id: string): string } {
   const st = app.settings;
   // `opt()` lê `st.options` na hora (nunca um alias congelado): "RESTAURAR PADRÃO" troca `st.options` por um
   // objeto novo (`d.options`), e um alias tirado na criação da tela ficaria apontando para o objeto antigo —
   // os controles de música/efeitos/spawns pareceriam obedecer, mas editariam um objeto órfão, nunca salvo.
   const opt = (): typeof st.options => st.options;
-  let asking = false;
 
   app.audio.ensureMenus(MUSIC.title);
 
   const goBack = (): void => {
-    if (page === 'main') app.transition(() => titleScreen(app, { cursor: 1 }), FADE_TO_TITLE);
+    if (page === 'main') app.transition(() => titleScreen(app, { cursor: 2 }), FADE_TO_TITLE);
     else app.transition(() => optionsScreen(app, page === 'controls' ? 0 : 1), FADE_MENU);
   };
   const open = (to: OptionsPage): void => { app.transition(() => optionsScreen(app, 0, to), FADE_MENU); };
@@ -127,11 +125,6 @@ export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'ma
       right: () => { const b = opt().sfxVol; opt().sfxVol = clamp(opt().sfxVol + 1, 0, 10); app.save(); setVol(); return opt().sfxVol !== b; },
     });
     rows.push({
-      id: 'romStatus', label: S.options.rom, disabled: true, value: () => (romState.assets ? S.options.romOk : S.options.romNo),
-    });
-    rows.push({ id: 'romLoad', label: S.options.load, select: () => { openRomDialog(); } });
-    rows.push({ id: 'romForget', label: S.options.forget, select: () => { asking = true; } });
-    rows.push({
       id: 'reset', label: S.options.reset, select: () => {
         const d = defaultSettings();
         st.devices = d.devices; st.keymaps = d.keymaps; st.padmaps = d.padmaps; st.options = d.options;
@@ -147,21 +140,15 @@ export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'ma
     id: 'options',
     menu,
     page,
-    get asking() { return asking; },
     rowIds() { return rows.map(r => r.id); },
     value(id: string) { return rows.find(r => r.id === id)?.value?.() ?? ''; },
     update(inp) {
-      if (asking) {
-        if (inp.pressedAny & BTN.A) { asking = false; void forgetStoredRom(); }
-        else if (inp.pressedAny & BTN.B) { asking = false; }
-        return;
-      }
       const ev = menu.update(inp.any, inp.pressedAny, app.audio);
       if (ev === 'back') goBack();
     },
     draw(ctx, bank) {
       const displayRows: OptionsRow[] = rows.map(r => ({ label: r.label, value: r.value?.() ?? '', disabled: r.disabled }));
-      const footer = asking ? S.options.forgetAsk : page === 'controls' && menu.cursor < 5 ? S.options.playerHelp : undefined;
+      const footer = page === 'controls' && menu.cursor < 5 ? S.options.playerHelp : undefined;
       const title = page === 'controls' ? S.options.controlsTitle : page === 'gameplay' ? S.options.gameplayTitle : S.options.title;
       drawOptionsPage(ctx, bank, title, displayRows, menu.cursor, footer);
     },

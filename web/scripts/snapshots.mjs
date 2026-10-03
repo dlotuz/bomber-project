@@ -1,19 +1,19 @@
 // Screenshots do fluxo inteiro (plano 10, T22). Requer o Google Chrome instalado (playwright-core usa channel 'chrome',
-// não baixa o Chromium). Duas passadas: `fallback/` (sem ROM) e, se SB4_ROM apontar para a ROM, `rom/` — a ROM entra
-// pelo <input type="file"> do painel do plano 5 (rom/ui.ts), como um usuário faria. Saída: $SNAP_OUT (padrão
+// não baixa o Chromium). Uma passada, `rom/`: os gráficos e o som vêm do pacote embutido (public/rom-pack.dat,
+// rom/pack.ts), sem ROM do usuário. Saída: $SNAP_OUT (padrão
 // web/snapshots/, fora do git). Os quadros exatos (f100 do "BATALHA!", f5/f20 do intro, S = 60/200/…) saem do gancho
 // `__crown.hold/step` do main.ts (só em dev com ?debug), que para o relógio do loop e avança tick a tick.
 import { chromium } from 'playwright-core';
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const OUT = process.env.SNAP_OUT ?? `${root}snapshots`;
-const ROM = process.env.SB4_ROM && existsSync(process.env.SB4_ROM) ? process.env.SB4_ROM : null;
 const PORT = Number(process.env.SNAP_PORT ?? 5188);
 const BTN = { UP: 1, DOWN: 2, LEFT: 4, RIGHT: 8, A: 16, B: 32, START: 128 };
-const server = spawn('npx', ['vite', '--port', String(PORT), '--strictPort'], { cwd: root, stdio: 'ignore' });
+// pelo próprio Node (no Windows, spawn('npx') falha sem shell)
+const server = spawn(process.execPath, [`${root}node_modules/vite/bin/vite.js`, '--port', String(PORT), '--strictPort'], { cwd: root, stdio: 'ignore' });
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const base = `http://localhost:${PORT}/`;
 
@@ -25,7 +25,7 @@ async function waitServer() {
   throw new Error('vite não subiu');
 }
 
-/** Uma página com os ajudantes da passada (`rom`: carrega a ROM pelo seletor de arquivo). */
+/** Uma página com os ajudantes da passada (espera o pacote embutido carregar). */
 async function session(browser, pass) {
   const dir = `${OUT}/${pass}`;
   mkdirSync(dir, { recursive: true });
@@ -41,14 +41,9 @@ async function session(browser, pass) {
       // Capturas fiéis por padrão (?fx=0); o cenário `effects` liga os efeitos com fx=1.
       await page.goto(`${base}?debug&${query}${query.includes('fx=') ? '' : '&fx=0'}`);
       await page.waitForFunction(() => !!window.__crown);
-      if (pass === 'rom') {
-        await page.setInputFiles('input[type=file]', ROM);
-        await page.waitForFunction(() => window.__crown.rom.status === 'ok' || window.__crown.rom.status === 'erro', null, { timeout: 30000 });
-        const st = await page.evaluate(() => [window.__crown.rom.status, window.__crown.rom.erro]);
-        if (st[0] !== 'ok') throw new Error(`ROM não carregou: ${st[1]}`);
-        // O painel some sozinho quando a ROM é aceita; espera para não fotografar a transição dele.
-        await sleep(100);
-      }
+      await page.waitForFunction(() => window.__crown.rom.status === 'ok' || window.__crown.rom.status === 'erro', null, { timeout: 30000 });
+      const st = await page.evaluate(() => [window.__crown.rom.status, window.__crown.rom.erro]);
+      if (st[0] !== 'ok') throw new Error(`pacote da ROM não carregou: ${st[1]}`);
       await page.evaluate(() => window.__crown.hold(true));
     },
     step: (n = 1, btn = 0, slot = 0) => page.evaluate(([n, b, s]) => window.__crown.step(n, b, s), [n, btn, slot]),
@@ -197,7 +192,7 @@ let browser;
 try {
   await waitServer();
   browser = await chromium.launch({ channel: 'chrome' });
-  for (const pass of ROM ? ['fallback', 'rom'] : ['fallback']) {
+  for (const pass of ['rom']) {
     console.log(`passada ${pass}:`);
     for (const scenario of [menusAndMatch, teams, options, arenas, effects].filter(s => !ONLY || ONLY.includes(s.name))) {
       const h = await session(browser, pass);

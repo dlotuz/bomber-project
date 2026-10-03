@@ -30,5 +30,7 @@ export default defineConfig({
     format: 'es',
     rollupOptions: { output: { manualChunks: (id: string) => (id.includes('/audio/apu/dsp/') ? 'spc-dsp' : undefined) } },
   },
+  // Sala online em dev: o WebSocket /ws vai para o servidor da sala (node server/sala.mjs, porta 8787).
+  server: { proxy: { '/ws': { target: 'ws://localhost:8787', ws: true } } },
   test: { globals: true, include: ['tests/**/*.test.ts'] },
 });

@@ -5,7 +5,7 @@ export const ROM_TITLE = 'SUPER BOMBERMAN 4    ';           // 21 bytes em $FFC0
 const HDR = 0xffc0;
 
 // 'falha' = erro inesperado ao validar/carregar (ex.: crypto.subtle indisponível fora de HTTPS/localhost),
-// não um motivo de a ROM estar errada; usado por rom/state.ts e rom/ui.ts para nunca travar o painel em "Verificando…".
+// não um motivo de a ROM estar errada; usado por rom/state.ts para nunca travar em "Verificando…".
 export type RomMotivo = 'tamanho' | 'cabecalho' | 'hash' | 'falha';
 export type ValidateResult = { ok: true; rom: Uint8Array; sha1: string } | { ok: false; motivo: RomMotivo; mensagem: string };
 

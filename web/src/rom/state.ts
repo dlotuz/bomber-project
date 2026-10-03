@@ -3,6 +3,8 @@ import type { RomAssets } from './types';
 import { validateRom, mensagemDe, type ValidateResult } from './validate';
 import { loadStoredRom, saveRom, forgetRom } from './store';
 import { createRomAssets } from './assets';
+import { fetchPack } from './pack';
+import { traceRom } from './trace';
 
 export type RomStatus = 'vazio' | 'verificando' | 'ok' | 'erro';
 export interface RomState { assets: RomAssets | null; status: RomStatus; erro: string | null }
@@ -15,7 +17,7 @@ let dialog: (() => void) | null = null;
 export function onRomChange(cb: (s: RomState) => void): () => void { listeners.add(cb); return () => { listeners.delete(cb); }; }
 function emit(): void { for (const cb of [...listeners]) cb(romState); }
 
-/** O painel (rom/ui.ts) se registra aqui; as telas chamam openRomDialog() sem conhecer o DOM. */
+/** Painel de abrir a ROM (sem uso desde o pacote embutido, rom/pack.ts; fica para quem quiser registrar um). */
 export function registerRomDialog(open: (() => void) | null): void { dialog = open; }
 export function openRomDialog(): void { dialog?.(); }
 
@@ -59,6 +61,38 @@ export async function bootRom(): Promise<boolean> {
     try { await forgetRom(); } catch { /* ROM guardada não confiável; segue vazio mesmo se o delete falhar */ }
     romState.status = 'vazio'; romState.erro = null; emit();
     return false;
+  }
+}
+
+/** No boot: os gráficos e o som vêm do pacote embutido (public/rom-pack.dat, rom/pack.ts) — ninguém precisa carregar a
+ *  ROM. Nunca rejeita: se o pacote falhar, o jogo segue com a arte por código e sem som. Devolve se ficou com ele. */
+export async function bootPack(url: string): Promise<boolean> {
+  romState.status = 'verificando'; romState.erro = null; emit();
+  try {
+    romState.assets = createRomAssets(await fetchPack(url)); romState.status = 'ok';
+    emit();
+    return true;
+  } catch (e) {
+    console.warn('Crown Blast: pacote de gráficos indisponível; usando a arte por código.', e);
+    romState.status = 'erro'; romState.erro = 'Não foi possível carregar os gráficos do jogo.'; emit();
+    return false;
+  }
+}
+
+/** Dev (?romtrace=<url>, scripts/rom-pack): usa a ROM real dessa URL, rastreando o que o jogo lê, para regerar o
+ *  pacote embutido. Devolve as faixas lidas até o momento (ou null se a ROM não carregou). */
+export async function bootTrace(url: string): Promise<(() => [number, number][]) | null> {
+  try {
+    const res = await fetch(url);
+    let bytes = new Uint8Array(await res.arrayBuffer());
+    if (bytes.length % 0x8000 === 512) bytes = bytes.subarray(512);
+    const t = traceRom(bytes);
+    romState.assets = createRomAssets(t.view); romState.status = 'ok'; romState.erro = null;
+    emit();
+    return t.ranges;
+  } catch (e) {
+    console.warn('Crown Blast: ?romtrace sem ROM.', e);
+    return null;
   }
 }
 

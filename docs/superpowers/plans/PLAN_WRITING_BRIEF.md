@@ -8,7 +8,9 @@
   dessas pastas (ex.: `mecanicas/movesim.py`, `mecanicas/itemsim.py`, `arenas-cenario/arena_rom.py`,
   `graficos-formato/decomp.py`). Quando o plano mandar portar um modelo Python, cite arquivo e função.
 - ROM para testes locais: `SB4_ROM="/Users/dlotuz/Projetos Claude/Bomber Project/Super Bomberman 4 (USA).sfc"`.
-  Testes que exigem a ROM usam `describe.skipIf(!ROM)`. Nunca versionar bytes da ROM, imagens extraídas, áudio.
+  Testes que exigem a ROM usam `describe.skipIf(!ROM)` (com `SB4_PACK=web/public/rom-pack.dat` rodam com o pacote
+  embutido). Os gráficos e o som da ROM vão no pacote `web/public/rom-pack.dat` (regerado por `web/scripts/rom-pack/`
+  quando o jogo passar a ler faixas novas da ROM); não versionar a ROM inteira nem estados do emulador.
 - Emulador/Python para gerar fixtures (traços numéricos): `analise/ferramentas/emu.py`, Python
   `analise/extraido/cores/venv/bin/python`, cores instrumentados em `analise/extraido/cores/rom-*` (as frentes
   compilaram versões com trace). Savestates em `analise/estados/`.

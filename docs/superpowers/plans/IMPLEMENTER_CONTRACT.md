@@ -10,7 +10,8 @@ use os valores e o código dele literalmente. Quando o brief traz código "confe
   lock; os pacotes já estão no `node_modules` compartilhado. Se faltar um pacote de verdade, reporte NEEDS_CONTEXT.
 - **Não mexa** em arquivos fora da posse da sua tarefa (o brief lista "Files"/"Possui"). Se precisar, pare e reporte.
 - ROM para testes: `SB4_ROM="/Users/dlotuz/Projetos Claude/Bomber Project/Super Bomberman 4 (USA).sfc"`.
-  Nunca versione bytes da ROM, imagens extraídas ou áudio.
+  Os gráficos e o som da ROM vão no pacote embutido `web/public/rom-pack.dat`: se o código passar a ler faixas novas
+  da ROM, regere-o (`web/scripts/rom-pack/build.mjs`). Não versione a ROM inteira nem estados do emulador.
 - TDD quando o brief pedir. Rode o teste focado enquanto itera; antes do commit rode a suíte inteira
   (`cd web && npx vitest run` com e sem `SB4_ROM`) e `npx tsc --noEmit`.
 - Commit(s) em PT-BR como o brief manda, terminando com `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
