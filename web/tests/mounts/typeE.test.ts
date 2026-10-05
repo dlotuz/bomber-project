@@ -1,5 +1,10 @@
 import { mkRound, placePx, ride, run, firstTick, BTN } from './helpers';
 import { mstate } from '../../src/core/mounts/types';
+import { SHOT_COOLDOWN } from '../../src/core/mounts/projectile';
+
+/** Regra da casa: espera depois que a nuvem some (SHOT_COOLDOWN, + 1 tick da contagem); os limiares medidos no
+ *  original ganham esse tanto. */
+const W = SHOT_COOLDOWN + 1;
 
 function shoot(targetPx: number) {
   const s = mkRound({ players: [0, 2] });
@@ -44,8 +49,8 @@ describe('montaria tipo E (tanque): Y = tiro lento', () => {
     };
     expect(shotAt(30)).toBe(false);
     expect(shotAt(70)).toBe(false);
-    expect(shotAt(134)).toBe(false);
-    expect(shotAt(135)).toBe(true);
+    expect(shotAt(134 + W)).toBe(false);
+    expect(shotAt(135 + W)).toBe(true);
   });
   it('acerto a 2 casas (nuvem em 11): Y em 50 não atira, em 51 atira', () => {
     const shotAt = (k: number): boolean => {
@@ -54,7 +59,7 @@ describe('montaria tipo E (tanque): Y = tiro lento', () => {
       run(s, 1, { 0: BTN.Y });
       return mstate(s).projectiles.some(pr => pr.born === s.tick);
     };
-    expect([shotAt(50), shotAt(51)]).toEqual([false, true]);
+    expect([shotAt(50 + W), shotAt(51 + W)]).toEqual([false, true]);
   });
   it('sem alvo: voa até a parede (nuvem em k = 95, x = 224), a nuvem dura 40 ticks e some (medido)', () => {
     const s = mkRound();

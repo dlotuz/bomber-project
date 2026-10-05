@@ -1,4 +1,5 @@
 import { defaultRules } from '../game/core-api';
+import { STAGE_MAX } from '../game/stages';
 import {
   DEFAULT_KEYMAPS, DEFAULT_PADMAP, DEVICE_IDS, KEY_FIELDS, PAD_FIELDS,
   type DeviceId, type KeyMap, type PadMap,
@@ -64,7 +65,12 @@ export interface Settings {
   /** Slots salvos (null = vazio). Jogabilidade: o 1 nasce com o padrão do jogo. "Restaurar padrão" não mexe nisto. */
   controlSlots: (ControlPreset | null)[];
   gameplaySlots: (GameplayPreset | null)[];
+  /** Controle da sala online: um perfil só dele (dispositivo, teclas e botões), separado dos 5 jogadores locais. */
+  online: OnlineControls;
 }
+
+export interface OnlineControls { device: DeviceId; keymap: KeyMap; padmap: PadMap }
+export const defaultOnlineControls = (): OnlineControls => ({ device: 'kb', keymap: { ...DEFAULT_KEYMAPS[0] }, padmap: { ...DEFAULT_PADMAP } });
 
 export const NAME_MAX = 8;
 export const NAME_CHARS = ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-';
@@ -88,6 +94,7 @@ export function defaultSettings(): Settings {
     keymaps: DEFAULT_KEYMAPS.map(m => ({ ...m })), padmaps: [0, 1, 2, 3, 4].map(() => ({ ...DEFAULT_PADMAP })),
     options: defaultOptions(), setup: defaultSetup(),
     controlSlots: [null, null, null], gameplaySlots: [gameplayOf(defaultOptions()), null, null],
+    online: defaultOnlineControls(),
   };
 }
 
@@ -191,10 +198,15 @@ export function normalizeSettings(raw: unknown): Settings {
         racer: bool(rr.racer, ds.rules.racer),
       },
       chars: five(s.chars, (x, i) => intIn(x, 0, CHARACTERS.length - 1, ds.chars[i])),
-      stage: intIn(s.stage, 1, 10, ds.stage),
+      stage: intIn(s.stage, 1, STAGE_MAX, ds.stage),
     },
     controlSlots: slots(r.controlSlots, d.controlSlots, x => normalizeControlPreset(x, d)),
     gameplaySlots: slots(r.gameplaySlots, d.gameplaySlots, x => normalizeGameplayPreset(x, d.options)),
+    online: {
+      device: oneOf(asObj(r.online).device, DEVICE_IDS, d.online.device),
+      keymap: normalizeKeyMap(asObj(r.online).keymap, d.online.keymap),
+      padmap: normalizePadMap(asObj(r.online).padmap),
+    },
   };
 }
 

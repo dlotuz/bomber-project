@@ -14,14 +14,14 @@ import { drawText } from '../render/text/text';
 import { romState } from '../app/rom-api';
 import { sceneFrame, PpuCanvas } from '../render/screens-rom/scene';
 import { stagePreview, STAGE_ICON_HOFS_BASE } from '../render/screens-rom/stagesel';
-import { drawBackground } from './ui';
+import { hdMenu } from '../render/hd-menu';
+import { coreStage, stageNumber, stepVisible, visibleStage } from '../game/stages';
 import { battleScreen } from './battle';
 import { charactersScreen } from './characters';
 import { teamsScreen } from './teams';
 
-const STAGES = 10;
-/** Volta 1↔10. */
-const wrapStage = (n: number): number => ((n - 1 + STAGES) % STAGES) + 1;
+/** Faixa das prévias (px da base): topo, altura e recorte horizontal dentro da moldura de corda do menu HD. */
+const PREVIEW_Y = 40, PREVIEW_H = 112, CLIP_X0 = 16, CLIP_X1 = 240;
 
 /** Cues da transição para a partida (§6.7): brilho fixo em $01 até o fade sonoro, banco e música da batalha. */
 const fadeAudio = (a: App): void => a.audio.fade();
@@ -31,8 +31,8 @@ const musicCue = (id: number) => (a: App): void => a.audio.music(id);
 /** Miniatura da arena (15×13 casas de `cell` px) com as cores do tema. Placeholder até a T11 reconstruir as
  *  prévias reais de `$C1:A901` (ver `render/screens-rom/stagesel.ts`, R29). */
 export function drawMiniArena(ctx: CanvasRenderingContext2D, stage: number, x: number, y: number, cell: number): void {
-  const t = THEMES[stage - 1];
-  const rows = LAYOUTS[stage - 1];
+  const t = THEMES[coreStage(stage) - 1];
+  const rows = LAYOUTS[coreStage(stage) - 1];
   for (let gy = 0; gy < 13; gy++) for (let gx = 0; gx < 15; gx++) {
     let color: string;
     if (gx === 0 || gy === 0 || gx === 14 || gy === 12) color = t.wallFace;
@@ -51,7 +51,8 @@ export function stageScreen(app: App): Screen & {
   readonly stage: number; scroll(): number; readonly seqF: number; battleVisible(): boolean; titleDy(): number;
 } {
   const setup = app.settings.setup;
-  const rep = new Repeater(STAGE.repeatFirst, STAGE.repeatEvery);
+  setup.stage = visibleStage(setup.stage);   // fase salva que ficou oculta (game/stages.ts) → a 1ª visível
+  const rep =new Repeater(STAGE.repeatFirst, STAGE.repeatEvery);
   const ppu = new PpuCanvas();
   let dir: -1 | 0 | 1 = 0;   // 0 parado, ±1 rolando
   let scrollT = 0;
@@ -96,7 +97,7 @@ export function stageScreen(app: App): Screen & {
       if (dir !== 0) {
         scrollT++;
         if (scrollT === STAGE.scrollFrames) {
-          setup.stage = wrapStage(setup.stage + dir);
+          setup.stage = stepVisible(setup.stage, dir);
           app.save();
           dir = 0; scrollT = 0;
         }
@@ -116,31 +117,36 @@ export function stageScreen(app: App): Screen & {
         app.transition(() => (setup.mode === 'team' ? teamsScreen(app) : charactersScreen(app)), FADE_MENU);
       }
     },
-    draw(ctx, bank, frame) {
+    draw(ctx, bank) {
+      // Menu HD como os outros (quebra-cabeça com corda, título e textos HD); as prévias ficam na base, por cima.
+      hdMenu(ctx, null, { item: 16 });
       const s = currentScroll();
       const rom = romState.assets;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(CLIP_X0, PREVIEW_Y, CLIP_X1 - CLIP_X0, PREVIEW_H);
+      ctx.clip();
       if (rom) {
-        // ROM: fundo de quebra-cabeça igual aos outros menus (cena `stagesel`, T5) e as prévias reais
-        // (anterior/atual/seguinte e, rolando, a que entra) com mapas e paletas por slot lidos da ROM
-        // (`$C1:A8D1`/`$C1:A92B`), com o BG1 rolando por baixo delas (`render/screens-rom/stagesel.ts`).
-        const { g, maps } = stagePreview(rom, setup.stage, dir);
-        ppu.draw(ctx, sceneFrame(g, maps, { bg1: [STAGE_ICON_HOFS_BASE - s, 0] }));
+        // ROM: as prévias reais (anterior/atual/seguinte e, rolando, a que entra) com mapas e paletas por slot lidos
+        // da ROM (`$C1:A8D1`/`$C1:A92B`), com o BG1 rolando (`render/screens-rom/stagesel.ts`); sem o quebra-cabeça
+        // da ROM no BG2, o fundo HD aparece entre elas. As vizinhas são as fases visíveis (game/stages.ts).
+        const { g, maps } = stagePreview(rom, setup.stage, dir, stepVisible);
+        ppu.drawOver(ctx, sceneFrame(g, { bg1: maps.bg1 }, { bg1: [STAGE_ICON_HOFS_BASE - s, 0] }));
       } else {
-        // Sem ROM: fallback com a arena reduzida (T-anterior), sem alpha, nas posições do R29.
-        drawBackground(ctx, frame);
+        // Sem ROM: fallback com a arena reduzida (T-anterior), nas posições do R29.
         const cell = 112 / 15;
-        const prev = wrapStage(setup.stage - 1), next = wrapStage(setup.stage + 1);
-        drawMiniArena(ctx, prev, 72 - 128 + s, 40, cell);
-        drawMiniArena(ctx, setup.stage, 72 + s, 40, cell);
-        drawMiniArena(ctx, next, 72 + 128 + s, 40, cell);
+        drawMiniArena(ctx, stepVisible(setup.stage, -1), 72 - 128 + s, PREVIEW_Y, cell);
+        drawMiniArena(ctx, setup.stage, 72 + s, PREVIEW_Y, cell);
+        drawMiniArena(ctx, stepVisible(setup.stage, 1), 72 + 128 + s, PREVIEW_Y, cell);
       }
+      ctx.restore();
       if (battleTextVisible(seqF)) {
         drawText(ctx, bank, 'bigBattle', S.stage.battle, 128, 8, { align: 'center' });
       } else {
-        drawText(ctx, bank, 'spriteBlue', S.stage.title, 126, 8 + stageTitleDy(seqF), { align: 'center' });
+        drawText(ctx, bank, 'menuTitle', S.stage.title, 128, 16 + stageTitleDy(seqF), { align: 'center' });
       }
-      drawText(ctx, bank, 'spriteBlue', S.stage.stage(setup.stage), 128, 152, { align: 'center' });
-      drawText(ctx, bank, 'spriteBlue', S.stage.names[setup.stage - 1], 128, 184, { align: 'center' });
+      drawText(ctx, bank, 'menuItem', S.stage.stage(stageNumber(setup.stage)), 128, 160, { align: 'center', tone: 'blue' });
+      drawText(ctx, bank, 'menuItem', S.stage.names[setup.stage - 1], 128, 184, { align: 'center' });
     },
   };
 }

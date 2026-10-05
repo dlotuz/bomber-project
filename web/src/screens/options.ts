@@ -20,19 +20,21 @@ export type OptionsPage = 'main' | 'controls' | 'gameplay';
  * Opções (§6.13, R15, R25). Principal: submenus, volume de música/efeitos (a ROM vem embutida: rom/pack.ts).
  * Controles: por jogador, dispositivo (←/→) e controles próprios (A abre). Jogabilidade: spawns aleatórios e as
  * regras extras (luva, arremesso de jogador, soneca). `back` (linha e B): do submenu volta às Opções; das Opções, ao
- * título na "Opções".
+ * título na "Opções". `ret`: submenu aberto de fora das Opções (atalho em "Configure as regras"); o `back` dele volta
+ * para essa tela em vez das Opções.
  */
-export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'main'): Screen & { readonly menu: Menu; readonly page: OptionsPage; rowIds(): string[]; value(id: string): string } {
+export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'main', ret?: () => Screen): Screen & { readonly menu: Menu; readonly page: OptionsPage; rowIds(): string[]; value(id: string): string } {
   const st = app.settings;
   // `opt()` lê `st.options` na hora (nunca um alias congelado): "RESTAURAR PADRÃO" troca `st.options` por um
   // objeto novo (`d.options`), e um alias tirado na criação da tela ficaria apontando para o objeto antigo —
   // os controles de música/efeitos/spawns pareceriam obedecer, mas editariam um objeto órfão, nunca salvo.
   const opt = (): typeof st.options => st.options;
 
-  app.audio.ensureMenus(MUSIC.title);
+  app.audio.ensureMenus(ret ? MUSIC.menus : MUSIC.title);   // aberto das regras: segue a música dos menus da batalha
 
   const goBack = (): void => {
     if (page === 'main') app.transition(() => titleScreen(app, { cursor: 2 }), FADE_TO_TITLE);
+    else if (ret) app.transition(ret, FADE_MENU);
     else app.transition(() => optionsScreen(app, page === 'controls' ? 0 : 1), FADE_MENU);
   };
   const open = (to: OptionsPage): void => { app.transition(() => optionsScreen(app, 0, to), FADE_MENU); };
@@ -61,7 +63,7 @@ export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'ma
     rows.push({
       id: `p${i + 1}`, label: S.options.player(i + 1), value: () => S.options.devices[st.devices[i]],
       left: () => turn(i, -1), right: () => turn(i, 1),
-      select: () => { app.transition(() => remapScreen(app, i), FADE_MENU); },
+      select: () => { app.transition(() => remapScreen(app, i, ret), FADE_MENU); },
     });
   }
   if (page === 'controls') slotRows(() => !!st.controlSlots[slot], () => { st.controlSlots[slot] = controlsOf(st); }, () => {
@@ -92,7 +94,7 @@ export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'ma
     });
     rows.push({
       id: 'password', label: S.password.menu, value: () => (opt().allMounts ? S.password.active : ''),
-      select: () => { const back = rows.findIndex(r => r.id === 'password'); app.transition(() => passwordScreen(app, back), FADE_MENU); },
+      select: () => { const back = rows.findIndex(r => r.id === 'password'); app.transition(() => passwordScreen(app, back, ret), FADE_MENU); },
     });
     slotRows(() => !!st.gameplaySlots[slot], () => { st.gameplaySlots[slot] = gameplayOf(opt()); },
       () => { Object.assign(opt(), st.gameplaySlots[slot]); });

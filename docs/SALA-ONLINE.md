@@ -39,9 +39,13 @@ Na sala:
 - O anfitrião começa em **INICIAR PARTIDA**.
 - B leva o cursor até **SAIR DA SALA**, para ninguém sair sem querer.
 
+**CONTROLE ONLINE**, que aparece fora e dentro da sala, configura o controle usado nas partidas online: dispositivo (teclado ou controle), teclas e botões. É um perfil só do online (`Settings.online`), separado dos controles dos 5 jogadores do jogo local, e começa igual ao do jogador 1. Na partida online, cada um joga só com esse perfil.
+
+Na partida, o nome de cada jogador humano aparece em cima da cabeça, na cor dele.
+
 As regras extras vêm das Opções do anfitrião: soltar da luva, arremesso de jogador, soneca, montarias e spawns. Por enquanto a sala online é só Todos contra Todos.
 
-Cada um joga com o controle ou com as teclas do **jogador 1** da própria máquina. START pausa para todos. SELECT+START segurado encerra a partida para todos. Quando a partida acaba, todo mundo volta para a sala.
+Cada um joga com o seu **CONTROLE ONLINE**. START pausa para todos. SELECT+START segurado encerra a partida para todos. Quando a partida acaba, todo mundo volta para a sala.
 
 ## Como funciona
 

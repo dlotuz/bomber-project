@@ -1,5 +1,7 @@
 import { newMatch, devMountHumans, startRound, finishRoundInfo, createAi, matchRngState, type MatchState, type RoundState, type AiState, type MatchCarry } from './core-api';
 import type { GameConfig } from './config';
+import { coreStage, stageSkin } from './stages';
+import { setBattleStage } from '../render/stage-skin';
 
 export interface MatchSession {
   cfg: GameConfig; match: MatchState; round: RoundState | null; ai: AiState;
@@ -13,7 +15,8 @@ export function resetCarry(): void { carry.seed = null; carry.racerPrize = null;
 export function createMatchSession(cfg: GameConfig): MatchSession {
   const seed = cfg.seed ?? carry.seed ?? 0x0012;
   const prize = cfg.rules.racer && cfg.rules.mode === 'ffa' ? carry.racerPrize : null;
-  const match = newMatch(cfg.rules, cfg.stage, seed, prize, cfg.chars);
+  const match = newMatch(cfg.rules, coreStage(cfg.stage), seed, prize, cfg.chars);
+  setBattleStage(stageSkin(cfg.stage));
   // Spawns aleatórios: semente própria do navegador (o RNG do jogo começa sempre em $0012 ao abrir a página, e a
   // ordem sairia igual a cada recarga). Com ?seed= na URL fica determinística, para reproduzir partidas.
   if (cfg.seed === null) match.spawnSeed = (Math.random() * 0x100000000) >>> 0;

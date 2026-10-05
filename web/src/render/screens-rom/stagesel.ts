@@ -28,6 +28,8 @@
 //   Conferido contra as 10 capturas `stagesel*` (mapas iguais fora dos bits de paleta; cores por pixel).
 import type { RomAssets } from '../../app/rom-api';
 import { newMap, put, pattern, sceneGfx, MENU_GEO, type SceneGfx, type SceneMaps } from './scene';
+import { coreStage } from '../../game/stages';
+import { skinColors } from '../stage-skin';
 
 /** Coluna/linha do slot central (128 px de passo, igual a `STAGE.scrollPx * STAGE.scrollFrames`). */
 export const STAGE_ICON_COL = 8, STAGE_ICON_ROW = 2;
@@ -41,19 +43,25 @@ const STAGES = 10;
 const ICON = 7;
 
 const wrapStage10 = (n: number): number => ((n - 1 + STAGES * 10) % STAGES) + 1;
+/** Fase `d` passos depois de `stage`: por padrão as 10 do original em sequência; a tela passa a lista visível. */
+export type StageStep = (stage: number, d: number) => number;
+const step10: StageStep = (stage, d) => wrapStage10(stage + d);
+/** Fases da interface além das 10 (cópias com outra paleta, game/stages.ts) ficam como estão; as outras dão a volta. */
+const norm = (n: number): number => (coreStage(n) !== n ? n : wrapStage10(n));
 /** Mapa 7×7 da prévia de `stage` (com volta 1↔10), como está na ROM (os bits de paleta são trocados pelo slot). */
 export function stageIcon(a: RomAssets, stage: number): Uint16Array {
-  const p = a.rom.u24(STAGE_PREVIEW_MAPS + 3 * (wrapStage10(stage) - 1));
+  const p = a.rom.u24(STAGE_PREVIEW_MAPS + 3 * (wrapStage10(coreStage(norm(stage))) - 1));
   const out = new Uint16Array(ICON * ICON);
   for (let i = 0; i < out.length; i++) out[i] = a.rom.u16(p + 2 * i);
   return out;
 }
 /** As 16 cores da prévia de `stage` (com volta 1↔10). */
 export function stagePalette(a: RomAssets, stage: number): Uint16Array {
-  const p = a.rom.u24(STAGE_PREVIEW_PALS + 3 * (wrapStage10(stage) - 1));
+  const st = norm(stage);
+  const p = a.rom.u24(STAGE_PREVIEW_PALS + 3 * (wrapStage10(coreStage(st)) - 1));
   const out = new Uint16Array(16);
   for (let i = 0; i < 16; i++) out[i] = a.rom.u16(p + 2 * i);
-  return out;
+  return skinColors(out, st, a.arena(coreStage(st)).bgCgram);
 }
 
 /** `$C1:A209`: copia o bloco 7×7 limpando os bits 10–12 (`AND #$E3FF`) e pondo a paleta do slot (`ORA`). */
@@ -80,35 +88,36 @@ export function buildStageScene(a: RomAssets, stage: number): SceneMaps {
 /** Faixa ao vivo: anterior/atual/seguinte lado a lado como no jogo, prontos para o BG1 rolar por baixo
  *  (`hofs = STAGE_ICON_HOFS_BASE - stageScreen.scroll()`). Com `dir` ≠ 0 (rolando), a fase atual + 2·dir entra no
  *  4º slot (coluna 24, que o mapa de 512 px mostra à direita ao rolar para → e à esquerda ao rolar para ←). */
-export function buildStagePreviewStrip(a: RomAssets, stage: number, dir: -1 | 0 | 1 = 0): SceneMaps {
+export function buildStagePreviewStrip(a: RomAssets, stage: number, dir: -1 | 0 | 1 = 0, step: StageStep = step10): SceneMaps {
   const bg1 = newMap();
-  placeIcon(bg1, SLOT.prev[0], STAGE_ICON_ROW, stageIcon(a, stage - 1), SLOT.prev[1]);
+  placeIcon(bg1, SLOT.prev[0], STAGE_ICON_ROW, stageIcon(a, step(stage, -1)), SLOT.prev[1]);
   placeIcon(bg1, SLOT.cur[0], STAGE_ICON_ROW, stageIcon(a, stage), SLOT.cur[1]);
-  placeIcon(bg1, SLOT.next[0], STAGE_ICON_ROW, stageIcon(a, stage + 1), SLOT.next[1]);
-  if (dir !== 0) placeIcon(bg1, SLOT.extra[0], STAGE_ICON_ROW, stageIcon(a, stage + 2 * dir), SLOT.extra[1]);
+  placeIcon(bg1, SLOT.next[0], STAGE_ICON_ROW, stageIcon(a, step(stage, 1)), SLOT.next[1]);
+  if (dir !== 0) placeIcon(bg1, SLOT.extra[0], STAGE_ICON_ROW, stageIcon(a, step(stage, 2 * dir)), SLOT.extra[1]);
   return { bg1, bg2: puzzleBg() };
 }
 
 /** Cópia de `base` com as paletas das prévias nas linhas 0–3 (`$C4:1986`: 16 cores em `$7E:8E00 + 32·slot`). */
-export function stagePreviewCgram(a: RomAssets, base: Uint16Array, stage: number, dir: -1 | 0 | 1 = 0): Uint16Array {
+export function stagePreviewCgram(a: RomAssets, base: Uint16Array, stage: number, dir: -1 | 0 | 1 = 0, step: StageStep = step10): Uint16Array {
   const cg = base.slice();
-  cg.set(stagePalette(a, stage - 1), SLOT.prev[1] * 16);
+  cg.set(stagePalette(a, step(stage, -1)), SLOT.prev[1] * 16);
   cg.set(stagePalette(a, stage), SLOT.cur[1] * 16);
-  cg.set(stagePalette(a, stage + 1), SLOT.next[1] * 16);
-  if (dir !== 0) cg.set(stagePalette(a, stage + 2 * dir), SLOT.extra[1] * 16);
+  cg.set(stagePalette(a, step(stage, 1)), SLOT.next[1] * 16);
+  if (dir !== 0) cg.set(stagePalette(a, step(stage, 2 * dir)), SLOT.extra[1] * 16);
   return cg;
 }
 
 export interface StagePreview { g: SceneGfx; maps: SceneMaps }
 const previewCache = new WeakMap<RomAssets, Map<string, StagePreview>>();
-/** Gráficos (CGRAM com as paletas dos slots) e mapas da faixa, memorizados por (ROM, fase, direção). */
-export function stagePreview(a: RomAssets, stage: number, dir: -1 | 0 | 1 = 0): StagePreview {
+/** Gráficos (CGRAM com as paletas dos slots) e mapas da faixa, memorizados por (ROM, fase, direção, vizinhas). */
+export function stagePreview(a: RomAssets, stage: number, dir: -1 | 0 | 1 = 0, step: StageStep = step10): StagePreview {
   let m = previewCache.get(a); if (!m) { m = new Map(); previewCache.set(a, m); }
-  const key = `${wrapStage10(stage)}:${dir}`;
+  stage = norm(stage);
+  const key = `${stage}:${dir}:${[-2, -1, 1, 2].map(d => norm(step(stage, d))).join(',')}`;
   let p = m.get(key);
   if (!p) {
     const g = sceneGfx(a, 'stagesel');
-    p = { g: { ...g, cgram: stagePreviewCgram(a, g.cgram, stage, dir) }, maps: buildStagePreviewStrip(a, stage, dir) };
+    p = { g: { ...g, cgram: stagePreviewCgram(a, g.cgram, stage, dir, step) }, maps: buildStagePreviewStrip(a, stage, dir, step) };
     m.set(key, p);
   }
   return p;

@@ -36,11 +36,11 @@ try {
   console.log(`sala ${code}`);
   await B.page.goto(`${base}?sala=${code}`);
   await onScreen(B); await sleep(800);
-  await key(B, 'KeyW', 2); await typeEntry(B, 'Beto');   // o convite abre no CÓDIGO: sobe ao NOME
-  await key(B, 'KeyS', 3); await key(B, 'KeyJ');         // ENTRAR NA SALA
+  await key(B, 'KeyW', 3); await typeEntry(B, 'Beto');   // o convite abre no CÓDIGO: sobe ao NOME
+  await key(B, 'KeyS', 4); await key(B, 'KeyJ');         // ENTRAR NA SALA
   await B.page.waitForFunction(() => window.__sala?.code, null, { timeout: 15000 });
   await sleep(1500);                                     // pacote de gráficos e ping dos dois
-  await key(A, 'KeyW', 2); await key(A, 'KeyJ');         // da própria vaga, ↑↑ dá a volta até INICIAR PARTIDA
+  await key(A, 'KeyW', 3); await key(A, 'KeyJ');         // da própria vaga, ↑↑↑ dá a volta até INICIAR PARTIDA
   await Promise.all([A, B].map(p => p.page.waitForFunction(() => window.__sala.tick > 10, null, { timeout: 15000 })));
   // os dois apertam teclas do jogador 1 (WASD + J = bomba) durante a partida
   const keys = ['KeyD', 'KeyS', 'KeyJ', 'KeyA', 'KeyW', 'KeyJ'];

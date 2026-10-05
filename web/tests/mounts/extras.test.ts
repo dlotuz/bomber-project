@@ -6,6 +6,7 @@ import { addBomb, bombFireOf } from '../../src/core/bombs';
 import { CODE } from '../../src/core/types';
 import { rangeOf } from '../../src/core/constants';
 import { SWEEP_PATH } from '../../src/core/mounts/abilities/type5';
+import { DASH_COOLDOWN } from '../../src/core/mounts/abilities/type4';
 import { cellFromRomOff } from '../../src/core/units';
 import { ROM } from '../rom/helpers';
 
@@ -98,7 +99,7 @@ describe('montaria tipo 4 (investida)', () => {
     expect(X(p)).toBe(50);
     expect(bombCells(s)).toEqual([cellOf(2, 1)]);
   });
-  it('durante a investida não põe bomba nem vira; o Y repete sem recarga', () => {
+  it('durante a investida não põe bomba nem vira; o Y só repete depois da espera (regra da casa)', () => {
     const { s, p } = (() => {
       const s = mkRound();
       const p = placePx(s, 0, cx(2), cy(1));
@@ -113,6 +114,9 @@ describe('montaria tipo 4 (investida)', () => {
     run(s, 60);
     expect(X(p)).toBe(223);
     p.face = 6;
+    run(s, 1, { 0: BTN.Y }); run(s, 3);
+    expect(X(p)).toBe(223);                    // ainda na espera: o Y não faz nada (o original repetia sem recarga)
+    run(s, DASH_COOLDOWN);
     run(s, 1, { 0: BTN.Y }); run(s, 3);
     expect(X(p)).toBeLessThan(223);
   });

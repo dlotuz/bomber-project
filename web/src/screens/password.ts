@@ -9,12 +9,12 @@ import { optionsScreen } from './options';
 export const ALL_MOUNTS_CODE = '0164';
 
 /** Senha (Opções → Jogabilidade): 4 dígitos (←/→ muda 0–9, com volta), CONFIRMAR e VOLTAR. `back` = linha de
- *  volta na Jogabilidade. */
-export function passwordScreen(app: App, back: number): Screen & { readonly menu: Menu; readonly digits: number[]; readonly note: string } {
+ *  volta na Jogabilidade; `ret`, para onde a Jogabilidade volta (ver `optionsScreen`). */
+export function passwordScreen(app: App, back: number, ret?: () => Screen): Screen & { readonly menu: Menu; readonly digits: number[]; readonly note: string } {
   const digits = [0, 0, 0, 0];
   let note = '';
   const turn = (i: number, d: number): boolean => { digits[i] = (digits[i] + d + 10) % 10; note = ''; return true; };
-  const goBack = (): void => { app.transition(() => optionsScreen(app, back, 'gameplay'), FADE_MENU); };
+  const goBack = (): void => { app.transition(() => optionsScreen(app, back, 'gameplay', ret), FADE_MENU); };
   const rows: MenuRow[] = [
     ...digits.map((_, i) => ({ id: `d${i}`, left: () => turn(i, -1), right: () => turn(i, 1) })),
     {

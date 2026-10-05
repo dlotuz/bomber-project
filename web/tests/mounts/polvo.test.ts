@@ -89,7 +89,7 @@ describe('investida do polvo (tipo 4)', () => {
     expect(dashing(r)).toBe(false);
   });
 
-  it('parede: sem atraso — f49 é a parada, em f50 já desce; Y em f49 se perde, Y em f50 vale', () => {
+  it('parede: sem atraso para andar — f49 é a parada, em f50 já desce; Y em f49 se perde, Y em f50 cai na espera', () => {
     const go = (script: (f: number) => number) => {
       const s = mkRound();
       const p = placePx(s, 0, cx(2), cy(1));
@@ -106,7 +106,8 @@ describe('investida do polvo (tipo 4)', () => {
     const lost = go(f => (f === 0 || f === 49 ? BTN.Y : 0));
     expect(lost[50].dash).toBe(false);
     const again = go(f => (f === 0 || f === 50 ? BTN.Y : 0));
-    expect(again[50].dash).toBe(true);    // ROM: f50 na $C2:26E0, f51 já sai (parede à frente)
+    // ROM: f50 já voltava à $C2:26E0. Regra da casa: depois de uma investida há DASH_COOLDOWN ticks de espera.
+    expect(again[50].dash).toBe(false);
     expect(again[51].dash).toBe(false);
   });
 

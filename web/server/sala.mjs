@@ -141,7 +141,7 @@ wss.on('connection', ws => {
       case 'lobby': {  // só o anfitrião: arena, regras, vagas sem humano (CPU/vazia), times e personagens das CPUs
         if (!room || room.game || peer !== room.host) return;
         const L = room.lobby, n = m.lobby ?? {};
-        L.stage = clampInt(n.stage, 1, 10, L.stage);
+        L.stage = clampInt(n.stage, 1, 13, L.stage);   // 11 a 13: cópias da 1 com outras cores (src/game/stages.ts)
         L.mode = n.mode === 'team' ? 'team' : 'ffa';
         if (Array.isArray(n.slots)) n.slots.forEach((k, s) => { if (s < 5 && L.slots[s] !== 'human' && (k === 'cpu' || k === 'off')) L.slots[s] = k; });
         if (Array.isArray(n.teams)) n.teams.forEach((v, s) => { if (s < 5) L.teams[s] = v === 1 ? 1 : 0; });

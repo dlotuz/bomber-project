@@ -3,7 +3,6 @@
 // vitória, pausa) roda com a entrada combinada de todos, tick a tick, em cada navegador. Quando a partida termina (tela
 // de fase ou título), todo mundo volta para a tela da sala.
 import type { App } from '../app/app';
-import type { MenuInput } from '../input/input';
 import type { SpriteBank } from '../render/sprite-bank';
 import { configFromSetup, type SetupLike, type SlotKind } from '../game/config';
 import { createMatchSession, type MatchSession } from '../game/match-session';
@@ -14,6 +13,9 @@ import { hashState } from '../core/hash';
 import { drawText } from '../render/text/text';
 import { S } from '../render/text/strings';
 import { Lockstep } from './lockstep';
+import { standing } from '../core/state';
+import { entX, entY } from '../render/fx/coords';
+import { PLAYER_COLORS } from '../render/draw-game';
 
 export interface Lobby {
   stage: number; mode: 'ffa' | 'team'; teams: number[]; slots: SlotKind[]; chars: number[]; names: string[];
@@ -31,6 +33,8 @@ type ServerMsg =
   | { t: 'error'; msg: string }
   | { t: 'closed'; msg: string };
 
+/** Nome em cima da cabeça: tamanho e altura acima do centro do jogador (px da base), a pé e montado. */
+const NAME_SIZE = 7, NAME_UP = 19, NAME_UP_MOUNTED = 27;
 /** A cada quantos ticks da batalha os navegadores conferem o estado (hash) entre si. */
 const HASH_EVERY = 120;
 const NAME_KEY = 'crown-sala-nome';
@@ -150,13 +154,14 @@ export class OnlineClient {
     this.app.go(onlineScreen(this.app));
   }
 
-  /** Um passo do loop na partida: manda o botão local e roda o tick quando os de todos chegaram. */
-  step(local: MenuInput): void {
+  /** Um passo do loop na partida: manda o botão local (`bits`, do controle da sala online) e roda o tick quando os de
+   *  todos chegaram. */
+  step(bits: number): void {
     const ls = this.ls;
     if (!ls) return;
     // até 2 ticks por passo: o 2º só se este navegador ficou para trás de todos os outros (alcança sem passar dos 60 Hz)
     for (let n = 0; n < 2; n++) {
-      const out = ls.local(local.any);
+      const out = ls.local(bits);
       if (out) this.send({ t: 'in', k: out.k, b: out.b });
       const t = ls.next();
       if (!t) {
@@ -187,6 +192,31 @@ export class OnlineClient {
     ctx.fillStyle = 'rgba(0,0,0,0.7)';
     ctx.fillRect(0, 0, 256, 11);
     drawText(ctx, bank, 'ascii8', text, 128, 2, { align: 'center', bare: true });
+  }
+
+  /** Nome de cada humano em cima da cabeça, na partida: desenhado na tela de saída em resolução nativa (nítido em
+   *  qualquer escala), depois do `present` — `L` = onde a imagem do jogo está (escala e deslocamento). */
+  drawNames(out: CanvasRenderingContext2D, L: { sx: number; sy: number; ox: number; oy: number }): void {
+    const round = this.ms?.round, room = this.room;
+    if (!this.ls || !round || !room || this.app.screen.id !== 'battle') return;
+    const size = NAME_SIZE * L.sy;
+    out.save();
+    out.setTransform(1, 0, 0, 1, 0, 0);
+    out.font = `700 ${size}px "Fredoka", "Arial Rounded MT Bold", system-ui, sans-serif`;
+    out.textAlign = 'center';
+    out.textBaseline = 'bottom';
+    out.lineJoin = 'round';
+    for (const p of round.players) {
+      const name = room.lobby.names[p.slot];
+      if (!name || !this.ms!.cfg.humans[p.slot] || !standing(p)) continue;
+      const x = L.ox + entX(p.x) * L.sx;
+      const y = L.oy + (entY(p.y) - (p.z ?? 0) - (p.mount ? NAME_UP_MOUNTED : NAME_UP)) * L.sy;
+      out.strokeStyle = 'rgba(0,0,0,0.85)'; out.lineWidth = size * 0.28;
+      out.strokeText(name, x, y);
+      out.fillStyle = PLAYER_COLORS[p.slot];
+      out.fillText(name, x, y);
+    }
+    out.restore();
   }
 
   /** Diagnóstico (scripts/sala-e2e.mjs e console). */

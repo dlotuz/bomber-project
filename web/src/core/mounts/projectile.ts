@@ -1,6 +1,6 @@
 import type { RoundState, Player } from '../types';
 import { CODE } from '../types';
-import { mstate, type MountProjectile, type MountState, type ProjKind } from './types';
+import { mstate, rider, type MountProjectile, type MountState, type ProjKind } from './types';
 import { cellAt, cellOf, colOf, linOf, centerX, centerY, GRID_W, GRID_H, isEnemy } from './core-api';
 
 /** Modelo por casas medido no emulador (relatório da T3 do plano 9; testes de bloqueio do ajuste C). Posições em
@@ -45,6 +45,16 @@ export function spawnProjectile(s: RoundState, owner: Player, kind: ProjKind, sl
 
 /** Tiro E/F: ao nascer, a ROM testa a casa da frente do montador ($C1:2D23 / $C1:2F45). Bloqueada → o objeto final
  *  já nasce na posição do montador (medido: de frente para a parede ou para um item, fim em k = 0). */
+/** Regra da casa (não é do original: lá o próximo tiro sai assim que o anterior some): espera depois que o tiro lento
+ *  (E) ou a nota da soneca (F) some, antes do dono poder atirar de novo. 2 s. */
+export const SHOT_COOLDOWN = 120;
+/** Fim do tiro E/F: some e começa a espera do dono (se ainda está na mesma montaria). */
+export function endShot(s: RoundState, pr: MountProjectile): void {
+  pr.state = 'done';
+  const q = s.players[pr.owner], r = q ? rider(q) : null;
+  if (r && r.type === pr.kind) r.cooldown = SHOT_COOLDOWN;
+}
+
 export function spawnShot(s: RoundState, owner: Player, kind: 0xe | 0xf): MountProjectile {
   const pr = spawnProjectile(s, owner, kind);
   if (frontBlocked(s, neighbor(cellAt(owner.x, owner.y), owner.face))) {
@@ -63,6 +73,13 @@ export function shotInPlay(s: RoundState, owner: number, kind: 0xe | 0xf): boole
   const list = (s.mountState as MountState | null)?.projectiles ?? [];
   return list.some(pr => pr.owner === owner && pr.kind === kind
     && (pr.state === 'fly' || (pr.state === 'cloud' && s.tick - pr.t < SHOT_END_TICKS)));
+}
+
+/** Y do E/F bloqueado: tiro do dono ainda não encerrado (inclusive o que some neste tick, antes de `endShot` dar a
+ *  espera) ou a espera (`SHOT_COOLDOWN`) correndo. */
+export function shotBlocked(s: RoundState, p: Player, kind: 0xe | 0xf): boolean {
+  const list = (s.mountState as MountState | null)?.projectiles ?? [];
+  return (rider(p)?.cooldown ?? 0) > 0 || list.some(pr => pr.owner === p.slot && pr.kind === kind && pr.state !== 'done');
 }
 
 /** 1º adversário do dono (ordem P1..P5) parado na casa `cell`; −1 se não houver. */

@@ -2,7 +2,9 @@ import type { TextStyleId } from './types';
 import { PAD_NAMES } from '../../input/input';
 
 export const STAGE_NAMES_PT = ['O Clássico', 'Rápido e Devagar', 'Bombardeio Orbital', 'Não Me Empurre', 'Escola de Choques',
-  'Piso Traiçoeiro', 'Esconde-Explode', 'Caça-Níquel', 'Gangorra', 'Alfaiataria'] as const;
+  'Piso Traiçoeiro', 'Esconde-Explode', 'Caça-Níquel', 'Gangorra', 'Alfaiataria',
+  // 11 em diante: cópias com outra paleta (game/stages.ts)
+  'O Clássico Noturno', 'O Clássico Gelado', 'O Clássico em Brasa'] as const;
 
 export const RACER_PRIZE_NAMES = {
   'bomb+1': 'BOMBA +1', pierce: 'BOMBA PERFURANTE', 'fire+1': 'FOGO +1', fullFire: 'FOGO TOTAL', 'speed+1': 'PATINS +1',
@@ -11,7 +13,7 @@ export const RACER_PRIZE_NAMES = {
 } as const;
 
 const DEVICE_NAMES = { kb: 'TECLADO', gp0: 'CONTROLE 1', gp1: 'CONTROLE 2', gp2: 'CONTROLE 3', gp3: 'CONTROLE 4', none: 'NENHUM' } as const;
-const ACTIONS = { up: 'CIMA', down: 'BAIXO', left: 'ESQUERDA', right: 'DIREITA', a: 'A (BOMBA)', b: 'B (DETONAR)', x: 'X (PARA CHUTE)', y: 'Y (SOCO)', l: 'L', r: 'R', start: 'START', select: 'SELECT', power: 'PODER (P)' } as const;
+const ACTIONS = { up: 'CIMA', down: 'BAIXO', left: 'ESQUERDA', right: 'DIREITA', a: 'A (BOMBA)', b: 'B (DANCINHA)', x: 'X (PARA CHUTE)', y: 'Y (SOCO)', l: 'L', r: 'R', start: 'START', select: 'SELECT', power: 'PODER (P)' } as const;
 
 export const S = {
   title: { normal: 'JOGO NORMAL', battle: 'JOGO DE BATALHA', options: 'OPÇÕES', pressStart: 'APERTE START!' },
@@ -20,6 +22,8 @@ export const S = {
   rules: {
     title: 'Configure as regras!',
     labels: ['Nível da CPU', 'Coroas', 'Tempo', 'Morte Súbita', 'Bomber Vingador', 'Corrida Bônus'],
+    // atalhos para os submenus das Opções, sem voltar ao título
+    controls: 'Controles', gameplay: 'Jogabilidade',
     cpu: ['Fraco', 'Normal', 'Forte'], crowns: ['1', '2', '3', '4', '5'], time: ['1:00', '2:00', '3:00', '5:00', '∞'], no: 'Não', yes: 'Sim',
   },
   chars: {
@@ -50,11 +54,13 @@ export const S = {
     name: 'NOME', create: 'CRIAR SALA', code: 'CÓDIGO', join: 'ENTRAR NA SALA', back: 'VOLTAR', empty: '---',
     you: 'VOCÊ', cpu: 'CPU', off: 'NENHUM', stage: 'FASE', crowns: 'COROAS', time: 'TEMPO', level: 'FORÇA DA CPU',
     sudden: 'MORTE SÚBITA', bad: 'BOMBER VINGADOR', invite: 'CONVIDAR', copy: 'COPIAR LINK', copied: 'LINK COPIADO!',
-    start: 'INICIAR PARTIDA', waitHost: 'AGUARDANDO O ANFITRIÃO', playing: 'PARTIDA EM ANDAMENTO', leave: 'SAIR DA SALA',
+    controls: 'CONTROLE ONLINE', start: 'INICIAR PARTIDA', waitHost: 'AGUARDANDO O ANFITRIÃO', playing: 'PARTIDA EM ANDAMENTO', leave: 'SAIR DA SALA',
     connecting: 'CONECTANDO...', typing: 'DIGITE E APERTE ENTER (ESC CANCELA)', needName: 'DIGITE UM NOME PRIMEIRO',
     needCode: 'DIGITE O CÓDIGO DA SALA', help: 'ESQ/DIR: MUDA   A: OK', guestHelp: 'ESQ/DIR: SEU PERSONAGEM',
     lost: 'A CONEXÃO COM A SALA CAIU', noServer: 'SEM SERVIDOR DA SALA (NPM RUN SALA)', desync: 'DESSINCRONIZOU! TERMINE E RECOMECE',
     waiting: (names: string) => `AGUARDANDO ${names.toUpperCase()}...`, slot: (s: number) => `${s + 1}P`,
+    players: 'JOGADORES', rules: 'REGRAS', roomCode: 'CÓDIGO DA SALA', copyHelp: 'A: COPIA O LINK DE CONVITE',
+    levelShort: 'CPU', badShort: 'VINGADOR',
   },
   password: {
     title: 'Senha', menu: 'SENHA', active: 'LIGADA', digit: (n: number) => `NÚMERO ${n}`, ok: 'CONFIRMAR',
@@ -71,7 +77,7 @@ export const STRING_USES: readonly Use[] = uniq([
   ...as('titleMenu', [S.title.normal, S.title.battle, S.title.options, S.title.pressStart]),
   ...as('menuTitle', [S.vs.title, S.players.title, S.rules.title, S.chars.title, S.teams.title, S.options.title, S.options.controlsTitle, S.options.gameplayTitle, S.password.title, S.online.title]),
   ...as('menuItem', [S.vs.royale, S.vs.champ, S.vs.mania, S.vs.ffa, S.vs.team, ...S.players.row, S.players.human, S.players.cpu,
-    S.players.off, ...S.rules.labels, ...S.rules.cpu, ...S.rules.crowns, ...S.rules.time, S.rules.no, S.rules.yes, S.teams.vs]),
+    S.players.off, ...S.rules.labels, S.rules.controls, S.rules.gameplay, ...S.rules.cpu, ...S.rules.crowns, ...S.rules.time, S.rules.no, S.rules.yes, S.teams.vs]),
   ...as('spriteBlue', [S.stage.title, ...Array.from({ length: 10 }, (_, i) => S.stage.stage(i + 1)), ...STAGE_NAMES_PT]),
   ...as('banner', [S.battle.pause, S.battle.hurry, S.battle.timeUp, S.battle.timeUpShort, S.racer.press]),
   ...as('ascii8', [
@@ -87,8 +93,9 @@ export const STRING_USES: readonly Use[] = uniq([
     S.password.wrong, S.password.on, S.password.off,
     S.online.name, S.online.create, S.online.code, S.online.join, S.online.back, S.online.empty, S.online.you, S.online.cpu,
     S.online.off, S.online.stage, S.online.crowns, S.online.time, S.online.level, S.online.sudden, S.online.bad,
-    S.online.invite, S.online.copy, S.online.copied, S.online.start, S.online.waitHost, S.online.playing, S.online.leave,
+    S.online.controls, S.online.invite, S.online.copy, S.online.copied, S.online.start, S.online.waitHost, S.online.playing, S.online.leave,
     S.online.connecting, S.online.typing, S.online.needName, S.online.needCode, S.online.help, S.online.guestHelp,
+    S.online.players, S.online.rules, S.online.roomCode, S.online.copyHelp, S.online.levelShort, S.online.badShort,
     S.online.lost, S.online.noServer, S.online.desync, S.online.waiting('ANA, BETO'), ...[0, 1, 2, 3, 4].map(S.online.slot),
   ]),
   ...as('bigBattle', [S.stage.battle]),

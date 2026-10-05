@@ -10,6 +10,7 @@ import { hdMenu } from '../render/hd-menu';
 import { Menu, clamp, type MenuRow } from './menu';
 import { playersScreen } from './players';
 import { charactersScreen } from './characters';
+import { optionsScreen, type OptionsPage } from './options';
 
 type ToggleKey = keyof Pick<RuleChoices, 'suddenDeath' | 'badBomber' | 'racer'>;
 /** Âncora (centro, topo) do título, presa à faixa de texto da captura em `tests/screens/menu-title.test.ts`. */
@@ -25,8 +26,12 @@ export const RULES_VALUE_X = 176;
 const CPU_TONE: readonly Tone[] = ['blue', 'green', 'red'];
 const onOffTone = (b: boolean): Tone => (b ? 'red' : 'blue');
 
-/** "Configure as regras": os 6 ajustes do original (§6.5, §3.14). Spawn aleatório mora em Opções (T3). */
-export function rulesScreen(app: App): Screen & { readonly cursor: number; values(): string[]; tones(): Tone[] } {
+/** Linhas: y do 1º rótulo e passo (24 no original; 19 para caberem os 2 atalhos). */
+export const RULES_ROW_Y = 48, RULES_ROW_STEP = 19;
+
+/** "Configure as regras": os 6 ajustes do original (§6.5, §3.14) e atalhos para os submenus Controles e
+ *  Jogabilidade das Opções (voltam para cá). Spawn aleatório mora em Jogabilidade (T3). */
+export function rulesScreen(app: App, cursor?: number): Screen & { readonly cursor: number; values(): string[]; tones(): Tone[] } {
   const r = app.settings.setup.rules;
   app.audio.ensureMenus(MUSIC.menus);
 
@@ -64,7 +69,12 @@ export function rulesScreen(app: App): Screen & { readonly cursor: number; value
     numeric('timeIdx', () => r.timeIdx, v => { r.timeIdx = v; }, 0, 4),
     ...TOGGLES.map(toggle),
   ];
-  const menu = new Menu(rows);
+  const sub = (id: string, page: OptionsPage): MenuRow => ({
+    id, select: () => { const back = rows.findIndex(r => r.id === id); app.transition(() => optionsScreen(app, 0, page, () => rulesScreen(app, back)), FADE_MENU); },
+  });
+  rows.push(sub('controls', 'controls'), sub('gameplay', 'gameplay'));
+  const labels = [...S.rules.labels, S.rules.controls, S.rules.gameplay];
+  const menu = new Menu(rows, { cursor });
 
   return {
     id: 'rules',
@@ -75,13 +85,13 @@ export function rulesScreen(app: App): Screen & { readonly cursor: number; value
       if (menu.update(inp.any, inp.pressedAny, app.audio) === 'back') app.transition(() => playersScreen(app), FADE_MENU);
     },
     draw(ctx, bank) {
-      hdMenu(ctx, [16, 56 + 24 * menu.cursor], { item: 14, hand: 1.3 });
+      hdMenu(ctx, [16, RULES_ROW_Y + 1 + RULES_ROW_STEP * menu.cursor], { item: 14, hand: 1.3 });
       drawText(ctx, bank, 'menuTitle', S.rules.title, RULES_TITLE.x, RULES_TITLE.y, { align: 'center' });
       const vals = values(), tn = tones();
-      for (let i = 0; i < S.rules.labels.length; i++) {
-        const y = 55 + 24 * i;
-        drawText(ctx, bank, 'menuItem', S.rules.labels[i], 32, y);
-        drawText(ctx, bank, 'menuItem', vals[i], RULES_VALUE_X, y, { tone: tn[i] });
+      for (let i = 0; i < labels.length; i++) {
+        const y = RULES_ROW_Y + RULES_ROW_STEP * i;
+        drawText(ctx, bank, 'menuItem', labels[i], 32, y);
+        if (i < vals.length) drawText(ctx, bank, 'menuItem', vals[i], RULES_VALUE_X, y, { tone: tn[i] });
       }
     },
   };

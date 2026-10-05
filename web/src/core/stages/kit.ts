@@ -5,7 +5,7 @@ import { cellAt, cellOf, centerX, centerY, colOf, linOf, px } from '../units';
 import { itemCode, newId, playerCell, setAct, standing } from '../state';
 import { PRESSURE_BORDER_AT, PRESSURE_STEPS_SD, STUN_TICKS, FUSE } from '../constants';
 import { isImmune, stunPlayer } from '../hit';
-import { addBomb } from '../bombs';
+import { addBomb, bombOccupies } from '../bombs';
 import { launchBomb } from '../flyers';
 import { activeCount } from '../mounts/eggs';
 
@@ -85,7 +85,8 @@ export function landBomb(s: RoundState, cell: number, ev: GameEvent[]): void {
   for (const p of hit) stunPlayer(s, p, ev);
   const g = s.grid[cell];
   if (g === CODE.BURNING || g === CODE.PRESSURE) return;
-  if (g === CODE.FLOOR && hit.length === 0) { addBomb(s, -1, cell, { fire: 4, fuse: FUSE }); return; }
+  // casa com bomba rolando (fora da grade) não recebe outra parada em cima: quica, como as outras bombas que caem
+  if (g === CODE.FLOOR && hit.length === 0 && !bombOccupies(s, cell)) { addBomb(s, -1, cell, { fire: 4, fuse: FUSE }); return; }
   const b: Bomb = addBomb(s, -1, cell, { fire: 4, fuse: FUSE, state: 'air' });
   launchBomb(s, b, 'bounce', 2, { x: centerX(colOf(cell)), y: centerY(linOf(cell)), z: 0 });
 }

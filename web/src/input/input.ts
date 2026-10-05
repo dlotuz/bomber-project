@@ -226,6 +226,7 @@ export class InputManager {
   private gameKeys = new Set<string>();
   private lastKey: string | null = null;
   private maps: KeyMap[] = [];
+  private extra: KeyMap | null = null;
   private padmaps: PadMap[] = [];
   private padHeld: boolean[][] = [];   // [pad][button] segurado na última leitura
   private lastPad: { pad: number; button: number } | null = null;
@@ -249,7 +250,24 @@ export class InputManager {
 
   setKeymaps(maps: readonly KeyMap[]): void {
     this.maps = maps.map(m => ({ ...m }));
-    this.gameKeys = new Set(this.maps.flatMap(m => Object.values(m)).filter(Boolean));
+    this.refreshGameKeys();
+  }
+
+  /** Teclas de um perfil avulso (controle da sala online): também não rolam a página. */
+  setExtraKeymap(m: KeyMap | null): void {
+    this.extra = m ? { ...m } : null;
+    this.refreshGameKeys();
+  }
+
+  private refreshGameKeys(): void {
+    this.gameKeys = new Set([...this.maps, ...(this.extra ? [this.extra] : [])].flatMap(m => Object.values(m)).filter(Boolean));
+  }
+
+  /** Botões de um perfil avulso (controle da sala online), fora da atribuição dos 5 jogadores locais. */
+  readProfile(device: DeviceId, keymap: KeyMap, padmap: PadMap): number {
+    if (device === 'none') return 0;
+    if (device === 'kb') return readKeyMap(this.down, keymap);
+    return readGamepad(this.gamepads()[Number(device[2])] ?? null, padmap);
   }
 
   setPadmaps(maps: readonly PadMap[]): void {

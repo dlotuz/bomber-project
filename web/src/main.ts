@@ -30,10 +30,11 @@ if (params.has('seed')) carry.seed = Number.parseInt(params.get('seed')!, 10) & 
 
 const input = new InputManager(window, settings.keymaps);
 input.setPadmaps(settings.padmaps);
+input.setExtraKeymap(settings.online.keymap);
 const app = new App(settings, {
   save: s => saveSettings(store, s),
   setKeymaps: m => input.setKeymaps(m),
-  applyInput: s => { input.setKeymaps(s.keymaps); input.setPadmaps(s.padmaps); },
+  applyInput: s => { input.setKeymaps(s.keymaps); input.setPadmaps(s.padmaps); input.setExtraKeymap(s.online.keymap); },
   seed: () => 0x0012,
 });
 app.audio.setVolume(settings.options.musicVol / 10, settings.options.sfxVol / 10);
@@ -75,6 +76,7 @@ const render = (): void => {
   app.draw(ctx, bank);
   online.drawOverlay(ctx, bank);
   present(display, fxOff ? null : app.screen.fx?.() ?? null, app.brightness() / 15, resolveScreenMode(urlMode, app.settings.options, resolveScreenKind(location.search, app.settings.options.screen)));
+  online.drawNames(display.out, display.layout());   // sala online: nome de cada humano em cima da cabeça
 };
 // ?quick abre direto numa partida com as regras da URL (ver parseConfig); sem ele, começa no título.
 // Sala online: o cliente (net/online.ts) e a tela (screens/online.ts); ?sala=<código> (link de convite) abre direto nela.
@@ -123,7 +125,8 @@ startLoop(() => {
   const inp = withEscapeAsBack(buildInput(cur, prev, app.settings.devices, input.takeLastKey(),
     { connected: input.connected(), esc: input.escHeld(), padButton: input.takePadButton() }));
   if (inp.pressedAny) audioStart.gesture();        // botão do controle também conta como gesto (M6)
-  if (online.playing) online.step(inp);            // partida online: a entrada local vai para o lockstep
+  // partida online: só o controle da sala online (Opções dele na tela da sala) vai para o lockstep
+  if (online.playing) { const oc = app.settings.online; online.step(input.readProfile(oc.device, oc.keymap, oc.padmap)); }
   else app.update(inp);
   prev = cur;
 }, render);

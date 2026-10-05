@@ -1,4 +1,4 @@
-import type { MountAbility } from '../types';
+import type { MountAbility, MountRider } from '../types';
 import { BTN, type Bomb } from '../../types';
 import { moveStep } from '../../movement';
 import { speedLevel } from '../../disease';
@@ -11,6 +11,10 @@ export const DASH_SPEED = 4 * 256;
 /** Teto da investida: $C2:4697 grava $58 = $38; $C2:2776 decrementa depois de cada movimento e sai no zero. */
 export const DASH_TICKS = 0x38;
 const FACE_BTN = [BTN.UP, 0, BTN.RIGHT, 0, BTN.DOWN, 0, BTN.LEFT];
+/** Regra da casa (não é do original: lá o Y repete sem recarga, `analise/investigacao/montarias-extras`): espera depois
+ *  que a investida termina antes de poder dar outra, para não ficar emendando investidas. 1,5 s. */
+export const DASH_COOLDOWN = 90;
+const endDash = (r: MountRider): void => { r.dash = false; r.cooldown = DASH_COOLDOWN; };
 
 /** Tipo 4: Y dispara a investida ($C2:4691). Sem bomba nem virar durante; atravessa jogadores. Termina ($C2:2776-2785,
  *  volta à rotina normal $C2:22F0 no mesmo tick, sem pose nem espera: no tick seguinte já anda, vira e usa o Y):
@@ -22,10 +26,13 @@ const FACE_BTN = [BTN.UP, 0, BTN.RIGHT, 0, BTN.DOWN, 0, BTN.LEFT];
 export const ABILITY_4: MountAbility = {
   type: 0x4,
   yEndsTick: true,   // $C2:46AD: SEC — sem chute no tick do Y
-  onY(s, _p, r) { r.dash = true; r.dashLeft = DASH_TICKS; r.dashT = s.tick; return true; },
+  onY(s, _p, r) {
+    if (r.dash || r.cooldown > 0) return true;   // ainda na espera (DASH_COOLDOWN): o Y não faz nada
+    r.dash = true; r.dashLeft = DASH_TICKS; r.dashT = s.tick; return true;
+  },
   drive(s, p, r, ev) {
     if (!r.dash) return false;
-    if (r.dashT !== s.tick - 1) { r.dash = false; return false; }   // a rotina foi substituída no meio
+    if (r.dashT !== s.tick - 1) { endDash(r); return false; }   // a rotina foi substituída no meio
     r.dashT = s.tick;
     const x = p.x, y = p.y, before = cellAt(x, y);
     const hit: { roller?: Bomb } = {};
@@ -37,9 +44,9 @@ export const ABILITY_4: MountAbility = {
     const st = STAGES[s.stage];
     if (now !== before && now >= 0) st?.onEnterCell?.(s, p, now, ev);
     if (now >= 0) st?.onStand?.(s, p, now, ev);
-    if (p.actLeft > 0 || p.push.left > 0) { r.dash = false; return true; }   // o gancho trocou a rotina
+    if (p.actLeft > 0 || p.push.left > 0) { endDash(r); return true; }   // o gancho trocou a rotina
     r.dashLeft = (r.dashLeft ?? DASH_TICKS) - 1;
-    if (r.dashLeft <= 0 || (p.x === x && p.y === y)) r.dash = false;
+    if (r.dashLeft <= 0 || (p.x === x && p.y === y)) endDash(r);
     return true;
   },
 };

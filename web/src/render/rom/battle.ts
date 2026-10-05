@@ -16,6 +16,7 @@ import { MAP_W, newMemo, type RomClock, type RomMemo } from './scene';
 import { warnOnce } from './warn';
 import { cellCategory, NO_SKIP, type HdSkip } from '../hdart/cover';
 import { hdBattleSkip } from '../hdart/mode';
+import { battleSkin, skinCgram } from '../stage-skin';
 
 /** D1: o que a tela da partida passa além da rodada. */
 export interface RomBattleVis { crowns: readonly number[] }
@@ -130,7 +131,7 @@ export function buildBattleFrame(s: RoundState, vis: RomBattleVis, a: RomAssets,
   const headKey = opts.hudHeads === false ? 'rom' : s.players.map(p => (p.present ? `${p.char}${cry[p.slot] ? 'c' : ''}` : '-')).join(',');
   const inf = s.clock.sec >= CLOCK_FROZEN_FROM ? infinityOverrides(ar.bgTiles.px, ar.hudMap) : [];
   const tiles = sceneryTiles(ar, clock.tick, [...heads, ...inf], headKey + (inf.length ? '|inf' : ''), opts.tileCopies);
-  const cgram = sceneryCgram(opts.palAnim === false ? { ...ar, palAnim: [] } : ar, clock.tick, frame, opts.blink !== false);
+  const cgram = skinCgram(sceneryCgram(opts.palAnim === false ? { ...ar, palAnim: [] } : ar, clock.tick, frame, opts.blink !== false), battleSkin());
   const scene = readScene(s, clock.tick, memo);
   const bg2 = fieldWords(s, ar, scene, tb, clock, t => a.bombScript(t));
   const bg1 = Uint16Array.from(ar.bg1.subarray(0, 1024));

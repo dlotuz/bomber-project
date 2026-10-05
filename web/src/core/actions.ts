@@ -2,8 +2,8 @@ import { BTN, CODE, DIR_BTNS, DISEASE, type GameEvent, type Player, type PlayerA
 import { DETONATE_TICKS, P_ADVANCE_TICKS, P_PUSH_TICKS, P_SPEED, P_TICKS } from './constants';
 import { cellAt, cellCenter, faceDcol, faceDlin, faceStep } from './units';
 import { playerCell, setAct, standing } from './state';
-import { movePlayer } from './movement';
-import { tryKick } from './kick';
+import { movePlayer, passesBomb } from './movement';
+import { rollerAt, tryKick } from './kick';
 import { detonateRemote, placeBomb } from './bombs';
 import { punchBomb, startLift, throwHeld, tossHeld } from './flyers';
 import { isImmune } from './hit';
@@ -20,7 +20,9 @@ export function applyPush(s: RoundState, p: Player, ev: GameEvent[]): boolean {
   const pu = p.push;
   if (pu.left <= 0) return false;
   const c0 = playerCell(p), c1 = cellAt(p.x + pu.vx, p.y + pu.vy);
-  if (c1 !== c0 && (c1 < 0 || solid(s.grid[c1]))) { pu.left = 0; [p.x, p.y] = cellCenter(c0); return false; }
+  // Bomba rolando fica fora da grade: sem o `rollerAt`, o empurrado (esteira, golpe P) entrava na casa dela e ela parava
+  // embaixo dele — o "atravessou a bomba". Andando, `moveStep` já barra do mesmo jeito.
+  if (c1 !== c0 && (c1 < 0 || solid(s.grid[c1]) || (!passesBomb(p) && rollerAt(s, c1)))) { pu.left = 0; [p.x, p.y] = cellCenter(c0); return false; }
   p.x += pu.vx; p.y += pu.vy; pu.left--;
   STAGES[s.stage]?.outOfBounds?.(s, p, ev);
   return true;
@@ -83,6 +85,10 @@ export function playerActions(s: RoundState, p: Player, btn: number, pressed: nu
   // Trancar: B segurado (depois do tick em que foi apertado) trava o jogador na pose de detonar; assim a luva não o pega.
   if (btn & BTN.B && !(pressed & BTN.B) && !holding(p) && !p.mount) { p.moveDir = 8; setAct(s, p, 'detonate'); return; }
   movePlayer(s, p, btn, ev);
+  // A esteira (fase 6) pode ter começado a empurrar o jogador neste mesmo passo (`onStand` → 'pushed'): o resto do
+  // tick (B, soco, luva, P) não pode trocar essa trava por uma mais curta, senão ele volta a andar no meio do empurrão
+  // e passa do alvo da esteira (auditoria de atravessar bomba, achado 2).
+  if (p.act === 'pushed') return;
   // Montado (qualquer fase): nada de luva, soco nem P — só o poder da própria montaria (Y) e as bombas.
   const onFoot = !p.mount;
   // Chute só andando contra a bomba (direcional apertado); parado olhando para ela, o Y do soco ainda a alcança.

@@ -10,7 +10,9 @@ export interface HdText { text: string; x: number; y: number; size: number; row:
 /** Tamanhos por tela (px da base): `item` = `menuItem`, `title` = `menuTitle`, `hand` = escala da luva. */
 export interface HdSizes { item?: number; title?: number; hand?: number }
 
-const state = { on: false, cursor: null as null | [number, number], texts: [] as HdText[], sizes: {} as HdSizes, bg: 'menu' as HdBg };
+/** Quadro arredondado por baixo dos textos (destaque), em px da base. */
+export interface HdPanel { x: number; y: number; w: number; h: number; fill: string; stroke: string; glow?: string }
+const state = { on: false, cursor: null as null | [number, number], texts: [] as HdText[], sizes: {} as HdSizes, bg: 'menu' as HdBg, panels: [] as HdPanel[] };
 /** Fundo: `menu` = quebra-cabeça com corda; `title` = arte do título (4:3) centrada no preto. */
 export type HdBg = 'menu' | 'title';
 
@@ -59,7 +61,9 @@ const handImg = (): HTMLImageElement | null => {
 };
 
 /** Zera o quadro (chamado antes de cada `app.draw`). */
-export function hdBegin(): void { state.on = false; state.cursor = null; state.texts.length = 0; state.sizes = {}; state.bg = 'menu'; }
+export function hdBegin(): void { state.on = false; state.cursor = null; state.texts.length = 0; state.sizes = {}; state.bg = 'menu'; state.panels.length = 0; }
+/** Quadro de destaque na tela de menu atual (depois de `hdMenu`), desenhado entre o fundo e os textos. */
+export function hdPanel(p: HdPanel): void { if (state.on) state.panels.push(p); }
 export const hdActive = (): boolean => state.on;
 /** Textos guardados neste quadro (testes). */
 export const hdTexts = (): readonly HdText[] => state.texts;
@@ -72,6 +76,7 @@ export function hdMenu(ctx: CanvasRenderingContext2D, cursor?: readonly [number,
   state.sizes = sizes;
   state.bg = bg;
   state.cursor = cursor ? [cursor[0], cursor[1]] : null;
+  state.panels.length = 0;
 }
 
 /** Desvio do `drawText`: guarda o texto se o estilo é de menu e a tela está em modo HD. Devolve a largura (px da base). */
@@ -162,6 +167,19 @@ function inkCenterY(out: CanvasRenderingContext2D, t: HdText): number {
   return Number.isFinite(m.actualBoundingBoxAscent) ? cy + (m.actualBoundingBoxDescent - m.actualBoundingBoxAscent) / 2 : cy;
 }
 
+function drawPanel(out: CanvasRenderingContext2D, p: HdPanel, s: number): void {
+  const r = Math.min(8, p.h / 2);
+  out.beginPath();
+  out.roundRect(p.x, p.y, p.w, p.h, r);
+  if (p.glow) { out.shadowColor = p.glow; out.shadowBlur = 8 * s; }
+  out.fillStyle = p.fill;
+  out.fill();
+  out.shadowBlur = 0;
+  out.strokeStyle = p.stroke;
+  out.lineWidth = 1.5;
+  out.stroke();
+}
+
 /** Fundo HD da tela atual, nas coordenadas da base (256×224; o chamador põe a escala no transform). */
 function drawBg(out: CanvasRenderingContext2D): boolean {
   if (state.bg === 'title') {
@@ -185,6 +203,7 @@ export function drawHdMenu(out: CanvasRenderingContext2D, sx: number, sy = sx, o
   out.imageSmoothingEnabled = true;
   out.imageSmoothingQuality = 'high';
   drawBg(out);
+  for (const p of state.panels) drawPanel(out, p, s);
   for (const t of state.texts) if (t.art) drawArtLabel(out, t, s); else drawLabel(out, t);
   if (state.cursor) {
     const [hx, hy] = state.cursor;

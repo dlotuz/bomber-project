@@ -2,7 +2,7 @@ import type { App, Screen } from '../app/app';
 import { Menu, cycle, type MenuRow } from './menu';
 import {
   KEY_FIELDS, DEFAULT_KEYMAPS, DEFAULT_PADMAP, DEVICE_IDS, keyLabel, padLabel, assignKey, assignPadButton, isReservedKey,
-  type DeviceId, type KeyMap,
+  type DeviceId, type KeyMap, type PadMap,
 } from '../input/input';
 import { defaultSettings, setDevice } from '../app/settings';
 import { S } from '../render/text/strings';
@@ -23,19 +23,54 @@ const SEQ: readonly (keyof KeyMap)[] = KEY_FIELDS.filter(f => f !== 'power');
  * trocam (`assignKey`/`assignPadButton`). Depois de gravar ou cancelar: `applyInput()`, `save()` e ignora tudo até
  * soltar (evita reabrir com a tecla/botão novo ainda segurado).
  */
-export function remapScreen(app: App, player: number): Screen & { readonly menu: Menu; readonly capturing: Capture | null } {
+export type RemapScreen = Screen & { readonly menu: Menu; readonly capturing: Capture | null };
+
+/** De quem são os controles editados: um dos 5 jogadores locais ou um perfil avulso (o controle da sala online). */
+export interface RemapTarget {
+  title: string;
+  device(): DeviceId;
+  setDevice(d: DeviceId): void;
+  keymap(): KeyMap;
+  padmap(): PadMap;
+  /** Grava a tecla na ação (trocando com quem já a usava). */
+  assignKey(f: keyof KeyMap, code: string): void;
+  /** Volta ao padrão (teclas, botões e dispositivo). */
+  reset(): void;
+  back(): void;
+}
+
+/** Controles do jogador local `player` (Opções > Controles). `ret`: para onde o submenu Controles volta (ver
+ *  `optionsScreen`). */
+export function remapScreen(app: App, player: number, ret?: () => Screen): RemapScreen {
   const st = app.settings;
-  const dev = (): DeviceId => st.devices[player];
+  return remapTargetScreen(app, {
+    title: S.options.controls(player + 1),
+    device: () => st.devices[player],
+    setDevice: d => setDevice(st.devices, player, d),
+    keymap: () => st.keymaps[player],
+    padmap: () => st.padmaps[player],
+    assignKey: (f, code) => assignKey(st.keymaps, player, f, code),
+    reset: () => {
+      for (const f of KEY_FIELDS) assignKey(st.keymaps, player, f, DEFAULT_KEYMAPS[player][f]);
+      st.padmaps[player] = { ...DEFAULT_PADMAP };
+      setDevice(st.devices, player, defaultSettings().devices[player]);
+    },
+    back: () => { app.transition(() => optionsScreen(app, player, 'controls', ret), FADE_MENU); },
+  });
+}
+
+export function remapTargetScreen(app: App, t: RemapTarget): RemapScreen {
+  const dev = (): DeviceId => t.device();
   let capturing: Capture | null = null;
   let seq = false;
   let suppress = false;
 
-  const goBack = (): void => { app.transition(() => optionsScreen(app, player, 'controls'), FADE_MENU); };
+  const goBack = (): void => { t.back(); };
   const capture = (c: Capture): void => { capturing = c; menu.cursor = rows.findIndex(r => r.id === c); };
-  const turn = (d: number): boolean => { setDevice(st.devices, player, cycle(DEVICE_IDS, dev(), d)); app.save(); return true; };
+  const turn = (d: number): boolean => { t.setDevice(cycle(DEVICE_IDS, dev(), d)); app.save(); return true; };
   /** ←/→ no PODER apaga a tecla própria do P (volta ao Y fazendo P e soco, como na ROM). */
   const clearPower = (): boolean => {
-    st.keymaps[player].power = ''; st.padmaps[player].power = -1;
+    t.keymap().power = ''; t.padmap().power = -1;
     app.applyInput(); app.save();
     return true;
   };
@@ -46,9 +81,7 @@ export function remapScreen(app: App, player: number): Screen & { readonly menu:
     { id: 'all', select: () => { seq = true; capture(SEQ[0]); } },
     {
       id: 'reset', select: () => {
-        for (const f of KEY_FIELDS) assignKey(st.keymaps, player, f, DEFAULT_KEYMAPS[player][f]);
-        st.padmaps[player] = { ...DEFAULT_PADMAP };
-        setDevice(st.devices, player, defaultSettings().devices[player]);
+        t.reset();
         app.applyInput(); app.save();
       },
     },
@@ -63,7 +96,7 @@ export function remapScreen(app: App, player: number): Screen & { readonly menu:
     if (id === 'device') return S.options.devices[dev()];
     if (!(KEY_FIELDS as readonly string[]).includes(id) || dev() === 'none') return '';
     const f = id as keyof KeyMap;
-    return dev() === 'kb' ? keyLabel(st.keymaps[player][f]) : padLabel(st.padmaps[player][f]);
+    return dev() === 'kb' ? keyLabel(t.keymap()[f]) : padLabel(t.padmap()[f]);
   };
 
   const done = (): void => {
@@ -87,10 +120,10 @@ export function remapScreen(app: App, player: number): Screen & { readonly menu:
         const key = inp.key && !isReservedKey(inp.key) ? inp.key : null;
         const pb = inp.padButton && inp.padButton.pad < 4 ? inp.padButton : null;
         if (!key && !pb) return;
-        setDevice(st.devices, player, key ? 'kb' : `gp${pb!.pad}` as DeviceId);
+        t.setDevice(key ? 'kb' : `gp${pb!.pad}` as DeviceId);
         if (capturing !== 'device') {
-          if (key) assignKey(st.keymaps, player, capturing, key);
-          else assignPadButton(st.padmaps[player], capturing, pb!.button);
+          if (key) t.assignKey(capturing, key);
+          else assignPadButton(t.padmap(), capturing, pb!.button);
         }
         done();
         return;
@@ -101,7 +134,7 @@ export function remapScreen(app: App, player: number): Screen & { readonly menu:
     draw(ctx, bank) {
       const rowsOut: OptionsRow[] = rows.map(r => ({ label: label(r.id), value: value(r.id) }));
       const footer = capturing ? S.options.pressAny : rows[menu.cursor].id === 'power' ? S.options.powerHelp : undefined;
-      drawOptionsPage(ctx, bank, S.options.controls(player + 1), rowsOut, menu.cursor, footer, 'ascii8');
+      drawOptionsPage(ctx, bank, t.title, rowsOut, menu.cursor, footer, 'ascii8');
     },
   };
 }

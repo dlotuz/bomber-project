@@ -15,9 +15,9 @@ const def = (cuts: StyleRomDef['cuts'], extra: Partial<StyleRomDef> = {}): Style
 });
 
 describe('strings PT-BR (spec §6)', () => {
-  it('nomes das 10 fases', () => {
+  it('nomes das 10 fases e das cópias', () => {
     expect(STAGE_NAMES_PT).toEqual(['O Clássico', 'Rápido e Devagar', 'Bombardeio Orbital', 'Não Me Empurre', 'Escola de Choques',
-      'Piso Traiçoeiro', 'Esconde-Explode', 'Caça-Níquel', 'Gangorra', 'Alfaiataria']);
+      'Piso Traiçoeiro', 'Esconde-Explode', 'Caça-Níquel', 'Gangorra', 'Alfaiataria', 'O Clássico Noturno', 'O Clássico Gelado', 'O Clássico em Brasa']);
   });
   it('textos da spec, na caixa do original', () => {
     expect([S.title.normal, S.title.battle, S.title.options, S.title.pressStart]).toEqual(['JOGO NORMAL', 'JOGO DE BATALHA', 'OPÇÕES', 'APERTE START!']);

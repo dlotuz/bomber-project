@@ -7,43 +7,48 @@ import { sceneFrame, gfxFromVram, type SceneGfx } from '../../src/render/screens
 import { createImage, renderPpu } from '../../src/render/ppu';
 import { mkApp, press, tap, idle, hold, settle } from './helpers';
 import { ASSETS } from './rom';
+import { VISIBLE_STAGES } from '../../src/game/stages';
+
+/** Só as fases visíveis aparecem na seleção (game/stages.ts): 1ª, última e a `k`-ésima depois da 1ª, com volta. */
+const FIRST = VISIBLE_STAGES[0], LAST = VISIBLE_STAGES[VISIBLE_STAGES.length - 1];
+const nth = (k: number): number => VISIBLE_STAGES[k % VISIBLE_STAGES.length];
 import { loadCapture, capturedMap, mapMatch, type Rect } from './captures';
 
 describe('seleção de fase (§6.7)', () => {
-  it('→: $01 no botão, faixa rola 8 px/f por 16 f, o número troca no fim, com volta 10 → 1', () => {
+  it('→: $01 no botão, faixa rola 8 px/f por 16 f, o número troca no fim, com volta da última visível para a 1ª', () => {
     const { app, sink } = mkApp();
-    app.settings.setup.stage = 10;
+    app.settings.setup.stage = LAST;
     const st = stageScreen(app); app.go(st); sink.clear();
     tap(app, BTN.RIGHT);
-    expect([st.scroll(), st.stage]).toEqual([0, 10]);
+    expect([st.scroll(), st.stage]).toEqual([0, LAST]);
     idle(app, 1); expect(st.scroll()).toBe(-8);
-    idle(app, 14); expect([st.scroll(), st.stage]).toEqual([-120, 10]);
-    idle(app, 1); expect([st.scroll(), st.stage]).toEqual([0, 1]);
-    expect([app.settings.setup.stage, sink.of('sfx').map(c => c.id)]).toEqual([1, [1]]);
+    idle(app, 14); expect([st.scroll(), st.stage]).toEqual([-120, LAST]);
+    idle(app, 1); expect([st.scroll(), st.stage]).toEqual([0, FIRST]);
+    expect([app.settings.setup.stage, sink.of('sfx').map(c => c.id)]).toEqual([FIRST, [1]]);
   });
-  it('← anda para o outro lado, com volta 1 → 10', () => {
+  it('← anda para o outro lado, com volta da 1ª visível para a última', () => {
     const { app } = mkApp();
     const st = stageScreen(app); app.go(st);
     tap(app, BTN.LEFT); idle(app, 1);
     expect(st.scroll()).toBe(8);
     idle(app, 15);
-    expect(st.stage).toBe(10);
+    expect(st.stage).toBe(LAST);
   });
   it('segurar: 36 f e depois a cada 21 f', () => {
     const { app } = mkApp();
     const st = stageScreen(app); app.go(st);
     hold(app, BTN.RIGHT, 100);                     // pulsos em 0, 36, 57 e 78
-    expect(st.stage).toBe(5);
+    expect(st.stage).toBe(nth(4));
   });
   it('↑/↓ não fazem nada', () => {
     const { app, sink } = mkApp();
     const st = stageScreen(app); app.go(st); sink.clear();
     press(app, BTN.UP); press(app, BTN.DOWN);
-    expect([st.stage, st.scroll(), sink.calls.length]).toEqual([1, 0, 0]);
+    expect([st.stage, st.scroll(), sink.calls.length]).toEqual([FIRST, 0, 0]);
   });
   it('A: $02 f0, $13 f48, voz $07 f208, fade-out f278, FADE f310, $2F e $14 junto com a partida em f323 (ROUND_BLACK)', () => {
     const { app, sink } = mkApp();
-    app.settings.setup.stage = 3;
+    app.settings.setup.stage = LAST;
     app.go(stageScreen(app)); sink.clear();
     tap(app, BTN.A);
     const t0 = app.tick;
@@ -55,7 +60,7 @@ describe('seleção de fase (§6.7)', () => {
     expect(app.tick - t0).toBe(323);
     expect(sink.since(t0).filter(c => c.t <= 323).map(c => [c.t, c.op, c.id])).toEqual([
       [0, 'sfx', 2], [48, 'music', 0x13], [208, 'voice', 0x07], [310, 'fade', undefined], [323, 'bank', 0x2f], [323, 'music', 0x14]]);
-    expect((app.screen as unknown as { ms: MatchSession }).ms.cfg.stage).toBe(3);
+    expect((app.screen as unknown as { ms: MatchSession }).ms.cfg.stage).toBe(LAST);
   });
   it('"BATALHA!" pisca de f65 a f207 e fica de f208 a f277; o título sobe de f48 a f64; entradas ignoradas', () => {
     const { app } = mkApp();
@@ -65,7 +70,7 @@ describe('seleção de fase (§6.7)', () => {
     idle(app, 9); expect([st.seqF, st.battleVisible()]).toEqual([65, true]);
     idle(app, 1); expect(st.battleVisible()).toBe(false);
     press(app, BTN.B); press(app, BTN.RIGHT);
-    expect([app.inTransition, st.stage]).toEqual([false, 1]);
+    expect([app.inTransition, st.stage]).toEqual([false, FIRST]);
     idle(app, 150); expect(st.battleVisible()).toBe(true);
   });
   it('B → personagens com $03; em Equipes → equipes (R12)', () => {
@@ -152,7 +157,7 @@ describe.skipIf(!ASSETS)('prévias reconstruídas × capturas reais (todas as 10
   });
   it('a prévia é memorizada por (ROM, fase, direção): o mesmo objeto a cada quadro', () => {
     expect(stagePreview(ASSETS!, 4, 0)).toBe(stagePreview(ASSETS!, 4, 0));
-    expect(stagePreview(ASSETS!, 11, 1)).toBe(stagePreview(ASSETS!, 1, 1));
+    expect(stagePreview(ASSETS!, 21, 1)).toBe(stagePreview(ASSETS!, 1, 1));   // 11 é a cópia da 1 (game/stages.ts)
     expect(stagePreview(ASSETS!, 4, 1)).not.toBe(stagePreview(ASSETS!, 4, 0));
   });
 });

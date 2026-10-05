@@ -1,5 +1,6 @@
 import { mkRound, placePx, ride, run, firstTick, flameAt, BTN } from './helpers';
 import { mstate } from '../../src/core/mounts/types';
+import { SHOT_COOLDOWN } from '../../src/core/mounts/projectile';
 import { cellOf } from '../../src/core/mounts/core-api';
 
 describe('montaria tipo F (palhaço): Y = notas', () => {
@@ -80,38 +81,44 @@ function refire(setup: (s: ReturnType<typeof mkRound>) => void, face: 0 | 2 | 4 
   return mstate(s).projectiles.some(pr => pr.born === s.tick);
 }
 
+/** Regra da casa: depois que a nota some ainda há a espera (SHOT_COOLDOWN, + 1 tick da contagem). Os limiares
+ *  medidos no original (comentário abaixo) ganham esse tanto. */
+const W = SHOT_COOLDOWN + 1;
+
 // Ajuste C, item 4: +$C6 ($C2:471E) só zera quando o objeto final da nota some (fim + 40). Medido (refire.py, hitF.py,
 // wall.py): de frente para a parede/item, fim em 0 → Y em 39 não lança, em 40 lança; bloco a 2 casas, fim em 31 →
 // 70 não, 71 sim; livre, fim em 159 → 198 não, 199 sim; acerto (alvo a 72 px), fim em 78 → 117 não, 118 sim.
 describe('ajuste C: Soneca — uma nota por vez até o objeto final sumir', () => {
   it('de frente para a parede: a nota acaba na hora; Y de novo só 40 ticks depois', () => {
-    expect(refire(() => {}, 0, 39)).toBe(false);
-    expect(refire(() => {}, 0, 40)).toBe(true);
+    expect(refire(() => {}, 0, 39 + W)).toBe(false);
+    expect(refire(() => {}, 0, 40 + W)).toBe(true);
   });
   it('bloco a 2 casas (fim em 31): 70 não, 71 sim', () => {
     const soft = (s: ReturnType<typeof mkRound>) => { s.grid[cellOf(4, 1)] = 0xcc80; };
-    expect(refire(soft, 2, 70)).toBe(false);
-    expect(refire(soft, 2, 71)).toBe(true);
+    expect(refire(soft, 2, 70 + W)).toBe(false);
+    expect(refire(soft, 2, 71 + W)).toBe(true);
   });
   it('sem alvo (fim em 159): 198 não, 199 sim', () => {
-    expect(refire(() => {}, 2, 198, 47 + 16 * 4)).toBe(false);
-    expect(refire(() => {}, 2, 199, 47 + 16 * 4)).toBe(true);
+    expect(refire(() => {}, 2, 198 + W, 47 + 16 * 4)).toBe(false);
+    expect(refire(() => {}, 2, 199 + W, 47 + 16 * 4)).toBe(true);
   });
   it('acerto no alvo a 72 px (fim em 78, dança em 79): 117 não, 118 sim', () => {
     const tgt = (s: ReturnType<typeof mkRound>) => { placePx(s, 2, 72, 47); };
-    expect(refire(tgt, 2, 117)).toBe(false);
-    expect(refire(tgt, 2, 118)).toBe(true);
+    expect(refire(tgt, 2, 117 + W)).toBe(false);
+    expect(refire(tgt, 2, 118 + W)).toBe(true);
   });
-  it('apertar Y sem parar contra a parede: uma nota a cada 40 ticks, não uma por toque', () => {
+  it('apertar Y sem parar contra a parede: uma nota por vez e, depois que ela some, a espera (regra da casa)', () => {
     const s = mkRound();
     const p = placePx(s, 0, 32, 47); p.face = 0;
     ride(s, 0, 0xf);
-    let shots = 0;
-    for (let i = 0; i < 120; i++) {
+    const born: number[] = [];
+    for (let i = 0; i < 2 * (40 + SHOT_COOLDOWN) + 20; i++) {
       run(s, 1, i % 2 === 0 ? { 0: BTN.Y } : {});
-      shots += mstate(s).projectiles.filter(pr => pr.born === s.tick).length;
+      if (mstate(s).projectiles.some(pr => pr.born === s.tick)) born.push(i);
     }
-    expect(shots).toBe(3);                                  // ticks 0, 40, 80
+    // original: ticks 0, 40, 80 (nova nota assim que a anterior some); aqui, + SHOT_COOLDOWN de espera entre elas
+    expect(born).toHaveLength(3);
+    expect(born[1] - born[0]).toBeGreaterThanOrEqual(40 + SHOT_COOLDOWN - 2);
   });
 });
 

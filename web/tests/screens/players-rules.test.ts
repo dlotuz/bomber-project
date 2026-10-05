@@ -117,9 +117,9 @@ describe('regras: valores como no original (I10)', () => {
     hdBegin();
     r.draw(ctx, {} as SpriteBank, 0);
     expect(RULES_VALUE_X).toBe(176);
-    // Valores: nas linhas 55 + 24·i, todos começando em x = 176 (sem alinhamento à direita).
+    // Valores: nas linhas 48 + 19·i (passo menor para caberem os atalhos), todos começando em x = 176.
     const values = hdTexts().filter(t => t.x >= 150);
-    expect(values.map(t => [t.x, t.y, t.align])).toEqual([0, 1, 2, 3, 4, 5].map(i => [176, 55 + 24 * i, 'left']));
+    expect(values.map(t => [t.x, t.y, t.align])).toEqual([0, 1, 2, 3, 4, 5].map(i => [176, 48 + 19 * i, 'left']));
     expect(values.slice(0, 4).map(t => t.tone)).toEqual(['green', 'green', 'green', 'red']);
   });
 });

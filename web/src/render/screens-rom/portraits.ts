@@ -31,13 +31,62 @@ export const scoreboardPortraitTile = (char: number): number => 0x80 + portraitS
 /** Tile16 de BG do retrato na cena `charsel` (folha em BG `$200`). */
 export const charselPortraitTile = (char: number): number => 0x200 + portraitSheetOffset(char);
 
-/** 16 cores BGR555 do retrato de `char` no slot `slot` (0..4), lidas da ROM. */
-export function portraitPalette(a: RomAssets, slot: number, char: number): Uint16Array {
+/** As 16 cores como estão em `$C1:B3C3`. No pacote embutido (`public/rom-pack.dat`, só as faixas que o jogo leu ao
+ *  gerar o pacote) as combinações (slot, personagem) que ninguém desenhou vêm zeradas. */
+function romPortraitPalette(a: RomAssets, slot: number, char: number): Uint16Array {
   const list = a.rom.p24(PORTRAIT_PAL_TABLE + 3 * slot);
   const pal = a.rom.p24(list + 3 * Math.min(Math.max(char, 0), 8));
   const out = new Uint16Array(16);
   for (let i = 0; i < 16; i++) out[i] = a.rom.u16(pal + 2 * i);
   return out;
+}
+const blank = (p: Uint16Array): boolean => p.every(v => v === 0);
+
+const rgb = (v: number): [number, number, number] => [v & 31, (v >> 5) & 31, (v >> 10) & 31];
+const dist = (a: number, b: number): number => { const A = rgb(a), B = rgb(b); return Math.hypot(A[0] - B[0], A[1] - B[1], A[2] - B[2]); };
+const luma = (v: number): number => { const c = rgb(v); return 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2]; };
+
+/**
+ * Paleta de retrato que falta no pacote, montada a partir das paletas do boneco (`character(char).palettes`, que vêm
+ * completas): cada cor do retrato segue a cor do boneco que melhor a explica nos slots conhecidos (o slot 0 sempre
+ * está no pacote) e ganha a cor do boneco no slot pedido, com o brilho da cor original do retrato. Cores iguais em
+ * todos os slots conhecidos (pele, olhos, contorno) ficam como estão. Conferido contra as combinações que existem:
+ * não fica idêntico ao original, mas na mesma cor do jogador.
+ */
+function derivedPortraitPalette(a: RomAssets, slot: number, char: number): Uint16Array {
+  const spr = a.character(char).palettes;
+  const known: { por: Uint16Array; spr: Uint16Array }[] = [];
+  for (let s = 0; s < spr.length; s++) {
+    const por = romPortraitPalette(a, s, char);
+    if (!blank(por)) known.push({ por, spr: spr[s] });
+  }
+  const target = spr[slot];
+  if (!known.length || !target) return romPortraitPalette(a, slot, char);
+  const { por: p0, spr: s0 } = known[0];
+  // fundo do quadrinho (cor 15): é do slot, não do personagem — o de outro personagem nesse slot que esteja no pacote
+  let back = p0[15];
+  for (let c = 0; c <= NO_CHAR; c++) { const o = romPortraitPalette(a, slot, c); if (!blank(o)) { back = o[15]; break; } }
+  return p0.map((v, i) => {
+    if (i === 15) return back;
+    if (i < 2) return v;   // transparente e contorno
+    if (known.length > 1 && known.every(k => k.por[i] === v)) return v;
+    let j = 2, best = Infinity;
+    for (let k = 2; k < 15; k++) {
+      const e = known.reduce((sum, kn) => sum + dist(kn.por[i], kn.spr[k]), 0);
+      if (e < best) { best = e; j = k; }
+    }
+    if (known.length === 1 && s0[j] === target[j]) return v;
+    const f = (luma(v) + 0.5) / (luma(s0[j]) + 0.5);
+    const [r, g, b] = rgb(target[j]).map(x => Math.max(0, Math.min(31, Math.round(x * f))));
+    return r | (g << 5) | (b << 10);
+  });
+}
+
+/** 16 cores BGR555 do retrato de `char` no slot `slot` (0..4), lidas da ROM (ou montadas, se faltam no pacote —
+ *  ver `derivedPortraitPalette`; sem isso o retrato sai preto quando dois jogadores pegam o mesmo personagem). */
+export function portraitPalette(a: RomAssets, slot: number, char: number): Uint16Array {
+  const pal = romPortraitPalette(a, slot, char);
+  return blank(pal) && char < NO_CHAR ? derivedPortraitPalette(a, slot, char) : pal;
 }
 
 /** Cópia de `cgram` com a paleta do retrato de cada slot gravada na linha `rows[slot]` (0..15 da CGRAM). */
