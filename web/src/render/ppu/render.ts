@@ -16,12 +16,13 @@ const pal32 = new Uint32Array(256);
 function mod(a: number, n: number): number { return ((a % n) + n) % n; }
 
 function bgLine(L: BgLayer, tile16: boolean, hofs: number, vofs: number, y: number, out: Int16Array, pri: Uint8Array): void {
-  const ts = tile16 ? 16 : 8, mapW = L.mapW, mapH = (L.map.length / mapW) | 0;
-  const by = mod(y + vofs + 1, mapH * ts), row = (by / ts) | 0, fy = by % ts, wpx = mapW * ts;
-  const px = L.tiles.px, count = L.tiles.count, two = L.tiles.bpp === 2;
-  for (let x = 0; x < W; x++) {
-    const bx = mod(x + hofs, wpx), e = L.map[row * mapW + ((bx / ts) | 0)];
-    let fx = bx % ts, gy = fy;
+  const ts = tile16 ? 16 : 8, sh = tile16 ? 4 : 3, mapW = L.mapW, mapH = (L.map.length / mapW) | 0;
+  const by = mod(y + vofs + 1, mapH * ts), row = by >> sh, fy = by & (ts - 1), wpx = mapW * ts;
+  const px = L.tiles.px, count = L.tiles.count, two = L.tiles.bpp === 2, map = L.map, rowBase = row * mapW;
+  // bx avança 1 por pixel com volta no fim do mapa (sem `mod`/divisão por pixel: é o laço mais quente da PPU)
+  for (let x = 0, bx = mod(hofs, wpx); x < W; x++, bx = bx + 1 === wpx ? 0 : bx + 1) {
+    const e = map[rowBase + (bx >> sh)];
+    let fx = bx & (ts - 1), gy = fy;
     if (e & 0x4000) fx = ts - 1 - fx;
     if (e & 0x8000) gy = ts - 1 - gy;
     let t = e & 0x3ff;

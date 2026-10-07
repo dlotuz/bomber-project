@@ -123,6 +123,7 @@ function refFrame(ctx: CanvasRenderingContext2D, frame: FxFrame, bombs: boolean,
  * entra no orçamento: só as sombras pausam.
  */
 export function prepareFx(frame: FxFrame, base: CanvasRenderingContext2D, fade: number): FxPrep {
+  if (frame.prep) { const p = frame.prep; frame.prep = undefined; return p; }   // a tela já preparou nos pixels
   const fx = frame.state, shadows = fx.shadowsPause === 0;
   if (!shadows) fx.shadowsPause--;
   const spots = bombSpots(frame.round);
@@ -135,6 +136,30 @@ export function prepareFx(frame: FxFrame, base: CanvasRenderingContext2D, fade: 
     visible ??= new Uint8ClampedArray(SCREEN_W * SCREEN_H * 4);
     bombMask(img.data, refFrame(refBombs ??= refCtx(), frame, true, fade), none, visible);
     for (const [x, y] of tintBombsInPlace(img.data, visible, SCREEN_W, spots)) base.putImageData(img, 0, 0, x, y, 16, 16);
+  }
+  return { mask, ms: performance.now() - t0 };
+}
+
+/**
+ * `prepareFx` sobre os pixels do quadro antes de irem para o canvas (sprites da ROM): `base` é o quadro completo, e
+ * `ref(bombs)` desenha em memória o quadro sem atores (ou só com as bombas) — nada de ler o canvas de volta, que trava
+ * a GPU a cada quadro. A cor das bombas é pintada em `base` no lugar. `ref` null = sem quadro de referência (nada).
+ */
+export function prepareFxPixels(fx: FxState, round: FxFrame['round'], base: Uint8ClampedArray,
+  ref: (bombs: boolean) => Uint8ClampedArray | null): FxPrep {
+  const shadows = fx.shadowsPause === 0;
+  if (!shadows) fx.shadowsPause--;
+  const spots = bombSpots(round);
+  if (!shadows && !spots.length) return { mask: null, ms: 0 };
+  const t0 = performance.now();
+  const none = ref(false);
+  if (!none) return { mask: null, ms: 0 };
+  const mask = shadows ? actorMask(base, none) : null;
+  const bombsOnly = spots.length ? ref(true) : null;
+  if (bombsOnly) {
+    visible ??= new Uint8ClampedArray(SCREEN_W * SCREEN_H * 4);
+    bombMask(base, bombsOnly, none, visible);
+    tintBombsInPlace(base, visible, SCREEN_W, spots);
   }
   return { mask, ms: performance.now() - t0 };
 }

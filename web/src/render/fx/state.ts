@@ -1,16 +1,17 @@
 import type { RoundState } from '../../core';
+import type { FxPrep } from './draw';
 
 export const MAX_PARTS = 600;
 export const PART = { SPARK: 1, SMOKE: 2, DEBRIS: 3, DUST: 4, BURST: 5 } as const;
 
-/** Partículas em arrays de tamanho fixo (anel: a nova substitui a mais antiga), tremor, flash e a grade anterior. */
+/** Partículas em arrays de tamanho fixo (anel: a nova substitui a mais antiga), flash e a grade anterior. */
 export interface FxState {
   seed: number;
   next: number;
   kind: Uint8Array; color: Uint32Array; age: Int16Array; life: Int16Array;
   x: Float32Array; y: Float32Array; vx: Float32Array; vy: Float32Array; g: Float32Array;
   size: Float32Array; grow: Float32Array; ground: Float32Array;
-  shake: number; dx: number; dy: number; flash: number;
+  flash: number;
   round: RoundState | null; prevGrid: Int32Array | null;
   /** Quadros que faltam com as sombras em pausa (orçamento estourado; voltam a ser tentadas depois). */
   shadowsPause: number; costSum: number; costN: number;
@@ -25,6 +26,9 @@ export interface FxFrame {
   rom?: boolean;
   /** Vagas em que a elipse do sprite da ROM ficou no último quadro (sem a suave). */
   hardShadows?: ReadonlySet<number>;
+  /** Sombras e cor das bombas já preparadas pela tela nos pixels do quadro (`prepareFxPixels`); o `present()` usa e
+   *  limpa. Ausente: `prepareFx` lê o canvas (arte própria). */
+  prep?: FxPrep;
 }
 
 export function createFx(seed = 0x5eed): FxState {
@@ -33,7 +37,7 @@ export function createFx(seed = 0x5eed): FxState {
     seed, next: 0,
     kind: new Uint8Array(MAX_PARTS), color: new Uint32Array(MAX_PARTS), age: new Int16Array(MAX_PARTS), life: new Int16Array(MAX_PARTS),
     x: f32(), y: f32(), vx: f32(), vy: f32(), g: f32(), size: f32(), grow: f32(), ground: f32(),
-    shake: 0, dx: 0, dy: 0, flash: 0, round: null, prevGrid: null, shadowsPause: 0, costSum: 0, costN: 0,
+    flash: 0, round: null, prevGrid: null, shadowsPause: 0, costSum: 0, costN: 0,
   };
 }
 
@@ -64,5 +68,5 @@ export function liveCount(fx: FxState): number {
 
 export function clearFx(fx: FxState): void {
   fx.life.fill(0); fx.age.fill(0); fx.next = 0;
-  fx.shake = 0; fx.dx = 0; fx.dy = 0; fx.flash = 0; fx.shadowsPause = 0; fx.costSum = 0; fx.costN = 0;
+  fx.flash = 0; fx.shadowsPause = 0; fx.costSum = 0; fx.costN = 0;
 }

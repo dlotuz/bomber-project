@@ -14,20 +14,20 @@ export interface RuleChoices {
   suddenDeath: boolean; badBomber: boolean; racer: boolean;
 }
 
-/** Opções gerais (fora das regras da partida): spawn aleatório e volumes. */
+/** Opções gerais (fora das regras da partida): spawn aleatório (padrão SIM) e volumes. */
 export interface Options {
   randomSpawns: boolean; musicVol: number; sfxVol: number;
   gloveEscape: number;   // apertos de B para se soltar da luva (1..30)
   throwStun: boolean;    // só jogador arremessado sobre outro jogador atordoa os dois (bomba atordoa sempre)
   sleepSec: number;      // duração do soneca (montaria F), segundos (1..10); a ROM usa 3,2 s
   fx: boolean;           // efeitos visuais da batalha (luz, partículas, sombras…)
-  allMounts: boolean;    // ovos dos 13 tipos (senha 0164 do original); padrão SIM, a senha desliga e liga
+  allMounts: boolean;    // MONTARIAS EXTRAS: ovos dos 13 tipos (senha 0164 do original); padrão SIM
   screen: ScreenKind;    // 'hd' (padrão): altura toda em 4:3 + laterais borradas; 'classic': inteiros, pixel 8:7, bordas pretas
   smooth: boolean;       // filtro suave (pixel art ampliada com bordas lisas); padrão NÃO (nítido)
 }
 
 export function defaultOptions(): Options {
-  return { randomSpawns: false, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3, fx: true, allMounts: true, screen: 'hd', smooth: false };
+  return { randomSpawns: true, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3, fx: true, allMounts: true, screen: 'hd', smooth: false };
 }
 
 /** Slots de Opções → Controles: dispositivo, teclas e botões dos 5 jogadores. */
@@ -35,6 +35,26 @@ export interface ControlPreset { devices: DeviceId[]; keymaps: KeyMap[]; padmaps
 /** Slots de Opções → Jogabilidade. */
 export type GameplayPreset = Pick<Options, 'randomSpawns' | 'gloveEscape' | 'throwStun' | 'sleepSec'>;
 export const SLOT_COUNT = 3;
+
+/** DEV CONTROLES (Opções → Controles, depois do slot 3; fixo): três jogadores no teclado (a config "3 teclados" do
+ *  emulador) e P4/P5 nos controles 2 e 1. P1 com as teclas de poder próprias (J bomba, H dancinha, G soco, Y para a
+ *  bomba, T poder do P); P2 com o poder do P no Num7; P3 com o P no Delete. */
+export function devControls(): ControlPreset {
+  const none = { l: '', r: '' };
+  return {
+    devices: ['kb', 'kb', 'kb', 'gp1', 'gp0'],
+    keymaps: [
+      { up: 'KeyW', down: 'KeyS', left: 'KeyA', right: 'KeyD', a: 'KeyJ', b: 'KeyH', y: 'KeyG', x: 'KeyY', power: 'KeyT',
+        start: 'Digit2', select: 'Digit1', ...none },
+      { up: 'KeyO', down: 'KeyL', left: 'KeyK', right: 'Semicolon', a: 'Numpad6', b: 'Numpad5', y: 'Numpad4', x: 'Numpad8', power: 'Numpad7',
+        start: 'NumpadMultiply', select: 'NumpadDivide', ...none },
+      { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', a: 'Enter', b: 'ControlRight', y: 'Backspace', x: 'ShiftRight',
+        power: 'Delete', start: '', select: '', ...none },
+      { ...DEFAULT_KEYMAPS[3] }, { ...DEFAULT_KEYMAPS[4] },
+    ],
+    padmaps: [0, 1, 2, 3, 4].map(() => ({ ...DEFAULT_PADMAP })),
+  };
+}
 
 export function gameplayOf(o: Options): GameplayPreset {
   return { randomSpawns: o.randomSpawns, gloveEscape: o.gloveEscape, throwStun: o.throwStun, sleepSec: o.sleepSec };
@@ -54,7 +74,7 @@ export interface Setup {
 }
 
 export interface Settings {
-  version: 3;
+  version: 4;
   names: string[];
   devices: DeviceId[];
   /** Teclas e botões de controle de cada jogador (5 cada), usados conforme o dispositivo escolhido. */
@@ -90,8 +110,7 @@ export function defaultSetup(): Setup {
 
 export function defaultSettings(): Settings {
   return {
-    version: 3, names: ['', '', '', '', ''], devices: ['kb', 'kb', 'gp0', 'gp1', 'gp2'],
-    keymaps: DEFAULT_KEYMAPS.map(m => ({ ...m })), padmaps: [0, 1, 2, 3, 4].map(() => ({ ...DEFAULT_PADMAP })),
+    version: 4, names: ['', '', '', '', ''], ...devControls(),   // começa com o DEV CONTROLES carregado
     options: defaultOptions(), setup: defaultSetup(),
     controlSlots: [null, null, null], gameplaySlots: [gameplayOf(defaultOptions()), null, null],
     online: defaultOnlineControls(),
@@ -168,7 +187,7 @@ export function normalizeSettings(raw: unknown): Settings {
   const ro = asObj(r.options);
   const ds = d.setup;
   return {
-    version: 3,
+    version: 4,
     names: five(r.names, x => sanitizeName(x)),
     devices: five(r.devices, (x, i) => oneOf(x, DEVICE_IDS, d.devices[i])),
     keymaps: five(r.keymaps, (x, i) => normalizeKeyMap(x, d.keymaps[i])),
@@ -215,7 +234,8 @@ export function normalizeSettings(raw: unknown): Settings {
  * `randomSpawns` dentro de `setup.rules` (agora em Opções): apaga o campo de lá (o valor antigo é
  * descartado — Opções nasce com o padrão Não) e deixa o resto para `normalizeSettings` completar.
  * Até a v2 os mapas eram por dispositivo (Teclado 1/2, Controles 1–4); na v3 são por jogador: cada jogador herda
- * o mapa do dispositivo que usava (teclas novas, ex. L/R/SELECT, ganham o padrão daquele teclado).
+ * o mapa do dispositivo que usava (teclas novas, ex. L/R/SELECT, ganham o padrão daquele teclado). Na v4 os spawns
+ * aleatórios vêm ligados e o PODER (P) do controle vai para o RB (só onde o P ainda não tinha botão e o R estava no RB).
  */
 export function migrate(raw: unknown): unknown {
   const version = asObj(raw).version;
@@ -233,6 +253,20 @@ export function migrate(raw: unknown): unknown {
     o.keymaps = [0, 1, 2, 3, 4].map(i => { const k = kb(devs[i]); return k < 0 ? undefined : { ...DEFAULT_KEYMAPS[k], ...asObj(oldK[k]) }; });
     o.padmaps = [0, 1, 2, 3, 4].map(i => { const g = gp(devs[i]); return g < 0 ? undefined : oldP[g]; });
     o.devices = devs.map(d => (kb(d) >= 0 ? 'kb' : d));
+  }
+  if ((version === undefined || version === 1 || version === 2 || version === 3) && raw && typeof raw === 'object') {
+    // v4: spawns aleatórios passam a vir ligados, e o controle ganha o PODER (P) no RB (o R vai para o RT)
+    const o = raw as Obj;
+    if (o.options && typeof o.options === 'object') (o.options as Obj).randomSpawns = true;
+    const rb = (m: unknown): void => {
+      const p = asObj(m);
+      const busy = (b: number) => Object.entries(p).some(([k, v]) => k !== 'r' && k !== 'power' && v === b);   // RB/RT já em outra ação
+      if (m && typeof m === 'object' && (p.power === undefined || p.power === -1) && (p.r === undefined || p.r === 5) && !busy(5) && !busy(7)) {
+        p.power = 5; p.r = 7;
+      }
+    };
+    if (Array.isArray(o.padmaps)) o.padmaps.forEach(rb);
+    rb(asObj(o.online).padmap);
   }
   return raw;
 }

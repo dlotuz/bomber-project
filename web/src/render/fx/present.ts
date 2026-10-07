@@ -6,8 +6,6 @@ import { drawHdMenu } from '../hd-menu';
 import { drawHdBattleLayer } from '../hdart/mode';
 import type { FxFrame } from './state';
 
-const reduced = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
-
 /** Base ampliada por um inteiro `k` sem suavizar (pixels nítidos e todos do mesmo tamanho); depois esse quadro é
  *  levado à escala final, quebrada e/ou 4:3, com suavização — só a borda de cada pixel fica levemente macia, em vez
  *  de linhas e colunas com espessuras desiguais (o "sharp bilinear" dos emuladores). */
@@ -26,15 +24,14 @@ function sharpBase(d: Display): CanvasImageSource {
   return mid.canvas;
 }
 
-/** Base ampliada (com tremor) centrada na janela e, por cima/por baixo dela, as camadas em resolução nativa: menus HD
+/** Base ampliada centrada na janela e, por cima/por baixo dela, as camadas em resolução nativa: menus HD
  *  e arte HD da partida por baixo (a base fica transparente onde eles entram), arte HD por cima e, na batalha, os
- *  efeitos (spec §3.1) — tudo deslocado junto com a imagem do jogo (centralização + tremor) e recortado na área dela.
+ *  efeitos (spec §3.1) — tudo deslocado junto com a imagem do jogo (centralização) e recortado na área dela.
  *  O filtro suave só passa pela base (a arte HD já é nativa). Por último as bordas: o fundo borrado, feito da imagem
  *  final da área do jogo, ou preto (`mode`). `fade` = brilho do App / 15. */
 export function present(d: Display, frame: FxFrame | null, fade: number, mode: ScreenMode = { blur: true, smooth: false }): void {
   const { out } = d, L = d.layout(), { sx, sy } = L;
-  const shake = frame && !reduced?.matches;
-  const ox = L.ox + (shake ? frame.state.dx * sx : 0), oy = L.oy + (shake ? frame.state.dy * sy : 0);
+  const ox = L.ox, oy = L.oy;
   // cor das bombas na própria base (antes de ampliar/suavizar) e máscara das sombras
   const prep = frame ? prepareFx(frame, d.ctx, fade) : null;
   out.setTransform(1, 0, 0, 1, 0, 0);

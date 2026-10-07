@@ -21,8 +21,8 @@ const small = (w: number, h: number): CanvasRenderingContext2D => {
 /**
  * Fundo das bordas (16:9 e janelas mais altas): a imagem final da área do jogo — base, menus HD, arte HD da partida e
  * efeitos, já no canvas de saída em (`gx`, `gy`) — ampliada para cobrir a tela inteira, desfocada e escurecida. Chamado
- * DEPOIS de desenhar a área do jogo; só pinta fora dela (o recorte deixa a imagem nítida intacta, inclusive com o
- * tremor). Barato por quadro: a área do jogo é reduzida para 256×224 (cópia na GPU) e daí para 64×56, desfocada nesse
+ * DEPOIS de desenhar a área do jogo; só pinta fora dela (o recorte deixa a imagem nítida intacta).
+ * Barato por quadro: a área do jogo é reduzida para 256×224 (cópia na GPU) e daí para 64×56, desfocada nesse
  * tamanho e só então ampliada em duas passadas bilineares — nada de `getImageData` nem de desfocar em resolução cheia.
  * Sem bordas, não desenha nada.
  */
@@ -33,7 +33,7 @@ export function drawBackdrop(out: CanvasRenderingContext2D, L: ScreenLayout, gx 
   soft ??= small(TW, TH);
   med ??= small(MW, MH);
   out.setTransform(1, 0, 0, 1, 0, 0);
-  // a área do jogo inteira (com o tremor, a parte que saiu do canvas fica de fora e a miniatura só a omite)
+  // a área do jogo inteira (a parte fora do canvas fica de fora e a miniatura só a omite)
   const x0 = Math.max(0, gx), y0 = Math.max(0, gy);
   const x1 = Math.min(out.canvas.width, gx + L.gw), y1 = Math.min(out.canvas.height, gy + L.gh);
   if (x1 - x0 < 1 || y1 - y0 < 1) return;

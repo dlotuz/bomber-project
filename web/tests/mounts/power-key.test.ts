@@ -35,8 +35,10 @@ describe('tecla própria do P: entrada', () => {
     expect(readKeyMap(new Set(['KeyP']), k)).toBe(BTN.POWER);
     expect(hasPowerKey('kb', k, DEFAULT_PADMAP)).toBe(true);
     const pad = { buttons: Array.from({ length: 17 }, (_, i) => ({ pressed: i === 6 })), axes: [0, 0] };
-    expect(readGamepad(pad, DEFAULT_PADMAP)).toBe(0);
-    expect(hasPowerKey('gp0', k, DEFAULT_PADMAP)).toBe(false);
+    const noP = { ...DEFAULT_PADMAP, power: -1 };
+    expect(readGamepad(pad, noP)).toBe(0);
+    expect(hasPowerKey('gp0', k, noP)).toBe(false);
+    expect(hasPowerKey('gp0', k, DEFAULT_PADMAP)).toBe(true);   // padrão: P no RB
     expect(readGamepad(pad, { ...DEFAULT_PADMAP, power: 6 })).toBe(BTN.POWER);
     expect(hasPowerKey('gp0', k, { ...DEFAULT_PADMAP, power: 6 })).toBe(true);
   });

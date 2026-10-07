@@ -7,7 +7,7 @@ import { KEY_FIELDS, DEFAULT_PADMAP } from '../../src/input/input';
 import { defaultSettings } from '../../src/app/settings';
 import { BTN } from '../../src/game/core-api';
 import { idleInput } from '../../src/input/input';
-import { mkApp, press, settle, inputOf, RecordingSink } from './helpers';
+import { mkApp, classicSettings, press, settle, inputOf, RecordingSink } from './helpers';
 import { ASSETS } from './rom';
 import { optionsPpuFrame, OPTIONS_FRAME } from '../../src/render/screens-rom/options';
 import { MENU_GEO } from '../../src/render/screens-rom/scene';
@@ -23,14 +23,16 @@ describe('opções (§6.13)', () => {
     const { app } = mkApp();
     expect(optionsScreen(app).rowIds()).toEqual(['controls', 'gameplay', 'fx', 'screen', 'smooth', 'music', 'sfx', 'reset', 'back']);
     expect(optionsScreen(app, 0, 'controls').rowIds()).toEqual(['p1', 'p2', 'p3', 'p4', 'p5', 'slot', 'slotSave', 'slotLoad', 'back']);
-    expect(optionsScreen(app, 0, 'gameplay').rowIds()).toEqual(['spawns', 'escape', 'throwStun', 'sleep', 'password', 'slot', 'slotSave', 'slotLoad', 'back']);
+    expect(optionsScreen(app, 0, 'gameplay').rowIds()).toEqual(['spawns', 'escape', 'throwStun', 'sleep', 'allMounts', 'slot', 'slotSave', 'slotLoad', 'back']);
   });
   it('slots de controles: salvar no 2 e carregar de volta; slot vazio não carrega', () => {
-    const { app } = mkApp();
+    const { app } = mkApp(classicSettings());
     const o = optionsScreen(app, 0, 'controls'); app.go(o);
-    goRow(o, 'slot'); expect(o.value('slot')).toBe('1 VAZIO');
+    goRow(o, 'slot'); expect(o.value('slot')).toBe('DEV CONTROLES');   // abre no padrão carregado
+    for (let i = 0; i < 3; i++) press(app, BTN.LEFT);
+    expect(o.value('slot')).toBe('1 VAZIO');
     goRow(o, 'slotLoad'); press(app, BTN.A);
-    expect(app.settings.devices).toEqual(defaultSettings().devices);
+    expect(app.settings.devices).toEqual(classicSettings().devices);
     goRow(o, 'slot'); press(app, BTN.RIGHT);
     app.settings.keymaps[0].a = 'KeyZ'; app.settings.devices[4] = 'none';
     goRow(o, 'slotSave'); press(app, BTN.A);
@@ -40,6 +42,31 @@ describe('opções (§6.13)', () => {
     expect([app.settings.keymaps[0].a, app.settings.devices[4], o.value('slotLoad')]).toEqual(['KeyZ', 'none', 'CARREGADO']);
     app.settings.keymaps[0].a = 'KeyQ';
     expect(app.settings.controlSlots[1]!.keymaps[0].a).toBe('KeyZ');   // o slot é uma cópia
+  });
+  it('DEV CONTROLES: depois do slot 3; carrega os 3 teclados e não deixa salvar por cima', () => {
+    const { app } = mkApp();
+    const o = optionsScreen(app, 0, 'controls'); app.go(o);
+    goRow(o, 'slot'); for (let i = 0; i < 4; i++) press(app, BTN.RIGHT);
+    expect(o.value('slot')).toBe('DEV CONTROLES');
+    goRow(o, 'slotSave'); press(app, BTN.A);
+    expect(o.value('slotSave')).toBe('FIXO');
+    goRow(o, 'slotLoad'); press(app, BTN.A);
+    const s = app.settings;
+    expect(s.devices).toEqual(['kb', 'kb', 'kb', 'gp1', 'gp0']);
+    expect([s.keymaps[0].a, s.keymaps[0].b, s.keymaps[0].y, s.keymaps[0].x, s.keymaps[0].power]).toEqual(['KeyJ', 'KeyH', 'KeyG', 'KeyY', 'KeyT']);
+    expect([s.keymaps[2].up, s.keymaps[2].power]).toEqual(['ArrowUp', 'Delete']);
+    expect(s.controlSlots).toEqual([null, null, null]);
+    const keys = s.keymaps.flatMap(m => Object.values(m)).filter(Boolean);
+    expect(new Set(keys).size).toBe(keys.length);   // nenhuma tecla em duas ações
+  });
+  it('MONTARIAS EXTRAS: padrão SIM; ←/→ desliga e liga', () => {
+    const { app } = mkApp();
+    const o = optionsScreen(app, 0, 'gameplay'); app.go(o); goRow(o, 'allMounts');
+    expect(o.value('allMounts')).toBe('SIM');
+    press(app, BTN.LEFT);
+    expect([app.settings.options.allMounts, o.value('allMounts')]).toEqual([false, 'NÃO']);
+    press(app, BTN.RIGHT);
+    expect(app.settings.options.allMounts).toBe(true);
   });
   it('slots de jogabilidade: o 1 vem com o padrão do jogo; carregar restaura', () => {
     const { app } = mkApp();
@@ -111,7 +138,7 @@ describe('opções (§6.13)', () => {
     expect(saves()).toBeGreaterThanOrEqual(3);
   });
   it('dois jogadores nunca no mesmo controle: escolher o de outro troca os dois (M4); teclado repete', () => {
-    const { app } = mkApp();
+    const { app } = mkApp(classicSettings());
     const o = optionsScreen(app, 0, 'controls'); app.go(o);
     expect(o.value('p2')).toBe('TECLADO');
     goRow(o, 'p3'); press(app, BTN.RIGHT);                   // gp0 → gp1 (do P4): trocam
@@ -127,10 +154,12 @@ describe('opções (§6.13)', () => {
     press(app, BTN.A); settle(app);
     expect(app.screen.id).toBe('remap');
   });
-  it('spawns aleatórios: NÃO → SIM', () => {
+  it('spawns aleatórios: padrão SIM; SIM → NÃO → SIM', () => {
     const { app } = mkApp();
     const o = optionsScreen(app, 0, 'gameplay'); app.go(o); goRow(o, 'spawns');
-    expect(o.value('spawns')).toBe('NÃO');
+    expect(o.value('spawns')).toBe('SIM');
+    press(app, BTN.LEFT);
+    expect([app.settings.options.randomSpawns, o.value('spawns')]).toEqual([false, 'NÃO']);
     press(app, BTN.RIGHT);
     expect([app.settings.options.randomSpawns, o.value('spawns')]).toEqual([true, 'SIM']);
   });
@@ -162,11 +191,11 @@ describe('opções (§6.13)', () => {
     const { app } = mkApp();
     const got: number[][] = [];
     app.audio.setSink(Object.assign(new RecordingSink(), { setVolume: (m: number, s: number) => { got.push([m, s]); } }));
-    app.settings.options.musicVol = 2; app.settings.options.sfxVol = 3; app.settings.options.randomSpawns = true;
+    app.settings.options.musicVol = 2; app.settings.options.sfxVol = 3; app.settings.options.randomSpawns = false;
     const o = optionsScreen(app); app.go(o);
     goRow(o, 'reset'); press(app, BTN.A);
     const d = defaultSettings();
-    expect([o.value('music'), o.value('sfx'), app.settings.options.randomSpawns]).toEqual([String(d.options.musicVol), String(d.options.sfxVol), false]);
+    expect([o.value('music'), o.value('sfx'), app.settings.options.randomSpawns]).toEqual([String(d.options.musicVol), String(d.options.sfxVol), true]);
     expect(got.at(-1)).toEqual([d.options.musicVol / 10, d.options.sfxVol / 10]);
     goRow(o, 'music'); press(app, BTN.RIGHT);
     expect([app.settings.options.musicVol, o.value('music')]).toEqual([d.options.musicVol + 1, String(d.options.musicVol + 1)]);
@@ -190,7 +219,7 @@ describe('opções (§6.13)', () => {
 describe('controles do jogador', () => {
   const row = (f: string) => ['device', ...KEY_FIELDS, 'all', 'reset', 'back'].indexOf(f);
   it('teclado: A na ação, depois a tecla nova; aplica e grava; Escape cancela', () => {
-    const { app, saves } = mkApp();
+    const { app, saves } = mkApp(classicSettings());
     const applied = vi.spyOn(app, 'applyInput');
     const r = remapScreen(app, 0); app.go(r);
     r.menu.cursor = row('a');
@@ -207,7 +236,7 @@ describe('controles do jogador', () => {
     expect([r.capturing, app.settings.keymaps[0].b]).toEqual([null, 'KeyK']);
   });
   it('teclado: tecla já usada em outra ação (até de outro jogador) troca as duas; F5/Tab são ignoradas (M3)', () => {
-    const { app } = mkApp();
+    const { app } = mkApp(classicSettings());
     const r = remapScreen(app, 0); app.go(r);
     r.menu.cursor = row('a');
     press(app, BTN.A);
@@ -218,7 +247,7 @@ describe('controles do jogador', () => {
     expect([r.capturing, app.settings.keymaps[0].a, app.settings.keymaps[1].up]).toEqual([null, 'ArrowUp', 'KeyJ']);
   });
   it('controle: botão já usado em outra ação troca as duas', () => {
-    const { app } = mkApp();
+    const { app } = mkApp(classicSettings());
     const r = remapScreen(app, 3); app.go(r);                 // P4 = controle 2 (gp1)
     r.menu.cursor = row('a');
     press(app, BTN.A);
@@ -226,7 +255,7 @@ describe('controles do jogador', () => {
     expect([r.capturing, app.settings.padmaps[3].a, app.settings.padmaps[3].start, app.settings.padmaps[2]]).toEqual([null, 9, DEFAULT_PADMAP.a, DEFAULT_PADMAP]);
   });
   it('captura aceita qualquer dispositivo: jogador no teclado aperta um botão do controle e passa para ele', () => {
-    const { app } = mkApp();
+    const { app } = mkApp(classicSettings());
     const r = remapScreen(app, 0); app.go(r);                 // P1 = teclado
     r.menu.cursor = row('up');
     press(app, BTN.A);
@@ -234,7 +263,7 @@ describe('controles do jogador', () => {
     expect([r.capturing, app.settings.devices[0], app.settings.devices[3], app.settings.padmaps[0].up]).toEqual([null, 'gp1', 'kb', 12]);
   });
   it('configurar todos: pede as 12 ações em sequência', () => {
-    const { app } = mkApp();
+    const { app } = mkApp(classicSettings());
     const r = remapScreen(app, 2); app.go(r);
     app.settings.devices[2] = 'kb';
     r.menu.cursor = row('all');
@@ -248,7 +277,7 @@ describe('controles do jogador', () => {
     expect(app.settings.keymaps[0].select).toBe('');          // F era o SELECT do P1: fica com a tecla antiga do P3 (nenhuma)
   });
   it('dispositivo: A e depois um botão escolhe aquele controle; uma tecla escolhe o teclado', () => {
-    const { app } = mkApp();
+    const { app } = mkApp(classicSettings());
     const r = remapScreen(app, 0); app.go(r);
     r.menu.cursor = row('device');
     press(app, BTN.A);
@@ -261,7 +290,7 @@ describe('controles do jogador', () => {
     expect(app.settings.devices[0]).toBe('kb');
   });
   it('sem dispositivo (NENHUM) ainda dá para configurar: a tecla apertada põe o jogador no teclado', () => {
-    const { app } = mkApp();
+    const { app } = mkApp(classicSettings());
     app.settings.devices[0] = 'none';
     const r = remapScreen(app, 0); app.go(r);
     r.menu.cursor = row('a');
@@ -270,14 +299,14 @@ describe('controles do jogador', () => {
     expect([app.settings.devices[0], app.settings.keymaps[0].a]).toEqual(['kb', 'KeyZ']);
   });
   it('restaurar padrão do jogador (teclas, botões e dispositivo)', () => {
-    const { app } = mkApp();
+    const { app } = mkApp(classicSettings());
     app.settings.keymaps[0].a = 'KeyZ'; app.settings.padmaps[0].a = 5; app.settings.devices[0] = 'none';
     const r = remapScreen(app, 0); app.go(r);
     r.menu.cursor = row('reset'); press(app, BTN.A);
-    expect([app.settings.keymaps[0], app.settings.padmaps[0], app.settings.devices[0]]).toEqual([defaultSettings().keymaps[0], DEFAULT_PADMAP, 'kb']);
+    expect([app.settings.keymaps[0], app.settings.padmaps[0], app.settings.devices[0]]).toEqual([classicSettings().keymaps[0], DEFAULT_PADMAP, 'kb']);
   });
   it('B fora da captura volta às opções, com o cursor no jogador', () => {
-    const { app } = mkApp();
+    const { app } = mkApp(classicSettings());
     app.go(remapScreen(app, 1));
     press(app, BTN.B); settle(app);
     expect([app.screen.id, (app.screen as unknown as { menu: { cursor: number } }).menu.cursor]).toEqual(['options', 1]);

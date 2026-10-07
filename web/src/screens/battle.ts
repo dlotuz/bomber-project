@@ -6,7 +6,9 @@ import {
 } from '../game/timeline';
 import { FADE_OUT_1, FADE_IN_1, fadeSpec } from '../app/fade';
 import { SFX, MUSIC, BANK } from '../app/audio';
-import { drawRomBattle, romState } from '../app/rom-api';
+import { drawRomBattle, romState, type RomAssets } from '../app/rom-api';
+import { renderRomBattle } from '../render/rom/battle';
+import { prepareFxPixels } from '../render/fx/draw';
 import { timeUpLabel } from '../render/text/text';
 import { createView, updateView } from '../render/view';
 import { drawRound } from '../render/draw-game';
@@ -51,6 +53,21 @@ export function battleScreen(app: App, ms: MatchSession): BattleScreen {
     bombless.grid = round.grid.map(v => (v === CODE.BOMB ? CODE.FLOOR : v));
     bombless.bombs = [];
     return bombless;
+  };
+  /** Quadros de referência dos efeitos (sem atores / só bombas), desenhados pela PPU direto em memória. */
+  const refs: (ImageData | null)[] = [null, null];
+  const refPixels = (a: RomAssets, bombs: boolean, crowns: readonly number[], frame: number): Uint8ClampedArray | null => {
+    const img = renderRomBattle(refs[+bombs] ??= new ImageData(256, 224), bombs ? round : withoutBombs(), { crowns }, a, frame,
+      bombs ? BOMBS_ONLY : NO_ACTORS);
+    return img && img.data;
+  };
+  /** Pixels do último quadro da ROM (cor dos destroços sem ler o canvas); null = arte própria. */
+  let pixels: Uint8ClampedArray | null = null;
+  const colorAt = (c: number): number => {
+    const x = cellX(c), y = cellY(c);
+    if (!pixels) return sampleBase(x, y, DEBRIS_COLOR);
+    const i = (Math.round(y) * 256 + Math.round(x)) * 4;
+    return pixels[i + 3] ? (pixels[i] << 16) | (pixels[i + 1] << 8) | pixels[i + 2] : DEBRIS_COLOR;
   };
   let paused = false, ended = false, quitHold = 0;
   let disconnected: number | null = null;
@@ -131,7 +148,7 @@ export function battleScreen(app: App, ms: MatchSession): BattleScreen {
       const pads = [0, 1, 2, 3, 4].map(i => (ms.cfg.humans[i] ? inp.pads[i] & ~(BTN.START | BTN.SELECT) : ai[i]));
       const ev = step(round, pads);
       updateView(view, round, ev);
-      fxUpdate(fx, round, ev, c => sampleBase(cellX(c), cellY(c), DEBRIS_COLOR));
+      fxUpdate(fx, round, ev, colorAt);
       app.audio.playEvents(ev);
       for (const e of ev) {
         if (eventType(e) === 'hurry') hurryT0 = round.tick;
@@ -145,7 +162,13 @@ export function battleScreen(app: App, ms: MatchSession): BattleScreen {
       const crowns = crownsOf(ms.match);
       const soft = fxShown && fx.shadowsPause === 0;
       hardShadows.clear();
-      fxFrame.rom = !!a && drawRomBattle(ctx, round, { crowns }, a, frame, soft ? SOFT_SHADOWS : {});
+      fxFrame.prep = undefined;
+      // Efeitos nos pixels do quadro, antes de irem para o canvas: os quadros de referência saem da PPU em memória.
+      fxFrame.rom = !!a && drawRomBattle(ctx, round, { crowns }, a, frame, soft ? SOFT_SHADOWS : {}, img => {
+        pixels = img.data;
+        if (fxShown) fxFrame.prep = prepareFxPixels(fx, round, img.data, bombs => refPixels(a, bombs, crowns, frame));
+      });
+      if (!fxFrame.rom) pixels = null;
       if (!fxFrame.rom) drawRound(ctx, round, view, bank, ms.cfg.chars, frame, [...crowns]);
       drawBombLevels(ctx, bank, round);
       drawBattleOverlays(ctx, bank, { paused, disconnected, ...banners() });

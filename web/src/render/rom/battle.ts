@@ -181,7 +181,9 @@ function clearBackdrop(img: ImageData, back: number, rom: number, skip: HdSkip):
   }
 }
 
-export function drawRomBattle(ctx: CanvasRenderingContext2D, round: RoundState, vis: RomBattleVis, assets: RomAssets, frame: number, opts: BuildOpts = {}): boolean {
+/** Desenha o quadro da partida em `img` (256×224), sem canvas: os quadros de referência dos efeitos saem daqui direto
+ *  em memória (`target` só é criado se o quadro montar). null = gráficos da ROM indisponíveis nesta partida. */
+export function renderRomBattle(target: ImageData | (() => ImageData), round: RoundState, vis: RomBattleVis, assets: RomAssets, frame: number, opts: BuildOpts = {}): ImageData | null {
   let f: PpuFrame;
   const skip = opts.skip ?? (opts.sprites !== false ? hdBattleSkip(round, vis.crowns ?? NO_CROWNS) : NO_SKIP);
   try {
@@ -189,12 +191,25 @@ export function drawRomBattle(ctx: CanvasRenderingContext2D, round: RoundState, 
   } catch (e) {
     // M1: a chave do aviso vive em `assets`, então uma ROM nova (outro objeto) volta a avisar se falhar de novo.
     warnOnce(assets, 'frame', 'Crown Blast: gráficos da ROM indisponíveis nesta partida; usando a arte própria.', e);
-    return false;
+    return null;
   }
-  let img = images.get(ctx);
-  if (!img) { img = ctx.createImageData(256, 224); images.set(ctx, img); }
+  const img = typeof target === 'function' ? target() : target;
   renderPpu(f, img);
   if (f.backdrop !== undefined) clearBackdrop(img, f.backdrop, f.cgram[0], skip);
+  return img;
+}
+
+/** `renderRomBattle` no canvas. `beforePut` mexe nos pixels antes de irem para o canvas (efeitos: sombras e cor das
+ *  bombas calculadas no buffer, sem ler o canvas de volta — a leitura trava a GPU e derrubava o FPS). */
+export function drawRomBattle(ctx: CanvasRenderingContext2D, round: RoundState, vis: RomBattleVis, assets: RomAssets, frame: number,
+  opts: BuildOpts = {}, beforePut?: (img: ImageData) => void): boolean {
+  const img = renderRomBattle(() => {
+    let m = images.get(ctx);
+    if (!m) { m = ctx.createImageData(256, 224); images.set(ctx, m); }
+    return m;
+  }, round, vis, assets, frame, opts);
+  if (!img) return false;
+  beforePut?.(img);
   ctx.putImageData(img, 0, 0);
   return true;
 }

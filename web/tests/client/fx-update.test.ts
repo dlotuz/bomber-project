@@ -6,18 +6,17 @@ const boom = (cell: number) => ({ type: 'explosion' as const, cell, owner: 0 });
 const round = () => createRound(1, defaultRules(), makeRng());
 
 describe('fxUpdate', () => {
-  it('explosão gera 10 faíscas + 6 fumaças e tremor', () => {
+  it('explosão gera 10 faíscas + 6 fumaças (sem tremor de tela)', () => {
     const r = round(), fx = createFx();
     fxUpdate(fx, r, [boom(cellOf(5, 5))]);
     expect(liveCount(fx)).toBe(16);
-    expect(fx.shake).toBeGreaterThan(0);
+    expect('shake' in fx).toBe(false);
   });
-  it('tudo some e o tremor zera depois de 60 ticks', () => {
+  it('tudo some depois de 60 ticks', () => {
     const r = round(), fx = createFx();
     fxUpdate(fx, r, [boom(cellOf(5, 5)), { type: 'player_hit', slot: 0 }]);
     for (let i = 0; i < 60; i++) fxUpdate(fx, r, []);
     expect(liveCount(fx)).toBe(0);
-    expect(fx.shake).toBe(0);
     expect(fx.flash).toBe(0);
   });
   it('bloco que vira BURNING (SOFT) solta 8 detritos com a cor amostrada', () => {
@@ -37,11 +36,10 @@ describe('fxUpdate', () => {
     expect(fx.flash).toBe(1);
     expect(liveCount(fx)).toBe(24);
   });
-  it('cadeia: teto de 600 partículas e de 3 px de tremor', () => {
+  it('cadeia: teto de 600 partículas', () => {
     const r = round(), fx = createFx();
     fxUpdate(fx, r, Array.from({ length: 40 }, () => boom(cellOf(7, 7))));
     expect(liveCount(fx)).toBe(600);
-    expect(fx.shake).toBeLessThanOrEqual(3);
   });
   it('TIME UP e fim de rodada não geram efeitos novos', () => {
     const r = round(), fx = createFx();
@@ -55,14 +53,13 @@ describe('fxUpdate', () => {
     fxUpdate(fx, round(), [boom(cellOf(5, 5)), { type: 'player_hit', slot: 0 }]);
     fxUpdate(fx, round(), []);
     expect(liveCount(fx)).toBe(0);
-    expect(fx.shake).toBe(0);
     expect(fx.flash).toBe(0);
   });
   it('determinístico: mesma semente e mesmos eventos = mesmo estado', () => {
     const r = round(), a = createFx(7), b = createFx(7);
     for (const fx of [a, b]) { fxUpdate(fx, r, [boom(cellOf(5, 5))]); fxUpdate(fx, r, []); }
     expect(Array.from(a.x)).toEqual(Array.from(b.x));
-    expect([a.dx, a.dy]).toEqual([b.dx, b.dy]);
+    expect(Array.from(a.y)).toEqual(Array.from(b.y));
   });
 });
 

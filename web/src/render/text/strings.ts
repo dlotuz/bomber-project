@@ -42,7 +42,8 @@ export const S = {
     controls: (n: number) => `CONTROLES DO JOGADOR ${n}`, device: 'DISPOSITIVO', all: 'CONFIGURAR TODOS',
     playerHelp: 'A: CONFIGURAR  ESQ/DIR: TROCA', pressAny: 'TECLA OU BOTÃO? (ESC CANCELA)',
     spawns: 'SPAWNS ALEATÓRIOS', escape: 'SOLTAR DA LUVA', slot: 'SLOT', slotEmpty: 'VAZIO', slotSave: 'SALVAR NO SLOT',
-    slotLoad: 'CARREGAR DO SLOT', slotSaved: 'SALVO', slotLoaded: 'CARREGADO', throwStun: 'PLAYER EM PLAYER: STUN', sleep: 'SONECA (SEG)', fx: 'EFEITOS VISUAIS', screen: 'TELA', screenHd: 'HD', screenClassic: 'CLÁSSICA', smooth: 'FILTRO SUAVE', music: 'VOLUME DA MÚSICA', sfx: 'VOLUME DOS EFEITOS',
+    slotLoad: 'CARREGAR DO SLOT', slotSaved: 'SALVO', slotLoaded: 'CARREGADO', devSlot: 'DEV CONTROLES', slotFixed: 'FIXO',
+    allMounts: 'MONTARIAS EXTRAS', throwStun: 'PLAYER EM PLAYER: STUN', sleep: 'SONECA (SEG)', fx: 'EFEITOS VISUAIS', screen: 'TELA', screenHd: 'HD', screenClassic: 'CLÁSSICA', smooth: 'FILTRO SUAVE', music: 'VOLUME DA MÚSICA', sfx: 'VOLUME DOS EFEITOS',
     rom: 'ROM', romOk: 'CARREGADA ✓', romNo: 'NÃO CARREGADA', load: 'CARREGAR ROM...', forget: 'ESQUECER ROM',
     forgetAsk: 'ESQUECER A ROM? A: SIM  B: NÃO', reset: 'RESTAURAR PADRÃO', back: 'VOLTAR', no: 'NÃO', yes: 'SIM',
     powerHelp: 'SEM TECLA: Y FAZ P E SOCO  ESQ/DIR: APAGA',
@@ -62,10 +63,6 @@ export const S = {
     players: 'JOGADORES', rules: 'REGRAS', roomCode: 'CÓDIGO DA SALA', copyHelp: 'A: COPIA O LINK DE CONVITE',
     levelShort: 'CPU', badShort: 'VINGADOR',
   },
-  password: {
-    title: 'Senha', menu: 'SENHA', active: 'LIGADA', digit: (n: number) => `NÚMERO ${n}`, ok: 'CONFIRMAR',
-    help: 'ESQ/DIR: MUDA O NÚMERO', wrong: 'SENHA ERRADA', on: 'TODAS AS MONTARIAS: SIM', off: 'TODAS AS MONTARIAS: NÃO',
-  },
 } as const;
 
 type Use = { style: TextStyleId; text: string };
@@ -75,7 +72,7 @@ const uniq = (u: Use[]): Use[] => [...new Map(u.map(x => [`${x.style}|${x.text}`
 /** Todo par (estilo, texto) que o jogo desenha. Base dos testes de cobertura (T4, T16–T18, T22). */
 export const STRING_USES: readonly Use[] = uniq([
   ...as('titleMenu', [S.title.normal, S.title.battle, S.title.options, S.title.pressStart]),
-  ...as('menuTitle', [S.vs.title, S.players.title, S.rules.title, S.chars.title, S.teams.title, S.options.title, S.options.controlsTitle, S.options.gameplayTitle, S.password.title, S.online.title]),
+  ...as('menuTitle', [S.vs.title, S.players.title, S.rules.title, S.chars.title, S.teams.title, S.options.title, S.options.controlsTitle, S.options.gameplayTitle, S.online.title]),
   ...as('menuItem', [S.vs.royale, S.vs.champ, S.vs.mania, S.vs.ffa, S.vs.team, ...S.players.row, S.players.human, S.players.cpu,
     S.players.off, ...S.rules.labels, S.rules.controls, S.rules.gameplay, ...S.rules.cpu, ...S.rules.crowns, ...S.rules.time, S.rules.no, S.rules.yes, S.teams.vs]),
   ...as('spriteBlue', [S.stage.title, ...Array.from({ length: 10 }, (_, i) => S.stage.stage(i + 1)), ...STAGE_NAMES_PT]),
@@ -89,8 +86,7 @@ export const STRING_USES: readonly Use[] = uniq([
     S.options.yes, S.options.pressKey, S.options.pressPad, ...Object.values(ACTIONS),
     ...Array.from({ length: 32 }, (_, i) => S.options.button(i)),
     'ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789 -+.:!?', 'ESPAÇO', '0 1 2 3 4 5 6 7 8 9 10',
-    S.password.menu, S.password.active, ...[1, 2, 3, 4].map(S.password.digit), S.password.ok, S.password.help,
-    S.password.wrong, S.password.on, S.password.off,
+    S.options.devSlot, S.options.slotFixed, S.options.allMounts,
     S.online.name, S.online.create, S.online.code, S.online.join, S.online.back, S.online.empty, S.online.you, S.online.cpu,
     S.online.off, S.online.stage, S.online.crowns, S.online.time, S.online.level, S.online.sudden, S.online.bad,
     S.online.controls, S.online.invite, S.online.copy, S.online.copied, S.online.start, S.online.waitHost, S.online.playing, S.online.leave,

@@ -56,9 +56,10 @@ export interface PadMap {
 
 export const PAD_FIELDS: readonly (keyof PadMap)[] = KEY_FIELDS;
 
-/** Layout "standard" da Gamepad API: A = 1, B = 0, Y = 2, X = 3, L = 4, R = 5, SELECT = 8, START = 9, d-pad 12–15. */
+/** Layout "standard" da Gamepad API: A = 1, B = 0, Y = 2, X = 3, L = 4 (LB), PODER (P) = 5 (RB), R = 7 (RT), SELECT = 8,
+ *  START = 9, d-pad 12–15. */
 export const DEFAULT_PADMAP: PadMap = {
-  a: 1, b: 0, y: 2, x: 3, l: 4, r: 5, select: 8, start: 9, up: 12, down: 13, left: 14, right: 15, power: -1,
+  a: 1, b: 0, y: 2, x: 3, l: 4, r: 7, select: 8, start: 9, up: 12, down: 13, left: 14, right: 15, power: 5,
 };
 
 const DEAD_ZONE = 0.5;

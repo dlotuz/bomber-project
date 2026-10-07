@@ -4,7 +4,6 @@ import { cellX, cellY, entX, entY } from './coords';
 import { PART, between, clearFx, rand, spawn, type FxState } from './state';
 
 export const DEBRIS_COLOR = 0x8a6a3a;
-const SHAKE_ADD = 1.2, SHAKE_MAX = 3, SHAKE_DECAY = 0.85, SHAKE_MIN = 0.3;
 const FLASH_STEP = 1 / 6;
 const SPARK_COLORS = [0xfff2a0, 0xffc040, 0xff8a2a];
 const hex = (s: string): number => Number.parseInt(s.slice(1), 16);
@@ -22,7 +21,6 @@ function explosion(fx: FxState, cell: number): void {
     spawn(fx, { kind: PART.SMOKE, color: 0x5a5a60, life: Math.round(between(fx, 36, 48)),
       x: x + between(fx, -6, 6), y: y + between(fx, -6, 6), vx: between(fx, -0.2, 0.2), vy: -0.3, size: 3, grow: 0.17 });
   }
-  fx.shake = Math.min(SHAKE_MAX, fx.shake + SHAKE_ADD);
 }
 
 function debris(fx: FxState, cell: number, color: number): void {
@@ -51,7 +49,7 @@ function burst(fx: FxState, round: RoundState, slot: number): void {
   fx.flash = 1;
 }
 
-/** Um tick de 60 Hz dos efeitos (spec §3.3): física, eventos → partículas/flash/tremor, decaimentos. */
+/** Um tick de 60 Hz dos efeitos (spec §3.3): física, eventos → partículas/flash, decaimentos. */
 export function fxUpdate(fx: FxState, round: RoundState, events: readonly GameEvent[], colorAt: (cell: number) => number = () => DEBRIS_COLOR): void {
   if (fx.round !== round) { clearFx(fx); fx.round = round; fx.prevGrid = Int32Array.from(round.grid); }
   for (let i = 0; i < fx.life.length; i++) {
@@ -73,8 +71,4 @@ export function fxUpdate(fx: FxState, round: RoundState, events: readonly GameEv
     }
   }
   prev.set(round.grid);
-  fx.shake *= SHAKE_DECAY;
-  if (fx.shake < SHAKE_MIN) fx.shake = 0;
-  fx.dx = fx.shake ? (rand(fx) * 2 - 1) * fx.shake : 0;
-  fx.dy = fx.shake ? (rand(fx) * 2 - 1) * fx.shake : 0;
 }

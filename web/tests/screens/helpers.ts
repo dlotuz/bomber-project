@@ -1,6 +1,6 @@
 import { App } from '../../src/app/app';
 import { defaultSettings, type Settings } from '../../src/app/settings';
-import { idleInput, type MenuInput } from '../../src/input/input';
+import { idleInput, DEFAULT_KEYMAPS, DEFAULT_PADMAP, type MenuInput } from '../../src/input/input';
 import type { AudioSink } from '../../src/app/rom-api';
 
 export type AudioOp = 'bank' | 'music' | 'sfx' | 'voice' | 'stop' | 'fade';
@@ -25,6 +25,14 @@ export class RecordingSink implements AudioSink {
   clear(): void { this.calls = []; }
 }
 
+/** Controles "clássicos" (P1/P2 no teclado, P3–P5 nos Controles 1–3): o padrão novo já vem com o DEV CONTROLES carregado. */
+export function classicSettings(): Settings {
+  const s = defaultSettings();
+  s.devices = ['kb', 'kb', 'gp0', 'gp1', 'gp2'];
+  s.keymaps = DEFAULT_KEYMAPS.map(m => ({ ...m }));
+  s.padmaps = [0, 1, 2, 3, 4].map(() => ({ ...DEFAULT_PADMAP }));
+  return s;
+}
 export function mkApp(settings: Settings = defaultSettings()) {
   const sink = new RecordingSink();
   let saves = 0;

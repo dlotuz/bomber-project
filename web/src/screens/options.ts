@@ -2,14 +2,13 @@ import type { App, Screen } from '../app/app';
 import { BTN } from '../game/core-api';
 import { Menu, clamp, cycle, type MenuRow } from './menu';
 import { DEVICE_IDS } from '../input/input';
-import { SLOT_COUNT, controlsOf, defaultSettings, gameplayOf, setDevice } from '../app/settings';
+import { SLOT_COUNT, controlsOf, defaultSettings, devControls, gameplayOf, setDevice, type ControlPreset } from '../app/settings';
 import { S } from '../render/text/strings';
 import { MUSIC } from '../app/audio';
 import { FADE_MENU, FADE_TO_TITLE } from '../app/fade';
 import { drawOptionsPage, type OptionsRow } from '../render/screens-rom/options';
 import { titleScreen } from './title';
 import { remapScreen } from './remap';
-import { passwordScreen } from './password';
 
 interface Row extends MenuRow { label: string; value?: () => string }
 
@@ -18,8 +17,8 @@ export type OptionsPage = 'main' | 'controls' | 'gameplay';
 
 /**
  * Opções (§6.13, R15, R25). Principal: submenus, volume de música/efeitos (a ROM vem embutida: rom/pack.ts).
- * Controles: por jogador, dispositivo (←/→) e controles próprios (A abre). Jogabilidade: spawns aleatórios e as
- * regras extras (luva, arremesso de jogador, soneca). `back` (linha e B): do submenu volta às Opções; das Opções, ao
+ * Controles: por jogador, dispositivo (←/→) e controles próprios (A abre); depois do slot 3 vem o DEV CONTROLES (fixo,
+ * só carrega). Jogabilidade: spawns aleatórios, as regras extras (luva, arremesso de jogador, soneca) e as montarias extras. `back` (linha e B): do submenu volta às Opções; das Opções, ao
  * título na "Opções". `ret`: submenu aberto de fora das Opções (atalho em "Configure as regras"); o `back` dele volta
  * para essa tela em vez das Opções.
  */
@@ -40,18 +39,24 @@ export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'ma
   const open = (to: OptionsPage): void => { app.transition(() => optionsScreen(app, 0, to), FADE_MENU); };
   const turn = (i: number, d: number): boolean => { setDevice(st.devices, i, cycle(DEVICE_IDS, st.devices[i], d)); app.save(); return true; };
   const rows: Row[] = [];
-  // Slots (Controles e Jogabilidade): SLOT escolhe com ←/→; SALVAR grava o atual; CARREGAR aplica o do slot.
-  let slot = 0;
+  // Slots (Controles e Jogabilidade): SLOT escolhe com ←/→; SALVAR grava o atual; CARREGAR aplica o do slot. Nos
+  // Controles, um a mais depois do 3: o DEV CONTROLES (fixo: não salva, só carrega).
+  let slot = page === 'controls' ? SLOT_COUNT : 0;   // Controles abre no DEV CONTROLES (o padrão carregado)
+  const dev = (): boolean => page === 'controls' && slot === SLOT_COUNT;
   let note: { id: string; text: string } | null = null;
   const said = (id: string): string => (note?.id === id ? note.text : '');
   const slotRows = (has: () => boolean, save: () => void, load: () => void): void => {
+    const last = page === 'controls' ? SLOT_COUNT : SLOT_COUNT - 1;
     rows.push({
-      id: 'slot', label: S.options.slot, value: () => `${slot + 1}${has() ? '' : ' ' + S.options.slotEmpty}`,
-      left: () => { const b = slot; slot = clamp(slot - 1, 0, SLOT_COUNT - 1); note = null; return slot !== b; },
-      right: () => { const b = slot; slot = clamp(slot + 1, 0, SLOT_COUNT - 1); note = null; return slot !== b; },
+      id: 'slot', label: S.options.slot, value: () => (dev() ? S.options.devSlot : `${slot + 1}${has() ? '' : ' ' + S.options.slotEmpty}`),
+      left: () => { const b = slot; slot = clamp(slot - 1, 0, last); note = null; return slot !== b; },
+      right: () => { const b = slot; slot = clamp(slot + 1, 0, last); note = null; return slot !== b; },
     });
     rows.push({ id: 'slotSave', label: S.options.slotSave, value: () => said('slotSave'),
-      select: () => { save(); app.save(); note = { id: 'slotSave', text: S.options.slotSaved }; } });
+      select: () => {
+        if (dev()) { note = { id: 'slotSave', text: S.options.slotFixed }; return false; }
+        save(); app.save(); note = { id: 'slotSave', text: S.options.slotSaved };
+      } });
     rows.push({ id: 'slotLoad', label: S.options.slotLoad, value: () => said('slotLoad'),
       select: () => { if (!has()) return; load(); app.save(); note = { id: 'slotLoad', text: S.options.slotLoaded }; } });
   };
@@ -66,8 +71,9 @@ export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'ma
       select: () => { app.transition(() => remapScreen(app, i, ret), FADE_MENU); },
     });
   }
-  if (page === 'controls') slotRows(() => !!st.controlSlots[slot], () => { st.controlSlots[slot] = controlsOf(st); }, () => {
-    const c = controlsOf(st.controlSlots[slot]!);
+  const presetAt = (): ControlPreset | null => (dev() ? devControls() : st.controlSlots[slot]);
+  if (page === 'controls') slotRows(() => !!presetAt(), () => { st.controlSlots[slot] = controlsOf(st); }, () => {
+    const c = controlsOf(presetAt()!);
     st.devices = c.devices; st.keymaps = c.keymaps; st.padmaps = c.padmaps;
     app.applyInput();
   });
@@ -92,9 +98,10 @@ export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'ma
       left: () => { const b = opt().sleepSec; opt().sleepSec = clamp(b - 1, 1, 10); app.save(); return opt().sleepSec !== b; },
       right: () => { const b = opt().sleepSec; opt().sleepSec = clamp(b + 1, 1, 10); app.save(); return opt().sleepSec !== b; },
     });
-    rows.push({
-      id: 'password', label: S.password.menu, value: () => (opt().allMounts ? S.password.active : ''),
-      select: () => { const back = rows.findIndex(r => r.id === 'password'); app.transition(() => passwordScreen(app, back, ret), FADE_MENU); },
+    rows.push({   // ovos dos 13 tipos (a senha 0164 do original); padrão SIM
+      id: 'allMounts', label: S.options.allMounts, value: () => (opt().allMounts ? S.options.yes : S.options.no),
+      left: () => { const changed = opt().allMounts; opt().allMounts = false; app.save(); return changed; },
+      right: () => { const changed = !opt().allMounts; opt().allMounts = true; app.save(); return changed; },
     });
     slotRows(() => !!st.gameplaySlots[slot], () => { st.gameplaySlots[slot] = gameplayOf(opt()); },
       () => { Object.assign(opt(), st.gameplaySlots[slot]); });
