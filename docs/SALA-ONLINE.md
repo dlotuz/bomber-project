@@ -18,6 +18,8 @@ O comando faz três coisas:
 
 Mande essa URL para quem vai jogar. A URL muda cada vez que a sala sobe. Ctrl+C encerra tudo.
 
+Passo a passo completo para outra pessoa (ou o agente de IA dela) baixar o projeto e hospedar a sala: [`SUBIR-SALA-CLOUDFLARE.md`](SUBIR-SALA-CLOUDFLARE.md).
+
 - Para jogar só na rede local, sem túnel, use `SALA_NO_BUILD=1` (aproveita o `web/dist` existente) ou `SALA_NO_TUNNEL=1`. A sala fica em `http://<seu-ip>:8787`.
 - O `cloudflared` instala com `winget install Cloudflare.cloudflared`.
 
@@ -41,7 +43,7 @@ Na sala:
 
 **CONTROLE ONLINE**, que aparece fora e dentro da sala, configura o controle usado nas partidas online: dispositivo (teclado ou controle), teclas e botões. É um perfil só do online (`Settings.online`), separado dos controles dos 5 jogadores do jogo local, e começa igual ao do jogador 1. Na partida online, cada um joga só com esse perfil.
 
-Na partida, o nome de cada jogador humano aparece em cima da cabeça, na cor dele.
+Na partida, o nome de cada jogador humano aparece em cima da cabeça, na cor dele. No canto de cima da tela fica o contador de FPS e de ping até a sala (`src/app/stats.ts`).
 
 As regras extras vêm das Opções do anfitrião: soltar da luva, arremesso de jogador, soneca, montarias e spawns. Por enquanto a sala online é só Todos contra Todos.
 

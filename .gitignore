@@ -18,3 +18,6 @@ web/snapshots/
 # ROM servida só durante o rastreio do pacote (web/scripts/rom-pack/play.mjs)
 web/.rom/
 web/dist-e2e/
+
+# login/credenciais do Claude Code (nunca versionar)
+.claude-login/

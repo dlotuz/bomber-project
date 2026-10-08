@@ -40,7 +40,7 @@ try {
   await key(B, 'KeyS', 4); await key(B, 'KeyJ');         // ENTRAR NA SALA
   await B.page.waitForFunction(() => window.__sala?.code, null, { timeout: 15000 });
   await sleep(1500);                                     // pacote de gráficos e ping dos dois
-  await key(A, 'KeyW', 3); await key(A, 'KeyJ');         // da própria vaga, ↑↑↑ dá a volta até INICIAR PARTIDA
+  await key(A, 'KeyW', 4); await key(A, 'KeyJ');         // da própria vaga, ↑↑↑↑ dá a volta (CONVITE, SAIR, CONTROLE) até INICIAR PARTIDA
   await Promise.all([A, B].map(p => p.page.waitForFunction(() => window.__sala.tick > 10, null, { timeout: 15000 })));
   // os dois apertam teclas do jogador 1 (WASD + J = bomba) durante a partida
   const keys = ['KeyD', 'KeyS', 'KeyJ', 'KeyA', 'KeyW', 'KeyJ'];

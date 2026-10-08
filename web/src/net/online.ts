@@ -47,6 +47,8 @@ export class OnlineClient {
   /** Última mensagem para o jogador (erro, sala fechada, conexão caiu); a tela mostra no rodapé. */
   message = '';
   desync: string | null = null;
+  /** Ping até o servidor da sala, em ms (média móvel; null sem conexão). O contador do topo da tela mostra. */
+  ping: number | null = null;
   private ws: WebSocket | null = null;
   private ls: Lockstep | null = null;
   private ms: MatchSession | null = null;
@@ -89,10 +91,10 @@ export class OnlineClient {
     this.ws = sock;
     sock.onopen = () => {
       sock.send(JSON.stringify(first));
-      // ping até a sala (fora da partida): o servidor escolhe o atraso do lockstep pelo pior par de jogadores
+      // ping até a sala (também na partida, para o contador): o servidor escolhe o atraso do lockstep pelo pior par
       const ping = (): void => {
         if (this.ws !== sock || sock.readyState !== WebSocket.OPEN) return;
-        if (!this.ls) this.send({ t: 'ping', c: performance.now() });
+        this.send({ t: 'ping', c: performance.now() });
         setTimeout(ping, 1500);
       };
       ping();
@@ -100,7 +102,7 @@ export class OnlineClient {
     sock.onmessage = e => this.receive(JSON.parse(String(e.data)) as ServerMsg);
     sock.onclose = () => {
       if (this.ws !== sock) return;
-      this.ws = null; this.connecting = false;
+      this.ws = null; this.connecting = false; this.ping = null;
       const was = this.room !== null || this.ls !== null;
       this.room = null;
       if (this.ls) this.finish(S.online.lost);
@@ -112,7 +114,12 @@ export class OnlineClient {
   private receive(m: ServerMsg): void {
     switch (m.t) {
       case 'room': this.room = { code: m.code, you: m.you, host: m.host, lobby: m.lobby, playing: m.playing }; this.connecting = false; break;
-      case 'pong': this.send({ t: 'rtt', ms: performance.now() - m.c }); break;
+      case 'pong': {
+        const ms = performance.now() - m.c;
+        this.ping = this.ping === null ? ms : 0.7 * this.ping + 0.3 * ms;
+        this.send({ t: 'rtt', ms });
+        break;
+      }
       case 'error': this.message = m.msg.toUpperCase(); this.connecting = false; break;
       case 'closed': this.room = null; this.message = m.msg.toUpperCase(); if (this.ls) this.finish(this.message); break;
       case 'start': this.begin(m); break;
