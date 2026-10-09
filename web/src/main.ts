@@ -130,7 +130,8 @@ startLoop(() => {
     { connected: input.connected(), esc: input.escHeld(), padButton: input.takePadButton() }));
   if (inp.pressedAny) audioStart.gesture();        // botão do controle também conta como gesto (M6)
   // partida online: só o controle da sala online (Opções dele na tela da sala) vai para o lockstep
-  if (online.playing) { const oc = app.settings.online; online.step(input.readProfile(oc.device, oc.keymap, oc.padmap)); }
+  // (aba escondida: nenhum botão — o jogo segue para os outros sem ninguém "segurando" uma direção)
+  if (online.playing) { const oc = app.settings.online; online.step(document.hidden ? 0 : input.readProfile(oc.device, oc.keymap, oc.padmap)); }
   else app.update(inp);
   prev = cur;
-}, render);
+}, render, () => online.playing);

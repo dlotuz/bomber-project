@@ -68,6 +68,7 @@ function newLobby() {
   return {
     stage: 1, mode: 'ffa', teams: [0, 1, 0, 1, 0], slots: ['human', 'cpu', 'cpu', 'off', 'off'], chars: [0, 1, 2, 3, 4],
     names: ['', '', '', '', ''], rules: { cpuLevel: 1, matches: 3, timeIdx: 2, suddenDeath: false, badBomber: false },
+    powerKey: [false, false, false, false, false],
   };
 }
 const send = (ws, msg) => { if (ws.readyState === 1) ws.send(JSON.stringify(msg)); };
@@ -103,6 +104,7 @@ function leave(peer) {
     room.lobby.slots[peer.slot] = 'off';
   }
   room.lobby.names[peer.slot] = '';
+  room.lobby.powerKey[peer.slot] = false;
   broadcastRoom(room);
 }
 
@@ -132,8 +134,14 @@ wss.on('connection', ws => {
         const s = takeSlot(r);
         if (s < 0) { send(ws, { t: 'error', msg: 'A sala está cheia (5 jogadores).' }); return; }
         r.peers.add(peer); peer.room = r; peer.slot = s; peer.name = cleanName(m.name) || `P${s + 1}`;
-        r.lobby.names[s] = peer.name;
+        r.lobby.names[s] = peer.name; r.lobby.powerKey[s] = false;
         broadcastRoom(r);
+        break;
+      }
+      case 'power': {  // cada um informa se o CONTROLE ONLINE dele tem tecla própria do P
+        if (!room || room.game) return;
+        room.lobby.powerKey[peer.slot] = !!m.on;
+        broadcastRoom(room);
         break;
       }
       case 'char': {   // cada um escolhe o próprio personagem

@@ -16,9 +16,13 @@ import { Lockstep } from './lockstep';
 import { standing } from '../core/state';
 import { entX, entY } from '../render/fx/coords';
 import { PLAYER_COLORS } from '../render/draw-game';
+import { BTN } from '../core/types';
+import { hasPowerKey } from '../input/input';
 
 export interface Lobby {
   stage: number; mode: 'ffa' | 'team'; teams: number[]; slots: SlotKind[]; chars: number[]; names: string[];
+  /** Vaga com tecla/botão próprio do P no CONTROLE ONLINE de quem está nela (cada um informa o seu). */
+  powerKey?: boolean[];
   rules: { cpuLevel: 0 | 1 | 2; matches: number; timeIdx: number; suddenDeath: boolean; badBomber: boolean };
 }
 export interface Room { code: string; you: number; host: boolean; lobby: Lobby; playing: boolean }
@@ -83,6 +87,15 @@ export class OnlineClient {
     this.send({ t: 'start', extras: { gloveEscape: o.gloveEscape, throwStun: o.throwStun, sleepTicks: o.sleepSec * 60, allMounts: o.allMounts, randomSpawns: o.randomSpawns } });
   }
 
+  /** Avisa a sala se o CONTROLE ONLINE deste jogador tem tecla própria do P (todos montam a partida com a mesma regra). */
+  private syncPower(): void {
+    const room = this.room;
+    if (!room || room.playing || room.you < 0) return;
+    const oc = this.app.settings.online;
+    const mine = hasPowerKey(oc.device, oc.keymap, oc.padmap);
+    if ((room.lobby.powerKey?.[room.you] ?? false) !== mine) this.send({ t: 'power', on: mine });
+  }
+
   // ---------------------------------------------------------------------------------------------------- conexão
   private send(m: object): void { if (this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify(m)); }
 
@@ -98,6 +111,7 @@ export class OnlineClient {
       const ping = (): void => {
         if (this.ws !== sock || sock.readyState !== WebSocket.OPEN) return;
         this.send({ t: 'ping', c: performance.now() });
+        this.syncPower();   // trocou a tecla do P na tela de controles: a sala fica sabendo
         setTimeout(ping, 1000);
       };
       ping();
@@ -116,7 +130,7 @@ export class OnlineClient {
 
   private receive(m: ServerMsg): void {
     switch (m.t) {
-      case 'room': this.room = { code: m.code, you: m.you, host: m.host, lobby: m.lobby, playing: m.playing }; this.connecting = false; break;
+      case 'room': this.room = { code: m.code, you: m.you, host: m.host, lobby: m.lobby, playing: m.playing }; this.connecting = false; this.syncPower(); break;
       case 'pong': {
         const ms = performance.now() - m.c;
         this.ping = this.ping === null ? ms : 0.7 * this.ping + 0.3 * ms;
@@ -151,7 +165,7 @@ export class OnlineClient {
     // todos com a mesma configuração: semente do servidor, dispositivos neutros (sem pausa por controle desconectado)
     const cfg = configFromSetup(setup, x.randomSpawns, ['kb', 'kb', 'kb', 'kb', 'kb'], m.seed, {
       gloveEscape: x.gloveEscape, throwStun: x.throwStun, sleepTicks: x.sleepTicks, allMounts: x.allMounts,
-      powerKey: [false, false, false, false, false],
+      powerKey: [0, 1, 2, 3, 4].map(s => !!L.powerKey?.[s] && L.slots[s] === 'human'),
     });
     this.ls = new Lockstep(m.delay, m.you, cfg.humans);
     this.ms = createMatchSession(cfg);
@@ -175,6 +189,8 @@ export class OnlineClient {
     const ls = this.ls;
     if (!ls) return;
     // até 2 ticks por passo: o 2º só se este navegador ficou para trás de todos os outros (alcança sem passar dos 60 Hz)
+    // sem pausa na sala online: só o anfitrião pausa (e, pausado, encerra com SELECT+START); START dos outros não vale
+    if (!this.room?.host && this.app.screen.id === 'battle') bits &= ~BTN.START;
     for (let n = 0; n < 2; n++) {
       for (const out of ls.local(bits)) this.send({ t: 'in', k: out.k, b: out.b });
       const t = ls.next();
@@ -255,6 +271,8 @@ export function initOnline(app: App): OnlineClient {
     get tick() { return c.tick; }, get screen() { return app.screen.id; }, get desync() { return c.desync; },
     get code() { return c.room?.code ?? null; }, hash: (k: number) => c.hash(k), get hashes() { return c.hashes(); },
     get message() { return c.message; },
+    get paused() { return (app.screen as { paused?: boolean }).paused ?? false; },
+    get powerKey() { return c.room?.lobby.powerKey ?? null; },
   };
   return c;
 }

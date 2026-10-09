@@ -23,6 +23,10 @@ try {
     return { page, errors, name };
   };
   const A = await open('anfitrião'), B = await open('convidado');
+  // o convidado tem tecla própria do P no CONTROLE ONLINE (U): a sala tem de saber e a partida montar com ela
+  await B.page.addInitScript(() => {
+    try { localStorage.setItem('crown-blast/settings', JSON.stringify({ online: { device: 'kb', keymap: { up: 'KeyW', down: 'KeyS', left: 'KeyA', right: 'KeyD', a: 'KeyJ', b: 'KeyK', x: 'KeyI', y: 'KeyL', l: 'KeyQ', r: 'KeyE', start: 'Enter', select: 'KeyF', power: 'KeyU' } } })); } catch { /* sem storage */ }
+  });
   // tudo pela tela da sala no jogo, com as teclas do jogador 1 (W/S = cima/baixo, J = A) e digitando nome e código
   const key = async (p, k, n = 1) => { for (let i = 0; i < n; i++) { await p.page.keyboard.down(k); await sleep(70); await p.page.keyboard.up(k); await sleep(70); } };
   const typeEntry = async (p, text) => { await key(p, 'KeyJ'); await sleep(150); await p.page.keyboard.type(text); await p.page.keyboard.press('Enter'); await sleep(200); };
@@ -40,6 +44,9 @@ try {
   await key(B, 'KeyS', 4); await key(B, 'KeyJ');         // ENTRAR NA SALA
   await B.page.waitForFunction(() => window.__sala?.code, null, { timeout: 15000 });
   await sleep(1500);                                     // pacote de gráficos e ping dos dois
+  const pk = await A.page.evaluate(() => window.__sala.powerKey);
+  console.log(`tecla própria do P na sala: ${JSON.stringify(pk)}`);
+  if (!pk || pk[1] !== true || pk[0] !== false) fail('a sala não registrou a tecla própria do P do convidado');
   await key(A, 'KeyW', 4); await key(A, 'KeyJ');         // da própria vaga, ↑↑↑↑ dá a volta (CONVITE, SAIR, CONTROLE) até INICIAR PARTIDA
   await Promise.all([A, B].map(p => p.page.waitForFunction(() => window.__sala.tick > 10, null, { timeout: 15000 })));
   // os dois apertam teclas do jogador 1 (WASD + J = bomba) durante a partida
@@ -72,6 +79,27 @@ try {
   console.log(`${same} conferências de estado iguais`);
   if (!same) fail('nenhuma conferência de estado em comum');
   for (const p of [A, B]) if (p.errors.length) fail(`erros na página do ${p.name}: ${[...new Set(p.errors)].join(' | ')}`);
+  // sem pausa para quem não é o anfitrião: o START (Enter) do convidado não pausa ninguém
+  if (!ended) {
+    await key(B, 'Enter'); await sleep(600);
+    const paused = await Promise.all([A, B].map(p => p.page.evaluate(() => window.__sala.paused)));
+    console.log(`START do convidado: pausado = ${JSON.stringify(paused)}`);
+    if (paused.some(Boolean)) fail('o START do convidado pausou a partida');
+  }
+  // o convidado troca de aba (alt+tab): a aba dele some, o requestAnimationFrame para — a partida não pode esperar
+  if (!ended) {
+    await B.page.evaluate(() => {
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+      window.requestAnimationFrame = () => 0;   // como o navegador faz com a aba escondida
+    });
+    await sleep(300);
+    const t1 = await A.page.evaluate(() => window.__sala.tick);
+    await sleep(3000);
+    const t2 = await Promise.all([A, B].map(p => p.page.evaluate(() => window.__sala.tick)));
+    console.log(`convidado com a aba escondida: anfitrião foi do tick ${t1} ao ${t2[0]} em 3 s (convidado no ${t2[1]})`);
+    if (t2[0] >= 0 && t2[0] - t1 < 150) fail('a partida ficou esperando o convidado com a aba escondida');
+  }
   // o convidado fecha a aba no meio da partida: a CPU assume a vaga e o anfitrião continua sem travar
   if (!ended) {
     const before = await A.page.evaluate(() => window.__sala.tick);

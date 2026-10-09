@@ -47,7 +47,7 @@ Na partida, o nome de cada jogador humano aparece em cima da cabeça, na cor del
 
 As regras extras vêm das Opções do anfitrião: soltar da luva, arremesso de jogador, soneca, montarias e spawns. Por enquanto a sala online é só Todos contra Todos.
 
-Cada um joga com o seu **CONTROLE ONLINE**. START pausa para todos. SELECT+START segurado encerra a partida para todos. Quando a partida acaba, todo mundo volta para a sala.
+Cada um joga com o seu **CONTROLE ONLINE**, inclusive com a tecla própria do P, se tiver configurado uma: cada um avisa a sala e a partida monta com a regra de cada vaga. Só o anfitrião pausa (START); pausado, SELECT+START segurado encerra a partida para todos. O START dos outros não vale na batalha. Quem troca de aba ou de janela (alt+tab) continua no jogo, parado e sem apertar nada: o navegador dele segue rodando os ticks em segundo plano e os outros não ficam esperando. Quando a partida acaba, todo mundo volta para a sala.
 
 ## Como funciona
 
