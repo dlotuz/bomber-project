@@ -25,5 +25,7 @@ describe('contador de FPS e ping', () => {
   it('mostra o ping só quando há sala', () => {
     expect(statsText(60, null)).toBe('60 FPS');
     expect(statsText(59, 42.6)).toBe('59 FPS · 43 ms');
+    expect(statsText(60, 3, [{ slot: 0, ms: 2.6 }, { slot: 2, ms: 81.2 }])).toBe('60 FPS · 3 ms · 1P 3 · 3P 81');
+    expect(statsText(60, 3, [{ slot: 0, ms: 2.6 }])).toBe('60 FPS · 3 ms');   // sozinho na sala: só o próprio ping
   });
 });

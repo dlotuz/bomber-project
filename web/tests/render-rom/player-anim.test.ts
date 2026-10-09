@@ -13,8 +13,14 @@ describe('ação → tabela (sem ROM)', () => {
     expect(FACES.map(f => playerAnimRef(pose('walk', f), 0).ref)).toEqual([0, 1, 4, 5].map(idx => ({ tab: 0xc276c5, idx })));
   });
   it('tédio depois de 383 ticks parado: $C2:6F71 [4 + char], tempo contado a partir do 383', () => {
-    expect(playerAnimRef(pose('idle', 4, 3), BORED_AFTER - 1).ref).toEqual({ tab: 0xc276c5, idx: 12 });
-    expect(playerAnimRef(pose('idle', 4, 3), BORED_AFTER + 10)).toEqual({ ref: { tab: 0xc26f71, idx: 7 }, t: 10 });
+    expect(playerAnimRef(pose('idle', 4, 0), BORED_AFTER - 1).ref).toEqual({ tab: 0xc276c5, idx: 12 });
+    expect(playerAnimRef(pose('idle', 4, 0), BORED_AFTER + 10)).toEqual({ ref: { tab: 0xc26f71, idx: 4 }, t: 10 });
+  });
+  it('vilões (personagens 1 a 5): sem tédio próprio (extra); o golpe do P continua o da ROM', () => {
+    for (let c = 1; c < 6; c++) {
+      expect(playerAnimRef(pose('idle', 4, c), BORED_AFTER + 10).ref).toEqual({ tab: 0xc276c5, idx: 12 });
+      expect(playerAnimRef(pose('pPunch', 2, c), 0).ref).toEqual({ tab: 0xc2749d, idx: 1 });
+    }
   });
   it('luva, soco e P pelas tabelas da §7.4', () => {
     expect(playerAnimRef(pose('lift', 2), 0).ref).toEqual({ tab: 0xc27515, idx: 1 });
@@ -43,7 +49,7 @@ describe('ação → tabela (sem ROM)', () => {
 
 describe.skipIf(!ASSETS)('ação × direção → animação da ROM (§7.4)', () => {
   const A = () => ASSETS!;
-  const addrs = (act: PlayerAct, c: number) => FACES.map(f => animAddr(A().rom, playerAnimRef(pose(act, f, c), 0).ref, c));
+  const addrs = (act: PlayerAct, c: number) => FACES.map(f => animAddr(A().rom, playerAnimRef(pose(act, f, 0), 0).ref, c));
   const same = (a: number) => [a, a, a, a];
   const EXPECT: [PlayerAct, number[]][] = [
     ['idle', [0xd8165a, 0xd81653, 0xd81645, 0xd8164c]],
@@ -64,7 +70,7 @@ describe.skipIf(!ASSETS)('ação × direção → animação da ROM (§7.4)', ()
     for (let c = 0; c < 6; c++) expect(addrs(act, c).map(hex)).toEqual(list.map(hex));
   });
   it('tédio por personagem ($C2:6F71 [4 + char])', () => {
-    const got = [0, 1, 2, 3, 4, 5].map(c => animAddr(A().rom, playerAnimRef(pose('idle', 4, c), BORED_AFTER).ref, c));
+    const got = [0, 1, 2, 3, 4, 5].map(c => animAddr(A().rom, { tab: 0xc26f71, idx: 4 + c }, c));   // tabela da ROM (o jogo só usa a do Blanco)
     expect(got.map(hex)).toEqual([0xd82a0d, 0xd8023d, 0xd802e0, 0xd80335, 0xd803fc, 0xd8046f].map(hex));
   });
   const first = (act: PlayerAct) => FACES.map(f => sampleAnim(resolveAnim(A(), playerAnimRef(pose(act, f), 0).ref, 0), 0).frame.pieces[0].tile);

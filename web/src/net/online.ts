@@ -16,9 +16,15 @@ import { Lockstep } from './lockstep';
 import { standing } from '../core/state';
 import { entX, entY } from '../render/fx/coords';
 import { PLAYER_COLORS } from '../render/draw-game';
+import { BTN } from '../core/types';
+import { hasPowerKey, type MenuInput } from '../input/input';
 
 export interface Lobby {
   stage: number; mode: 'ffa' | 'team'; teams: number[]; slots: SlotKind[]; chars: number[]; names: string[];
+  /** Vaga com tecla/botão próprio do P no CONTROLE ONLINE de quem está nela (cada um informa o seu). */
+  powerKey?: boolean[];
+  /** PRONTO de cada vaga humana (o anfitrião não marca: é ele quem inicia). CPU não conta. */
+  ready?: boolean[];
   rules: { cpuLevel: 0 | 1 | 2; matches: number; timeIdx: number; suddenDeath: boolean; badBomber: boolean };
 }
 export interface Room { code: string; you: number; host: boolean; lobby: Lobby; playing: boolean }
@@ -30,6 +36,7 @@ type ServerMsg =
   | { t: 'drop'; s: number; k: number }
   | { t: 'hash'; s: number; k: number; h: string }
   | { t: 'pong'; c: number }
+  | { t: 'net'; pings: (number | null)[]; delays: number[] }
   | { t: 'error'; msg: string }
   | { t: 'closed'; msg: string };
 
@@ -38,6 +45,8 @@ const NAME_SIZE = 7, NAME_UP = 19, NAME_UP_MOUNTED = 27;
 /** A cada quantos ticks da batalha os navegadores conferem o estado (hash) entre si. */
 const HASH_EVERY = 120;
 const NAME_KEY = 'crown-sala-nome';
+/** O anfitrião cria a sala e fica sempre na 1ª vaga (se ele sai, a sala fecha: server/sala.mjs). */
+export const HOST_SLOT = 0;
 
 export class OnlineClient {
   /** Sala em que este navegador está (null = fora de sala). */
@@ -49,6 +58,8 @@ export class OnlineClient {
   desync: string | null = null;
   /** Ping até o servidor da sala, em ms (média móvel; null sem conexão). O contador do topo da tela mostra. */
   ping: number | null = null;
+  /** Ping de cada vaga até a sala (o servidor manda a cada 2 s; null = vaga sem humano ou sem medida). */
+  pings: (number | null)[] = [null, null, null, null, null];
   private ws: WebSocket | null = null;
   private ls: Lockstep | null = null;
   private ms: MatchSession | null = null;
@@ -72,12 +83,31 @@ export class OnlineClient {
   create(): void { this.connect({ t: 'create', name: this.name }); }
   join(code: string): void { this.connect({ t: 'join', code, name: this.name }); }
   setChar(c: number): void { this.send({ t: 'char', c }); }
+  /** Convidado: marca/desmarca PRONTO. */
+  setReady(on: boolean): void { this.send({ t: 'ready', on }); }
+  /** Este jogador está PRONTO (o anfitrião sempre). */
+  get ready(): boolean { const r = this.room; return !!r && (r.host || !!r.lobby.ready?.[r.you]); }
+  /** Vagas humanas (fora o anfitrião) que ainda não marcaram PRONTO. */
+  notReady(): number[] {
+    const r = this.room;
+    if (!r) return [];
+    return r.lobby.slots.flatMap((k, s) => (k === 'human' && s !== HOST_SLOT && !r.lobby.ready?.[s] ? [s] : []));
+  }
   setLobby(patch: Partial<Lobby>): void { if (this.room) this.send({ t: 'lobby', lobby: { ...this.room.lobby, ...patch } }); }
   leave(): void { this.send({ t: 'leave' }); this.ws?.close(); this.ws = null; this.room = null; this.connecting = false; }
   /** Só o anfitrião: começa a partida com as regras extras das Opções dele (iguais para todos). */
   start(): void {
     const o = this.app.settings.options;
     this.send({ t: 'start', extras: { gloveEscape: o.gloveEscape, throwStun: o.throwStun, sleepTicks: o.sleepSec * 60, allMounts: o.allMounts, randomSpawns: o.randomSpawns } });
+  }
+
+  /** Avisa a sala se o CONTROLE ONLINE deste jogador tem tecla própria do P (todos montam a partida com a mesma regra). */
+  private syncPower(): void {
+    const room = this.room;
+    if (!room || room.playing || room.you < 0) return;
+    const oc = this.app.settings.online;
+    const mine = hasPowerKey(oc.device, oc.keymap, oc.padmap);
+    if ((room.lobby.powerKey?.[room.you] ?? false) !== mine) this.send({ t: 'power', on: mine });
   }
 
   // ---------------------------------------------------------------------------------------------------- conexão
@@ -95,14 +125,15 @@ export class OnlineClient {
       const ping = (): void => {
         if (this.ws !== sock || sock.readyState !== WebSocket.OPEN) return;
         this.send({ t: 'ping', c: performance.now() });
-        setTimeout(ping, 1500);
+        this.syncPower();   // trocou a tecla do P na tela de controles: a sala fica sabendo
+        setTimeout(ping, 1000);
       };
       ping();
     };
     sock.onmessage = e => this.receive(JSON.parse(String(e.data)) as ServerMsg);
     sock.onclose = () => {
       if (this.ws !== sock) return;
-      this.ws = null; this.connecting = false; this.ping = null;
+      this.ws = null; this.connecting = false; this.ping = null; this.pings = [null, null, null, null, null];
       const was = this.room !== null || this.ls !== null;
       this.room = null;
       if (this.ls) this.finish(S.online.lost);
@@ -113,7 +144,7 @@ export class OnlineClient {
 
   private receive(m: ServerMsg): void {
     switch (m.t) {
-      case 'room': this.room = { code: m.code, you: m.you, host: m.host, lobby: m.lobby, playing: m.playing }; this.connecting = false; break;
+      case 'room': this.room = { code: m.code, you: m.you, host: m.host, lobby: m.lobby, playing: m.playing }; this.connecting = false; this.syncPower(); break;
       case 'pong': {
         const ms = performance.now() - m.c;
         this.ping = this.ping === null ? ms : 0.7 * this.ping + 0.3 * ms;
@@ -124,6 +155,11 @@ export class OnlineClient {
       case 'closed': this.room = null; this.message = m.msg.toUpperCase(); if (this.ls) this.finish(this.message); break;
       case 'start': this.begin(m); break;
       case 'in': this.ls?.remote(m.s, m.k, m.b); break;
+      case 'net': {   // ping de todos e o atraso de cada um, recalculados pelo servidor
+        this.pings = m.pings;
+        if (this.ls) { this.ls.setDelays(m.delays); this.ls.setDelay(m.delays[this.ls.me]); }
+        break;
+      }
       case 'drop': this.ls?.drop(m.s, m.k); break;
       case 'hash': {
         const mine = this.myHashes.get(m.k);
@@ -143,7 +179,7 @@ export class OnlineClient {
     // todos com a mesma configuração: semente do servidor, dispositivos neutros (sem pausa por controle desconectado)
     const cfg = configFromSetup(setup, x.randomSpawns, ['kb', 'kb', 'kb', 'kb', 'kb'], m.seed, {
       gloveEscape: x.gloveEscape, throwStun: x.throwStun, sleepTicks: x.sleepTicks, allMounts: x.allMounts,
-      powerKey: [false, false, false, false, false],
+      powerKey: [0, 1, 2, 3, 4].map(s => !!L.powerKey?.[s] && L.slots[s] === 'human'),
     });
     this.ls = new Lockstep(m.delay, m.you, cfg.humans);
     this.ms = createMatchSession(cfg);
@@ -168,8 +204,7 @@ export class OnlineClient {
     if (!ls) return;
     // até 2 ticks por passo: o 2º só se este navegador ficou para trás de todos os outros (alcança sem passar dos 60 Hz)
     for (let n = 0; n < 2; n++) {
-      const out = ls.local(bits);
-      if (out) this.send({ t: 'in', k: out.k, b: out.b });
+      for (const out of ls.local(bits)) this.send({ t: 'in', k: out.k, b: out.b });
       const t = ls.next();
       if (!t) {
         if (n === 0 && ++this.stalled > 20) this.waitingFor = ls.missing().map(s => this.room?.lobby.names[s] || `${s + 1}P`);
@@ -177,6 +212,9 @@ export class OnlineClient {
       }
       this.stalled = 0; this.waitingFor = [];
       if (this.ms) for (const s of t.dropped) this.ms.cfg.humans[s] = false;   // saiu: a CPU assume a vaga (mesmo tick em todos)
+      // sem pausa na sala online: o START de ninguém (nem do anfitrião) vale na batalha. Tirado do tick que vai rodar,
+      // não do botão enviado: o START apertado no placar chega ticks depois, já na batalha (igual em todos)
+      if (this.app.screen.id === 'battle') noStart(t.input);
       this.app.update(t.input);
       const round = this.ms?.round;
       if (this.app.screen.id === 'battle' && round && round.tick % HASH_EVERY === 0
@@ -226,9 +264,23 @@ export class OnlineClient {
     out.restore();
   }
 
+  /** Ping de cada humano na sala, para o contador do topo ("1P 3 · 2P 80"): só fora de vaga vazia. */
+  peerPings(): { slot: number; ms: number }[] {
+    const room = this.room;
+    if (!room) return [];
+    return this.pings.flatMap((ms, slot) => (ms !== null && room.lobby.slots[slot] === 'human' ? [{ slot, ms }] : []));
+  }
+
   /** Diagnóstico (scripts/sala-e2e.mjs e console). */
   hash(k: number): string | null { return this.myHashes.get(k) ?? null; }
   hashes(): number[] { return [...this.myHashes.keys()]; }
+}
+
+/** Tira o START de todos os jogadores do tick (segurado e recém-apertado). */
+export function noStart(inp: MenuInput): void {
+  const m = ~BTN.START;
+  inp.pads = inp.pads.map(b => b & m); inp.pressed = inp.pressed.map(b => b & m);
+  inp.any &= m; inp.pressedAny &= m;
 }
 
 let client: OnlineClient | null = null;
@@ -241,6 +293,9 @@ export function initOnline(app: App): OnlineClient {
     get tick() { return c.tick; }, get screen() { return app.screen.id; }, get desync() { return c.desync; },
     get code() { return c.room?.code ?? null; }, hash: (k: number) => c.hash(k), get hashes() { return c.hashes(); },
     get message() { return c.message; },
+    get paused() { return (app.screen as { paused?: boolean }).paused ?? false; },
+    get powerKey() { return c.room?.lobby.powerKey ?? null; },
+    get ready() { return c.room?.lobby.ready ?? null; }, get notReady() { return c.notReady(); },
   };
   return c;
 }

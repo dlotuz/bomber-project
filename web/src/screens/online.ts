@@ -16,7 +16,7 @@ import type { Tone } from '../render/text/types';
 import type { SpriteBank } from '../render/sprite-bank';
 import { hdMenu, hdPanel } from '../render/hd-menu';
 import { PLAYER_COLORS } from './ui';
-import { online, type Lobby } from '../net/online';
+import { online, HOST_SLOT, type Lobby } from '../net/online';
 import { startTextEntry, type TextEntry } from '../net/text-entry';
 import { assignKey, DEFAULT_KEYMAPS, DEFAULT_PADMAP, KEY_FIELDS } from '../input/input';
 import { defaultOnlineControls } from '../app/settings';
@@ -158,9 +158,12 @@ export function onlineScreen(app: App, o: { code?: string; cursor?: string } = {
       left: () => host() && setRule({ badBomber: !L().rules.badBomber }), right: () => host() && setRule({ badBomber: !L().rules.badBomber }),
     },
     {
+      // anfitrião: INICIAR PARTIDA, só com todos os jogadores PRONTOS (CPU não conta); convidado: marca/desmarca PRONTO
       id: 'start', label: S.online.start, select: () => {
         const lob = L();
-        if (!host() || net.room!.playing || lob.slots.filter(k => k !== 'off').length < 2) return false;
+        if (net.room!.playing) return false;
+        if (!host()) { net.setReady(!net.ready); return; }
+        if (lob.slots.filter(k => k !== 'off').length < 2 || net.notReady().length) return false;
         net.start();
       },
     },
@@ -184,6 +187,14 @@ export function onlineScreen(app: App, o: { code?: string; cursor?: string } = {
     if (net.message) return net.message;
     if (net.connecting) return S.online.connecting;
     if (net.room && inRows[inMenu.cursor].id === 'invite') return copied > 0 ? S.online.copied : S.online.copyHelp;
+    if (net.room && !net.room.playing && inRows[inMenu.cursor].id === 'start') {
+      const waiting = net.notReady();
+      if (net.room.host && waiting.length) {
+        const names = S.online.waitReady(waiting.map(s => L().names[s] || S.online.slot(s)).join(', '));
+        return names.length <= 48 ? names : S.online.waitReady(waiting.map(S.online.slot).join(', '));   // não cabe: só as vagas
+      }
+      if (!net.room.host && net.ready) return S.online.waitHost;
+    }
     return net.room ? (net.room.host ? S.online.help : S.online.guestHelp) : '';
   };
 
@@ -210,6 +221,11 @@ export function onlineScreen(app: App, o: { code?: string; cursor?: string } = {
       t(S.online.slot(s), ROOM.left, y, { color: kind === 'off' ? '#9a9a9a' : PLAYER_COLORS[s] });
       t(who, ROOM.left + 20, y, { tone: editable ? undefined : 'gray' });
       if (kind !== 'off') t(CHARACTERS[lob.chars[s]].name, ROOM.right, y, { align: 'right', tone: editable ? 'green' : 'gray' });
+      // PRONTO de cada convidado (o anfitrião é quem inicia; CPU não precisa)
+      if (kind === 'human' && s !== HOST_SLOT && !room.playing) {
+        const ok = !!lob.ready?.[s];
+        t(ok ? S.online.ready : S.online.notReadyTag, ROOM.right - 54, y, { align: 'right', tone: ok ? 'green' : 'gray' });
+      }
     }
 
     t(S.online.rules, ROOM.left, ROOM.rulesY, { tone: 'blue' });
@@ -222,8 +238,9 @@ export function onlineScreen(app: App, o: { code?: string; cursor?: string } = {
     }
 
     for (const k of ['start', 'controls', 'leave'] as const) {
-      const off = k === 'start' && (!room.host || room.playing);
-      t(centerLabel(k), 128, ROOM_AT[k].y, { align: 'center', tone: off ? 'gray' : k === 'start' ? 'yellow' : undefined });
+      const off = k === 'start' && (room.playing || (room.host && net.notReady().length > 0));
+      const tone: Tone | undefined = off ? 'gray' : k !== 'start' ? undefined : !room.host && net.ready ? 'green' : 'yellow';
+      t(centerLabel(k), 128, ROOM_AT[k].y, { align: 'center', tone });
     }
 
     // código da sala: quadro de destaque, centralizado
@@ -238,7 +255,7 @@ export function onlineScreen(app: App, o: { code?: string; cursor?: string } = {
   }
   function centerLabel(id: 'start' | 'controls' | 'leave'): string {
     const room = net.room!;
-    if (id === 'start') return room.playing ? S.online.playing : room.host ? S.online.start : S.online.waitHost;
+    if (id === 'start') return room.playing ? S.online.playing : room.host ? S.online.start : net.ready ? S.online.readyOn : S.online.readyBtn;
     return id === 'controls' ? S.online.controls : S.online.leave;
   }
 

@@ -38,7 +38,8 @@ Na sala:
 - O anfitrião escolhe, com ←/→:
   - em cada vaga sem jogador, CPU (com cada personagem) ou NENHUM;
   - a fase, as coroas, o tempo, a força da CPU, a morte súbita e o Bomber Vingador.
-- O anfitrião começa em **INICIAR PARTIDA**.
+- Cada convidado marca **ESTOU PRONTO** (A de novo desmarca); na lista aparece PRONTO ao lado do nome.
+- O anfitrião começa em **INICIAR PARTIDA**, que só vale com todos os jogadores prontos (CPU não precisa marcar). Enquanto falta alguém, o rodapé mostra quem. Depois de cada partida, todos marcam de novo.
 - B leva o cursor até **SAIR DA SALA**, para ninguém sair sem querer.
 
 **CONTROLE ONLINE**, que aparece fora e dentro da sala, configura o controle usado nas partidas online: dispositivo (teclado ou controle), teclas e botões. É um perfil só do online (`Settings.online`), separado dos controles dos 5 jogadores do jogo local, e começa igual ao do jogador 1. Na partida online, cada um joga só com esse perfil.
@@ -47,14 +48,15 @@ Na partida, o nome de cada jogador humano aparece em cima da cabeça, na cor del
 
 As regras extras vêm das Opções do anfitrião: soltar da luva, arremesso de jogador, soneca, montarias e spawns. Por enquanto a sala online é só Todos contra Todos.
 
-Cada um joga com o seu **CONTROLE ONLINE**. START pausa para todos. SELECT+START segurado encerra a partida para todos. Quando a partida acaba, todo mundo volta para a sala.
+Cada um joga com o seu **CONTROLE ONLINE**, inclusive com a tecla própria do P, se tiver configurado uma: cada um avisa a sala e a partida monta com a regra de cada vaga. Na sala online ninguém pausa: o START de todos, inclusive o do anfitrião, não vale na batalha. Para largar no meio, é só sair da sala; a CPU assume a vaga. Quem troca de aba ou de janela (alt+tab) continua no jogo, parado e sem apertar nada: o navegador dele segue rodando os ticks em segundo plano e os outros não ficam esperando. Quando a partida acaba, todo mundo volta para a sala.
 
 ## Como funciona
 
 A sincronia é por lockstep:
 
 - Cada navegador roda o mesmo núcleo determinístico, e só os botões de cada tick trafegam (`src/net/lockstep.ts` e `src/net/online.ts`).
-- O botão apertado no tick T vale no tick T + atraso. O servidor escolhe o atraso no início da partida, pelo ping de cada jogador: entre 4 e 20 ticks, normalmente de 5 a 10 (80 a 170 ms). `SALA_DELAY=<n>` fixa o valor.
+- O botão apertado no tick T vale no tick T + atraso. Cada jogador tem o próprio atraso: meio ping dele até a sala mais meio ping do mais lento dos outros, mais 2 ticks de folga (entre 4 e 20, `server/delay.mjs`). Quem tem ping baixo, como o anfitrião jogando em `http://localhost:8787/`, responde mais rápido. `SALA_DELAY=<n>` fixa o mesmo valor para todos.
+- O ping de cada um é a mediana das últimas 9 medidas (uma por segundo), então um pico isolado não muda o atraso. A cada 2 s o servidor manda o ping de todos e o atraso de cada um; na partida, cada navegador anda 1 tick por vez até o novo atraso. O contador do topo mostra o ping de todos na sala (`1P 3 · 2P 81`), para ver quem está puxando o atraso.
 - Se a rede de alguém engasga, todos esperam. Aparece "Aguardando <nome>…".
 - A cada 120 ticks os navegadores comparam o estado da partida (hash). Se der diferença, aparece o aviso de dessincronização.
 - Quem sai no meio da partida vira CPU, no mesmo tick em todos os navegadores.

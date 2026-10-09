@@ -6,6 +6,8 @@ import type { PlayerPose } from '../rom/scene';
 export interface AnimRef { tab: number; idx: number | null }
 
 export const BORED_AFTER = 383;   // ticks parado até o tédio (§7.4)
+/** Personagens além do Blanco (vilões do original): extra, sem o número próprio do tédio (canhão, foguete, tiro...). */
+export const villain = (char: number): boolean => char !== 0;
 
 export const TAB = {
   stand: 0xc276c5, lift: 0xc27515, carry: 0xc27665, throw: 0xc2755d, punch: 0xc2746d, pPunch: 0xc2749d,
@@ -21,15 +23,17 @@ export function playerAnimRef(p: PlayerPose, t: number): { ref: AnimRef; t: numb
   const d4 = DIR4[p.face] ?? 2;
   const at = (tab: number, idx: number | null) => ({ ref: { tab, idx }, t });
   switch (p.act) {
+    // tédio: só o Blanco (0). Os outros (vilões) no original fazem o número deles (canhão, foguete, tiro, sumiço,
+    // bolinha) — parece poder e não é; extra: ficam na pose parada
     case 'idle':
-      return t >= BORED_AFTER ? { ref: { tab: TAB.spin, idx: 4 + (p.char & 7) }, t: t - BORED_AFTER } : at(TAB.stand, d8 + 8);
+      return t >= BORED_AFTER && !villain(p.char) ? { ref: { tab: TAB.spin, idx: 4 + (p.char & 7) }, t: t - BORED_AFTER } : at(TAB.stand, d8 + 8);
     case 'walk': return at(TAB.stand, d8);
     case 'lift': return at(TAB.lift, d8);
     case 'carryIdle': return at(TAB.carry, d8 + 8);
     case 'carryWalk': return at(TAB.carry, d8);
     case 'throw': return at(TAB.throw, d8);
     case 'punch': return at(TAB.punch, d8);
-    case 'pPunch': return at(TAB.pPunch, d8);
+    case 'pPunch': return at(TAB.pPunch, d8);   // golpe do P: cada um com o desenho próprio da ROM (o empurrão é igual)
     // Pose de 3 ticks (DETONATE_TICKS); trancar (B segurado) congela no último quadro dela.
     case 'detonate': return { ref: { tab: TAB.misc, idx: 12 }, t: Math.min(t, 2) };
     case 'shocked': return at(TAB.misc, 4);
