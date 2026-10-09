@@ -79,12 +79,12 @@ try {
   console.log(`${same} conferências de estado iguais`);
   if (!same) fail('nenhuma conferência de estado em comum');
   for (const p of [A, B]) if (p.errors.length) fail(`erros na página do ${p.name}: ${[...new Set(p.errors)].join(' | ')}`);
-  // sem pausa para quem não é o anfitrião: o START (Enter) do convidado não pausa ninguém
-  if (!ended) {
-    await key(B, 'Enter'); await sleep(600);
+  // sem pausa na sala online: o START (Enter) de ninguém pausa, nem do convidado nem do anfitrião
+  for (const P of [B, A]) if (!ended) {
+    await key(P, 'Enter'); await sleep(600);
     const paused = await Promise.all([A, B].map(p => p.page.evaluate(() => window.__sala.paused)));
-    console.log(`START do convidado: pausado = ${JSON.stringify(paused)}`);
-    if (paused.some(Boolean)) fail('o START do convidado pausou a partida');
+    console.log(`START do ${P.name}: pausado = ${JSON.stringify(paused)}`);
+    if (paused.some(Boolean)) fail(`o START do ${P.name} pausou a partida`);
   }
   // o convidado troca de aba (alt+tab): a aba dele some, o requestAnimationFrame para — a partida não pode esperar
   if (!ended) {

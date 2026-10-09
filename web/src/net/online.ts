@@ -189,8 +189,8 @@ export class OnlineClient {
     const ls = this.ls;
     if (!ls) return;
     // até 2 ticks por passo: o 2º só se este navegador ficou para trás de todos os outros (alcança sem passar dos 60 Hz)
-    // sem pausa na sala online: só o anfitrião pausa (e, pausado, encerra com SELECT+START); START dos outros não vale
-    if (!this.room?.host && this.app.screen.id === 'battle') bits &= ~BTN.START;
+    // sem pausa na sala online: o START de ninguém (nem do anfitrião) vale na batalha
+    if (this.app.screen.id === 'battle') bits &= ~BTN.START;
     for (let n = 0; n < 2; n++) {
       for (const out of ls.local(bits)) this.send({ t: 'in', k: out.k, b: out.b });
       const t = ls.next();
