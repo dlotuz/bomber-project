@@ -66,8 +66,7 @@ describe('lockstep da sala online', () => {
       peers.forEach((p, i) => {
         // cada humano aperta botões "aleatórios" (determinísticos) — direções e bomba
         const bits = [1, 2, 4, 8, 16, 0][(wall * (i + 3) >> 4) % 6];
-        const out = p.local(bits);
-        if (out) wire.send(i, out.k, out.b, 1 + ((wall * 7 + i * 13) % 5));
+        for (const out of p.local(bits)) wire.send(i, out.k, out.b, 1 + ((wall * 7 + i * 13) % 5));
         const t: LockstepTick | null = p.next();
         if (!t) return;
         const r = rs[i], ms = games[i].ms;
@@ -80,6 +79,53 @@ describe('lockstep da sala online', () => {
     }
     const n = Math.min(...hashes.map(h => h.length));
     expect(n).toBeGreaterThan(3000);
+    for (let k = 0; k < n; k++) if (hashes[0][k] !== hashes[1][k] || hashes[0][k] !== hashes[2][k]) throw new Error(`dessincronizou no tick ${k}`);
+  }, 120_000);
+  it('atraso que muda na partida: subir preenche os ticks pulados, descer não manda o mesmo tick duas vezes', () => {
+    const a = new Lockstep(3, 0, [true, false, false, false, false]);
+    expect(a.local(5).map(o => o.k)).toEqual([3]);
+    a.next();
+    a.setDelay(6); a.setDelay(6);                 // anda 1 tick por chamada: 3 → 4 → 5
+    expect(a.delay).toBe(5);
+    expect(a.local(7).map(o => o.k)).toEqual([4, 5, 6]);   // tick 1 + 5: os ticks 4 e 5 levam o mesmo botão
+    a.next();
+    a.setDelay(1); a.setDelay(1);                 // 5 → 4 → 3
+    expect(a.local(9)).toEqual([]);               // tick 2 + 3 = 5 já foi mandado
+    const seen: number[] = [];
+    for (let t = 0; t < 6; t++) { a.local(0); seen.push(a.next()!.input.pads[0]); }
+    expect(seen).toEqual([0, 5, 7, 7, 7, 0]);      // ticks 2..7: 0 (sem botão), 3, 4..6 e depois os novos
+  });
+  it('3 navegadores com atrasos diferentes e mudando durante a partida jogam a mesma partida', () => {
+    const setup: SetupLike = {
+      mode: 'ffa', slots: ['human', 'human', 'human', 'cpu', 'off'], teams: [0, 1, 0, 1, 0], chars: [0, 1, 2, 3, 4], stage: 5,
+      rules: { cpuLevel: 1, matches: 1, timeIdx: 0, suddenDeath: false, badBomber: false, racer: false },
+    };
+    const cfg = configFromSetup(setup, false, ['kb', 'kb', 'kb', 'kb', 'kb'], 0x4321);
+    const peers = [0, 1, 2].map(me => new Lockstep(8, me, cfg.humans));
+    const games = peers.map(() => ({ ms: createMatchSession(structuredClone(cfg)) }));
+    const rs = games.map(g => beginRound(g.ms));
+    const wire = net(3);
+    const hashes: string[][] = [[], [], []];
+    for (let wall = 0; wall < 5000; wall++) {
+      if (wall % 120 === 0) {   // "servidor": novos alvos de atraso para cada um (o anfitrião baixo, os outros variando)
+        const targets = [2, 4 + ((wall / 120) % 5), 9 - ((wall / 120) % 4)];
+        peers.forEach(p => { p.setDelays(targets); p.setDelay(targets[p.me]); });
+      }
+      peers.forEach((p, i) => {
+        const bits = [1, 2, 4, 8, 16, 0][(wall * (i + 5) >> 3) % 6];
+        for (const out of p.local(bits)) wire.send(i, out.k, out.b, 1 + ((wall * 11 + i * 7) % 6));
+        const t: LockstepTick | null = p.next();
+        if (!t) return;
+        const r = rs[i], ms = games[i].ms;
+        const cpu = ms.cfg.humans.map((h, s) => !h && ms.cfg.rules.active[s]);
+        const ai = aiInputs(r, ms.ai, cpu, ms.cfg.rules.cpuLevel);
+        step(r, t.input.pads.map((b, s) => (ms.cfg.humans[s] ? b : ai[s])));
+        hashes[i].push(hashState(r));
+      });
+      wire.deliver(peers);
+    }
+    const n = Math.min(...hashes.map(h => h.length));
+    expect(n).toBeGreaterThan(2500);
     for (let k = 0; k < n; k++) if (hashes[0][k] !== hashes[1][k] || hashes[0][k] !== hashes[2][k]) throw new Error(`dessincronizou no tick ${k}`);
   }, 120_000);
 });

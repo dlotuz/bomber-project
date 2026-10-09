@@ -1,6 +1,11 @@
 // Lockstep da sala online: todos os navegadores rodam o mesmo App com a mesma entrada por tick. O botão local apertado
 // no tick T vale no tick T + delay (o tempo de ele chegar aos outros); o tick só roda quando os botões de todos os
-// humanos ainda na partida chegaram. Os ticks 0..delay−1 rodam sem botões. Determinístico: nada aqui lê o relógio.
+// humanos ainda na partida chegaram. Os ticks 0..start−1 rodam sem botões. Determinístico: nada aqui lê o relógio.
+//
+// O atraso de cada um pode ser diferente e mudar durante a partida (o servidor recalcula pelo ping, `setDelay`): ele só
+// decide em que tick o botão LOCAL vale, e cada botão viaja com o seu tick — todos continuam rodando a mesma entrada.
+// Ao aumentar, os ticks pulados recebem o mesmo botão (ninguém fica esperando um tick que nunca seria mandado); ao
+// diminuir, o tick já mandado vale e os botões lidos até o novo atraso alcançá-lo são descartados (1 tick por vez).
 import type { MenuInput } from '../input/input';
 
 export interface LockstepTick { input: MenuInput; dropped: number[] }
@@ -15,16 +20,40 @@ export class Lockstep {
   /** Maior tick já recebido de cada jogador (até onde ele já chegou: o tick dele + atraso). */
   private readonly newest = [-1, -1, -1, -1, -1];
 
-  /** `humans[s]`: a vaga s é de um jogador humano (o local, `me`, ou remoto) cujos botões a partida espera. */
-  constructor(readonly delay: number, readonly me: number, private readonly humans: readonly boolean[]) {}
+  /** Atraso atual do botão local, em ticks (muda com `setDelay`). */
+  delay: number;
+  /** Primeiro tick que espera botões (o atraso do início da partida, igual em todos). */
+  readonly start: number;
+  /** Atraso atual de cada vaga, como o servidor informou (para saber se este navegador ficou para trás). */
+  private readonly delays: number[];
 
-  /** Botões locais lidos agora: valem no tick + delay. Devolve o que mandar aos outros (null = esse tick já foi). */
-  local(bits: number): { k: number; b: number } | null {
+  /** `humans[s]`: a vaga s é de um jogador humano (o local, `me`, ou remoto) cujos botões a partida espera. */
+  constructor(delay: number, readonly me: number, private readonly humans: readonly boolean[]) {
+    this.delay = delay; this.start = delay; this.delays = [delay, delay, delay, delay, delay];
+    this.sentUpTo = delay - 1;
+  }
+
+  /** Novo atraso do botão local (o servidor manda o alvo pelo ping): anda no máximo 1 tick por chamada, entre 1 e 30. */
+  setDelay(target: number): void {
+    if (!Number.isFinite(target)) return;
+    const t = Math.min(30, Math.max(1, Math.round(target)));
+    this.delay += Math.sign(t - this.delay);
+    this.delays[this.me] = this.delay;
+  }
+
+  /** Atraso atual de cada vaga (o servidor manda junto com o ping de cada um). */
+  setDelays(ds: readonly number[]): void {
+    ds.forEach((d, s) => { if (s !== this.me && Number.isFinite(d)) this.delays[s] = d; });
+  }
+
+  /** Botões locais lidos agora: valem no tick + delay. Devolve o que mandar aos outros — vazio se esse tick já foi
+   *  mandado (o atraso diminuiu), mais de um se o atraso aumentou (os ticks pulados levam o mesmo botão). */
+  local(bits: number): { k: number; b: number }[] {
     const k = this.tick + this.delay;
-    if (k <= this.sentUpTo) return null;
-    this.sentUpTo = k;
-    this.at(k)[this.me] = bits;
-    return { k, b: bits };
+    const out: { k: number; b: number }[] = [];
+    for (let kk = this.sentUpTo + 1; kk <= k; kk++) { this.at(kk)[this.me] = bits; out.push({ k: kk, b: bits }); }
+    if (k > this.sentUpTo) this.sentUpTo = k;
+    return out;
   }
 
   /** Botões de outro jogador para o tick k. */
@@ -37,7 +66,7 @@ export class Lockstep {
    *  rodar um tick a mais neste passo para alcançá-los). Sem outros jogadores, nunca. */
   behind(): boolean {
     const others = [0, 1, 2, 3, 4].filter(s => s !== this.me && this.awaited(s));
-    return others.length > 0 && others.every(s => this.newest[s] >= this.tick + this.delay + 2);
+    return others.length > 0 && others.every(s => this.newest[s] >= this.tick + this.delays[s] + 2);
   }
 
   /** O jogador da vaga saiu: a partir do tick k, ela não é mais esperada (vira CPU em quem roda a partida). */
@@ -45,7 +74,7 @@ export class Lockstep {
 
   /** Vagas que ainda faltam para rodar o tick atual (vazio = pronto). */
   missing(): number[] {
-    if (this.tick < this.delay) return [];
+    if (this.tick < this.start) return [];
     const row = this.table.get(this.tick);
     return [0, 1, 2, 3, 4].filter(s => this.awaited(s) && row?.[s] === undefined);
   }

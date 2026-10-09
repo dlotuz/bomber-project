@@ -84,7 +84,7 @@ const render = (): void => {
 // Sala online: o cliente (net/online.ts) e a tela (screens/online.ts); ?sala=<código> (link de convite) abre direto nela.
 const online = initOnline(app);
 // FPS e ping no topo da tela (o ping só com a sala online conectada)
-const stats = createStats(document.getElementById('stats'), () => online.ping);
+const stats = createStats(document.getElementById('stats'), () => online.ping, () => online.peerPings());
 if (params.has('quick')) app.go(battleScreen(app, createMatchSession(parseConfig(window.location.search))));
 else if (params.has('sala')) app.transition(() => onlineScreen(app, { code: params.get('sala') ?? '' }), { out: [], black: 0, in: FADE_IN_1 });
 else app.transition(() => titleScreen(app), { out: [], black: 0, in: FADE_IN_1 });

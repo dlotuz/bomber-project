@@ -7,20 +7,24 @@ import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomInt } from 'node:crypto';
 import { WebSocketServer } from 'ws';
+import { MIN_DELAY, RTT_WINDOW, rttOf, delaysFor } from './delay.mjs';
 
 const DIST = process.env.SALA_DIST ? join(process.env.SALA_DIST, '/') : fileURLToPath(new URL('../dist/', import.meta.url));
 const PORT = Number(process.env.PORT ?? 8787);
 /** Atraso de entrada (ticks): o botão apertado no tick T vale no T + atraso em todos os navegadores. Fixo com
  *  SALA_DELAY; senão escolhido no início da partida pelo ping medido de cada um (delayFor). */
 const FIXED_DELAY = process.env.SALA_DELAY ? Number(process.env.SALA_DELAY) : null;
-const MIN_DELAY = 4, MAX_DELAY = 20;
-/** O botão vai de um jogador ao servidor e do servidor ao outro: meio ping de cada um. Pega a pior dupla, em ticks de
- *  60 Hz, mais 2 de folga (oscilação da rede). */
+/** Atraso do início da partida (os ticks 0..atraso−1 rodam sem botões em todos): o maior entre os jogadores. */
 function delayFor(room) {
-  if (FIXED_DELAY !== null) return FIXED_DELAY;
-  const rtts = [...room.peers].map(p => p.rtt ?? 150).sort((a, b) => b - a);
-  const worst = (rtts[0] + (rtts[1] ?? 0)) / 2;
-  return Math.min(MAX_DELAY, Math.max(MIN_DELAY, Math.ceil(worst / (1000 / 60)) + 2));
+  const ds = delaysFor(room.peers, FIXED_DELAY);
+  return Math.max(...[...room.peers].map(p => ds[p.slot] ?? MIN_DELAY), MIN_DELAY);
+}
+/** A cada 2 s: o ping de cada vaga e o atraso de cada um (na partida o navegador anda 1 tick por vez até ele). */
+function broadcastNet(room) {
+  const pings = [null, null, null, null, null];
+  for (const p of room.peers) if (p.slot >= 0) { const r = rttOf(p); pings[p.slot] = r === null ? null : Math.round(r); }
+  const msg = JSON.stringify({ t: 'net', pings, delays: delaysFor(room.peers, FIXED_DELAY) });
+  for (const p of room.peers) if (p.ws.readyState === 1) p.ws.send(msg);
 }
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css',
@@ -105,7 +109,7 @@ function leave(peer) {
 const wss = new WebSocketServer({ server: http, path: '/ws' });
 wss.on('connection', ws => {
   /** @type {Peer & { room: Room | null }} */
-  const peer = { ws, name: '', slot: -1, room: null, rtt: null };
+  const peer = { ws, name: '', slot: -1, room: null, rtts: [] };
   ws.on('message', data => {
     let m;
     try { m = JSON.parse(String(data)); } catch { return; }
@@ -190,12 +194,14 @@ wss.on('connection', ws => {
         break;
       }
       case 'ping': send(ws, { t: 'pong', c: m.c }); break;   // o navegador mede o ping e manda em 'rtt'
-      case 'rtt': if (Number.isFinite(m.ms)) peer.rtt = peer.rtt === null ? m.ms : Math.round(0.7 * peer.rtt + 0.3 * m.ms); break;
+      case 'rtt': if (Number.isFinite(m.ms) && m.ms >= 0) { peer.rtts.push(m.ms); if (peer.rtts.length > RTT_WINDOW) peer.rtts.shift(); } break;
       case 'leave': leave(peer); break;
       default: break;
     }
   });
   ws.on('close', () => leave(peer));
 });
+
+setInterval(() => { for (const room of rooms.values()) broadcastNet(room); }, 2000).unref();
 
 http.listen(PORT, () => console.log(`sala: http://localhost:${PORT}/  (WebSocket em /ws, atraso ${FIXED_DELAY ?? 'pelo ping'}${FIXED_DELAY !== null ? ' ticks' : ''})`));

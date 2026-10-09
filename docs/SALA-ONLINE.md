@@ -54,7 +54,8 @@ Cada um joga com o seu **CONTROLE ONLINE**. START pausa para todos. SELECT+START
 A sincronia é por lockstep:
 
 - Cada navegador roda o mesmo núcleo determinístico, e só os botões de cada tick trafegam (`src/net/lockstep.ts` e `src/net/online.ts`).
-- O botão apertado no tick T vale no tick T + atraso. O servidor escolhe o atraso no início da partida, pelo ping de cada jogador: entre 4 e 20 ticks, normalmente de 5 a 10 (80 a 170 ms). `SALA_DELAY=<n>` fixa o valor.
+- O botão apertado no tick T vale no tick T + atraso. Cada jogador tem o próprio atraso: meio ping dele até a sala mais meio ping do mais lento dos outros, mais 2 ticks de folga (entre 4 e 20, `server/delay.mjs`). Quem tem ping baixo, como o anfitrião jogando em `http://localhost:8787/`, responde mais rápido. `SALA_DELAY=<n>` fixa o mesmo valor para todos.
+- O ping de cada um é a mediana das últimas 9 medidas (uma por segundo), então um pico isolado não muda o atraso. A cada 2 s o servidor manda o ping de todos e o atraso de cada um; na partida, cada navegador anda 1 tick por vez até o novo atraso. O contador do topo mostra o ping de todos na sala (`1P 3 · 2P 81`), para ver quem está puxando o atraso.
 - Se a rede de alguém engasga, todos esperam. Aparece "Aguardando <nome>…".
 - A cada 120 ticks os navegadores comparam o estado da partida (hash). Se der diferença, aparece o aviso de dessincronização.
 - Quem sai no meio da partida vira CPU, no mesmo tick em todos os navegadores.

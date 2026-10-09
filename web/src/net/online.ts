@@ -30,6 +30,7 @@ type ServerMsg =
   | { t: 'drop'; s: number; k: number }
   | { t: 'hash'; s: number; k: number; h: string }
   | { t: 'pong'; c: number }
+  | { t: 'net'; pings: (number | null)[]; delays: number[] }
   | { t: 'error'; msg: string }
   | { t: 'closed'; msg: string };
 
@@ -49,6 +50,8 @@ export class OnlineClient {
   desync: string | null = null;
   /** Ping até o servidor da sala, em ms (média móvel; null sem conexão). O contador do topo da tela mostra. */
   ping: number | null = null;
+  /** Ping de cada vaga até a sala (o servidor manda a cada 2 s; null = vaga sem humano ou sem medida). */
+  pings: (number | null)[] = [null, null, null, null, null];
   private ws: WebSocket | null = null;
   private ls: Lockstep | null = null;
   private ms: MatchSession | null = null;
@@ -95,14 +98,14 @@ export class OnlineClient {
       const ping = (): void => {
         if (this.ws !== sock || sock.readyState !== WebSocket.OPEN) return;
         this.send({ t: 'ping', c: performance.now() });
-        setTimeout(ping, 1500);
+        setTimeout(ping, 1000);
       };
       ping();
     };
     sock.onmessage = e => this.receive(JSON.parse(String(e.data)) as ServerMsg);
     sock.onclose = () => {
       if (this.ws !== sock) return;
-      this.ws = null; this.connecting = false; this.ping = null;
+      this.ws = null; this.connecting = false; this.ping = null; this.pings = [null, null, null, null, null];
       const was = this.room !== null || this.ls !== null;
       this.room = null;
       if (this.ls) this.finish(S.online.lost);
@@ -124,6 +127,11 @@ export class OnlineClient {
       case 'closed': this.room = null; this.message = m.msg.toUpperCase(); if (this.ls) this.finish(this.message); break;
       case 'start': this.begin(m); break;
       case 'in': this.ls?.remote(m.s, m.k, m.b); break;
+      case 'net': {   // ping de todos e o atraso de cada um, recalculados pelo servidor
+        this.pings = m.pings;
+        if (this.ls) { this.ls.setDelays(m.delays); this.ls.setDelay(m.delays[this.ls.me]); }
+        break;
+      }
       case 'drop': this.ls?.drop(m.s, m.k); break;
       case 'hash': {
         const mine = this.myHashes.get(m.k);
@@ -168,8 +176,7 @@ export class OnlineClient {
     if (!ls) return;
     // até 2 ticks por passo: o 2º só se este navegador ficou para trás de todos os outros (alcança sem passar dos 60 Hz)
     for (let n = 0; n < 2; n++) {
-      const out = ls.local(bits);
-      if (out) this.send({ t: 'in', k: out.k, b: out.b });
+      for (const out of ls.local(bits)) this.send({ t: 'in', k: out.k, b: out.b });
       const t = ls.next();
       if (!t) {
         if (n === 0 && ++this.stalled > 20) this.waitingFor = ls.missing().map(s => this.room?.lobby.names[s] || `${s + 1}P`);
@@ -224,6 +231,13 @@ export class OnlineClient {
       out.fillText(name, x, y);
     }
     out.restore();
+  }
+
+  /** Ping de cada humano na sala, para o contador do topo ("1P 3 · 2P 80"): só fora de vaga vazia. */
+  peerPings(): { slot: number; ms: number }[] {
+    const room = this.room;
+    if (!room) return [];
+    return this.pings.flatMap((ms, slot) => (ms !== null && room.lobby.slots[slot] === 'human' ? [{ slot, ms }] : []));
   }
 
   /** Diagnóstico (scripts/sala-e2e.mjs e console). */
