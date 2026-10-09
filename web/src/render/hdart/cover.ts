@@ -11,6 +11,7 @@ import { CLOCK_FROZEN_FROM, CODE, isEggCode, isItemCode, itemOfCode, type Player
 import { rider } from '../../core/mounts/types';
 import { flamePart } from '../view';
 import { charKey, faceToHdDir, itemKey, mountKey, stageKey, type HdKey, type HdPack, type HdTile } from './types';
+import { villain } from '../anim/player-anim';
 
 export type HdCategory = 'arena' | 'items' | 'flames' | 'bombs' | 'eggs' | 'players' | 'hud';
 /** Ordem de desenho (de baixo para cima). */
@@ -58,7 +59,8 @@ const NO_DIR = new Set<Player['act']>(['dying', 'victory']);
 
 /** Chave do corpo do jogador a pé (ou montando/desmontando, que usam a ação do núcleo). */
 export function bodyKey(p: Player): HdKey {
-  return NO_DIR.has(p.act) ? charKey(p.char, p.act) : charKey(p.char, p.act, faceToHdDir(p.face));
+  const act = p.act === 'pPunch' && villain(p.char) ? 'walk' : p.act;   // vilão no P: pose de andar (anim/player-anim.ts)
+  return NO_DIR.has(act) ? charKey(p.char, act) : charKey(p.char, act, faceToHdDir(p.face));
 }
 
 /** Desenhos de um jogador em campo: montaria (atrás) e corpo (de traje quando o original troca o desenho). */
