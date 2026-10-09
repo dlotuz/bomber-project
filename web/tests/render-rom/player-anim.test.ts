@@ -16,10 +16,10 @@ describe('ação → tabela (sem ROM)', () => {
     expect(playerAnimRef(pose('idle', 4, 0), BORED_AFTER - 1).ref).toEqual({ tab: 0xc276c5, idx: 12 });
     expect(playerAnimRef(pose('idle', 4, 0), BORED_AFTER + 10)).toEqual({ ref: { tab: 0xc26f71, idx: 4 }, t: 10 });
   });
-  it('vilões (personagens 1 a 5): sem tédio próprio e o P na pose de andar (extra)', () => {
+  it('vilões (personagens 1 a 5): sem tédio próprio (extra); o golpe do P continua o da ROM', () => {
     for (let c = 1; c < 6; c++) {
       expect(playerAnimRef(pose('idle', 4, c), BORED_AFTER + 10).ref).toEqual({ tab: 0xc276c5, idx: 12 });
-      expect(playerAnimRef(pose('pPunch', 2, c), 0).ref).toEqual({ tab: 0xc276c5, idx: 1 });
+      expect(playerAnimRef(pose('pPunch', 2, c), 0).ref).toEqual({ tab: 0xc2749d, idx: 1 });
     }
   });
   it('luva, soco e P pelas tabelas da §7.4', () => {

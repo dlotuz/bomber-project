@@ -6,7 +6,7 @@ import type { PlayerPose } from '../rom/scene';
 export interface AnimRef { tab: number; idx: number | null }
 
 export const BORED_AFTER = 383;   // ticks parado até o tédio (§7.4)
-/** Personagens além do Blanco (vilões do original): extra, sem as animações de "poder" próprias (tédio e golpe do P). */
+/** Personagens além do Blanco (vilões do original): extra, sem o número próprio do tédio (canhão, foguete, tiro...). */
 export const villain = (char: number): boolean => char !== 0;
 
 export const TAB = {
@@ -33,8 +33,7 @@ export function playerAnimRef(p: PlayerPose, t: number): { ref: AnimRef; t: numb
     case 'carryWalk': return at(TAB.carry, d8);
     case 'throw': return at(TAB.throw, d8);
     case 'punch': return at(TAB.punch, d8);
-    // P: o empurrão é igual para todos; extra: os vilões avançam na pose de andar, sem o golpe próprio deles da ROM
-    case 'pPunch': return villain(p.char) ? at(TAB.stand, d8) : at(TAB.pPunch, d8);
+    case 'pPunch': return at(TAB.pPunch, d8);   // golpe do P: cada um com o desenho próprio da ROM (o empurrão é igual)
     // Pose de 3 ticks (DETONATE_TICKS); trancar (B segurado) congela no último quadro dela.
     case 'detonate': return { ref: { tab: TAB.misc, idx: 12 }, t: Math.min(t, 2) };
     case 'shocked': return at(TAB.misc, 4);
