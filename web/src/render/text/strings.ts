@@ -62,6 +62,8 @@ export const S = {
     waiting: (names: string) => `AGUARDANDO ${names.toUpperCase()}...`, slot: (s: number) => `${s + 1}P`,
     players: 'JOGADORES', rules: 'REGRAS', roomCode: 'CÓDIGO DA SALA', copyHelp: 'A: COPIA O LINK DE CONVITE',
     levelShort: 'CPU', badShort: 'VINGADOR',
+    ready: 'PRONTO', notReadyTag: '...', readyBtn: 'ESTOU PRONTO', readyOn: 'PRONTO! (A: CANCELA)',
+    waitReady: (names: string) => `FALTA FICAR PRONTO: ${names.toUpperCase()}`,
   },
 } as const;
 
@@ -92,7 +94,7 @@ export const STRING_USES: readonly Use[] = uniq([
     S.online.controls, S.online.invite, S.online.copy, S.online.copied, S.online.start, S.online.waitHost, S.online.playing, S.online.leave,
     S.online.connecting, S.online.typing, S.online.needName, S.online.needCode, S.online.help, S.online.guestHelp,
     S.online.players, S.online.rules, S.online.roomCode, S.online.copyHelp, S.online.levelShort, S.online.badShort,
-    S.online.lost, S.online.noServer, S.online.desync, S.online.waiting('ANA, BETO'), ...[0, 1, 2, 3, 4].map(S.online.slot),
+    S.online.lost, S.online.noServer, S.online.desync, S.online.waiting('ANA, BETO'), S.online.ready, S.online.notReadyTag, S.online.readyBtn, S.online.readyOn, S.online.waitReady('ANA, BETO'), ...[0, 1, 2, 3, 4].map(S.online.slot),
   ]),
   ...as('bigBattle', [S.stage.battle]),
   ...as('bigScore', [S.score.title]),

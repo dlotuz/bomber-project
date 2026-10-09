@@ -48,6 +48,15 @@ try {
   console.log(`tecla própria do P na sala: ${JSON.stringify(pk)}`);
   if (!pk || pk[1] !== true || pk[0] !== false) fail('a sala não registrou a tecla própria do P do convidado');
   await key(A, 'KeyW', 4); await key(A, 'KeyJ');         // da própria vaga, ↑↑↑↑ dá a volta (CONVITE, SAIR, CONTROLE) até INICIAR PARTIDA
+  // PRONTO: com o convidado sem marcar, o INICIAR do anfitrião não começa (a CPU não precisa marcar)
+  await sleep(800);
+  const before = await A.page.evaluate(() => ({ tick: window.__sala.tick, notReady: window.__sala.notReady }));
+  console.log(`antes do PRONTO: tick ${before.tick}, falta ${JSON.stringify(before.notReady)}`);
+  if (before.tick >= 0 || JSON.stringify(before.notReady) !== '[1]') fail('a partida começou sem o convidado estar PRONTO');
+  await key(B, 'KeyW', 5); await key(B, 'KeyJ');         // convidado: da vaga 2P, ↑ ×5 até ESTOU PRONTO
+  await A.page.waitForFunction(() => window.__sala.notReady.length === 0, null, { timeout: 5000 }).catch(() => fail('o PRONTO do convidado não chegou'));
+  console.log(`PRONTO na sala: ${JSON.stringify(await A.page.evaluate(() => window.__sala.ready))}`);
+  await key(A, 'KeyJ');                                  // agora sim: INICIAR PARTIDA
   await Promise.all([A, B].map(p => p.page.waitForFunction(() => window.__sala.tick > 10, null, { timeout: 15000 })));
   // os dois apertam teclas do jogador 1 (WASD + J = bomba) durante a partida
   const keys = ['KeyD', 'KeyS', 'KeyJ', 'KeyA', 'KeyW', 'KeyJ'];

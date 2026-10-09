@@ -38,7 +38,8 @@ Na sala:
 - O anfitrião escolhe, com ←/→:
   - em cada vaga sem jogador, CPU (com cada personagem) ou NENHUM;
   - a fase, as coroas, o tempo, a força da CPU, a morte súbita e o Bomber Vingador.
-- O anfitrião começa em **INICIAR PARTIDA**.
+- Cada convidado marca **ESTOU PRONTO** (A de novo desmarca); na lista aparece PRONTO ao lado do nome.
+- O anfitrião começa em **INICIAR PARTIDA**, que só vale com todos os jogadores prontos (CPU não precisa marcar). Enquanto falta alguém, o rodapé mostra quem. Depois de cada partida, todos marcam de novo.
 - B leva o cursor até **SAIR DA SALA**, para ninguém sair sem querer.
 
 **CONTROLE ONLINE**, que aparece fora e dentro da sala, configura o controle usado nas partidas online: dispositivo (teclado ou controle), teclas e botões. É um perfil só do online (`Settings.online`), separado dos controles dos 5 jogadores do jogo local, e começa igual ao do jogador 1. Na partida online, cada um joga só com esse perfil.

@@ -69,6 +69,7 @@ function newLobby() {
     stage: 1, mode: 'ffa', teams: [0, 1, 0, 1, 0], slots: ['human', 'cpu', 'cpu', 'off', 'off'], chars: [0, 1, 2, 3, 4],
     names: ['', '', '', '', ''], rules: { cpuLevel: 1, matches: 3, timeIdx: 2, suddenDeath: false, badBomber: false },
     powerKey: [false, false, false, false, false],
+    ready: [false, false, false, false, false],   // PRONTO de cada jogador (o anfitrião não precisa: é ele quem inicia)
   };
 }
 const send = (ws, msg) => { if (ws.readyState === 1) ws.send(JSON.stringify(msg)); };
@@ -77,6 +78,11 @@ function broadcastRoom(room) {
 }
 const clampInt = (v, min, max, def) => (Number.isInteger(v) ? Math.min(max, Math.max(min, v)) : def);
 const cleanName = n => String(n ?? '').replace(/[^\p{L}\p{N} _.-]/gu, '').slice(0, 12).trim();
+
+/** Humanos (fora o anfitrião) que ainda não estão PRONTOS — a partida só começa sem nenhum. CPU não conta. */
+export function notReady(room) {
+  return [...room.peers].filter(p => p !== room.host && p.slot >= 0 && !room.lobby.ready[p.slot]).map(p => p.slot).sort((a, b) => a - b);
+}
 
 /** Primeira vaga sem humano (CPU ou vazia) vira do novo jogador. */
 function takeSlot(room) {
@@ -105,6 +111,7 @@ function leave(peer) {
   }
   room.lobby.names[peer.slot] = '';
   room.lobby.powerKey[peer.slot] = false;
+  room.lobby.ready[peer.slot] = false;
   broadcastRoom(room);
 }
 
@@ -134,13 +141,19 @@ wss.on('connection', ws => {
         const s = takeSlot(r);
         if (s < 0) { send(ws, { t: 'error', msg: 'A sala está cheia (5 jogadores).' }); return; }
         r.peers.add(peer); peer.room = r; peer.slot = s; peer.name = cleanName(m.name) || `P${s + 1}`;
-        r.lobby.names[s] = peer.name; r.lobby.powerKey[s] = false;
+        r.lobby.names[s] = peer.name; r.lobby.powerKey[s] = false; r.lobby.ready[s] = false;
         broadcastRoom(r);
         break;
       }
       case 'power': {  // cada um informa se o CONTROLE ONLINE dele tem tecla própria do P
         if (!room || room.game) return;
         room.lobby.powerKey[peer.slot] = !!m.on;
+        broadcastRoom(room);
+        break;
+      }
+      case 'ready': {  // cada jogador marca/desmarca PRONTO
+        if (!room || room.game || peer === room.host) return;
+        room.lobby.ready[peer.slot] = !!m.on;
         broadcastRoom(room);
         break;
       }
@@ -169,6 +182,8 @@ wss.on('connection', ws => {
       case 'start': {
         if (!room || room.game || peer !== room.host) return;
         if (room.lobby.slots.filter(k => k !== 'off').length < 2) { send(ws, { t: 'error', msg: 'Precisa de pelo menos 2 jogadores (humanos ou CPU).' }); return; }
+        const waiting = notReady(room);
+        if (waiting.length) { send(ws, { t: 'error', msg: `Falta ficar pronto: ${waiting.map(s => room.lobby.names[s] || `${s + 1}P`).join(', ')}.` }); return; }
         room.game = { last: [-1, -1, -1, -1, -1], delay: 0 };
         const seed = randomInt(0x10000);
         // regras extras das Opções do anfitrião (luva, arremesso, soneca, montarias, spawns): iguais para todos
@@ -198,6 +213,7 @@ wss.on('connection', ws => {
       case 'end': {    // fim da partida (o anfitrião avisa): volta todo mundo para a sala
         if (!room?.game || peer !== room.host) return;
         room.game = null;
+        room.lobby.ready = [false, false, false, false, false];   // a próxima partida pede PRONTO de novo
         broadcastRoom(room);
         break;
       }

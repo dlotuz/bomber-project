@@ -17,12 +17,14 @@ import { standing } from '../core/state';
 import { entX, entY } from '../render/fx/coords';
 import { PLAYER_COLORS } from '../render/draw-game';
 import { BTN } from '../core/types';
-import { hasPowerKey } from '../input/input';
+import { hasPowerKey, type MenuInput } from '../input/input';
 
 export interface Lobby {
   stage: number; mode: 'ffa' | 'team'; teams: number[]; slots: SlotKind[]; chars: number[]; names: string[];
   /** Vaga com tecla/botão próprio do P no CONTROLE ONLINE de quem está nela (cada um informa o seu). */
   powerKey?: boolean[];
+  /** PRONTO de cada vaga humana (o anfitrião não marca: é ele quem inicia). CPU não conta. */
+  ready?: boolean[];
   rules: { cpuLevel: 0 | 1 | 2; matches: number; timeIdx: number; suddenDeath: boolean; badBomber: boolean };
 }
 export interface Room { code: string; you: number; host: boolean; lobby: Lobby; playing: boolean }
@@ -43,6 +45,8 @@ const NAME_SIZE = 7, NAME_UP = 19, NAME_UP_MOUNTED = 27;
 /** A cada quantos ticks da batalha os navegadores conferem o estado (hash) entre si. */
 const HASH_EVERY = 120;
 const NAME_KEY = 'crown-sala-nome';
+/** O anfitrião cria a sala e fica sempre na 1ª vaga (se ele sai, a sala fecha: server/sala.mjs). */
+export const HOST_SLOT = 0;
 
 export class OnlineClient {
   /** Sala em que este navegador está (null = fora de sala). */
@@ -79,6 +83,16 @@ export class OnlineClient {
   create(): void { this.connect({ t: 'create', name: this.name }); }
   join(code: string): void { this.connect({ t: 'join', code, name: this.name }); }
   setChar(c: number): void { this.send({ t: 'char', c }); }
+  /** Convidado: marca/desmarca PRONTO. */
+  setReady(on: boolean): void { this.send({ t: 'ready', on }); }
+  /** Este jogador está PRONTO (o anfitrião sempre). */
+  get ready(): boolean { const r = this.room; return !!r && (r.host || !!r.lobby.ready?.[r.you]); }
+  /** Vagas humanas (fora o anfitrião) que ainda não marcaram PRONTO. */
+  notReady(): number[] {
+    const r = this.room;
+    if (!r) return [];
+    return r.lobby.slots.flatMap((k, s) => (k === 'human' && s !== HOST_SLOT && !r.lobby.ready?.[s] ? [s] : []));
+  }
   setLobby(patch: Partial<Lobby>): void { if (this.room) this.send({ t: 'lobby', lobby: { ...this.room.lobby, ...patch } }); }
   leave(): void { this.send({ t: 'leave' }); this.ws?.close(); this.ws = null; this.room = null; this.connecting = false; }
   /** Só o anfitrião: começa a partida com as regras extras das Opções dele (iguais para todos). */
@@ -189,8 +203,6 @@ export class OnlineClient {
     const ls = this.ls;
     if (!ls) return;
     // até 2 ticks por passo: o 2º só se este navegador ficou para trás de todos os outros (alcança sem passar dos 60 Hz)
-    // sem pausa na sala online: o START de ninguém (nem do anfitrião) vale na batalha
-    if (this.app.screen.id === 'battle') bits &= ~BTN.START;
     for (let n = 0; n < 2; n++) {
       for (const out of ls.local(bits)) this.send({ t: 'in', k: out.k, b: out.b });
       const t = ls.next();
@@ -200,6 +212,9 @@ export class OnlineClient {
       }
       this.stalled = 0; this.waitingFor = [];
       if (this.ms) for (const s of t.dropped) this.ms.cfg.humans[s] = false;   // saiu: a CPU assume a vaga (mesmo tick em todos)
+      // sem pausa na sala online: o START de ninguém (nem do anfitrião) vale na batalha. Tirado do tick que vai rodar,
+      // não do botão enviado: o START apertado no placar chega ticks depois, já na batalha (igual em todos)
+      if (this.app.screen.id === 'battle') noStart(t.input);
       this.app.update(t.input);
       const round = this.ms?.round;
       if (this.app.screen.id === 'battle' && round && round.tick % HASH_EVERY === 0
@@ -261,6 +276,13 @@ export class OnlineClient {
   hashes(): number[] { return [...this.myHashes.keys()]; }
 }
 
+/** Tira o START de todos os jogadores do tick (segurado e recém-apertado). */
+export function noStart(inp: MenuInput): void {
+  const m = ~BTN.START;
+  inp.pads = inp.pads.map(b => b & m); inp.pressed = inp.pressed.map(b => b & m);
+  inp.any &= m; inp.pressedAny &= m;
+}
+
 let client: OnlineClient | null = null;
 /** Cria o cliente da sala (main.ts, uma vez). */
 export function initOnline(app: App): OnlineClient {
@@ -273,6 +295,7 @@ export function initOnline(app: App): OnlineClient {
     get message() { return c.message; },
     get paused() { return (app.screen as { paused?: boolean }).paused ?? false; },
     get powerKey() { return c.room?.lobby.powerKey ?? null; },
+    get ready() { return c.room?.lobby.ready ?? null; }, get notReady() { return c.notReady(); },
   };
   return c;
 }

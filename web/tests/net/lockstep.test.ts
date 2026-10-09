@@ -129,3 +129,17 @@ describe('lockstep da sala online', () => {
     for (let k = 0; k < n; k++) if (hashes[0][k] !== hashes[1][k] || hashes[0][k] !== hashes[2][k]) throw new Error(`dessincronizou no tick ${k}`);
   }, 120_000);
 });
+
+describe('sala online sem pausa', () => {
+  it('noStart tira o START de todos, segurado e recém-apertado, e mantém o resto', async () => {
+    const { noStart } = await import('../../src/net/online');
+    const { BTN } = await import('../../src/core/types');
+    const inp = { pads: [BTN.START | BTN.A, BTN.START, 0, 0, 0], pressed: [BTN.START, BTN.START | BTN.B, 0, 0, 0],
+      any: BTN.START | BTN.A, pressedAny: BTN.START | BTN.B, key: null, connected: [true, true, true, true, true], esc: false, padButton: null };
+    noStart(inp);
+    expect(inp.pads).toEqual([BTN.A, 0, 0, 0, 0]);
+    expect(inp.pressed).toEqual([0, BTN.B, 0, 0, 0]);
+    expect(inp.any).toBe(BTN.A);
+    expect(inp.pressedAny).toBe(BTN.B);
+  });
+});
