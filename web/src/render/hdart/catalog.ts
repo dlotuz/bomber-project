@@ -10,7 +10,7 @@ import { CAPSULE_TYPES, CAPSULE_TYPES_ALL } from '../../core/tables/misc';
 import { STAGE_ITEMS } from '../../core/tables/items';
 import { A7_ARROWS, A8_L149F, A8_L14A9 } from '../../core/stages/tables';
 import { DISMOUNT_TICKS, MOUNTING_TICKS, isMachine, type MountPhase } from '../../core/mounts/types';
-import { CHARACTERS } from '../art/bomber';
+import { ORIGINALS as CHARACTERS } from '../art/bomber';
 import { playerAnimRef } from '../anim/player-anim';
 import { FLAME_PHASE } from '../anim/grid-seq';
 import {

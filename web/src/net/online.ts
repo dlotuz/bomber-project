@@ -18,6 +18,7 @@ import { entX, entY } from '../render/fx/coords';
 import { PLAYER_COLORS } from '../render/draw-game';
 import { BTN } from '../core/types';
 import { hasPowerKey, type MenuInput } from '../input/input';
+import { browserStorage, normalizeSettings, saveSettings } from '../app/settings';
 
 export interface Lobby {
   stage: number; mode: 'ffa' | 'team'; teams: number[]; slots: SlotKind[]; chars: number[]; names: string[];
@@ -27,7 +28,11 @@ export interface Lobby {
   ready?: boolean[];
   rules: { cpuLevel: 0 | 1 | 2; matches: number; timeIdx: number; suddenDeath: boolean; badBomber: boolean };
 }
-export interface Room { code: string; you: number; host: boolean; lobby: Lobby; playing: boolean }
+export interface Room { code: string; name: string; locked: boolean; quick: boolean; hostSlot: number; you: number; host: boolean; lobby: Lobby; playing: boolean }
+/** Uma sala da lista de JOGAR COM AMIGOS. */
+export interface RoomInfo { code: string; name: string; players: number; max: number; locked: boolean; playing: boolean }
+/** Fila da PARTIDA RÁPIDA: quantos esperam e quantos segundos faltam para começar (null = ainda sem 2). */
+export interface QueueState { n: number; left: number | null }
 interface Extras { gloveEscape: number; throwStun: boolean; sleepTicks: number; allMounts: boolean; randomSpawns: boolean }
 type ServerMsg =
   | ({ t: 'room' } & Room)
@@ -36,6 +41,11 @@ type ServerMsg =
   | { t: 'drop'; s: number; k: number }
   | { t: 'hash'; s: number; k: number; h: string }
   | { t: 'pong'; c: number }
+  | { t: 'rooms'; rooms: RoomInfo[] }
+  | { t: 'queue'; n: number; left: number | null }
+  | { t: 'notice'; msg: string }
+  | { t: 'account'; user: string | null; token: string | null; data: string | null; on: string }
+  | { t: 'autherror'; msg: string; on: string }
   | { t: 'net'; pings: (number | null)[]; delays: number[] }
   | { t: 'error'; msg: string }
   | { t: 'closed'; msg: string };
@@ -44,8 +54,8 @@ type ServerMsg =
 const NAME_SIZE = 7, NAME_UP = 19, NAME_UP_MOUNTED = 27;
 /** A cada quantos ticks da batalha os navegadores conferem o estado (hash) entre si. */
 const HASH_EVERY = 120;
-const NAME_KEY = 'crown-sala-nome';
-/** O anfitrião cria a sala e fica sempre na 1ª vaga (se ele sai, a sala fecha: server/sala.mjs). */
+const NAME_KEY = 'crown-sala-nome', CHAR_KEY = 'crown-sala-personagem', TOKEN_KEY = 'crown-sala-token';
+/** O anfitrião cria a sala na 1ª vaga; se ele sai, o jogador de menor vaga assume (`Room.hostSlot`, server/sala.mjs). */
 export const HOST_SLOT = 0;
 
 export class OnlineClient {
@@ -56,6 +66,10 @@ export class OnlineClient {
   /** Última mensagem para o jogador (erro, sala fechada, conexão caiu); a tela mostra no rodapé. */
   message = '';
   desync: string | null = null;
+  /** Salas abertas (resposta do último `list`; a tela de JOGAR COM AMIGOS pede de tempos em tempos). */
+  rooms: RoomInfo[] = [];
+  /** Na fila da PARTIDA RÁPIDA (null = fora da fila). */
+  queue: QueueState | null = null;
   /** Ping até o servidor da sala, em ms (média móvel; null sem conexão). O contador do topo da tela mostra. */
   ping: number | null = null;
   /** Ping de cada vaga até a sala (o servidor manda a cada 2 s; null = vaga sem humano ou sem medida). */
@@ -75,14 +89,125 @@ export class OnlineClient {
   get tick(): number { return this.ls?.tick ?? -1; }
 
   get name(): string { try { return localStorage.getItem(NAME_KEY) ?? ''; } catch { return ''; } }
-  set name(n: string) { try { localStorage.setItem(NAME_KEY, n); } catch { /* sem storage */ } }
+  set name(n: string) { try { localStorage.setItem(NAME_KEY, n); } catch { /* sem storage */ } this.syncAccount(); }
+
+  /** Personagem escolhido no menu (vale ao criar/entrar numa sala e na partida rápida; na sala dá para trocar). */
+  get char(): number {
+    try { const c = Number(localStorage.getItem(CHAR_KEY)); return Number.isInteger(c) && c >= 0 && c <= 8 ? c : 0; } catch { return 0; }
+  }
+  set char(c: number) { try { localStorage.setItem(CHAR_KEY, String(c)); } catch { /* sem storage */ } this.syncAccount(); }
+
+  // ---------------------------------------------------------------------------------------------------- conta
+  /** Conta em que este navegador está (null = sem conta). Os dados dela (controles, opções, nome, personagem) ficam
+   *  no servidor da sala e voltam a cada login. */
+  account: { user: string } | null = null;
+  /** Falando com o servidor sobre a conta (entrar/criar). */
+  accountBusy = false;
+  private lastBlob = '';
+  private get token(): string { try { return localStorage.getItem(TOKEN_KEY) ?? ''; } catch { return ''; } }
+  private set token(t: string) { try { if (t) localStorage.setItem(TOKEN_KEY, t); else localStorage.removeItem(TOKEN_KEY); } catch { /* sem storage */ } }
+  private wsUrl(): string { return `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`; }
+  private accountBlob(): string { return JSON.stringify({ settings: this.app.settings, name: this.name, char: this.char }); }
+
+  /** Uma conversa curta com o servidor, numa conexão própria: manda `msgs` e devolve a 1ª resposta de conta. */
+  private ask(msgs: object[]): Promise<Extract<ServerMsg, { t: 'account' | 'autherror' }> | null> {
+    return new Promise(resolve => {
+      let done = false;
+      const sock = new WebSocket(this.wsUrl());
+      const end = (m: Extract<ServerMsg, { t: 'account' | 'autherror' }> | null): void => {
+        if (done) return;
+        done = true; clearTimeout(timer);
+        try { sock.close(); } catch { /* já fechou */ }
+        resolve(m);
+      };
+      const timer = setTimeout(() => end(null), 8000);
+      sock.onopen = () => { for (const m of msgs) sock.send(JSON.stringify(m)); };
+      sock.onmessage = e => {
+        const m = JSON.parse(String(e.data)) as ServerMsg;
+        if (m.t === 'account' || m.t === 'autherror') end(m);
+      };
+      sock.onerror = () => end(null);
+      sock.onclose = () => end(null);
+    });
+  }
+
+  /** Entra numa conta (ou cria uma com os dados deste navegador). No login, os dados da conta substituem os daqui e o
+   *  jogo recarrega para aplicá-los. Devolve se deu certo; o motivo da falha fica em `message`. */
+  async auth(kind: 'login' | 'register', user: string, pass: string): Promise<boolean> {
+    if (this.accountBusy) return false;
+    this.accountBusy = true; this.message = '';
+    const r = await this.ask([{ t: kind, user, pass, data: kind === 'register' ? this.accountBlob() : undefined }]);
+    this.accountBusy = false;
+    if (!r) { this.message = S.online.noServer; return false; }
+    if (r.t === 'autherror') { this.message = r.msg.toUpperCase(); return false; }
+    if (!r.user || !r.token) return false;
+    this.account = { user: r.user }; this.token = r.token;
+    if (kind === 'register') { this.lastBlob = this.accountBlob(); this.message = S.online.accountCreated; return true; }
+    this.message = S.online.accountIn;
+    if (r.data) this.applyBlob(r.data); else this.syncAccount();
+    return true;
+  }
+
+  /** Troca os dados locais pelos da conta e recarrega o jogo (a tela da sala online reabre sozinha). */
+  private applyBlob(json: string): void {
+    try {
+      const b = JSON.parse(json) as { settings?: unknown; name?: string; char?: number };
+      if (b.settings) saveSettings(browserStorage(), normalizeSettings(b.settings));
+      localStorage.setItem(NAME_KEY, String(b.name ?? ''));
+      localStorage.setItem(CHAR_KEY, String(Number.isInteger(b.char) ? b.char : 0));
+    } catch { return; }
+    if (typeof location !== 'undefined') location.assign(`${location.pathname}?sala`);
+  }
+
+  /** Sai da conta neste navegador (os dados continuam na conta). */
+  logout(): void {
+    const t = this.token;
+    this.account = null; this.token = ''; this.lastBlob = '';
+    if (t) void this.ask([{ t: 'resume', token: t }, { t: 'logout' }]);
+  }
+
+  /** Ao abrir o jogo: se há sessão guardada, volta a ela (não troca os dados locais; só as próximas mudanças sobem). */
+  async restoreAccount(): Promise<void> {
+    const t = this.token;
+    if (!t || this.account) return;
+    const r = await this.ask([{ t: 'resume', token: t }]);
+    if (r?.t === 'account' && r.user) this.account = { user: r.user };
+    else if (r?.t === 'autherror') this.token = '';
+  }
+
+  /** Sobe os dados locais para a conta quando mudam (controles, opções, nome, personagem). */
+  syncAccount(): void {
+    const t = this.token;
+    if (!this.account || !t || typeof WebSocket === 'undefined') return;
+    const blob = this.accountBlob();
+    if (blob === this.lastBlob) return;
+    this.lastBlob = blob;
+    void this.ask([{ t: 'resume', token: t }, { t: 'save', data: blob }]);
+  }
 
   /** Link de convite da sala atual. */
   invite(): string { return this.room ? `${location.origin}${location.pathname}?sala=${this.room.code}` : ''; }
 
-  create(): void { this.connect({ t: 'create', name: this.name }); }
-  join(code: string): void { this.connect({ t: 'join', code, name: this.name }); }
-  setChar(c: number): void { this.send({ t: 'char', c }); }
+  /** Dados do jogador que vão junto de criar/entrar/fila: nome, personagem e se o CONTROLE ONLINE tem tecla do P. */
+  private me(): { name: string; char: number; power: boolean } {
+    const oc = this.app.settings.online;
+    return { name: this.name, char: this.char, power: hasPowerKey(oc.device, oc.keymap, oc.padmap) };
+  }
+  /** Cria a sala já com a fase e as regras escolhidas (`cfg`). */
+  create(roomName: string, password: string, cfg?: { stage: number; rules: Lobby['rules'] }): void {
+    this.connect({ t: 'create', roomName, password, lobby: cfg, ...this.me() });
+  }
+  join(code: string, password = ''): void { this.connect({ t: 'join', code, password, ...this.me() }); }
+  /** Entra na fila da PARTIDA RÁPIDA. */
+  quick(): void { this.queue = { n: 1, left: null }; this.connect({ t: 'quick', ...this.me() }); }
+  /** Pede a lista de salas (abre a conexão se preciso). */
+  listRooms(): void {
+    if (this.ws?.readyState === WebSocket.OPEN) this.send({ t: 'list' });
+    else if (!this.connecting) this.connect({ t: 'list' });
+  }
+  /** Fecha a conexão sem sala (saindo do menu de salas ou cancelando a fila). */
+  disconnect(): void { this.leave(); }
+  setChar(c: number): void { this.char = c; this.send({ t: 'char', c }); }
   /** Convidado: marca/desmarca PRONTO. */
   setReady(on: boolean): void { this.send({ t: 'ready', on }); }
   /** Este jogador está PRONTO (o anfitrião sempre). */
@@ -91,10 +216,13 @@ export class OnlineClient {
   notReady(): number[] {
     const r = this.room;
     if (!r) return [];
-    return r.lobby.slots.flatMap((k, s) => (k === 'human' && s !== HOST_SLOT && !r.lobby.ready?.[s] ? [s] : []));
+    return r.lobby.slots.flatMap((k, s) => (k === 'human' && s !== r.hostSlot && !r.lobby.ready?.[s] ? [s] : []));
   }
   setLobby(patch: Partial<Lobby>): void { if (this.room) this.send({ t: 'lobby', lobby: { ...this.room.lobby, ...patch } }); }
-  leave(): void { this.send({ t: 'leave' }); this.ws?.close(); this.ws = null; this.room = null; this.connecting = false; }
+  leave(): void {
+    this.send({ t: 'leave' }); this.ws?.close(); this.ws = null; this.room = null; this.connecting = false;
+    this.queue = null; this.rooms = []; this.ping = null;
+  }
   /** Só o anfitrião: começa a partida com as regras extras das Opções dele (iguais para todos). */
   start(): void {
     const o = this.app.settings.options;
@@ -115,6 +243,7 @@ export class OnlineClient {
 
   private connect(first: object): void {
     this.message = '';
+    if (this.ws?.readyState === WebSocket.OPEN) { this.ws.send(JSON.stringify(first)); return; }   // já conectado (lista de salas)
     this.ws?.close();
     this.connecting = true;
     const sock = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`);
@@ -134,8 +263,8 @@ export class OnlineClient {
     sock.onclose = () => {
       if (this.ws !== sock) return;
       this.ws = null; this.connecting = false; this.ping = null; this.pings = [null, null, null, null, null];
-      const was = this.room !== null || this.ls !== null;
-      this.room = null;
+      const was = this.room !== null || this.ls !== null || this.queue !== null;
+      this.room = null; this.queue = null; this.rooms = [];
       if (this.ls) this.finish(S.online.lost);
       else if (was) this.message = S.online.lost;
     };
@@ -144,14 +273,20 @@ export class OnlineClient {
 
   private receive(m: ServerMsg): void {
     switch (m.t) {
-      case 'room': this.room = { code: m.code, you: m.you, host: m.host, lobby: m.lobby, playing: m.playing }; this.connecting = false; this.syncPower(); break;
+      case 'room':
+        this.room = { code: m.code, name: m.name, locked: m.locked, quick: m.quick, hostSlot: m.hostSlot, you: m.you, host: m.host, lobby: m.lobby, playing: m.playing };
+        this.connecting = false; this.queue = null; this.syncPower();
+        break;
+      case 'rooms': this.rooms = m.rooms; this.connecting = false; break;
+      case 'queue': this.queue = { n: m.n, left: m.left }; this.connecting = false; break;
+      case 'notice': this.message = m.msg.toUpperCase(); break;
       case 'pong': {
         const ms = performance.now() - m.c;
         this.ping = this.ping === null ? ms : 0.7 * this.ping + 0.3 * ms;
         this.send({ t: 'rtt', ms });
         break;
       }
-      case 'error': this.message = m.msg.toUpperCase(); this.connecting = false; break;
+      case 'error': this.message = m.msg.toUpperCase(); this.connecting = false; this.queue = null; break;
       case 'closed': this.room = null; this.message = m.msg.toUpperCase(); if (this.ls) this.finish(this.message); break;
       case 'start': this.begin(m); break;
       case 'in': this.ls?.remote(m.s, m.k, m.b); break;
@@ -192,6 +327,7 @@ export class OnlineClient {
   private finish(why: string | null): void {
     if (this.room?.host && this.ws) this.send({ t: 'end' });
     this.ls = null; this.ms = null; this.waitingFor = [];
+    if (this.room?.quick) this.room = null;   // partida rápida: a sala não existe depois dela
     if (why) this.message = why;
     this.app.audio.fade();
     this.app.go(onlineScreen(this.app));

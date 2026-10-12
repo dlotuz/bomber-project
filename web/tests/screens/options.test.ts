@@ -4,7 +4,7 @@ vi.mock('../../src/app/rom-api', async orig => ({
 import { optionsScreen } from '../../src/screens/options';
 import { remapScreen } from '../../src/screens/remap';
 import { KEY_FIELDS, DEFAULT_PADMAP } from '../../src/input/input';
-import { defaultSettings } from '../../src/app/settings';
+import { defaultSettings, normalizeSettings } from '../../src/app/settings';
 import { BTN } from '../../src/game/core-api';
 import { idleInput } from '../../src/input/input';
 import { mkApp, classicSettings, press, settle, inputOf, RecordingSink } from './helpers';
@@ -21,7 +21,7 @@ beforeEach(() => vi.clearAllMocks());
 describe('opções (§6.13)', () => {
   it('linhas na ordem: Opções, Controles e Jogabilidade', () => {
     const { app } = mkApp();
-    expect(optionsScreen(app).rowIds()).toEqual(['controls', 'gameplay', 'fx', 'screen', 'smooth', 'music', 'sfx', 'reset', 'back']);
+    expect(optionsScreen(app).rowIds()).toEqual(['controls', 'gameplay', 'fx', 'music', 'sfx', 'reset', 'back']);
     expect(optionsScreen(app, 0, 'controls').rowIds()).toEqual(['p1', 'p2', 'p3', 'p4', 'p5', 'slot', 'slotSave', 'slotLoad', 'back']);
     expect(optionsScreen(app, 0, 'gameplay').rowIds()).toEqual(['spawns', 'escape', 'throwStun', 'sleep', 'allMounts', 'slot', 'slotSave', 'slotLoad', 'back']);
   });
@@ -93,25 +93,13 @@ describe('opções (§6.13)', () => {
     press(app, BTN.RIGHT);
     expect(app.settings.options.fx).toBe(true);
   });
-  it('TELA: padrão HD; ←/→ troca para CLÁSSICA e volta, e salva; BORDAS e ARTE não existem mais', () => {
+  it('TELA e FILTRO SUAVE não estão nas Opções: valem sempre HD e nítido, mesmo com valor antigo salvo', () => {
     const { app } = mkApp();
-    const o = optionsScreen(app); app.go(o); goRow(o, 'screen');
-    expect(o.value('screen')).toBe('HD');
-    press(app, BTN.RIGHT);
-    expect([app.settings.options.screen, o.value('screen')]).toEqual(['classic', 'CLÁSSICA']);
-    press(app, BTN.LEFT);
-    expect([app.settings.options.screen, o.value('screen')]).toEqual(['hd', 'HD']);
-    expect(o.rowIds()).not.toContain('borders');
-    expect(o.rowIds()).not.toContain('art');
-  });
-  it('FILTRO SUAVE: padrão NÃO; ←/→ liga e desliga, e salva', () => {
-    const { app } = mkApp();
-    const o = optionsScreen(app); app.go(o); goRow(o, 'smooth');
-    expect(o.value('smooth')).toBe('NÃO');
-    press(app, BTN.RIGHT);
-    expect([app.settings.options.smooth, o.value('smooth')]).toEqual([true, 'SIM']);
-    press(app, BTN.LEFT);
-    expect(app.settings.options.smooth).toBe(false);
+    const ids = optionsScreen(app).rowIds();
+    expect(ids).not.toContain('screen');
+    expect(ids).not.toContain('smooth');
+    const s = normalizeSettings({ version: 4, options: { screen: 'classic', smooth: true } });
+    expect([s.options.screen, s.options.smooth]).toEqual(['hd', false]);
   });
   it('A em CONTROLES/JOGABILIDADE abre o submenu; B volta às Opções com o cursor nele', () => {
     const { app } = mkApp();
@@ -217,7 +205,7 @@ describe('opções (§6.13)', () => {
 });
 
 describe('controles do jogador', () => {
-  const row = (f: string) => ['device', ...KEY_FIELDS, 'all', 'reset', 'back'].indexOf(f);
+  const row = (f: string) => ['device', ...KEY_FIELDS, 'copy', 'all', 'reset', 'back'].indexOf(f);
   it('teclado: A na ação, depois a tecla nova; aplica e grava; Escape cancela', () => {
     const { app, saves } = mkApp(classicSettings());
     const applied = vi.spyOn(app, 'applyInput');
@@ -297,6 +285,20 @@ describe('controles do jogador', () => {
     press(app, BTN.A);
     app.update(inputOf(0, 0, undefined, { key: 'KeyZ' }));
     expect([app.settings.devices[0], app.settings.keymaps[0].a]).toEqual(['kb', 'KeyZ']);
+  });
+  it('copiar do: leva teclas e botões de outro jogador (nunca o próprio) e mantém o gamepad em uso', () => {
+    const { app } = mkApp(classicSettings());
+    app.settings.keymaps[1].a = 'KeyZ'; app.settings.padmaps[1].a = 6; app.settings.devices[1] = 'kb';
+    app.settings.devices[0] = 'gp0';
+    const r = remapScreen(app, 0); app.go(r);
+    r.menu.cursor = row('copy');
+    expect(r.menu.cursor).toBeGreaterThan(0);
+    press(app, BTN.A);                        // origem inicial: P2 (o P1 não copia de si mesmo)
+    expect([app.settings.keymaps[0].a, app.settings.padmaps[0].a]).toEqual(['KeyZ', 6]);
+    expect(app.settings.devices[0]).toBe('kb');
+    app.settings.devices[0] = 'gp0'; app.settings.devices[1] = 'gp1';
+    press(app, BTN.A);
+    expect(app.settings.devices[0]).toBe('gp0');
   });
   it('restaurar padrão do jogador (teclas, botões e dispositivo)', () => {
     const { app } = mkApp(classicSettings());

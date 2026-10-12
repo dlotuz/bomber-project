@@ -1,9 +1,12 @@
 import { fromRows, flipH, makePix, blit, type Pix, type Palette } from './pix';
+import { SKINS, recolorHex } from './charskins';
 
-/** Os 6 personagens originais do Crown Blast (só cosméticos). */
-export interface CharacterDef { id: string; name: string; helmet: string; helmetShade: string; body: string; gloves: string; accent: string }
+/** Os 6 personagens originais do Crown Blast (só cosméticos) e, depois deles, as skins (`charskins.ts`). `shape` =
+ *  id do personagem de que a skin herda o desenho. */
+export interface CharacterDef { id: string; name: string; helmet: string; helmetShade: string; body: string; gloves: string; accent: string; shape?: string }
 
-export const CHARACTERS: readonly CharacterDef[] = [
+/** Só os 6 originais (a arte HD e o catálogo não têm skins: elas só repintam). */
+export const ORIGINALS: readonly CharacterDef[] = [
   { id: 'blanco', name: 'BLANCO', helmet: '#f4f4f4', helmetShade: '#b8c0d0', body: '#2e5bd8', gloves: '#e8403a', accent: '#ff5fa2' },
   { id: 'gear', name: 'GEAR', helmet: '#9aa3ad', helmetShade: '#5d6670', body: '#3a3f46', gloves: '#f2b632', accent: '#39d98a' },
   { id: 'tigra', name: 'TIGRA', helmet: '#ff9a2e', helmetShade: '#c8641a', body: '#1f8a4c', gloves: '#fff1c9', accent: '#ffd23f' },
@@ -11,6 +14,17 @@ export const CHARACTERS: readonly CharacterDef[] = [
   { id: 'verdi', name: 'VERDI', helmet: '#46b35a', helmetShade: '#2a7a3a', body: '#1d3b2a', gloves: '#e9e3c8', accent: '#c8ff5a' },
   { id: 'rubi', name: 'RUBI', helmet: '#d8344a', helmetShade: '#8f1f33', body: '#5a2a8f', gloves: '#1b1b22', accent: '#ffb13b' },
 ];
+
+export const CHARACTERS: readonly CharacterDef[] = [
+  ...ORIGINALS,
+  ...SKINS.map((s): CharacterDef => {
+    const b = ORIGINALS[s.base];
+    return { id: `skin-${s.name.toLowerCase()}`, name: s.name, shape: b.id, helmet: recolorHex(b.helmet, s), helmetShade: recolorHex(b.helmetShade, s),
+      body: recolorHex(b.body, s), gloves: recolorHex(b.gloves, s), accent: recolorHex(b.accent, s) };
+  }),
+];
+/** Id do desenho usado (as skins herdam o do personagem-base). */
+const shapeOf = (c: CharacterDef): string => c.shape ?? c.id;
 
 const FRONT = [
   '......kppk......', '.....kppppk.....', '......kppk......', '.......kk.......',
@@ -87,12 +101,12 @@ function assemble(base: string[], top: string[] | null, legs: string[], monocle:
 export function bomberFrame(charIndex: number, dir: number, frame: number): Pix {
   const c = CHARACTERS[charIndex];
   const pal = palette(c);
-  if (dir === 1) return fromRows(assemble(BACK, TOP[c.id], LEGS_FRONT[frame], false), pal);
+  if (dir === 1) return fromRows(assemble(BACK, TOP[shapeOf(c)], LEGS_FRONT[frame], false), pal);
   if (dir === 3 || dir === 4) {
-    const p = fromRows(assemble(SIDE, SIDE_TOP[c.id], LEGS_SIDE[frame], false), pal);
+    const p = fromRows(assemble(SIDE, SIDE_TOP[shapeOf(c)], LEGS_SIDE[frame], false), pal);
     return dir === 3 ? flipH(p) : p;
   }
-  return fromRows(assemble(FRONT, TOP[c.id], LEGS_FRONT[frame], c.id === 'gear'), pal);
+  return fromRows(assemble(FRONT, TOP[shapeOf(c)], LEGS_FRONT[frame], shapeOf(c) === 'gear'), pal);
 }
 
 function headOf(full: Pix): Pix {
@@ -109,5 +123,5 @@ export function headIcon(charIndex: number): Pix {
 /** Ícone de cabeça 16×14 chorando: o HUD troca para ele quando o jogador morre (como o rosto c·5+slot da ROM). */
 export function headCryIcon(charIndex: number): Pix {
   const c = CHARACTERS[charIndex];
-  return headOf(fromRows(assemble(FRONT, TOP[c.id], LEGS_FRONT[0], c.id === 'gear', true), palette(c)));
+  return headOf(fromRows(assemble(FRONT, TOP[shapeOf(c)], LEGS_FRONT[0], shapeOf(c) === 'gear', true), palette(c)));
 }

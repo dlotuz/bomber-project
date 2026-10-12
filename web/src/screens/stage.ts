@@ -14,7 +14,7 @@ import { drawText } from '../render/text/text';
 import { romState } from '../app/rom-api';
 import { sceneFrame, PpuCanvas } from '../render/screens-rom/scene';
 import { stagePreview, STAGE_ICON_HOFS_BASE } from '../render/screens-rom/stagesel';
-import { hdMenu } from '../render/hd-menu';
+import { hdMenu, hdPanel } from '../render/hd-menu';
 import { coreStage, stageNumber, stepVisible, visibleStage } from '../game/stages';
 import { battleScreen } from './battle';
 import { charactersScreen } from './characters';
@@ -119,7 +119,11 @@ export function stageScreen(app: App): Screen & {
     },
     draw(ctx, bank) {
       // Menu HD como os outros (quebra-cabeça com corda, título e textos HD); as prévias ficam na base, por cima.
-      hdMenu(ctx, null, { item: 16 });
+      hdMenu(ctx, null, { item: 16 }, 'lobby');
+      // moldura das prévias e faixas do número e do nome da fase, no padrão das telas do online
+      hdPanel({ x: 12, y: PREVIEW_Y - 4, w: 232, h: PREVIEW_H + 8, fill: 'rgba(10,30,90,0.6)', stroke: '#8fd8ff' });
+      hdPanel({ x: 14, y: 156, w: 228, h: 22, fill: 'rgba(10,30,90,0.6)', stroke: '#8fd8ff' });
+      hdPanel({ x: 14, y: 182, w: 228, h: 22, fill: 'rgba(16,40,112,0.92)', stroke: '#ffe46b', glow: 'rgba(255,220,90,0.9)' });
       const s = currentScroll();
       const rom = romState.assets;
       ctx.save();
@@ -141,9 +145,9 @@ export function stageScreen(app: App): Screen & {
       }
       ctx.restore();
       if (battleTextVisible(seqF)) {
-        drawText(ctx, bank, 'bigBattle', S.stage.battle, 128, 8, { align: 'center' });
+        drawText(ctx, bank, 'bigBattle', S.stage.battle, 128, 8, { align: 'center', bare: true });
       } else {
-        drawText(ctx, bank, 'menuTitle', S.stage.title, 128, 16 + stageTitleDy(seqF), { align: 'center' });
+        drawText(ctx, bank, 'menuTitle', S.stage.title, 128, 8 + stageTitleDy(seqF), { align: 'center', bare: true });
       }
       drawText(ctx, bank, 'menuItem', S.stage.stage(stageNumber(setup.stage)), 128, 160, { align: 'center', tone: 'blue' });
       drawText(ctx, bank, 'menuItem', S.stage.names[setup.stage - 1], 128, 184, { align: 'center' });

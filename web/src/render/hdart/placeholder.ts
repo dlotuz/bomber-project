@@ -11,7 +11,7 @@
 // O manifesto (`buildPlaceholder().manifest`) não precisa de canvas: os testes o comparam com o `pacote.json` gravado.
 import { HD_DIRS, charKey, stageKey, itemKey, type HdAnim, type HdDir, type HdFlamePart, type HdManifest, type HdPack, type HdTile } from './types';
 import { THEMES, type Theme } from '../art/tiles';
-import { CHARACTERS } from '../art/bomber';
+import { ORIGINALS as CHARACTERS } from '../art/bomber';
 import { ITEM } from '../../core/types';
 
 export const PH_CELL = 64;

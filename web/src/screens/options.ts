@@ -6,9 +6,10 @@ import { SLOT_COUNT, controlsOf, defaultSettings, devControls, gameplayOf, setDe
 import { S } from '../render/text/strings';
 import { MUSIC } from '../app/audio';
 import { FADE_MENU, FADE_TO_TITLE } from '../app/fade';
-import { drawOptionsPage, type OptionsRow } from '../render/screens-rom/options';
+import { drawLobbyList, type LobbyItem } from '../render/lobby-list';
 import { titleScreen } from './title';
 import { remapScreen } from './remap';
+import { isTouchDevice, setTouchStyle, touchStyle } from '../input/touch';
 
 interface Row extends MenuRow { label: string; value?: () => string }
 
@@ -113,16 +114,15 @@ export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'ma
       left: () => { const changed = opt().fx; opt().fx = false; app.save(); return changed; },
       right: () => { const changed = !opt().fx; opt().fx = true; app.save(); return changed; },
     });
-    rows.push({   // modo de tela: HD (padrão, 16:9 com 4:3 centrado) ou CLÁSSICA (inteiros, bordas pretas); ?tela= na URL manda
-      id: 'screen', label: S.options.screen, value: () => (opt().screen === 'hd' ? S.options.screenHd : S.options.screenClassic),
-      left: () => { const changed = opt().screen !== 'hd'; opt().screen = 'hd'; app.save(); return changed; },
-      right: () => { const changed = opt().screen !== 'classic'; opt().screen = 'classic'; app.save(); return changed; },
-    });
-    rows.push({   // filtro suave (bordas lisas na pixel art); ?filtro= na URL tem prioridade
-      id: 'smooth', label: S.options.smooth, value: () => (opt().smooth ? S.options.yes : S.options.no),
-      left: () => { const changed = opt().smooth; opt().smooth = false; app.save(); return changed; },
-      right: () => { const changed = !opt().smooth; opt().smooth = true; app.save(); return changed; },
-    });
+    if (isTouchDevice()) {   // só em tela de toque (ou ?touch): joystick flutuante ou direcional fixo
+      const pick = (s: 'joystick' | 'dpad'): boolean => { const changed = touchStyle() !== s; if (changed) setTouchStyle(s); return changed; };
+      rows.push({
+        id: 'touchStyle', label: S.options.touchStyle,
+        value: () => (touchStyle() === 'joystick' ? S.options.touchJoystick : S.options.touchDpad),
+        left: () => pick('joystick'), right: () => pick('dpad'),
+        select: () => { pick(touchStyle() === 'joystick' ? 'dpad' : 'joystick'); },
+      });
+    }
     rows.push({
       id: 'music', label: S.options.music, value: () => String(opt().musicVol),
       left: () => { const b = opt().musicVol; opt().musicVol = clamp(opt().musicVol - 1, 0, 10); app.save(); setVol(); return opt().musicVol !== b; },
@@ -156,10 +156,10 @@ export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'ma
       if (ev === 'back') goBack();
     },
     draw(ctx, bank) {
-      const displayRows: OptionsRow[] = rows.map(r => ({ label: r.label, value: r.value?.() ?? '', disabled: r.disabled }));
+      const items: LobbyItem[] = rows.map(r => ({ label: r.label, value: r.value?.() ?? '', disabled: r.disabled }));
       const footer = page === 'controls' && menu.cursor < 5 ? S.options.playerHelp : undefined;
       const title = page === 'controls' ? S.options.controlsTitle : page === 'gameplay' ? S.options.gameplayTitle : S.options.title;
-      drawOptionsPage(ctx, bank, title, displayRows, menu.cursor, footer);
+      drawLobbyList(ctx, bank, title, items, menu.cursor, footer);
     },
   };
 }

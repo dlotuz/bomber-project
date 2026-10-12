@@ -5,18 +5,19 @@ import { FADE_MENU } from '../app/fade';
 import { romState, type RomAssets } from '../app/rom-api';
 import { obj, PpuCanvas } from '../render/screens-rom/scene';
 import { CHARACTERS } from '../render/art/bomber';
-import { CHARSEL_GRID, CHARSEL_PORTRAIT, CHARSEL_STANDEE, CHARSEL_STANDEE_Y, charselSprites, drawCharselTitle } from '../render/screens-rom/charsel';
-import { hdMenu } from '../render/hd-menu';
+import { CHARSEL_PICK, CHARSEL_PORTRAIT, CHARSEL_PICK_STANDEE, charselSprites } from '../render/screens-rom/charsel';
+import { hdMenu, hdPanel } from '../render/hd-menu';
 import { drawText } from '../render/text/text';
 import { S } from '../render/text/strings';
 import { SCREEN_H } from '../render/display';
-import { COLORS, PLAYER_COLORS } from './ui';
+import { PLAYER_COLORS } from './ui';
 import { createPickScheme } from './pick-scheme';
 import { rulesScreen } from './rules';
 import { stageScreen } from './stage';
 import { teamsScreen } from './teams';
 
-const { cols: COLS, rows: ROWS } = CHARSEL_GRID;
+const { cols: COLS, rows: ROWS } = CHARSEL_PICK;
+const GRID = CHARSEL_PICK;
 /** Moldura do fallback (spec §6.14), medida como as demais telas de menu. */
 
 /** Cursor "[ ]": 4 cantos preenchidos (`fillRect`, 2 por canto), na cor do jogador — nunca uma única moldura
@@ -88,23 +89,27 @@ export function charactersScreen(app: App): Screen & {
     },
     draw(ctx, bank, frame) {
       const a: RomAssets | null = romState.assets;
-      hdMenu(ctx, null, { title: 15 });
+      hdMenu(ctx, null, { title: 15 }, 'lobby');
+      // uma faixa por personagem, no padrão das telas do online
+      for (let k = 0; k < COLS * ROWS; k++) {
+        hdPanel({ x: GRID.x[k % COLS] - 6, y: GRID.y[Math.floor(k / COLS)] - 1, w: 44, h: 40,
+          fill: 'rgba(10,30,90,0.6)', stroke: '#8fd8ff' });
+      }
+      drawText(ctx, bank, 'menuTitle', S.chars.title, 128, 8, { align: 'center', bare: true });
       if (a) {
         // Cena real (§6.6): corda + quebra-cabeça do BG (`MAP_SOURCES.charsel`, T19), a coluna de retratos da ROM
         // no BG1 (I6: folha `$CD:E585`, cores `$C1:B3C3` por slot e personagem; "×" nos slots desligados) e os 6
         // bonecos parados como OBJ (`CHARSEL_STANDEE`, medidos em `charsel.oam`), tudo com o HOFS −8 do BG1 (I8).
         // Só o título (no vão da corda) e os cursores vão por cima, depois do PPU.
-        const oam = CHARSEL_STANDEE.map((s, k) =>
-          obj(CHARSEL_GRID.x[k % COLS], CHARSEL_STANDEE_Y[Math.floor(k / COLS)], s.tile, s.pal, { big: true, prio: 3 }));
+        const oam = CHARSEL_PICK_STANDEE.map((s, k) =>
+          obj(GRID.x[k % COLS], GRID.standeeY[Math.floor(k / COLS)], s.tile, s.pal, { big: true, prio: 3 }));
         ppu.drawOver(ctx, charselSprites(a, [0, 1, 2, 3, 4].map(i => (setup.slots[i] !== 'off' ? setup.chars[i] : null)), oam));
-        drawCharselTitle(ctx, bank, S.chars.title, COLORS.title);
       } else {
         // Grade 3×2 dos personagens (sem ROM: nossa própria arte).
         CHARACTERS.forEach((ch, k) => {
-          const x = CHARSEL_GRID.x[k % COLS], y = CHARSEL_GRID.y[Math.floor(k / COLS)];
+          const x = GRID.x[k % COLS], y = GRID.y[Math.floor(k / COLS)];
           ctx.drawImage(bank.bomber(k, 2, 0), x, y, 32, 40);
         });
-        drawCharselTitle(ctx, bank, S.chars.title, COLORS.title);
         // Coluna da esquerda: o retrato de cada jogador ativo (sem ROM: a arte do fallback).
         for (const i of scheme.activeIdx) {
           const y = CHARSEL_PORTRAIT.y0 + CHARSEL_PORTRAIT.dy * i;
@@ -119,14 +124,15 @@ export function charactersScreen(app: App): Screen & {
         const driver = scheme.selfPicking(i) ? i : i === ctrl ? scheme.controller : null;
         if (driver === null) continue;
         const k = setup.chars[i];
-        const x = CHARSEL_GRID.x[k % COLS], y = CHARSEL_GRID.y[Math.floor(k / COLS)];
+        const x = GRID.x[k % COLS], y = GRID.y[Math.floor(k / COLS)];
         const color = PLAYER_COLORS[i];
-        drawCornerCursor(ctx, x - 2, y - 2, CHARSEL_GRID.cellW - 12, CHARSEL_GRID.cellH - 4, color);
+        drawCornerCursor(ctx, x - 2, y - 2, GRID.cellW - 12, GRID.cellH - 4, color);
         drawText(ctx, bank, 'ascii8', S.chars.tags[i], x - 3, y - 10, { color, bare: true });
       }
       // `bare` (M1, revisão final): igual a Opções/Remapeamento — sem o campo opaco do `ascii8`, como na ROM.
-      drawText(ctx, bank, 'ascii8', scheme.activeIdx.every(i => scheme.confirmed[i]) ? S.chars.allReady : S.chars.help,
-        128, SCREEN_H - 16, { align: 'center', tone: 'gray', bare: true });
+      if (scheme.activeIdx.every(i => scheme.confirmed[i])) {
+        drawText(ctx, bank, 'ascii8', S.chars.allReady, 128, SCREEN_H - 16, { align: 'center', tone: 'white', bare: true });
+      }
     },
   };
 }

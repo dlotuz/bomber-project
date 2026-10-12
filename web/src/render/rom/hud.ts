@@ -1,6 +1,7 @@
 import type { CharacterAssets } from '../../rom/types';
 import type { TileOverride } from './scene';
 import { CLOCK_FROZEN_FROM } from '../../core/constants';
+import { recolorBgr555, type SkinDef } from '../art/charskins';
 
 export const HUD_WORDS = 96;
 
@@ -76,6 +77,47 @@ export function faceTileIds(slot: number): number[] {
 export function headTiles(ch: CharacterAssets, slot: number, crying = false): Uint8Array[] {
   const px = (crying ? ch.hudCry(slot) : ch.hudHead(slot)).px;
   return [0, 1, 2, 3, 4, 5].map(i => px.subarray(i * 64, i * 64 + 64));
+}
+
+/** Índices de cor usados pelos tiles do HUD fora da região dos rostos e coroas (colunas 10–29): o fundo e a moldura. */
+export function hudFrameIndices(tilePx: Uint8Array, hudMap: Uint16Array): Set<number> {
+  const out = new Set<number>();
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 32; c++) {
+    if (c >= 10 && c <= 29) continue;
+    const t = hudMap[r * 32 + c] & 0x3ff;
+    for (let i = 0; i < 64; i++) { const v = tilePx[t * 64 + i]; if (v) out.add(v); }
+  }
+  return out;
+}
+
+/**
+ * Skins no HUD: o rosto de cada slot usa os mesmos índices da linha de paleta do HUD (a de `src`), então não dá para
+ * pintar só um rosto mudando a paleta. Em vez disso, cada skin ganha uma linha de BG livre (que nenhum mapa do quadro
+ * usa), com a paleta do HUD pintada, e as 6 palavras do rosto desse slot passam a apontar para ela.
+ */
+export function paintHudFaces(b: { bg1: Uint16Array; bg2: Uint16Array; cg: Uint16Array }, hudRow: number, src: number,
+  skins: readonly (SkinDef | null)[], keep: ReadonlySet<number>): void {
+  if (!skins.some(Boolean)) return;
+  const used = new Set<number>();
+  for (const m of [b.bg1, b.bg2]) for (const w of m) used.add((w >> 10) & 7);
+  const free = [0, 1, 2, 3, 4, 5, 6, 7].filter(r => !used.has(r));
+  const rowOf = new Map<SkinDef, number>();
+  skins.forEach((skin, k) => {
+    if (!skin) return;
+    let r = rowOf.get(skin);
+    if (r === undefined) {
+      r = free.shift();
+      if (r === undefined) return;   // sem linha livre: o rosto fica como está
+      rowOf.set(skin, r);
+      const from = b.cg.slice(16 * src, 16 * src + 16), painted = recolorBgr555(from, skin);
+      keep.forEach(i => { painted[i] = from[i]; });   // fundo do painel e moldura do HUD não mudam de cor
+      b.cg.set(painted, 16 * r);
+    }
+    for (let line = 0; line < 3; line++) for (const col of [10 + 4 * k, 11 + 4 * k]) {
+      const i = (hudRow + line) * 32 + col;
+      b.bg1[i] = (b.bg1[i] & ~0x1c00) | (r << 10);
+    }
+  });
 }
 
 export function headOverrides(heads: readonly (Uint8Array[] | null)[]): TileOverride[] {

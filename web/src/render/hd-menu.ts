@@ -7,14 +7,14 @@ import handUrl from '../assets/hand.png';
 import titleUrl from '../assets/title.jpg';
 
 export interface HdText { text: string; x: number; y: number; size: number; row: number; tone: Tone; align: 'left' | 'center' | 'right'; title: boolean; art: boolean; color?: string }
-/** Tamanhos por tela (px da base): `item` = `menuItem`, `title` = `menuTitle`, `hand` = escala da luva. */
-export interface HdSizes { item?: number; title?: number; hand?: number }
+/** Tamanhos por tela (px da base): `item` = `menuItem`, `title` = `menuTitle`, `small` = `ascii8`, `hand` = escala da luva. */
+export interface HdSizes { item?: number; title?: number; hand?: number; small?: number }
 
 /** Quadro arredondado por baixo dos textos (destaque), em px da base. */
 export interface HdPanel { x: number; y: number; w: number; h: number; fill: string; stroke: string; glow?: string }
 const state = { on: false, cursor: null as null | [number, number], texts: [] as HdText[], sizes: {} as HdSizes, bg: 'menu' as HdBg, panels: [] as HdPanel[] };
 /** Fundo: `menu` = quebra-cabeça com corda; `title` = arte do título (4:3) centrada no preto. */
-export type HdBg = 'menu' | 'title';
+export type HdBg = 'menu' | 'title' | 'lobby';
 
 /** Altura da linha da fonte da ROM (o texto HD fica centrado nela) e tamanho padrão do texto HD, por estilo desviado;
  *  os outros estilos seguem na base. */
@@ -37,6 +37,8 @@ const GRAD: Record<Tone, readonly [string, string, string]> = {
   gray: ['#e0e0e0', '#a8a8a8', '#787878'],
 };
 const TITLE_GRAD: readonly [string, string, string] = ['#c8fcff', '#3cc4ff', '#1446e8'];
+/** Branco das telas do online: mais cinza-azulado, para não estourar sobre o fundo escuro. */
+const SOFT_WHITE: readonly [string, string, string] = ['#dde4f2', '#b4c0da', '#8592b0'];
 
 let bg: HTMLImageElement | null = null;
 const bgImg = (): HTMLImageElement | null => {
@@ -84,7 +86,7 @@ export function hdText(style: TextStyleId, text: string, x: number, y: number, t
   align: 'left' | 'center' | 'right' = 'left', color?: string): number | null {
   const row = ROW[style];
   if (!state.on || !row) return null;
-  const size = (style === 'menuItem' ? state.sizes.item : style === 'menuTitle' ? state.sizes.title : undefined) ?? SIZE[style]!;
+  const size = (style === 'menuItem' ? state.sizes.item : style === 'menuTitle' ? state.sizes.title : style === 'ascii8' ? state.sizes.small : undefined) ?? SIZE[style]!;
   state.texts.push({ text, x, y, size, row, tone, align, title: style === 'menuTitle', art: style === 'titleMenu', color: style === 'menuTitle' ? undefined : color });
   return text.length * size * 0.52;
 }
@@ -113,7 +115,9 @@ function drawLabel(out: CanvasRenderingContext2D, t: HdText): void {
   const cy = t.y + t.row / 2, top = cy - t.size * 0.42, bot = cy + t.size * 0.42;
   // nunca passa da moldura (x 12–244): encolhe na horizontal se precisar
   const max = t.align === 'left' ? 244 - t.x : t.align === 'right' ? t.x - 12 : 2 * Math.min(t.x - 12, 244 - t.x);
-  const c = t.title ? TITLE_GRAD : GRAD[t.tone];
+  // telas do online (fundo `lobby`): branco menos estourado e brilho do reflexo bem mais fraco
+  const soft = state.bg === 'lobby';
+  const c = t.title ? TITLE_GRAD : soft && t.tone === 'white' ? SOFT_WHITE : GRAD[t.tone];
   const g = out.createLinearGradient(0, top, 0, bot);
   g.addColorStop(0, c[0]); g.addColorStop(0.55, c[1]); g.addColorStop(1, c[2]);
   out.lineJoin = 'round';
@@ -128,9 +132,10 @@ function drawLabel(out: CanvasRenderingContext2D, t: HdText): void {
   out.fillText(t.text, t.x, cy, max);
   // reflexo espelhado: faixa branca com corte seco na metade de cima e um reflexo fraco subindo da base
   const shine = out.createLinearGradient(0, top, 0, bot);
-  shine.addColorStop(0, 'rgba(255,255,255,0.8)'); shine.addColorStop(0.42, 'rgba(255,255,255,0.2)');
+  const k = soft ? 0.35 : 1;
+  shine.addColorStop(0, `rgba(255,255,255,${0.8 * k})`); shine.addColorStop(0.42, `rgba(255,255,255,${0.2 * k})`);
   shine.addColorStop(0.43, 'rgba(255,255,255,0)'); shine.addColorStop(0.8, 'rgba(255,255,255,0)');
-  shine.addColorStop(1, 'rgba(255,255,255,0.25)');
+  shine.addColorStop(1, `rgba(255,255,255,${0.25 * k})`);
   out.fillStyle = shine;
   out.fillText(t.text, t.x, cy, max);
 }
@@ -180,8 +185,25 @@ function drawPanel(out: CanvasRenderingContext2D, p: HdPanel, s: number): void {
   out.stroke();
 }
 
+/** Fundo do online: degradê azul-noite, brilho no alto e faixas diagonais finas (sem imagem: não espera carregar). */
+function drawLobbyBg(out: CanvasRenderingContext2D): void {
+  const g = out.createLinearGradient(0, 0, 0, 224);
+  g.addColorStop(0, '#0a1a4e'); g.addColorStop(0.55, '#16308a'); g.addColorStop(1, '#070c2c');
+  out.fillStyle = g; out.fillRect(0, 0, 256, 224);
+  const r = out.createRadialGradient(128, 60, 8, 128, 60, 170);
+  r.addColorStop(0, 'rgba(90,190,255,0.38)'); r.addColorStop(1, 'rgba(0,0,0,0)');
+  out.fillStyle = r; out.fillRect(0, 0, 256, 224);
+  out.fillStyle = 'rgba(255,255,255,0.06)';
+  for (let x = -224; x < 256; x += 28) {
+    out.beginPath(); out.moveTo(x, 0); out.lineTo(x + 12, 0); out.lineTo(x + 12 + 224, 224); out.lineTo(x + 224, 224); out.closePath(); out.fill();
+  }
+  out.fillStyle = 'rgba(255,228,107,0.9)'; out.fillRect(0, 22, 256, 1);
+  out.fillStyle = 'rgba(143,216,255,0.8)'; out.fillRect(0, 207, 256, 1);
+}
+
 /** Fundo HD da tela atual, nas coordenadas da base (256×224; o chamador põe a escala no transform). */
 function drawBg(out: CanvasRenderingContext2D): boolean {
+  if (state.bg === 'lobby') { drawLobbyBg(out); return true; }
   if (state.bg === 'title') {
     out.fillStyle = '#000000'; out.fillRect(0, 0, 256, 224);
     const img = titleImg();

@@ -12,7 +12,7 @@ const until = (app: App, id: string) => { for (let n = 0; n < 5000 && app.screen
 const step = (app: App, btn: number, id: string, slot?: number) => { press(app, btn, slot); settle(app); expect(app.screen.id).toBe(id); };
 
 describe('fluxo completo com entrada simulada (aceite do plano 10)', () => {
-  it('título → jogadores → regras → personagens → fase → partida → placar final → vitória → fase', () => {
+  it('título → jogadores → regras → personagens → fase → partida → (partida decidida: direto) fase', () => {
     const { app, sink } = mkApp();
     app.go(titleScreen(app));
     step(app, BTN.A, 'players'); step(app, BTN.A, 'rules');
@@ -24,12 +24,13 @@ describe('fluxo completo com entrada simulada (aceite do plano 10)', () => {
     const b = app.screen as ReturnType<typeof battleScreen>;
     while (b.round.phase === 'intro') app.update(idleInput());
     forceWin(b.round, 0);
-    until(app, 'scoreboard'); until(app, 'victory');
-    tap(app, BTN.A); settle(app);
+    // partida decidida: sem placar nem vitória, só fecha e volta para a escolha de fase
+    until(app, 'stage');
     expect(app.screen.id).toBe('stage');
     expect(carry.seed).not.toBeNull();
     const musics = sink.of('music').map(c => c.id);
-    for (const m of [0x01, 0x12, 0x13, 0x14, 0x15, 0x16]) expect(musics).toContain(m);
+    for (const m of [0x01, 0x12, 0x13, 0x14]) expect(musics).toContain(m);
+    expect(musics).not.toContain(0x16);
   });
   it('rodada empatada por tempo → EMPATE → A → próxima rodada', () => {
     const { app } = mkApp();

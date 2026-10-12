@@ -38,7 +38,7 @@ describe('folha de retratos: personagem → tile', () => {
     expect([0, 1, 2, 3, 4, 5].map(scoreboardPortraitTile)).toEqual([0x80, 0x84, 0x88, 0xc4, 0xc8, 0xc0]);
     expect(scoreboardPortraitTile(NO_CHAR)).toBe(0x8c);
     expect([0, 1, 2, 3, 4, 5, NO_CHAR].map(charselPortraitTile)).toEqual([0x200, 0x204, 0x208, 0x244, 0x248, 0x240, 0x20c]);
-    expect(PORTRAIT_OF_CHAR[NO_CHAR]).toBe(3);
+    expect(PORTRAIT_OF_CHAR[6]).toBe(3);
   });
 });
 

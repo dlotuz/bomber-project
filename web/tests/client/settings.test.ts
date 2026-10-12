@@ -77,7 +77,7 @@ describe('configurações v4', () => {
     expect(normalizeSettings({ options: { allMounts: false } }).options.allMounts).toBe(false);
     expect(normalizeSettings({ options: { allMounts: 1 } }).options.allMounts).toBe(true);
     expect(normalizeSettings({ options: { musicVol: 3 } }).options.screen).toBe('hd');
-    expect(normalizeSettings({ options: { screen: 'classic' } }).options.screen).toBe('classic');
+    expect(normalizeSettings({ options: { screen: 'classic', smooth: true } }).options).toMatchObject({ screen: 'hd', smooth: false });   // saiu das Opções: sempre HD e nítido
     expect(normalizeSettings({ options: { screen: 'xyz' } }).options.screen).toBe('hd');
     // salvos antigos: BORDAS e ARTE deixaram de existir; hdArt=true não liga mais a arte HD
     const old = normalizeSettings({ options: { blurBorders: false, hdArt: true } }).options as unknown as Record<string, unknown>;

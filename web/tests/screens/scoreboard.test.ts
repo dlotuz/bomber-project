@@ -54,9 +54,9 @@ describe('placar (§6.10, R7, R8, A15)', () => {
     expect(app.tick - t0).toBe(45);
     expect(sink.since(t0).map(c => [c.t, c.op, c.id])).toEqual([[31, 'bank', 0x2f], [43, 'music', 0x14]]);
   });
-  it('sem botão: sai sozinho em S=511', () => {
+  it('sem botão: sai sozinho em S=180 (3 s, depois do giro da coroa)', () => {
     const { app } = afterWin();
-    idle(app, 511); expect(app.inTransition).toBe(false);
+    idle(app, 180); expect(app.inTransition).toBe(false);
     idle(app, 1); expect(app.inTransition).toBe(true);
   });
 });

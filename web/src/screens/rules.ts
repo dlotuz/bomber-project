@@ -2,20 +2,18 @@ import type { App, Screen } from '../app/app';
 import type { RuleChoices } from '../app/settings';
 import { FADE_MENU } from '../app/fade';
 import { MUSIC } from '../app/audio';
-import { carry } from '../game/match-session';
 import { S } from '../render/text/strings';
-import { drawText } from '../render/text/text';
 import type { Tone } from '../render/text/types';
-import { hdMenu } from '../render/hd-menu';
+import { drawLobbyList } from '../render/lobby-list';
 import { Menu, clamp, type MenuRow } from './menu';
 import { playersScreen } from './players';
 import { charactersScreen } from './characters';
 import { optionsScreen, type OptionsPage } from './options';
 
-type ToggleKey = keyof Pick<RuleChoices, 'suddenDeath' | 'badBomber' | 'racer'>;
+type ToggleKey = keyof Pick<RuleChoices, 'suddenDeath' | 'badBomber'>;
 /** Âncora (centro, topo) do título, presa à faixa de texto da captura em `tests/screens/menu-title.test.ts`. */
 export const RULES_TITLE = { x: 127, y: 21 } as const;
-const TOGGLES: readonly ToggleKey[] = ['suddenDeath', 'badBomber', 'racer'];
+const TOGGLES: readonly ToggleKey[] = ['suddenDeath', 'badBomber'];
 const onOff = (b: boolean): string => (b ? S.rules.yes : S.rules.no);
 /** Coluna dos valores (I10): alinhados à esquerda na coluna 11 do BG1 da captura `rules` (x = 176), como os rótulos na
  *  coluna 2 (x = 32). */
@@ -34,14 +32,16 @@ export const RULES_ROW_Y = 48, RULES_ROW_STEP = 19;
 export function rulesScreen(app: App, cursor?: number): Screen & { readonly cursor: number; values(): string[]; tones(): Tone[] } {
   const r = app.settings.setup.rules;
   app.audio.ensureMenus(MUSIC.menus);
+  // A Corrida Bônus saiu das regras: um valor antigo salvo não pode ficar ligado sem ter como desligar.
+  if (r.racer) { r.racer = false; app.save(); }
 
   const values = (): string[] => [
     S.rules.cpu[r.cpuLevel], S.rules.crowns[r.matches - 1], S.rules.time[r.timeIdx],
-    onOff(r.suddenDeath), onOff(r.badBomber), onOff(r.racer),
+    onOff(r.suddenDeath), onOff(r.badBomber),
   ];
   const tones = (): Tone[] => [
     CPU_TONE[r.cpuLevel], 'green', r.timeIdx === S.rules.time.length - 1 ? 'blue' : 'green',
-    onOffTone(r.suddenDeath), onOffTone(r.badBomber), onOffTone(r.racer),
+    onOffTone(r.suddenDeath), onOffTone(r.badBomber),
   ];
   const next = (): boolean => { app.transition(() => charactersScreen(app), FADE_MENU); return true; };
   // `get`/`set` (em vez de indexar `r[key]` com uma chave-união) porque `cpuLevel` é `0 | 1 | 2`
@@ -58,7 +58,6 @@ export function rulesScreen(app: App, cursor?: number): Screen & { readonly curs
     right: () => {
       if (r[key]) return false;
       r[key] = true;
-      if (key === 'racer') carry.racerPrize = null;   // §3.14: ligar a Corrida Bônus zera o prêmio guardado.
       app.save();
       return true;
     },
@@ -85,14 +84,11 @@ export function rulesScreen(app: App, cursor?: number): Screen & { readonly curs
       if (menu.update(inp.any, inp.pressedAny, app.audio) === 'back') app.transition(() => playersScreen(app), FADE_MENU);
     },
     draw(ctx, bank) {
-      hdMenu(ctx, [16, RULES_ROW_Y + 1 + RULES_ROW_STEP * menu.cursor], { item: 14, hand: 1.3 });
-      drawText(ctx, bank, 'menuTitle', S.rules.title, RULES_TITLE.x, RULES_TITLE.y, { align: 'center' });
-      const vals = values(), tn = tones();
-      for (let i = 0; i < labels.length; i++) {
-        const y = RULES_ROW_Y + RULES_ROW_STEP * i;
-        drawText(ctx, bank, 'menuItem', labels[i], 32, y);
-        if (i < vals.length) drawText(ctx, bank, 'menuItem', vals[i], RULES_VALUE_X, y, { tone: tn[i] });
-      }
+      const L = S.lobby, onOffL = (b: boolean): string => (b ? L.yes : L.no);
+      const shown = [L.levels[r.cpuLevel], S.rules.crowns[r.matches - 1], L.time[r.timeIdx], onOffL(r.suddenDeath), onOffL(r.badBomber)];
+      const tn = tones();
+      const items = L.rules.map((label, i) => ({ label, value: shown[i] ?? '', tone: tn[i] }));
+      drawLobbyList(ctx, bank, S.rules.title, items, menu.cursor, L.rulesHelp);
     },
   };
 }

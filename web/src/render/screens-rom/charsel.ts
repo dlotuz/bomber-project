@@ -15,6 +15,7 @@ import type { RomAssets, ObjEntry, PpuFrame } from '../../app/rom-api';
 import { box, MENU_GEO, newMap, pattern, put, sceneFrame, sceneGfx, sceneMaps, tileWord, type SceneMaps } from './scene';
 import { drawText } from '../text/text';
 import { charselPortraitTile, NO_CHAR, withPortraitPalettes } from './portraits';
+import { SKINS, recolorBgr555 } from '../art/charskins';
 
 /** Grade 3×2 dos 6 personagens (`render/art/bomber.ts` `CHARACTERS`), medida no `charsel.oam`. */
 export const CHARSEL_GRID = { cols: 3, rows: 2, x: [80, 128, 176] as const, y: [88, 136] as const, cellW: 48, cellH: 48 };
@@ -60,6 +61,22 @@ export const CHARSEL_STANDEE: readonly { tile: number; pal: number }[] = [
   { tile: 0x080, pal: 5 },   // 4 VERDI
   { tile: 0x084, pal: 6 },   // 5 RUBI
 ];
+
+/** Escolha de personagem com as skins: grade 3×3 (as 3 skins vêm depois dos 6 originais). Cada skin usa os tiles do
+ *  personagem-base e uma das linhas 0–2 de OBJ, onde `withSkinPalettes` grava a paleta do base pintada. */
+export const CHARSEL_PICK = { cols: 3, rows: 3, x: [80, 128, 176] as const, y: [60, 102, 144] as const, standeeY: [68, 110, 152] as const, cellW: 48, cellH: 42 };
+export const CHARSEL_PICK_STANDEE: readonly { tile: number; pal: number }[] = [
+  ...CHARSEL_STANDEE, ...SKINS.map((s, i) => ({ tile: CHARSEL_STANDEE[s.base].tile, pal: i })),
+];
+/** `cgram` com, nas linhas de OBJ 0..2, a paleta de cada skin (a linha do personagem-base, pintada). */
+export function withSkinPalettes(cgram: Uint16Array): Uint16Array {
+  const out = cgram.slice();
+  SKINS.forEach((s, i) => {
+    const from = 128 + 16 * CHARSEL_STANDEE[s.base].pal;
+    out.set(recolorBgr555(cgram.slice(from, from + 16), s), 128 + 16 * i);
+  });
+  return out;
+}
 
 /** Moldura de corda da cena (BG1, mesma família das outras cenas de menu — T5 `MENU_GEO.rope` — mas `charsel` não
  *  está lá porque esse arquivo não é desta tarefa; os tiles abaixo são os medidos no `charsel-bg1.txt`
@@ -146,7 +163,7 @@ export function charselSprites(a: RomAssets, chars: readonly (number | null)[], 
   const bg1 = newMap();
   for (const p of charselPortraitWords(chars)) put(bg1, p.col, p.row, p.w);
   const frame = sceneFrame(g, { bg1 }, { ...CHARSEL_SCROLL, oam });
-  return { ...frame, cgram: withPortraitPalettes(a, g.cgram, chars.map(c => c ?? NO_CHAR), CHARSEL_PORTRAIT_PAL) };
+  return { ...frame, cgram: withSkinPalettes(withPortraitPalettes(a, g.cgram, chars.map(c => c ?? NO_CHAR), CHARSEL_PORTRAIT_PAL)) };
 }
 
 /** Nosso título (PT-BR) dentro do vão que a ROM deixava para "Select a character!" (`CHARSEL_TITLE_PX`, 2 linhas de

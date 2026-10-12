@@ -7,7 +7,7 @@ import {
 import { defaultSettings, setDevice } from '../app/settings';
 import { S } from '../render/text/strings';
 import { FADE_MENU } from '../app/fade';
-import { drawOptionsPage, type OptionsRow } from '../render/screens-rom/options';
+import { drawLobbyList, type LobbyItem } from '../render/lobby-list';
 import { optionsScreen } from './options';
 
 type Capture = keyof KeyMap | 'device';
@@ -28,6 +28,10 @@ export type RemapScreen = Screen & { readonly menu: Menu; readonly capturing: Ca
 /** De quem são os controles editados: um dos 5 jogadores locais ou um perfil avulso (o controle da sala online). */
 export interface RemapTarget {
   title: string;
+  /** Visual das telas do online (fundo azul, faixas em duas colunas) em vez da página das Opções. */
+  lobby?: boolean;
+  /** Linha de rodapé quando nada mais pede ajuda (ex.: de quem são os controles). */
+  sub?: string;
   device(): DeviceId;
   setDevice(d: DeviceId): void;
   keymap(): KeyMap;
@@ -36,6 +40,10 @@ export interface RemapTarget {
   assignKey(f: keyof KeyMap, code: string): void;
   /** Volta ao padrão (teclas, botões e dispositivo). */
   reset(): void;
+  /** Opcional: carrega o dispositivo, as teclas e os botões de um dos 5 jogadores locais (0–4). */
+  copyFrom?(player: number): void;
+  /** Jogador que não pode ser a origem da cópia (o próprio, nos controles locais). */
+  copyExclude?: number;
   back(): void;
 }
 
@@ -44,7 +52,8 @@ export interface RemapTarget {
 export function remapScreen(app: App, player: number, ret?: () => Screen): RemapScreen {
   const st = app.settings;
   return remapTargetScreen(app, {
-    title: S.options.controls(player + 1),
+    title: S.options.controlsTitle,
+    sub: S.options.controls(player + 1),
     device: () => st.devices[player],
     setDevice: d => setDevice(st.devices, player, d),
     keymap: () => st.keymaps[player],
@@ -54,6 +63,12 @@ export function remapScreen(app: App, player: number, ret?: () => Screen): Remap
       for (const f of KEY_FIELDS) assignKey(st.keymaps, player, f, DEFAULT_KEYMAPS[player][f]);
       st.padmaps[player] = { ...DEFAULT_PADMAP };
       setDevice(st.devices, player, defaultSettings().devices[player]);
+    },
+    copyExclude: player,
+    copyFrom: p => {   // teclas e botões do outro jogador; o controle (gamepad) em uso continua o mesmo
+      st.keymaps[player] = { ...st.keymaps[p] };
+      st.padmaps[player] = { ...st.padmaps[p] };
+      if (st.devices[p] === 'kb' || st.devices[p] === 'none') setDevice(st.devices, player, st.devices[p]);
     },
     back: () => { app.transition(() => optionsScreen(app, player, 'controls', ret), FADE_MENU); },
   });
@@ -75,9 +90,22 @@ export function remapTargetScreen(app: App, t: RemapTarget): RemapScreen {
     return true;
   };
 
+  const step = (from: number, d: number): number => {
+    let n = from + d;
+    if (n === t.copyExclude) n += d;
+    return n < 0 || n > 4 ? from : n;
+  };
+  let src = t.copyExclude === 0 ? 1 : 0;
+  let copied = false;
   const rows: MenuRow[] = [
     { id: 'device', left: () => turn(-1), right: () => turn(1), select: () => { capture('device'); } },
     ...KEY_FIELDS.map(f => ({ id: f, select: () => { capture(f); }, ...(f === 'power' ? { left: clearPower, right: clearPower } : {}) })),
+    ...(t.copyFrom ? [{
+      id: 'copy',
+      left: () => { const b = src; src = step(src, -1); copied = false; return src !== b; },
+      right: () => { const b = src; src = step(src, 1); copied = false; return src !== b; },
+      select: () => { t.copyFrom!(src); copied = true; app.applyInput(); app.save(); },
+    }] : []),
     { id: 'all', select: () => { seq = true; capture(SEQ[0]); } },
     {
       id: 'reset', select: () => {
@@ -89,11 +117,12 @@ export function remapTargetScreen(app: App, t: RemapTarget): RemapScreen {
   ];
   const menu = new Menu(rows);
 
-  const label = (id: string): string => (id === 'device' ? S.options.device : id === 'all' ? S.options.all
+  const label = (id: string): string => (id === 'device' ? S.options.device : id === 'copy' ? S.options.copyFrom : id === 'all' ? S.options.all
     : id === 'reset' ? S.options.reset : id === 'back' ? S.options.back : S.options.actions[id as keyof KeyMap]);
   const value = (id: string): string => {
     if (id === capturing) return '';
     if (id === 'device') return S.options.devices[dev()];
+    if (id === 'copy') return copied ? S.options.copyDone : `P${src + 1}`;
     if (!(KEY_FIELDS as readonly string[]).includes(id) || dev() === 'none') return '';
     const f = id as keyof KeyMap;
     return dev() === 'kb' ? keyLabel(t.keymap()[f]) : padLabel(t.padmap()[f]);
@@ -132,9 +161,10 @@ export function remapTargetScreen(app: App, t: RemapTarget): RemapScreen {
       if (ev === 'back') goBack();
     },
     draw(ctx, bank) {
-      const rowsOut: OptionsRow[] = rows.map(r => ({ label: label(r.id), value: value(r.id) }));
-      const footer = capturing ? S.options.pressAny : rows[menu.cursor].id === 'power' ? S.options.powerHelp : undefined;
-      drawOptionsPage(ctx, bank, t.title, rowsOut, menu.cursor, footer, 'ascii8');
+      const items: LobbyItem[] = rows.map(r => ({ label: label(r.id), value: value(r.id), capturing: capturing === r.id }));
+      const id = rows[menu.cursor].id;
+      const footer = capturing ? S.options.pressAny : id === 'power' ? S.options.powerHelp : id === 'copy' ? S.options.copyHelp(src + 1) : t.sub;
+      drawLobbyList(ctx, bank, t.title, items, menu.cursor, footer);
     },
   };
 }

@@ -201,8 +201,9 @@ export function normalizeSettings(raw: unknown): Settings {
       sleepSec: intIn(ro.sleepSec, 1, 10, d.options.sleepSec),
       fx: bool(ro.fx, d.options.fx),
       allMounts: bool(ro.allMounts, d.options.allMounts),
-      screen: oneOf(ro.screen, SCREEN_KINDS, d.options.screen),
-      smooth: bool(ro.smooth, d.options.smooth),
+      // TELA e FILTRO SUAVE saíram das Opções: valem sempre HD e nítido (o `?tela=` e o `?filtro=` na URL ainda mandam)
+      screen: d.options.screen,
+      smooth: d.options.smooth,
     },
     setup: {
       mode: oneOf(s.mode, ['ffa', 'team'] as const, ds.mode),

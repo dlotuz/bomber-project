@@ -1,16 +1,18 @@
 // Decisões da IA (porte do legado): fugir → item → bomba com fuga garantida → caçar/blocos → passear.
 import { CODE, DISEASE, type Bomb, type Player, type RoundState } from '../types';
-import { CELLS, colOf, faceStep, inField, linOf } from '../units';
+import { CELLS, cellCenter, colOf, faceStep, inField, linOf } from '../units';
 import { isEggCode, isItemCode, playerCell, standing } from '../state';
 import { bombFireOf, canPlaceBomb, fuseOf } from '../bombs';
 import { rangeOf } from '../constants';
 import { STAGES } from '../stages';
 import { MOUNTS } from '../mounts';
+import { rider } from '../mounts/types';
 import { canKick } from '../kick';
 import { SAFE, crossCells, hazards, pressureCells, type Extra, type Hazard } from './danger';
-import { kickWorth, punchKill } from './actions';
+import { incomingStun, isFoe, kickWorth, punchKill } from './actions';
 import { centered, escape, hasRefuge, lockOf, route, search, ticksPerCell, walkBlocked, type Route, type Search } from './nav';
 import { aiRoll, type AiLevel } from './level';
+import { fork } from './whatif';
 
 export { walkBlocked } from './nav';
 
@@ -20,10 +22,13 @@ export { walkBlocked } from './nav';
 export interface Brain {
   path: number[]; go: number[]; bomb: boolean; nextThink: number; push: number; liftAt: number; still: boolean;
   seed: number;
+  /** Tick até o qual a luva não levanta/arremessa por oportunidade (só quando mata) nem pega adversário de novo:
+   *  sem isso a CPU ficava tacando bomba e jogador o tempo todo. */
+  cool: number;
 }
 
 export function newBrain(seed = 0): Brain {
-  return { path: [], go: [], bomb: false, nextThink: 0, push: -1, liftAt: -1, still: false, seed };
+  return { path: [], go: [], bomb: false, nextThink: 0, push: -1, liftAt: -1, still: false, seed, cool: 0 };
 }
 
 /** Quantas casas candidatas (as mais próximas perto de adversários) a caça testa por decisão. */
@@ -40,10 +45,32 @@ const KICK_SLACK = 24;
 const PUNCH_WALK = 4;
 /** Chegando atrás da bomba para socá-la, pavio mínimo que ainda deve restar (tempo de virar e socar). */
 const PUNCH_MIN_FUSE = 12;
+/** Alvo "fácil": adversário travado por pelo menos este tempo (ticks) — soneca, dança, atordoado. */
+const PREY_LOCK = 40;
+/** Até quantos ticks de caminhada a CPU aceita para chegar ao pé de um alvo fácil. */
+const PREY_WALK = 90;
+/** Até quantas casas a CPU anda para soltar a bomba no ponto que mais quebra blocos. */
+const BLOCK_RANGE = 10;
 /** Na pressão, folga máxima exigida na fuga da própria bomba (arrisca mais para decidir a rodada). */
 const LATE_MARGIN = 2;
 
 const manhattan = (a: number, b: number): number => Math.abs(colOf(a) - colOf(b)) + Math.abs(linOf(a) - linOf(b));
+
+/**
+ * Contexto geral para decidir se vale perder a montaria: montado (a chama que pegaria o jogador leva só a montaria e ele
+ * fica vivo e invencível por uns instantes), a chance base do nível sobe com montaria de reserva, duelo (1 adversário)
+ * e fim de rodada (pressão), e cai quando há muita gente viva (a montaria vai valer mais depois). 0 = não sacrifica.
+ */
+export function sacrificeChance(s: RoundState, p: Player, level: AiLevel): number {
+  const r = rider(p);
+  if (!r || r.phase !== 'riding' || level.sacrifice <= 0) return 0;
+  const foes = s.players.filter(q => q !== p && standing(q) && !mate(s, p, q)).length;
+  let c = level.sacrifice;
+  if (r.reserves.length > 0) c += 20;
+  if (foes <= 1) c += 25; else if (foes >= 3) c -= 15;
+  if (s.pressure.trigger >= 0) c += 15;
+  return Math.max(0, Math.min(95, c));
+}
 
 /** Jogadores de pé. */
 function standingPlayers(s: RoundState): Player[] { return s.players.filter(standing); }
@@ -75,8 +102,16 @@ function bombUseful(s: RoundState, p: Player, cell: number, foes: ReadonlySet<nu
   for (const i of crossCells(s, cell, bombFireOf(p), bombTypeOf(p) === 2).cells) {
     if (s.grid[i] === CODE.SOFT) return true;
     if (foes.has(i)) return true;
+    if (eggToDeny(s, p, i)) return true;
   }
   return false;
+}
+
+/** Ovo de montaria no chão que a CPU não quer (já está montada e o ovo não serve de reserva): estourá-lo tira o ovo
+ *  dos adversários. Só com adversário vivo para pegá-lo. */
+function eggToDeny(s: RoundState, p: Player, cell: number): boolean {
+  if (!isEggCode(s.grid[cell]) || !rider(p)) return false;
+  return worth(s, p, cell) <= 0 && standingPlayers(s).some(q => q !== p && !mate(s, p, q));
 }
 
 /** Algum adversário a até `d` casas? */
@@ -174,6 +209,8 @@ export function think(s: RoundState, p: Player, level: AiLevel, brain: Brain, _a
   if (here < 0) { brain.path = []; brain.go = []; return; }
   const hz = hazards(s, p.slot);
   const blocked = walkBlocked(s, p);
+  // de luva na mesma casa de outro jogador, o A pegaria o jogador em vez de soltar a bomba: nada de bomba por aqui
+  const overlap = p.glove && !p.mount && standingPlayers(s).some(q => q !== p && playerCell(q) === here);
   // na pressão (fim de rodada) todo mundo caça, e quem já caçava também tenta encurralar
   const late = s.pressure.trigger >= 0;
   const foes = level.hunt || late ? foeCells(s, p) : new Set<number>();
@@ -206,7 +243,7 @@ export function think(s: RoundState, p: Player, level: AiLevel, brain: Brain, _a
     }
     const out = escape(s, p, hz, blocked, level, true, lock);
     // fugindo, mais uma bomba aqui se for útil (ou encurralar) e a fuga continuar garantida com ela
-    if (out && !lock && level.hunt && !noBombs && centered(s, p) && canPlaceBomb(p) && p.carry < 0 && s.grid[here] === CODE.FLOOR
+    if (out && !lock && !overlap && level.hunt && !noBombs && centered(s, p) && canPlaceBomb(p) && p.carry < 0 && p.grab < 0 && s.grid[here] === CODE.FLOOR
       && !blocked.has(here) && enemiesNear(s, p, here)) {
       const useful = bombUseful(s, p, here, foes) || (late && foeWithin(s, p, here, PRESS_NEAR));
       const b = tryBomb(s, p, here, hz, blocked);
@@ -233,7 +270,13 @@ export function think(s: RoundState, p: Player, level: AiLevel, brain: Brain, _a
   // sem pressa, não pisa em caveira (nem para buscar item nem na fuga da própria bomba)
   const calm = new Set(blocked);
   for (let i = 0; i < CELLS; i++) if (isSkull(s.grid[i])) calm.add(i);
-  const sr = search(s, p, hz, calm, level.margin, lock);
+  let sr = search(s, p, hz, calm, level.margin, lock);
+  // preso: se a única saída é pisar numa caveira, pisa (o `calm` só evita caveira quando há outro caminho)
+  const reach = (x: Search): number => { let k = 0; for (let i = 0; i < CELLS; i++) if (i !== here && x.time[i] >= 0) k++; return k; };
+  if (reach(sr) < 6) {
+    const open = search(s, p, hz, blocked, level.margin, lock);
+    if (reach(open) > reach(sr)) sr = open;
+  }
   // alvos (itens, casas para bomba, passeio) só em casas sem perigo previsto; a pressão só conta se o bloco pousa em
   // até 120 ticks depois da chegada
   const pc = late ? pressureCells(s) : null;
@@ -243,6 +286,52 @@ export function think(s: RoundState, p: Player, level: AiLevel, brain: Brain, _a
     const land = pc?.get(i);
     return land !== undefined && hz.at[i] === land + 1 && land - sr.time[i] > PRESSURE_DEST;
   };
+
+  // 1b) desvia (só às vezes) de bomba que vai pousar na cabeça dele ou de adversário de luva mirando nele
+  if (level.dodge > 0) {
+    const inc = incomingStun(s, p);
+    if (inc && aiRoll(inc.key, p.slot, 3, brain.seed) < level.dodge) {
+      let best = -1;
+      for (const face of [0, 2, 4, 6]) {
+        const i = faceStep(here, face);
+        if (!inField(colOf(i), linOf(i)) || !target(i) || sr.dist[i] !== 1 || inc.avoid.has(i)) continue;
+        if (best < 0 || sr.time[i] < sr.time[best]) best = i;
+      }
+      if (best >= 0) { follow(route(sr, best)); return; }
+    }
+  }
+
+  // 1c) alvos fáceis: adversário travado por tempo (soneca, dança, atordoado) — bomba no pé dele, que ele não foge — e,
+  //     já montado, a montaria do adversário montado (estourá-la o deixa sem a proteção). Vai até a casa mais próxima onde
+  //     a bomba pega o alvo e ainda dá para fugir; lá o passo 3 solta a bomba.
+  if (level.hunt && !noBombs && !lock && canPlaceBomb(p) && p.carry < 0 && p.grab < 0 && s.grid[here] === CODE.FLOOR) {
+    const myMount = rider(p)?.phase === 'riding';
+    const popMounts = myMount && aiRoll(Math.floor(s.tick / 30), p.slot, 16, brain.seed) < (level.trap ? 70 : 45);
+    const prey = standingPlayers(s).filter(q => q !== p && !mate(s, p, q)
+      && (lockOf(q) >= PREY_LOCK || (popMounts && rider(q)?.phase === 'riding')));
+    if (prey.length) {
+      const fuse = fuseOf(p);
+      const placeable = (i: number): boolean => {
+        const sim = fork(s);
+        const me = sim.players[p.slot];
+        [me.x, me.y] = cellCenter(i);
+        return escape(sim, me, hazards(sim, p.slot, extraOf(p, i)), new Set(blocked).add(i), level, true, 1) !== null;
+      };
+      let bestPrey = -1;
+      for (let i = 0; i < CELLS; i++) {
+        if (i === here || !target(i) || blocked.has(i) || s.grid[i] !== CODE.FLOOR || sr.time[i] > PREY_WALK) continue;
+        if (bestPrey >= 0 && sr.time[i] >= sr.time[bestPrey]) continue;
+        const arm = new Set(crossCells(s, i, bombFireOf(p), bombTypeOf(p) === 2).cells);
+        const hits = prey.some(q => {
+          if (!arm.has(playerCell(q))) return false;
+          const lk = lockOf(q);
+          return lk >= PREY_LOCK ? lk >= sr.time[i] + 1 + fuse : true;   // travado: ainda parado quando explodir
+        });
+        if (hits && placeable(i)) bestPrey = i;
+      }
+      if (bestPrey >= 0) { follow(route(sr, bestPrey)); return; }
+    }
+  }
 
   // 2) objetivos da arena (sem limite de distância) e item/ovo perto
   const goals = STAGES[s.stage]?.ai?.goals?.(s, p.slot) ?? [];
@@ -274,6 +363,52 @@ export function think(s: RoundState, p: Player, level: AiLevel, brain: Brain, _a
     if (best >= 0) { follow(route(sr, best)); return; }
   }
 
+  // 2c) de luva e sem nada na mão: vai até um adversário próximo para pegá-lo (e arremessá-lo), só às vezes
+  if (p.glove && !p.mount && p.carry < 0 && p.grab < 0 && level.hunt && level.grabFoe > 0 && !lock
+    && aiRoll(Math.floor(s.tick / 90), p.slot, 4, brain.seed) < level.grabFoe) {
+    let best = -1;
+    for (const q of standingPlayers(s)) {
+      if (!isFoe(s, p, q) || q.mount || q.heldBy >= 0 || q.flying) continue;
+      const qc = playerCell(q);
+      if (qc === here || !target(qc) || manhattan(qc, here) > 4) continue;
+      if (best < 0 || sr.time[qc] < sr.time[best]) best = qc;
+    }
+    if (best >= 0) { follow(route(sr, best)); return; }
+  }
+
+  // 2s) sacrifício da montaria: montado (a chama leva só a montaria), com a conta feita — uma bomba aqui, ou numa casa
+  //     perto, deixa um adversário sem refúgio e mata —, topa não ter fuga para si. Em duelo e no fim da rodada a chance
+  //     sobe (ver `sacrificeChance`); com muita gente viva, guarda a montaria.
+  {
+    const chance = sacrificeChance(s, p, level);
+    if (chance > 0 && !noBombs && !lock && canPlaceBomb(p) && p.carry < 0 && p.grab < 0 && !overlap
+      && aiRoll(Math.floor(s.tick / 20), p.slot, 14, brain.seed) < chance) {
+      // duelo (ou fim de rodada): vale também a bomba de frente — o adversário na cruz, a até 3 casas —, mesmo que ele
+      // ainda tenha por onde fugir: a CPU fica por perto e a montaria paga a própria chama
+      const foesAlive = s.players.filter(q => q !== p && standing(q) && !mate(s, p, q)).length;
+      const bold = foesAlive <= 1 || late;
+      const kills = (i: number): boolean => {
+        if (s.grid[i] !== CODE.FLOOR || blocked.has(i)) return false;
+        const b = tryBomb(s, p, i, hz, blocked);
+        if (b.hurtsMate) return false;
+        if (b.traps) return true;
+        if (!bold) return false;
+        const arm = new Set(crossCells(s, i, bombFireOf(p), bombTypeOf(p) === 2).cells);
+        return standingPlayers(s).some(q => q !== p && !mate(s, p, q) && arm.has(playerCell(q)) && manhattan(playerCell(q), i) <= 3);
+      };
+      if (kills(here)) {
+        const out = escape(s, p, tryBomb(s, p, here, hz, blocked).hz, new Set(calm).add(here), level, false, 1);
+        brain.bomb = true; follow(out); return;
+      }
+      let spot = -1;
+      for (let i = 0; i < CELLS; i++) {
+        if (i === here || !target(i) || sr.time[i] > PREY_WALK || (spot >= 0 && sr.time[i] >= sr.time[spot])) continue;
+        if (enemiesNear(s, p, i) && kills(i)) spot = i;
+      }
+      if (spot >= 0) { follow(route(sr, spot)); return; }
+    }
+  }
+
   // 3) bomba aqui, se for útil e der para fugir dela pela busca estrita. Estamos centrados: ela cai nesta casa. Neste
   //    tick só solta a bomba; a fuga começa no seguinte (delay 1). Fora da pressão, nunca com outro jogador com Luva
   //    na mesma casa nem com alguém com Chute na vizinha olhando para cá (na pressão isso travava dois CPUs colados um
@@ -281,10 +416,45 @@ export function think(s: RoundState, p: Player, level: AiLevel, brain: Brain, _a
   const crowded = !late && standingPlayers(s).some(q => {
     if (q === p) return false;
     const qc = playerCell(q);
-    if (q.glove && qc === here) return true;
+    // (colado com um adversário de luva: normalmente não solta bomba; às vezes solta de propósito — ele que pegar a CPU
+    // e a bomba fica debaixo dele: a luva solta o pego e a chama pega quem estiver parado em cima)
+    if (q.glove && qc === here) return aiRoll(Math.floor(s.tick / 30), p.slot, 17, brain.seed) >= level.dodge;
     return (q.kick || !!MOUNTS.current.kicks?.(q)) && faceStep(qc, q.face) === here;
   });
-  const canPlace = !lock && !noBombs && canPlaceBomb(p) && p.carry < 0 && s.grid[here] === CODE.FLOOR && !blocked.has(here) && !crowded;
+  // onde a bomba mais quebra blocos: a casa (perto, com fuga) com mais blocos na cruz; a caça e a pressão mandam antes
+  const blockHits = (i: number): number => {
+    let n = 0;
+    for (const c of crossCells(s, i, bombFireOf(p), bombTypeOf(p) === 2).cells) {
+      if (s.grid[c] === CODE.SOFT) n++;
+      else if (eggToDeny(s, p, c)) n += 2;           // ovo que os outros pegariam vale mais que um bloco
+    }
+    return n;
+  };
+  // só vale ir a uma casa que quebra mais blocos se dá para soltar a bomba lá e ainda fugir (senão ele ficaria andando
+  // atrás de um lugar onde nunca solta nada)
+  const placeableAt = (i: number): boolean => {
+    const sim = fork(s);
+    const q = sim.players[p.slot];
+    [q.x, q.y] = cellCenter(i);
+    return escape(sim, q, hazards(sim, p.slot, extraOf(p, i)), new Set(blocked).add(i), level, true, 1) !== null;
+  };
+  let bestBlock = -1, bestBlockHits = 0;
+  if (!late && !noBombs && !lock) {
+    const hereHits = blockHits(here);
+    const cands: { i: number; h: number }[] = [];
+    for (let i = 0; i < CELLS; i++) {
+      if (i === here || sr.dist[i] > BLOCK_RANGE || !target(i) || blocked.has(i) || s.grid[i] !== CODE.FLOOR) continue;
+      const h = blockHits(i);
+      if (h > hereHits) cands.push({ i, h });
+    }
+    cands.sort((a, b) => b.h - a.h || sr.time[a.i] - sr.time[b.i]);
+    for (const c of cands.slice(0, 3)) {
+      if (placeableAt(c.i)) { bestBlock = c.i; bestBlockHits = c.h; break; }
+    }
+  }
+  const betterBlockSpot = bestBlock >= 0 && bestBlockHits > blockHits(here) && !foeWithin(s, p, here, HUNT_NEAR);
+  const canPlace = !lock && !noBombs && canPlaceBomb(p) && p.carry < 0 && p.grab < 0 && s.grid[here] === CODE.FLOOR && !blocked.has(here) && !crowded && !overlap
+    && !betterBlockSpot;
   if (canPlace) {
     // na pressão, bomba colada num adversário também vale (fecha refúgios); e ninguém fica só na defensiva (`wary`)
     const useful = bombUseful(s, p, here, foes) || (late && foeWithin(s, p, here, PRESS_NEAR));
@@ -296,6 +466,14 @@ export function think(s: RoundState, p: Player, level: AiLevel, brain: Brain, _a
         const lv = late ? { ...level, margin: Math.min(level.margin, LATE_MARGIN) } : level;
         const out = escape(s, p, b.hz, outBlocked, lv, true, 1);
         if (out && out.path.length > 0) { brain.bomb = true; follow(out); return; }
+      }
+      // sacrifício: montado, topa ficar na própria chama (a montaria absorve) se a bomba encurrala um adversário perto —
+      // só às vezes, conforme o contexto (reserva, duelo, fim de rodada)
+      const foeInCross = crossCells(s, here, bombFireOf(p), bombTypeOf(p) === 2).cells.some(c => foes.has(c));   // acerta de frente
+      if (!b.hurtsMate && (b.traps || foeInCross) && enemiesNear(s, p, here) && foeWithin(s, p, here, 4)
+        && aiRoll(Math.floor(s.tick / 20), p.slot, 14, brain.seed) < sacrificeChance(s, p, level)) {
+        const out = escape(s, p, b.hz, new Set(calm).add(here), level, false, 1);
+        brain.bomb = true; follow(out); return;
       }
     }
   }
@@ -333,7 +511,7 @@ export function think(s: RoundState, p: Player, level: AiLevel, brain: Brain, _a
     if (i !== here && target(i) && bombUseful(s, p, i, foes)) spots.push(i);
   }
   spots.sort((a, b) => sr.time[a] - sr.time[b] || a - b);
-  let bestSpot = spots.length ? spots[0] : -1;
+  let bestSpot = bestBlock >= 0 ? bestBlock : spots.length ? spots[0] : -1;
   if (trap) {
     let tried = 0;
     for (const i of spots) {

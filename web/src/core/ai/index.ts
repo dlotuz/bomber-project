@@ -5,7 +5,7 @@ import { standing, playerCell } from '../state';
 import { faceStep } from '../units';
 import { blockedFor, passesBomb } from '../movement';
 import { canKick } from '../kick';
-import { AI_LEVELS } from './level';
+import { AI_LEVELS, aiRoll } from './level';
 import { centered, enterTicks, faceTo, passable, steer } from './nav';
 import { newBrain, think, walkBlocked, type Brain } from './brain';
 import { decideActions } from './actions';
@@ -101,6 +101,13 @@ export function aiInputs(s: RoundState, ai: AiState, cpu: readonly boolean[], le
     if (!standing(p)) continue;
     const brain = ai.brains[p.slot];
     const last = ai.lastOut[p.slot] ?? 0;
+    if (p.heldBy >= 0) {   // na mão de alguém (luva): aperta B várias vezes para se soltar (B é borda)
+      // ritmo de gente: um susto antes do 1º aperto e, depois, um aperto a cada ~6–16 ticks conforme o nível
+      const scared = s.tick - p.actT0 < level.clickDelay;
+      out[p.slot] = !scared && !(last & BTN.B) && aiRoll(s.tick, p.slot, 6, ai.seed) < level.clicks ? BTN.B : 0;
+      brain.path = []; brain.go = [];
+      continue;
+    }
     if (changed) brain.nextThink = Math.min(brain.nextThink, s.tick + level.alert);
     const react = p.disease === DISEASE.DIARRHEA ? 1 : level.react;
     let btn: number | null = null;

@@ -17,7 +17,7 @@ export const DRAW_TIME_END = { black: 104, audioFadeAt: 1, crownAt: 15, bankAt: 
 export const DRAW_DEAD_END = { black: 104, audioFadeAt: 0, crownAt: 15, bankAt: 57, musicAt: 68 } as const;
 export const NEXT_ROUND = { afterScore: 288, afterDraw: 385, bankAt: 31, musicAt: 43 } as const;
 export const SCORE = {
-  spinAt: 4, skipFrom: 18, autoAt: 511, victoryMusicAt: 511, descentAt: 557, descentFrames: 128, descentSpeed: 2,
+  spinAt: 4, skipFrom: 18, autoAt: 180, victoryMusicAt: 511, descentAt: 557, descentFrames: 128, descentSpeed: 2,
   rowY0: 56, rowStep: 32, headX: 48, crownX: [80, 112, 144, 176, 208],
 } as const;
 /** Durações da animação C3:DA94 [spec §6.10]: 1×10, 2×9, 3×4, 4, 5×3, 6, 7, 8, 10, 14. */

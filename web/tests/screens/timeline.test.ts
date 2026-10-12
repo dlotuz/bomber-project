@@ -31,7 +31,7 @@ describe('tempos da spec §6 e decisões R4–R11, R20–R21, R28', () => {
     expect(T.NEXT_ROUND).toEqual({ afterScore: 288, afterDraw: 385, bankAt: 31, musicAt: 43 });
   });
   it('placar (R7, R9) e giro da coroa: 32 quadros, 104 f', () => {
-    expect(T.SCORE).toMatchObject({ spinAt: 4, skipFrom: 18, autoAt: 511, victoryMusicAt: 511, descentAt: 557, descentFrames: 128, descentSpeed: 2 });
+    expect(T.SCORE).toMatchObject({ spinAt: 4, skipFrom: 18, autoAt: 180, victoryMusicAt: 511, descentAt: 557, descentFrames: 128, descentSpeed: 2 });
     expect(T.CROWN_SPIN).toHaveLength(32);
     expect(T.CROWN_SPIN.reduce((a, b) => a + b, 0)).toBe(104);
     expect([0, 9, 10, 27, 103, 104, 500].map(T.crownSpinFrame)).toEqual([0, 9, 10, 18, 31, 31, 31]);

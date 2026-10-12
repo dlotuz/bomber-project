@@ -12,7 +12,9 @@ import { SAFE, crossCells, firstLanding, flightEnd, hazards, kickPath, type Haza
 import { centered, enterTicks, escape, hasRefuge, ticksPerCell, walkBlocked } from './nav';
 import { fork, survives } from './whatif';
 import { oldestRemote, type Brain } from './brain';
-import type { AiLevel } from './level';
+import { aiRoll, type AiLevel } from './level';
+import { isImmune } from '../hit';
+import { airborne } from '../grab';
 
 /** Casa que bloqueia o avanço do P e o empurrão (bit $8000: parede, pilar, soft, bomba, queimando, pressão). */
 const solid = (v: number): boolean => (v & 0x8000) !== 0;
@@ -54,7 +56,7 @@ function who(s: RoundState, p: Player, cells: ReadonlySet<number>): { foe: boole
 }
 
 /** Põe a bomba `id` da cópia `sim` no ar com o voo `flight`, saindo de `from`. */
-function launch(sim: RoundState, id: number, flight: `throw${2 | 3 | 4 | 5}` | 'punch', dir: 0 | 1 | 2 | 3,
+function launch(sim: RoundState, id: number, flight: `throw${2 | 3 | 4 | 5}` | 'punch' | 'bounce', dir: 0 | 1 | 2 | 3,
   from: { x: number; y: number; z: number }): void {
   const b = sim.bombs.find(x => x.id === id);
   if (!b) return;
@@ -210,6 +212,17 @@ function punchPlan(s: RoundState, p: Player, level: AiLevel, hz: Hazard): number
   }
   if (wait >= 0) return wait === p.face ? 0 : FACE_BTN[wait];
   if (stun >= 0 && survives(afterY(s, p, stun, undefined, true).sim, p.slot, level, PUNCH_TICKS)) return go(stun);
+  // sem matar nem atordoar: o soco manda a bomba para onde o adversário fica sem refúgio (só às vezes, por bomba)
+  if (level.hunt) {
+    for (const face of [p.face, ...FACES.filter(f => f !== p.face)]) {
+      if (face !== p.face && !turns) continue;
+      const b = bombAt(s, faceStep(here, face));
+      if (!b || b.bad || b.chainAt || aiRoll(b.id, p.slot, 15, 0) >= trapChance(level)) continue;
+      const [x, y] = cellCenter(b.cell);
+      if (trapsFoeAt(s, p, b, firstLanding(x, y, (face >> 1) as 0 | 1 | 2 | 3, 'punch'))
+        && survives(afterY(s, p, face, undefined, true).sim, p.slot, level, PUNCH_TICKS)) return go(face);
+    }
+  }
   if (!bombAt(s, faceStep(here, p.face)) || hz.at[here] === SAFE || escape(s, p, hz, walkBlocked(s, p), level, true, 0) !== null) return null;
   return survives(afterY(s, p, p.face, undefined, true).sim, p.slot, level, PUNCH_TICKS) ? BTN.Y : null;
 }
@@ -236,6 +249,41 @@ function wantP(s: RoundState, p: Player, level: AiLevel): boolean {
   return survives(sim, p.slot, level, delay);
 }
 
+// ------------------------------------------------------------------------------------------------------------- ameaças
+
+/**
+ * Ameaça de atordoamento/reflect em cima de `p`: uma bomba no ar que vai pousar na casa dele em pouco tempo, ou um
+ * adversário de luva com uma bomba na mão olhando para ele (colado: o B larga na cabeça; na linha a até 4 casas: o
+ * arremesso mira nele). `avoid` = casas a evitar ao desviar (pouso, ou a linha de tiro); `key` = identifica a ameaça
+ * (para sortear "desvia ou não" uma vez só por ameaça, não a cada decisão).
+ */
+export function incomingStun(s: RoundState, p: Player): { avoid: ReadonlySet<number>; key: number } | null {
+  const here = playerCell(p);
+  if (here < 0) return null;
+  for (const f of s.flyers) {
+    if (f.kind !== 'bomb') continue;
+    const e = flightEnd(s, f);
+    if (e.cell === here && e.t <= 36) return { avoid: new Set([here]), key: 100 + f.id };
+  }
+  for (const q of s.players) {
+    if (!isFoe(s, p, q) || q.carry < 0 || airborne(q)) continue;
+    const line: number[] = [];
+    let c = playerCell(q), hit = false;
+    for (let k = 1; k <= 4; k++) {
+      c = faceStep(c, q.face);
+      if (!inField(colOf(c), linOf(c))) break;
+      line.push(c);
+      if (k === 1 && c === here) hit = true;                       // B: larga a bomba na casa da frente
+      if (k >= 2 && s.players.some(o => o !== q && standing(o) && o.heldBy < 0 && !o.flying && playerCell(o) === c)) {
+        if (c === here) hit = true;                                // arremesso: cai no 1º jogador da linha (2..4)
+        break;
+      }
+    }
+    if (hit) return { avoid: new Set(line), key: 200 + q.slot * 64 + (q.carry & 63) };
+  }
+  return null;
+}
+
 // ------------------------------------------------------------------------------------------------------------- luva
 
 /** Arremessar a bomba `b` da casa atual olhando para `face` deixa a CPU com fuga garantida (travada `delay` ticks)? */
@@ -255,6 +303,95 @@ function foeNear(s: RoundState, p: Player, cell: number, d: number): boolean {
   return s.players.some(q => isFoe(s, p, q) && Math.abs(colOf(playerCell(q)) - colOf(cell)) + Math.abs(linOf(playerCell(q)) - linOf(cell)) <= d);
 }
 
+/** A bomba `b`, pousando em `land` (casa livre, sem jogador), deixaria um adversário perto sem refúgio — encurralado — e
+ *  não pegaria colega nenhum? (Sem matar agora: serve só para prender; o resto é com a explosão.) */
+export function trapsFoeAt(s: RoundState, p: Player, b: Bomb, land: number): boolean {
+  if (land < 0 || !inField(colOf(land), linOf(land)) || s.grid[land] !== CODE.FLOOR || bombOccupies(s, land, b)) return false;
+  if (s.players.some(q => standing(q) && playerCell(q) === land)) return false;
+  const sim = fork(s);
+  const sb = sim.bombs.find(x => x.id === b.id);
+  if (!sb) return false;
+  if (sb.state === 'idle' && sim.grid[sb.cell] === CODE.BOMB) sim.grid[sb.cell] = CODE.FLOOR;
+  sb.state = 'idle'; sb.cell = land; [sb.x, sb.y] = cellCenter(land); sim.grid[land] = CODE.BOMB;
+  const me = sim.players[p.slot];
+  const arm = new Set(crossCells(sim, land, b.fire, b.type === 2, undefined, true, b.level ?? 0).cells);
+  if (sim.players.some(q => q !== me && isMate(sim, me, q) && arm.has(playerCell(q)))) return false;
+  return sim.players.some(q => {
+    if (!isFoe(sim, me, q)) return false;
+    const qc = playerCell(q);
+    if (Math.abs(colOf(qc) - colOf(land)) + Math.abs(linOf(qc) - linOf(land)) > 6) return false;
+    const was = s.players[q.slot];
+    const hadRefuge = hasRefuge(s, was, hazards(s, was.slot), walkBlocked(s, was));
+    return hadRefuge && !hasRefuge(sim, q, hazards(sim, q.slot), walkBlocked(sim, q));
+  });
+}
+
+/** Arremesso da luva de `p` olhando para `face` deixa a bomba `b` numa casa que encurrala um adversário. */
+function throwTrap(s: RoundState, p: Player, b: Bomb, face: number): boolean {
+  const here = playerCell(p);
+  const n = aimThrow(s, here, face, p.slot);
+  return trapsFoeAt(s, p, b, stepN(here, face, n));
+}
+
+/** Há um jeito de atordoar um adversário com a bomba `b` (que a luva vai levantar): ele colado na frente, para a
+ *  dropadinha, ou o arremesso caindo na cabeça dele. */
+function canStunFoe(s: RoundState, p: Player, b: Bomb, turns: boolean): boolean {
+  const here = playerCell(p);
+  const c = faceStep(here, p.face);
+  if (inField(colOf(c), linOf(c))) {
+    const v = s.players.find(q => isFoe(s, p, q) && !airborne(q) && !q.mount && q.carry < 0 && playerCell(q) === c);
+    if (v && killFuse(s, p, b, c, (p.face >> 1) as 0 | 1 | 2 | 3) >= 0) return true;
+  }
+  for (const face of [p.face, ...FACES.filter(f => f !== p.face)]) {
+    if (face !== p.face && !turns) continue;
+    const n = aimThrow(s, here, face, p.slot);
+    if (n <= 4 && killFuse(s, p, b, stepN(here, face, n), (face >> 1) as 0 | 1 | 2 | 3) >= 0) return true;
+  }
+  return false;
+}
+
+/** Depois de arremessar/largar, a luva fica sem "oportunidades" por este tempo (ticks). */
+const GLOVE_COOL = 240;
+/** Chance (%) de usar a luva só para encurralar, por nível. */
+const trapChance = (level: AiLevel): number => (level.trap ? 70 : level.hunt ? 30 : 0);
+
+/** Adversário na casa de `p` que a luva consegue pegar (de pé, no chão, sem montaria, sem invencibilidade e sem
+ *  estar segurando B para "trancar"); undefined = ninguém. */
+function foeToGrab(s: RoundState, p: Player): Player | undefined {
+  const here = playerCell(p);
+  return s.players.find(q => isFoe(s, p, q) && !airborne(q) && !q.mount && !isImmune(s, q) && !(q.prevBtn & BTN.B) && playerCell(q) === here);
+}
+
+/** Segurando um adversário (pego com a luva): arremessa quando a queda dele cai em chama/perigo; sem isso, segura um
+ *  pouco e arremessa para longe (ou já, se a casa de quem segura está para explodir). */
+function holdFoe(s: RoundState, p: Player, level: AiLevel, brain: Brain, last: number): number {
+  const here = playerCell(p);
+  const q = s.players[p.grab];
+  brain.still = true;
+  if (brain.liftAt < 0) brain.liftAt = s.tick - LIFT_TICKS;
+  if (!(last & BTN.A)) return BTN.A;
+  const held = s.tick - brain.liftAt;
+  if (p.act === 'lift' || held < LIFT_TICKS) return BTN.A;
+  const release = (): number => { brain.liftAt = -1; brain.cool = s.tick + GLOVE_COOL; return 0; };
+  if (!q) return release();
+  const turns = centered(s, p);
+  const hzFoe = hazards(s, q.slot), hzMe = hazards(s, p.slot);
+  let lethal = -1, far = -1, farN = -1;
+  for (const face of [p.face, ...FACES.filter(f => f !== p.face)]) {
+    if (face !== p.face && !turns) continue;
+    const n = aimThrow(s, here, face, p.slot);
+    const land = stepN(here, face, n);
+    if (!inField(colOf(land), linOf(land)) || (s.grid[land] & 0x8000) !== 0) continue;
+    if (lethal < 0 && hzFoe.at[land] !== SAFE && hzFoe.at[land] <= 45) lethal = face;
+    if (n > farN) { farN = n; far = face; }
+  }
+  const pose = (face: number): number => (face === p.face ? release() : FACE_BTN[face] | BTN.A);
+  if (lethal >= 0 && survives(s, p.slot, level, THROW_TICKS)) return pose(lethal);
+  if ((held >= HOLD_MAX * 2 || hzMe.at[here] !== SAFE) && far >= 0) return pose(far);
+  if (held >= HOLD_MAX * 3) return release();
+  return BTN.A;
+}
+
 /**
  * Luva. Segurando: arremessa na cabeça de quem o pavio mata (vira para ele se estiver de lado); com a bomba carregada
  * (pavio curto, que já não anda na mão), segura até HOLD_LOADED esperando alguém entrar na mira; senão arremessa em
@@ -267,8 +404,9 @@ function glove(s: RoundState, p: Player, level: AiLevel, brain: Brain, last: num
   const here = playerCell(p);
   const turns = centered(s, p);
   const faces = [p.face, ...FACES.filter(f => f !== p.face)];
-  const release = (): number => { brain.liftAt = -1; return 0; };      // solta A: arremessa
+  const release = (): number => { brain.liftAt = -1; brain.cool = s.tick + GLOVE_COOL; return 0; };      // solta A: arremessa
   const aimAt = (face: number): number => (face === p.face ? release() : FACE_BTN[face] | BTN.A);
+  if (p.grab >= 0) return holdFoe(s, p, level, brain, last);
   if (p.carry >= 0) {
     brain.still = true;
     if (brain.liftAt < 0) brain.liftAt = s.tick - LIFT_TICKS;           // levantou sem planejar: arremessa logo
@@ -277,12 +415,41 @@ function glove(s: RoundState, p: Player, level: AiLevel, brain: Brain, last: num
     if (p.act === 'lift' || held < LIFT_TICKS) return BTN.A;
     const b = bombById(s, p.carry);
     if (!b) return release();
+    // morreria esperando (explosão prevista aqui): nada de esperar mira nem pavio
+    const unsafe = hazards(s, p.slot).at[here] !== SAFE;
+    // dropadinha: B larga a bomba na casa da frente, na cabeça do adversário colado — mata (pavio no ponto) ou só
+    // atordoa, conforme a vez; nunca em quem segura bomba (reflete de volta). Sorteio por bomba, não por tick.
+    if (!(last & BTN.B)) {
+      const c = faceStep(here, p.face);
+      const victim = inField(colOf(c), linOf(c))
+        ? s.players.find(q => isFoe(s, p, q) && !airborne(q) && playerCell(q) === c) : undefined;
+      if (victim && victim.carry < 0 && !victim.mount) {
+        const kf = killFuse(s, p, b, c, (p.face >> 1) as 0 | 1 | 2 | 3);
+        if (kf >= 0) {
+          const chance = b.fuse <= kf ? level.dropKill : level.dropStun;
+          if (unsafe || aiRoll(b.id, p.slot, 11, brain.seed) < chance) {
+            const sim = fork(s);
+            sim.players[p.slot].carry = -1;
+            const [x, y] = cellCenter(here);
+            launch(sim, b.id, 'bounce', (p.face >> 1) as 0 | 1 | 2 | 3, { x, y, z: 0 });
+            if (survives(sim, p.slot, level, DETONATE_TICKS)) { brain.liftAt = -1; brain.cool = s.tick + GLOVE_COOL; return BTN.A | BTN.B; }
+          }
+        }
+      }
+    }
     for (const face of faces) {
       if (face !== p.face && !turns) continue;
       if (b.fuse <= throwKill(s, p, b, face) && throwSafe(s, p, b, level, face, THROW_TICKS)) return aimAt(face);
     }
-    if (level.hunt && b.fuse <= LOADED_FUSE && held < HOLD_LOADED && foeNear(s, p, here, LOAD_NEAR) && survives(s, p.slot, level, THROW_TICKS + 2)) return BTN.A;
-    if (aimThrow(s, here, p.face, p.slot) > 4 && held < HOLD_MAX) return BTN.A;
+    // sem matar: prende o adversário mandando a bomba para onde ele fica sem refúgio (só às vezes, por bomba)
+    if (level.hunt && aiRoll(b.id, p.slot, 15, brain.seed) < trapChance(level)) {
+      for (const face of faces) {
+        if (face !== p.face && !turns) continue;
+        if (throwTrap(s, p, b, face) && throwSafe(s, p, b, level, face, THROW_TICKS)) return aimAt(face);
+      }
+    }
+    if (!unsafe && level.hunt && b.fuse <= LOADED_FUSE && held < HOLD_LOADED && foeNear(s, p, here, LOAD_NEAR) && survives(s, p.slot, level, THROW_TICKS + 2)) return BTN.A;
+    if (!unsafe && aimThrow(s, here, p.face, p.slot) > 4 && held < HOLD_MAX) return BTN.A;
     if (aimThrow(s, here, p.face, p.slot) <= 4 || throwSafe(s, p, b, level, p.face, THROW_TICKS)) return release();
     for (const face of faces) if (face !== p.face && turns && throwSafe(s, p, b, level, face, THROW_TICKS)) return aimAt(face);
     return release();
@@ -292,6 +459,14 @@ function glove(s: RoundState, p: Player, level: AiLevel, brain: Brain, last: num
     brain.liftAt = -1;
   }
   if (!p.glove || p.mount || p.actLeft > 0) return null;
+  // pegar o adversário que está na mesma casa (a luva prefere o jogador à bomba) e arremessá-lo: oportunidade, então
+  // sempre (menos logo depois de outro arremesso)
+  if (level.hunt && s.tick >= brain.cool && foeToGrab(s, p)) {
+    brain.still = true;
+    if (last & BTN.A) return 0;                                         // solta antes: pegar precisa de borda
+    brain.liftAt = s.tick;
+    return BTN.A;
+  }
   const b = bombAt(s, here);
   if (!b || b.bad || b.chainAt) return null;
   const lift = (): number => {
@@ -303,19 +478,31 @@ function glove(s: RoundState, p: Player, level: AiLevel, brain: Brain, last: num
   const delay = 2 + LIFT_TICKS + THROW_TICKS;
   // 1) o arremesso já mata (o pavio para na mão: levanta agora)
   if (faces.some(f => (f === p.face || turns) && b.fuse <= throwKill(s, p, b, f) && throwSafe(s, p, b, level, f, delay))) return lift();
+  const cooled = s.tick >= brain.cool && b.owner === p.slot;
+  // 1b) prender: o arremesso deixa a bomba onde um adversário perto fica sem refúgio (só às vezes; não mata agora)
+  if (cooled && level.hunt && b.type !== 1 && aiRoll(b.id, p.slot, 15, brain.seed) < trapChance(level)
+    && faces.some(f => (f === p.face || turns) && throwTrap(s, p, b, f) && throwSafe(s, p, b, level, f, delay))) return lift();
   // 2) carregar: espera o pavio baixar até matar quem está na mira, ou até "carregada" se só há alguém perto
   if (level.hunt && b.type !== 1) {
     let target = -1;
     for (const f of faces) if (f === p.face || turns) target = Math.max(target, throwKill(s, p, b, f));
+    const real = target >= 0;                       // há mira que mata
     if (target < 0 && foeNear(s, p, here, LOAD_NEAR)) target = LOADED_FUSE;
     if (target >= 0) {
-      if (b.fuse <= target) return lift();
-      const hz = hazards(s, p.slot);
-      if (escape(s, p, hz, walkBlocked(s, p), level, true, b.fuse - target + 1) !== null) { brain.still = true; return 0; }
+      if (b.fuse <= target) { if (real || cooled) return lift(); }
+      else {
+        const hz = hazards(s, p.slot);
+        const canWait = escape(s, p, hz, walkBlocked(s, p), level, true, b.fuse - target + 1) !== null;
+        // nem sempre espera o pavio baixar: às vezes compensa pegar já e atordoar — mas só se há mesmo como atordoar
+        // (e, sem poder esperar, é isso ou morrer)
+        const impatient = cooled && canStunFoe(s, p, b, turns) && (!canWait || aiRoll(b.id, p.slot, 12, brain.seed) < level.dropStun);
+        if (impatient && survives(s, p.slot, level, 2 + LIFT_TICKS)) return lift();
+        if (canWait) { brain.still = true; return 0; }
+      }
     }
   }
-  // 3) como antes: bomba nossa recém-colocada e alguém na mira — levanta e arremessa (só atordoa)
-  if (b.owner !== p.slot || s.tick - b.born > FRESH) return null;
+  // 3) como antes: bomba nossa recém-colocada e alguém na mira — levanta e arremessa (só atordoa); com folga entre uma e outra
+  if (!cooled || s.tick - b.born > FRESH) return null;
   const n = aimThrow(s, here, p.face, p.slot);
   if (n > 4) return null;
   const target = s.players.find(q => q.slot !== p.slot && standing(q) && playerCell(q) === stepN(here, p.face, n));
