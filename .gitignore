@@ -21,3 +21,6 @@ web/dist-e2e/
 
 # login/credenciais do Claude Code (nunca versionar)
 .claude-login/
+
+# contas da sala online (usuarios e hashes): dados locais do servidor
+web/server/data/

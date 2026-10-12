@@ -8,7 +8,7 @@ import {
 import { RITMO_ROM } from '../../src/render/hdart/catalog-ritmo';
 import { validatePack } from '../../src/render/hdart/validate';
 import { HD_DIRS, charKey, itemKey, mountKey, stageKey } from '../../src/render/hdart/types';
-import { CHARACTERS } from '../../src/render/art/bomber';
+import { ORIGINALS as CHARACTERS } from '../../src/render/art/bomber';
 import { DISEASE, ITEM } from '../../src/core/types';
 import { FLAME_TICKS, STAGE_NAMES } from '../../src/core/constants';
 

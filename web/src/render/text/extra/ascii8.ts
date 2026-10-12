@@ -17,6 +17,8 @@ export const EXTRA: readonly ExtraGlyph[] = [
   { ch: 'Á', base: 'A', shrinkTop: 1, rows: [agudo, ...blank7] },
   { ch: 'Ã', base: 'A', shrinkTop: 1, rows: [til, ...blank7] },
   { ch: 'Ê', base: 'E', shrinkTop: 1, rows: [circunflexo, ...blank7] },
+  { ch: 'Í', base: 'I', shrinkTop: 1, rows: [agudo, ...blank7] },
+  { ch: 'Ô', base: 'O', shrinkTop: 1, rows: [circunflexo, ...blank7] },
   { ch: 'Ó', base: 'O', shrinkTop: 1, rows: [agudo, ...blank7] },
   { ch: 'Õ', base: 'O', shrinkTop: 1, rows: [til, ...blank7] },
   { ch: 'Ú', base: 'U', shrinkTop: 1, rows: [agudo, ...blank7] },

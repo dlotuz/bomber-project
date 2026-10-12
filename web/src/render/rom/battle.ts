@@ -7,7 +7,8 @@ import { FrameBuilder } from './builder';
 import { romTables } from './tables';
 import { readScene } from './adapt';
 import { fieldWords } from './field';
-import { headOverrides, headTiles, hudWords, infinityOverrides } from './hud';
+import { headOverrides, headTiles, hudFrameIndices, hudWords, infinityOverrides, paintHudFaces } from './hud';
+import { skinOf } from '../art/charskins';
 import { CLOCK_FROZEN_FROM } from '../../core/constants';
 import { hudCrying } from '../hud-cry';
 import { sceneryCgram, sceneryTiles } from './scenery';
@@ -127,7 +128,8 @@ export function buildBattleFrame(s: RoundState, vis: RomBattleVis, a: RomAssets,
   const memo = romMemo(s);
   const clock = battleClock(s, memo, frame);
   const cry = s.players.map(p => hudCrying(s, p));
-  const heads = opts.hudHeads === false ? [] : headOverrides(s.players.map(p => (p.present ? headTiles(a.character(p.char), p.slot, cry[p.slot]) : null)));
+  const faces = s.players.map(p => (p.present ? headTiles(a.character(p.char), p.slot, cry[p.slot]) : null));
+  const heads = opts.hudHeads === false ? [] : headOverrides(faces);
   const headKey = opts.hudHeads === false ? 'rom' : s.players.map(p => (p.present ? `${p.char}${cry[p.slot] ? 'c' : ''}` : '-')).join(',');
   const inf = s.clock.sec >= CLOCK_FROZEN_FROM ? infinityOverrides(ar.bgTiles.px, ar.hudMap) : [];
   const tiles = sceneryTiles(ar, clock.tick, [...heads, ...inf], headKey + (inf.length ? '|inf' : ''), opts.tileCopies);
@@ -145,6 +147,11 @@ export function buildBattleFrame(s: RoundState, vis: RomBattleVis, a: RomAssets,
   for (const l of opts.layers ?? romLayers) {
     try { l.draw(l.id === 'mounts' && skip.has('eggs') ? withoutEggs(s) : s, b, a, frame, clock.tick); }
     catch (e) { warnOnce(a, 'layer:' + l.id, `Crown Blast: camada "${l.id}" falhou nesta partida; ignorando o quadro dela.`, e); }
+  }
+  // skins: o rosto do HUD ganha uma linha de BG própria, pintada (depois das camadas, que também mexem nos mapas)
+  if (opts.hudHeads !== false && !skip.has('hud')) {
+    const skins = s.players.map(p => (p.present ? skinOf(p.char) : null));
+    if (skins.some(Boolean)) paintHudFaces(b, HUD_MAP_ROW, (ar.hudMap[10] >> 10) & 7, skins, hudFrameIndices(ar.bgTiles.px, ar.hudMap));
   }
   const math = skip.has('arena') ? 'none' : ar.colorMath;   // sem a arena, nada para misturar (e o fundo fica puro)
   const bands: ScanBand[] = [

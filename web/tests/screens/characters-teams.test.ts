@@ -104,16 +104,14 @@ describe('desenho (revisão da Task 10, rodada 2)', () => {
     expect(fills.filter(k => k.startsWith(`${PLAYER_COLORS[0]}:`))).toHaveLength(8);
     expect(fills.filter(k => k.startsWith(`${PLAYER_COLORS[1]}:`))).toHaveLength(8);
   });
-  it('título de personagens vai dentro do vão da corda (CHARSEL_TITLE_PX), não na barra fixa y=12', () => {
+  it('título de personagens numa linha no topo, no padrão das telas do online', () => {
     const { app } = mkApp();
     const c = charactersScreen(app); app.go(c);
     const { ctx } = recCtx();
     hdBegin();
     c.draw(ctx, fakeBank, 0);
-    // T22: 2 linhas de 16 px na fonte `menuTitle`, centradas no vão (agora na camada HD dos menus).
-    const cx = Math.floor((CHARSEL_TITLE_PX.x0 + CHARSEL_TITLE_PX.x1 + 1) / 2);
     const titles = hdTexts().filter(t => t.title).map(t => ({ x: t.x, y: t.y, align: t.align }));
-    expect(titles).toEqual([{ x: cx, y: CHARSEL_TITLE_PX.y0, align: 'center' }, { x: cx, y: CHARSEL_TITLE_PX.y0 + 16, align: 'center' }]);
+    expect(titles).toEqual([{ x: 128, y: 8, align: 'center' }]);
   });
   it('título de equipes também vai dentro do mesmo vão', () => {
     const { app } = mkApp();

@@ -1,7 +1,7 @@
 // IA: bomba na cabeça no tempo certo (soco e luva). A vítima (slot 1) fica parada até ser atordoada — como quem não viu
 // a bomba vindo — e daí em diante é uma CPU Forte tentando fugir: só morre se o pavio estava no ponto.
 import { arena, put, C } from '../kit';
-import { createAi, aiInputs } from '../../../src/core/ai';
+import { createAi, aiInputs, AI_LEVELS } from '../../../src/core/ai';
 import { killFuse, punchKill } from '../../../src/core/ai/actions';
 import { addBomb } from '../../../src/core/bombs';
 import { step } from '../../../src/core/step';
@@ -56,6 +56,11 @@ describe('IA: bomba na cabeça no tempo certo', () => {
   });
 
   it('luva: sobre a própria bomba nova, espera o pavio baixar, arremessa na cabeça e mata', () => {
+    const lv = AI_LEVELS[2], keep = lv.dropStun;
+    lv.dropStun = 0;                                   // sem a impaciência (outro teste cobre)
+    try { espera(); } finally { lv.dropStun = keep; }
+  });
+  const espera = (): void => {
     const s = arena(); const p = put(s, 0, 4, 3); p.glove = true; p.face = 2; put(s, 1, 7, 3);
     const b = addBomb(s, 0, C(4, 3), { fire: 1 });
     const kf = killFuse(s, p, b, C(7, 3), 1);
@@ -65,7 +70,7 @@ describe('IA: bomba na cabeça no tempo certo', () => {
     expect(r.ev).toContainEqual({ type: 'stunned', slot: 1 });
     expect(r.deadAt).toBeGreaterThanOrEqual(0);
     expect(s.players[0].state).toBe('alive');
-  });
+  };
 
   it('luva: vira para o adversário que está de lado antes de arremessar', () => {
     const s = arena(); const p = put(s, 0, 4, 3); p.glove = true; p.face = 4; put(s, 1, 7, 3);
@@ -104,5 +109,73 @@ describe('IA: bomba na cabeça no tempo certo', () => {
     expect(r.ev).toContainEqual({ type: 'punch', slot: 0 });
     expect(r.deadAt).toBeGreaterThanOrEqual(0);
     expect(s.players[0].state).toBe('alive');
+  });
+});
+
+describe('IA: dropadinha, desvio, cliques e arremesso de adversário', () => {
+  const withLevel = (patch: Partial<(typeof AI_LEVELS)[number]>, fn: () => void): void => {
+    const lv = AI_LEVELS[2], keep = { ...lv };
+    Object.assign(lv, patch);
+    try { fn(); } finally { Object.assign(lv, keep); }
+  };
+
+  it('dropadinha: segurando a bomba com o adversário colado, B larga na cabeça dele (atordoa) sem se matar', () => {
+    withLevel({ dropKill: 100, dropStun: 100 }, () => {
+      const s = arena(); const p = put(s, 0, 4, 3); p.glove = true; p.face = 2; put(s, 1, 5, 3);
+      const b = addBomb(s, 0, C(4, 3), { fuse: 40, fire: 1 });
+      const r = duel(s, 200, b);
+      expect(r.ev).toContainEqual({ type: 'stunned', slot: 1 });
+      expect(s.players[0].state).toBe('alive');
+    });
+  });
+
+  it('cliques: pego pela luva de um adversário, a CPU aperta B até se soltar', () => {
+    const s = arena(); const p0 = put(s, 0, 4, 3); const p1 = put(s, 1, 4, 3); p1.glove = true; p0.inv = 0; p1.inv = 0;
+    const ai = createAi();
+    let released = -1, grabbed = false;
+    for (let i = 0; i < 400 && released < 0; i++) {
+      const inp = aiInputs(s, ai, CPU0, 2);
+      inp[1] = BTN.A;                                   // aperta e segura A: pega e fica segurando
+      step(s, inp);
+      if (s.players[0].heldBy >= 0) grabbed = true;
+      else if (grabbed) released = i;
+    }
+    expect(grabbed).toBe(true);
+    expect(released).toBeGreaterThanOrEqual(0);
+    expect(released).toBeGreaterThan(40);                   // não solta rápido demais: susto + apertos no ritmo de gente
+    expect(released).toBeLessThan(260);
+  });
+
+  it('luva: na mesma casa de um adversário, pega e arremessa o outro jogador', () => {
+    withLevel({ grabFoe: 100 }, () => {
+      const s = arena(); const p0 = put(s, 0, 4, 3); const p1 = put(s, 1, 4, 3); p0.glove = true; p0.inv = 0; p1.inv = 0;
+      const ai = createAi();
+      let grabbed = false, threw = false;
+      for (let i = 0; i < 160 && !threw; i++) {
+        const inp = aiInputs(s, ai, CPU0, 2);
+        inp[1] = 0;
+        const ev = step(s, inp);
+        if (s.players[0].grab >= 0) grabbed = true;
+        if (ev.some(e => e.type === 'throw' && e.slot === 0)) threw = true;
+      }
+      expect([grabbed, threw]).toEqual([true, true]);
+    });
+  });
+
+  it('desvio: adversário de luva com a bomba mirando nela na linha, a CPU sai da linha', () => {
+    withLevel({ dodge: 100 }, () => {
+      const s = arena(); const p0 = put(s, 0, 7, 3); const p1 = put(s, 1, 4, 3); p1.glove = true; p1.face = 2;
+      addBomb(s, 1, C(4, 3), { fuse: 90, fire: 1 });
+      const ai = createAi();
+      const y0 = p0.y;
+      let left = false;
+      for (let i = 0; i < 40 && !left; i++) {
+        const inp = aiInputs(s, ai, CPU0, 2);
+        inp[1] = BTN.A;                                 // levanta e segura (sem arremessar)
+        step(s, inp);
+        if (s.players[1].carry >= 0 && s.players[0].y !== y0) left = true;
+      }
+      expect(left).toBe(true);
+    });
   });
 });

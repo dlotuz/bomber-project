@@ -59,10 +59,10 @@ describe('jogadores (§6.4, A15)', () => {
 });
 
 describe('regras (§6.5)', () => {
-  it('padrões: Normal, 3, 3:00, Não, Não, Não', () => {
+  it('padrões: Normal, 3, 3:00, Não, Não', () => {
     const { app } = mkApp();
     const r = rulesScreen(app); app.go(r);
-    expect(r.values()).toEqual(['Normal', '3', '3:00', 'Não', 'Não', 'Não']);
+    expect(r.values()).toEqual(['Normal', '3', '3:00', 'Não', 'Não']);
   });
   it('←/→ param nos limites (sem volta) e tocam $01 sempre', () => {
     const { app, sink } = mkApp();
@@ -79,14 +79,12 @@ describe('regras (§6.5)', () => {
     expect(r.values()[3]).toBe('Sim');
     expect(sink.of('sfx').filter(c => c.id === 1)).toHaveLength(12);
   });
-  it('ligar a Corrida Bônus zera o prêmio guardado (§3.14)', () => {
+  it('a Corrida Bônus não aparece nas regras e um valor antigo ligado é desligado', () => {
     const { app } = mkApp();
-    carry.racerPrize = { slot: 0, prize: 8 };
+    app.settings.setup.rules.racer = true;
     const r = rulesScreen(app); app.go(r);
-    for (let k = 0; k < 5; k++) press(app, BTN.DOWN);
-    press(app, BTN.RIGHT);
-    expect([r.values()[5], carry.racerPrize]).toEqual(['Sim', null]);
-    expect(app.settings.setup.rules.racer).toBe(true);
+    expect(r.values()).toHaveLength(5);
+    expect(app.settings.setup.rules.racer).toBe(false);
   });
   it('A → personagens; B → jogadores', () => {
     const a = mkApp();
@@ -102,24 +100,22 @@ describe('regras: valores como no original (I10)', () => {
   it('cores por valor: Low/Off/∞ azul, Normal/números/tempos verde, Strong/On vermelho', () => {
     const { app } = mkApp();
     const r = rulesScreen(app); app.go(r);
-    expect(r.tones()).toEqual(['green', 'green', 'green', 'blue', 'blue', 'blue']);
+    expect(r.tones()).toEqual(['green', 'green', 'green', 'blue', 'blue']);
     const rl = app.settings.setup.rules;
     rl.cpuLevel = 0; rl.timeIdx = 4; rl.suddenDeath = true;
     expect(r.tones().slice(0, 4)).toEqual(['blue', 'green', 'blue', 'red']);
     rl.cpuLevel = 2; rl.timeIdx = 0;
     expect(r.tones().slice(0, 3)).toEqual(['red', 'green', 'green']);
   });
-  it('valores alinhados à esquerda em x = 176 (coluna 11 do BG1 da captura), na cor do tom', () => {
+  it('valores na lista do visual novo: à direita da faixa (x = 236), uma linha a cada 17 px, na cor do tom', () => {
     const { app } = mkApp();
     app.settings.setup.rules.suddenDeath = true;
     const r = rulesScreen(app); app.go(r);
     const ctx = { clearRect() {} } as unknown as CanvasRenderingContext2D;
     hdBegin();
     r.draw(ctx, {} as SpriteBank, 0);
-    expect(RULES_VALUE_X).toBe(176);
-    // Valores: nas linhas 48 + 19·i (passo menor para caberem os atalhos), todos começando em x = 176.
-    const values = hdTexts().filter(t => t.x >= 150);
-    expect(values.map(t => [t.x, t.y, t.align])).toEqual([0, 1, 2, 3, 4, 5].map(i => [176, 48 + 19 * i, 'left']));
+    const values = hdTexts().filter(t => t.x >= 200);
+    expect(values.map(t => [t.x, t.y, t.align])).toEqual([0, 1, 2, 3, 4].map(i => [236, 30 + 17 * i, 'right']));
     expect(values.slice(0, 4).map(t => t.tone)).toEqual(['green', 'green', 'green', 'red']);
   });
 });

@@ -146,7 +146,7 @@ describe('faixas (§6.9, R27, R28)', () => {
 });
 
 describe('fim de rodada (§6.10, §6.11, R4–R6)', () => {
-  it('vitória: FADE, fade-out 15, +1 coroa no 1º frame do preto, $30 +16, $15 +57 e placar em +63', () => {
+  it('vitória: FADE, fade-out 15, +1 coroa no 1º frame do preto, $30 +16, $15 +45 (preto curto) e placar em +45', () => {
     const { app, sink, b, ms } = start();
     toPlay(app, b); forceWin(b.round, 0); sink.clear();
     const t0 = untilTransition(app);
@@ -155,22 +155,22 @@ describe('fim de rodada (§6.10, §6.11, R4–R6)', () => {
     expect(crownsOf(ms.match)[0]).toBe(0);
     idle(app, 1);
     expect(crownsOf(ms.match)[0]).toBe(1);
-    expect(untilScreen(app, 'scoreboard') - t0).toBe(63);
-    expect(calls(sink, t0)).toEqual([[0, 'fade', undefined], [16, 'bank', 0x30], [57, 'music', 0x15]]);
+    expect(untilScreen(app, 'scoreboard') - t0).toBe(45);
+    expect(calls(sink, t0)).toEqual([[0, 'fade', undefined], [16, 'bank', 0x30], [45, 'music', 0x15]]);
   });
-  it('EMPATE por tempo: FADE +1, $30 +58, $18 +68 e a tela EMPATE em +119', () => {
+  it('EMPATE por tempo: FADE +1, $30 e $18 no fim do preto curto (+45) e a tela EMPATE em +45', () => {
     const { app, sink, b } = start();
     toPlay(app, b); forceClock(b.round, 1); sink.clear();
     const t0 = untilTransition(app);
-    expect(untilScreen(app, 'draw') - t0).toBe(119);
-    expect(calls(sink, t0)).toEqual([[1, 'fade', undefined], [58, 'bank', 0x30], [68, 'music', 0x18]]);
+    expect(untilScreen(app, 'draw') - t0).toBe(45);
+    expect(calls(sink, t0)).toEqual([[1, 'fade', undefined], [45, 'bank', 0x30], [45, 'music', 0x18]]);
   });
-  it('EMPATE com todos mortos: FADE +0, $30 +57, $18 +68 e EMPATE em +119', () => {
+  it('EMPATE com todos mortos: FADE +0, $30 e $18 no fim do preto curto (+45) e EMPATE em +45', () => {
     const { app, sink, b } = start();
     toPlay(app, b); forceAllDead(b.round); sink.clear();
     const t0 = untilTransition(app);
-    expect(untilScreen(app, 'draw') - t0).toBe(119);
-    expect(calls(sink, t0)).toEqual([[0, 'fade', undefined], [57, 'bank', 0x30], [68, 'music', 0x18]]);
+    expect(untilScreen(app, 'draw') - t0).toBe(45);
+    expect(calls(sink, t0)).toEqual([[0, 'fade', undefined], [45, 'bank', 0x30], [45, 'music', 0x18]]);
   });
 });
 

@@ -4,6 +4,7 @@ import type { RomView } from './view';
 import { decodeTiles } from './decode/tiles';
 import { readBgr555 } from './decode/palette';
 import { decodeZte } from './decode/zte';
+import { CHAR_COUNT, baseChar, recolorBgr555, skinOf } from '../render/art/charskins';
 
 export const CHAR_SHEETS = 0xc20730, VICTORY_SHEETS = 0xc28ebf, CHAR_PALETTES = 0xc2779d;
 export const HUD_HEAD_BLOCKS = 0xc46170, HUD_HEAD_SRC = 0xc4617f, HUD_HEAD_DST = 0xc461f7;
@@ -41,8 +42,10 @@ export function hudHeadTiles(rom: RomView, buf: Uint8Array, e: number): Tiles {
   return decodeTiles(hudHeadRaw(rom, buf, e), 4);
 }
 
-export function loadCharacter(rom: RomView, c: number, heads: () => Uint8Array): CharacterAssets {
-  if (!(c >= 0 && c <= 5)) throw new RangeError(`personagem inválido: ${c}`);
+/** `c` pode ser uma skin (6..8): vale o desenho do personagem-base, com as paletas pintadas. */
+export function loadCharacter(rom: RomView, id: number, heads: () => Uint8Array): CharacterAssets {
+  if (!(id >= 0 && id < CHAR_COUNT)) throw new RangeError(`personagem inválido: ${id}`);
+  const c = baseChar(id), skin = skinOf(id);
   const sheet = rom.p24(CHAR_SHEETS + 3 * c), vsheet = rom.p24(VICTORY_SHEETS + 3 * c);
   const frames = new Map<number, Uint8Array>(), victoryFrames = new Map<number, Uint8Array>();
   const hudHeads = new Map<number, Tiles>(), hudCries = new Map<number, Tiles>();
@@ -51,9 +54,12 @@ export function loadCharacter(rom: RomView, c: number, heads: () => Uint8Array):
     let t = cache.get(slot); if (!t) { t = hudHeadTiles(rom, heads(), row * 5 + slot); cache.set(slot, t); } return t;
   };
   return {
-    char: c,
+    char: id,
     frame: g => { let f = frames.get(g); if (!f) { f = sheetFrame(rom, sheet, g); frames.set(g, f); } return f; },
-    palettes: Array.from({ length: 5 }, (_, s) => readBgr555(rom.bytes(rom.p24(CHAR_PALETTES + 32 * c + 4 * s), 32), 0, 16)),
+    palettes: Array.from({ length: 5 }, (_, s) => {
+      const p = readBgr555(rom.bytes(rom.p24(CHAR_PALETTES + 32 * c + 4 * s), 32), 0, 16);
+      return skin ? recolorBgr555(p, skin) : p;
+    }),
     victoryFrame: g => {
       if (!(g >= 0 && g <= 3)) throw new RangeError(`quadro de vitória inválido: ${g}`);
       let f = victoryFrames.get(g); if (!f) { f = sheetFrame(rom, vsheet, g); victoryFrames.set(g, f); } return f;

@@ -1,4 +1,5 @@
 import type { RomAssets } from '../../rom/types';
+import { baseChar, recolorBgr555, skinOf } from '../art/charskins';
 
 export const ITEM_TABLE = 0xc15fe0;     // 4 B por ID ($00..$2F): u16 palavra do BG2, u16 lógico (lido em $C1:5D00)
 export const CROWN_TABLE = 0xc45d11;    // u16 por nº de coroas (0..9): palavra do HUD
@@ -30,8 +31,10 @@ export function romTables(a: RomAssets): RomTables {
       const key = char * 8 + slot;
       let p = pals.get(key);
       if (!p) {
-        const src = rom.p24(TEAM_PALETTES + 32 * char + 4 * slot);
+        const src = rom.p24(TEAM_PALETTES + 32 * baseChar(char) + 4 * slot);
         p = Uint16Array.from({ length: 16 }, (_, i) => rom.u16(src + 2 * i));
+        const skin = skinOf(char);
+        if (skin) p = recolorBgr555(p, skin);
         pals.set(key, p);
       }
       return p;

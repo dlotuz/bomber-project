@@ -4,9 +4,8 @@ import { canStart } from '../game/config';
 import { FADE_MENU, FADE_TO_TITLE } from '../app/fade';
 import { MUSIC } from '../app/audio';
 import { S } from '../render/text/strings';
-import { drawText } from '../render/text/text';
 import type { Tone } from '../render/text/types';
-import { hdMenu } from '../render/hd-menu';
+import { drawLobbyList } from '../render/lobby-list';
 import { Menu, type MenuRow } from './menu';
 import { titleScreen } from './title';
 import { rulesScreen } from './rules';
@@ -55,14 +54,9 @@ export function playersScreen(app: App): Screen & { readonly cursor: number; val
       if (menu.update(inp.any, inp.pressedAny, app.audio) === 'back') app.transition(() => titleScreen(app), FADE_TO_TITLE);
     },
     draw(ctx, bank) {
-      hdMenu(ctx, [24, 48 + 32 * menu.cursor]);
-      drawText(ctx, bank, 'menuTitle', S.players.title, PLAYERS_TITLE.x, PLAYERS_TITLE.y, { align: 'center' });
-      for (let i = 0; i < 5; i++) {
-        const y = 47 + 32 * i;
-        drawText(ctx, bank, 'menuItem', S.players.row[i], 48, y);
-        const v = value(i);
-        drawText(ctx, bank, 'menuItem', v.text, 160, y, { tone: v.tone });
-      }
+      const names: Record<SlotKind, string> = { human: S.lobby.human, cpu: S.lobby.cpu, off: S.lobby.off };
+      const items = [0, 1, 2, 3, 4].map(i => ({ label: S.lobby.player(i + 1), value: names[setup.slots[i]], tone: TONE[setup.slots[i]] }));
+      drawLobbyList(ctx, bank, S.players.title, items, menu.cursor, S.lobby.playersHelp);
     },
   };
 }

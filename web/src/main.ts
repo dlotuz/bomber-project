@@ -3,6 +3,7 @@ import { browserStorage, defaultSettings, loadSettings, saveSettings } from './a
 import { startLoop } from './app/loop';
 import { createStats } from './app/stats';
 import { initOnline } from './net/online';
+import { installTouchControls } from './input/touch';
 import { onlineScreen } from './screens/online';
 import { FADE_IN_1 } from './app/fade';
 import { startRealAudio } from './app/audio';
@@ -33,7 +34,7 @@ const input = new InputManager(window, settings.keymaps);
 input.setPadmaps(settings.padmaps);
 input.setExtraKeymap(settings.online.keymap);
 const app = new App(settings, {
-  save: s => saveSettings(store, s),
+  save: s => { saveSettings(store, s); online.syncAccount(); },
   setKeymaps: m => input.setKeymaps(m),
   applyInput: s => { input.setKeymaps(s.keymaps); input.setPadmaps(s.padmaps); input.setExtraKeymap(s.online.keymap); },
   seed: () => 0x0012,
@@ -83,6 +84,9 @@ const render = (): void => {
 // ?quick abre direto numa partida com as regras da URL (ver parseConfig); sem ele, começa no título.
 // Sala online: o cliente (net/online.ts) e a tela (screens/online.ts); ?sala=<código> (link de convite) abre direto nela.
 const online = initOnline(app);
+// celular/tablet: direcional e botões na tela (viram as teclas do perfil em uso; na partida online, o controle online)
+installTouchControls(() => (online.playing ? app.settings.online.keymap : app.settings.keymaps[0]));
+void online.restoreAccount();   // sessão da conta guardada neste navegador
 // FPS e ping no topo da tela (o ping só com a sala online conectada)
 const stats = createStats(document.getElementById('stats'), () => online.ping, () => online.peerPings());
 if (params.has('quick')) app.go(battleScreen(app, createMatchSession(parseConfig(window.location.search))));

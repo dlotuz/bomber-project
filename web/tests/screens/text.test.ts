@@ -25,7 +25,7 @@ describe('strings PT-BR (spec §6)', () => {
       .toEqual(['Escolha o modo VS!', 'Battle Royale', 'Campeonato', 'Bombermania', 'Todos contra Todos', 'Em Equipes']);
     expect(S.players.row).toEqual(['1º Jogador', '2º Jogador', '3º Jogador', '4º Jogador', '5º Jogador']);
     expect([S.players.human, S.players.cpu, S.players.off]).toEqual(['Humano', 'CPU', 'Nenhum']);
-    expect(S.rules.labels).toEqual(['Nível da CPU', 'Coroas', 'Tempo', 'Morte Súbita', 'Bomber Vingador', 'Corrida Bônus']);
+    expect(S.rules.labels).toEqual(['Nível da CPU', 'Coroas', 'Tempo', 'Morte Súbita', 'Bomber Vingador']);
     expect(S.rules.time).toEqual(['1:00', '2:00', '3:00', '5:00', '∞']);
     expect([S.stage.title, S.stage.stage(7), S.stage.battle]).toEqual(['Escolha a fase!', 'Fase 7', 'BATALHA!']);
     expect([S.battle.pause, S.battle.hurry, S.battle.timeUp, S.battle.timeUpShort, S.battle.disconnected(3)])

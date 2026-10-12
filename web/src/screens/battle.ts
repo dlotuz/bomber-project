@@ -4,7 +4,7 @@ import { BTN, CODE, step, aiInputs, phaseElapsed, eventType, isDraw, drawReason,
 import {
   introBrightness, hurryX, hurryVisible, timeUpY, BANNER, PAUSE, WIN_END, DRAW_TIME_END, DRAW_DEAD_END,
 } from '../game/timeline';
-import { FADE_OUT_1, FADE_IN_1, fadeSpec } from '../app/fade';
+import { FADE_OUT_1, FADE_IN_1, fadeSpec, shortBlack } from '../app/fade';
 import { SFX, MUSIC, BANK } from '../app/audio';
 import { drawRomBattle, romState, type RomAssets } from '../app/rom-api';
 import { renderRomBattle } from '../render/rom/battle';
@@ -16,6 +16,7 @@ import { drawBattleOverlays, drawBombLevels } from '../render/draw-screens';
 import { scoreboardScreen } from './scoreboard';
 import { drawScreen } from './draw';
 import { stageScreen } from './stage';
+import { racerScreen } from './racer';
 import type { SpriteBank } from '../render/sprite-bank';
 import { sampleBase } from '../render/display';
 import { cellX, cellY } from '../render/fx/coords';
@@ -80,14 +81,21 @@ export function battleScreen(app: App, ms: MatchSession): BattleScreen {
     const draw = isDraw(res);
     const spec = !draw ? WIN_END : drawReason(res) === 'time' ? DRAW_TIME_END : DRAW_DEAD_END;
     ended = true;
-    app.transition(() => (draw ? drawScreen(app, ms) : scoreboardScreen(app, ms)), {
+    // Partida decidida: nada de placar nem vitória — só fecha e volta para a escolha de fase (no online, dali a sala).
+    // `ms.over` já vale aqui: a coroa entra no cue `crownAt`, antes de a tela nova ser criada.
+    const next = (): Screen => {
+      if (draw || !ms.over) return draw ? drawScreen(app, ms) : scoreboardScreen(app, ms);
+      closeMatch(ms);
+      return ms.cfg.rules.racer && ms.cfg.rules.mode === 'ffa' ? racerScreen(app, ms) : stageScreen(app);
+    };
+    app.transition(next, shortBlack({
       out: FADE_OUT_1, black: spec.black, in: FADE_IN_1, cues: [
         { at: spec.audioFadeAt, run: a => a.audio.fade() },
         { at: spec.crownAt, run: () => endRound(ms) },
         { at: spec.bankAt, run: a => a.audio.bank(BANK.menus) },
-        { at: spec.musicAt, run: a => a.audio.music(draw ? MUSIC.draw : MUSIC.score) },
+        { at: spec.musicAt, run: a => (!draw && ms.over ? a.audio.ensureMenus(MUSIC.menus) : a.audio.music(draw ? MUSIC.draw : MUSIC.score)) },
       ],
-    });
+    }));
   }
   function quit(): void {
     ended = true;

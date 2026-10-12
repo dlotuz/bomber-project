@@ -51,7 +51,7 @@ export function parseConfig(search: string): GameConfig {
     teams: [0, 1, 0, 1, 0],
     rules: { cpuLevel: int(q.get('level'), 1, 0, 2) as 0 | 1 | 2, matches: int(q.get('matches'), 3, 1, 5), timeIdx: int(q.get('time'), 2, 0, 4),
       suddenDeath: q.get('sd') === '1', badBomber: q.get('bad') === '1', racer: q.get('racer') === '1' },
-    chars: [0, 1, 2, 3, 4].map(i => (Number.isInteger(raw[i]) && raw[i] >= 0 && raw[i] <= 5 ? raw[i] : i)),
+    chars: [0, 1, 2, 3, 4].map(i => (Number.isInteger(raw[i]) && raw[i] >= 0 && raw[i] <= 8 ? raw[i] : i)),
     stage: int(q.get('stage'), 1, 1, STAGE_MAX),
   };
   const cfg = configFromSetup(setup, q.get('spawns') === '1', DEFAULT_DEVICES, q.has('seed') ? int(q.get('seed'), 0, 0, 0xffff) : null,

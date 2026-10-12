@@ -40,9 +40,9 @@ describe('pix', () => {
 });
 
 describe('personagens', () => {
-  it('6 personagens, todas as direções e quadros em 16×20 com conteúdo', () => {
-    expect(CHARACTERS).toHaveLength(6);
-    for (let c = 0; c < 6; c++) for (let d = 1; d <= 4; d++) for (let f = 0; f < 3; f++) {
+  it('6 personagens e 3 skins, todas as direções e quadros em 16×20 com conteúdo', () => {
+    expect(CHARACTERS).toHaveLength(9);
+    for (let c = 0; c < 9; c++) for (let d = 1; d <= 4; d++) for (let f = 0; f < 3; f++) {
       const p = bomberFrame(c, d, f);
       expect([p.w, p.h]).toEqual([16, 20]);
       expect(opaque(p)).toBeGreaterThan(100);

@@ -14,16 +14,20 @@
 import type { RomAssets, Tiles } from '../../app/rom-api';
 import { tilesFrom, zteBlock } from '../../app/rom-api';
 import type { ObjEntry } from '../../app/rom-api';
+import { BASE_CHARS, baseChar, recolorBgr555, skinOf } from '../art/charskins';
 
 export const PORTRAIT_SHEET_ADDR = 0xcde585;
 export const PORTRAIT_PAL_TABLE = 0xc1b3c3;
 /** Personagem (0..5, ordem de `CHARACTERS`) → retrato na folha. `NO_CHAR` (= 6, a 1ª entrada "×" da tabela de
  *  paletas) → o "×" da folha. */
 export const PORTRAIT_OF_CHAR: readonly number[] = [0, 1, 2, 5, 6, 4, 3];
-export const NO_CHAR = 6;
+/** "Sem personagem" (slot desligado): não é um número de personagem, para não se confundir com as skins (6..8). Na
+ *  tabela da folha e das paletas ele é a entrada `NONE_INDEX` (o "×"). */
+export const NO_CHAR = -1;
+const NONE_INDEX = 6;
 /** Deslocamento do retrato `i` na folha de 16 tiles de largura (4 retratos por faixa de 4 tiles de altura). */
 export const portraitSheetOffset = (char: number): number => {
-  const i = PORTRAIT_OF_CHAR[char] ?? PORTRAIT_OF_CHAR[NO_CHAR];
+  const i = char < 0 ? PORTRAIT_OF_CHAR[NONE_INDEX] : PORTRAIT_OF_CHAR[baseChar(char)] ?? PORTRAIT_OF_CHAR[NONE_INDEX];
   return (i >> 2) * 64 + (i & 3) * 4;
 };
 /** Tile OBJ do retrato na cena `scoreboard` (folha em OBJ `$80`). */
@@ -35,7 +39,7 @@ export const charselPortraitTile = (char: number): number => 0x200 + portraitShe
  *  gerar o pacote) as combinações (slot, personagem) que ninguém desenhou vêm zeradas. */
 function romPortraitPalette(a: RomAssets, slot: number, char: number): Uint16Array {
   const list = a.rom.p24(PORTRAIT_PAL_TABLE + 3 * slot);
-  const pal = a.rom.p24(list + 3 * Math.min(Math.max(char, 0), 8));
+  const pal = a.rom.p24(list + 3 * (char < 0 ? NONE_INDEX : Math.min(char, 8)));
   const out = new Uint16Array(16);
   for (let i = 0; i < 16; i++) out[i] = a.rom.u16(pal + 2 * i);
   return out;
@@ -65,7 +69,7 @@ function derivedPortraitPalette(a: RomAssets, slot: number, char: number): Uint1
   const { por: p0, spr: s0 } = known[0];
   // fundo do quadrinho (cor 15): é do slot, não do personagem — o de outro personagem nesse slot que esteja no pacote
   let back = p0[15];
-  for (let c = 0; c <= NO_CHAR; c++) { const o = romPortraitPalette(a, slot, c); if (!blank(o)) { back = o[15]; break; } }
+  for (let c = 0; c <= NONE_INDEX; c++) { const o = romPortraitPalette(a, slot, c); if (!blank(o)) { back = o[15]; break; } }
   return p0.map((v, i) => {
     if (i === 15) return back;
     if (i < 2) return v;   // transparente e contorno
@@ -85,8 +89,15 @@ function derivedPortraitPalette(a: RomAssets, slot: number, char: number): Uint1
 /** 16 cores BGR555 do retrato de `char` no slot `slot` (0..4), lidas da ROM (ou montadas, se faltam no pacote —
  *  ver `derivedPortraitPalette`; sem isso o retrato sai preto quando dois jogadores pegam o mesmo personagem). */
 export function portraitPalette(a: RomAssets, slot: number, char: number): Uint16Array {
+  const skin = skinOf(char);
+  if (skin) {   // skin: o retrato do personagem-base, pintado (o fundo do quadrinho, cor 15, é do slot e não muda)
+    const base = portraitPalette(a, slot, skin.base);
+    const out = recolorBgr555(base, skin);
+    out[15] = base[15];
+    return out;
+  }
   const pal = romPortraitPalette(a, slot, char);
-  return blank(pal) && char < NO_CHAR ? derivedPortraitPalette(a, slot, char) : pal;
+  return blank(pal) && char >= 0 && char < BASE_CHARS ? derivedPortraitPalette(a, slot, char) : pal;
 }
 
 /** Cópia de `cgram` com a paleta do retrato de cada slot gravada na linha `rows[slot]` (0..15 da CGRAM). */
