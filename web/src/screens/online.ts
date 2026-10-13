@@ -18,7 +18,7 @@ import { TITLE_X, TITLE_Y, FOOTER_Y } from '../render/screens-rom/options';
 import { drawText } from '../render/text/text';
 import { romState } from '../app/rom-api';
 import { obj, PpuCanvas } from '../render/screens-rom/scene';
-import { CHARSEL_PICK_STANDEE, charselSprites } from '../render/screens-rom/charsel';
+import { CHARSEL_PICK_STANDEE, charselSprites, charselStandeeSrc } from '../render/screens-rom/charsel';
 import type { Tone } from '../render/text/types';
 import type { SpriteBank } from '../render/sprite-bank';
 import { hdMenu, hdPanel } from '../render/hd-menu';
@@ -403,7 +403,7 @@ export function onlineScreen(app: App, o: { code?: string; cursor?: string; view
     const a = romState.assets;
     if (a) {
       const st = CHARSEL_PICK_STANDEE[ch];
-      ppu.drawOver(ctx, charselSprites(a, [], [obj(x, y, st.tile, st.pal, { big: true, prio: 3 })]));
+      ppu.drawOver(ctx, charselSprites(a, [], [{ ...obj(x, y, st.tile, st.pal, { big: true, prio: 3 }), src: charselStandeeSrc(a, ch) }]));
     } else ctx.drawImage(bank.bomber(ch, 2, 0), x - 4, y - 6, 40, 50);
   };
 

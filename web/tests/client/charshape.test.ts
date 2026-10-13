@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { reshapeFrame } from '../../src/render/art/charshape';
-import { SKINS, skinPalette } from '../../src/render/art/charskins';
+import { HELMET_IDX, SKINS, skinPalette } from '../../src/render/art/charskins';
 
 const W = 32;
 /** Boneco sintético de frente: cabeça 13×11 com topo na linha 8 e viseira (5/4) no meio; tronco de 9 colunas a partir da 19. */
@@ -94,17 +94,34 @@ describe('formas das skins (arte desenhada à mão)', () => {
     expect(reshapeFrame(new Uint8Array(W * W), 'fat')).toEqual(new Uint8Array(W * W));
   });
 
+  it('formas novas (acessórios, fantasias, alto, cabeção): mudam o boneco nas 3 direções, sem sair do quadro', () => {
+    const NEW = ['crown', 'cowboy', 'ninja', 'pirate', 'cape', 'chef', 'tall', 'bighead'] as const;
+    for (const shape of NEW) for (const f of ['front', 'back', 'right'] as const) {
+      const src = doll(f);
+      for (let y = 27; y <= 28; y++) for (let x = 11; x <= 19; x++) src[y * W + x] = 6;   // botas (o altão estica até elas)
+      const out = reshapeFrame(src, shape);
+      expect(out, `${shape} ${f}`).toHaveLength(W * W);
+      expect(Array.from(out), `${shape} ${f}`).not.toEqual(Array.from(src));
+      expect(Math.max(...out), `${shape} ${f}`).toBeLessThan(16);   // só índices da paleta (0–15)
+    }
+    const small = new Uint8Array(W * W);
+    for (let y = 24; y < 29; y++) for (let x = 8; x < 24; x++) small[y * W + x] = 1;
+    for (const shape of NEW) expect(reshapeFrame(small, shape)).toBe(small);   // efeito/sombra: igual
+  });
+
   it('várias formas se combinam, em ordem', () => {
     const src = doll(), both = reshapeFrame(src, ['suit', 'hat']);
     expect(both).toEqual(reshapeFrame(reshapeFrame(src, 'suit'), 'hat'));
   });
 
-  it('as skins partem do Blanco com as cores originais: a paleta não muda', () => {
+  it('as skins partem do Blanco com as cores originais; só as de capacete trocam as cores 12–14', () => {
     const pal = Uint16Array.from({ length: 16 }, (_, i) => (0x1111 * (i + 1)) & 0x7fff);
     for (const s of SKINS) {
       expect(s.base).toBe(0);
       expect(s.tint).toBeUndefined();
-      expect(skinPalette(pal, s)).toEqual(pal);
+      const out = skinPalette(pal, s);
+      for (let i = 0; i < 16; i++) if (!s.helmet || !HELMET_IDX.includes(i as 12)) expect(out[i]).toBe(pal[i]);
+      if (s.helmet) expect(HELMET_IDX.map(i => out[i])).not.toEqual(HELMET_IDX.map(i => pal[i]));
     }
   });
 });

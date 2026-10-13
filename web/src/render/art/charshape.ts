@@ -5,7 +5,8 @@
 // corpo por regra. Só mexe em quadros de corpo
 // inteiro; peças pequenas, sombras e efeitos da folha ficam como estão.
 
-export type SkinShape = 'hat' | 'fat' | 'small' | 'suit';
+export type SkinShape = 'hat' | 'fat' | 'small' | 'suit'
+  | 'crown' | 'cowboy' | 'ninja' | 'pirate' | 'cape' | 'chef' | 'tall' | 'bighead';
 
 const W = 32;
 const MIN_BODY_H = 16;
@@ -286,8 +287,12 @@ function makeSmall(px: Uint8Array, b: Box): Uint8Array {
   return out;
 }
 
-const apply = (px: Uint8Array, b: Box, shape: SkinShape): Uint8Array =>
-  shape === 'hat' ? addHat(px, b) : shape === 'small' ? makeSmall(px, b) : shape === 'suit' ? addSuit(px, b) : makeFat(px, b);
+const SHAPES: Record<SkinShape, (px: Uint8Array, b: Box) => Uint8Array> = {
+  hat: addHat, small: makeSmall, suit: addSuit, fat: makeFat,
+  crown: (px, b) => addArt(px, b, ART_CROWN), cowboy: (px, b) => addArt(px, b, ART_COWBOY), chef: addChef,
+  ninja: addNinja, pirate: addPirate, cape: addCape, tall: makeTall, bighead: makeBighead,
+};
+const apply = (px: Uint8Array, b: Box, shape: SkinShape): Uint8Array => SHAPES[shape](px, b);
 
 /** Quadro 32×32 com a(s) forma(s) da skin, aplicadas em ordem; quadros que não são de corpo inteiro voltam como vieram. */
 export function reshapeFrame(px: Uint8Array, shape: SkinShape | readonly SkinShape[]): Uint8Array {
@@ -298,4 +303,247 @@ export function reshapeFrame(px: Uint8Array, shape: SkinShape | readonly SkinSha
     cur = apply(cur, b, s);
   }
   return cur;
+}
+
+// ======================================================================================================================
+// Mais skins (todas a partir do Blanco): acessórios na cabeça, fantasias no corpo e outras formas. Mesmas regras de
+// cima: só índices da paleta do Blanco, nada de cor nova; a cor do time (8–10, 5) continua dizendo de quem é o boneco.
+// ======================================================================================================================
+
+/** Cores do corpo do Blanco que mudam com o time (macacão). */
+const TEAM_BODY = (v: number): boolean => v === 8 || v === 9 || v === 10;
+
+// --- coroa: dourada, 3 pontas e uma pedra na cor do acento do time -----------------------------------------------------
+const ART_CROWN: Art = {
+  ax: 5, ay: 3,
+  rows: [
+    '.1...1...1.',
+    '1y1.1y1.1y1',
+    '1yy1yyy1yy1',
+    '1yyyyryyyy1',
+    '11111111111',
+  ],
+};
+
+// --- chapéu de caubói: copa com faixa escura e aba larga e curvada nas pontas ----------------------------------------------
+const ART_COWBOY: Art = {
+  ax: 8, ay: 4,
+  rows: [
+    '.....1111111.....',
+    '....1yyyyyyy1....',
+    '....1yyy1yyy1....',
+    '....1kkkkkkk1....',
+    '11..1yyyyyyy1..11',
+    '1y111yyyyyyy111y1',
+    '.1yyyyyyyyyyyyy1.',
+    '..1111111111111..',
+  ],
+};
+
+// --- chapéu de cozinheiro: alto, branco, com dobras e faixa ------------------------------------------------------------
+const ART_CHEF: Art = {
+  ax: 5, ay: 6,
+  rows: [
+    '..111.111..',
+    '.1www1www1.',
+    '1wwwwwwwww1',
+    '1whwwwwhww1',
+    '.1whwwwhw1.',
+    '.1wwwwwww1.',
+    '.1hhhhhhh1.',
+    '.111111111.',
+  ],
+};
+
+/** Acessório desenhado na cabeça (quadros sem cabeça inteira ficam como estão). */
+function addArt(px: Uint8Array, b: Box, art: Art): Uint8Array {
+  const h = findHead(px, b);
+  if (!h) return px;
+  const out = px.slice();
+  stamp(out, art, h.hc, h.t, h.kind === 'side' && h.face < 0);
+  return out;
+}
+
+/** Linhas [lo, hi] (colunas) de cada linha do quadro com algum pixel; `null` nas vazias. */
+function spans(px: Uint8Array, y0: number, y1: number): ([number, number] | null)[] {
+  const out: ([number, number] | null)[] = [];
+  for (let y = y0; y <= y1; y++) {
+    let lo = W, hi = -1;
+    for (let x = 0; x < W; x++) if (px[y * W + x]) { if (x < lo) lo = x; if (x > hi) hi = x; }
+    out.push(hi < 0 ? null : [lo, hi]);
+  }
+  return out;
+}
+
+/** Primeira linha do tronco (abaixo do queixo) e a última antes das botas. */
+function torso(px: Uint8Array, b: Box, h: Head): { y0: number; y1: number } {
+  let y0 = -1, y1 = -1;
+  for (let y = h.t + 9; y <= b.y1; y++) for (let x = 0; x < W; x++) {
+    const v = px[y * W + x];
+    if (TEAM_BODY(v)) { if (y0 < 0) y0 = y; y1 = y; }
+  }
+  return { y0, y1 };
+}
+
+/** Faixa amarrada na cabeça (2 linhas a partir de `y`), na cor `ink`, com as pontas soltas atrás. */
+function headband(out: Uint8Array, px: Uint8Array, h: Head, y: number, top: number, bottom: number): void {
+  for (const [dy, v] of [[0, top], [1, bottom]] as const) {
+    const yy = y + dy;
+    for (let x = 0; x < W; x++) {
+      const c = px[yy * W + x];
+      if (!c) continue;
+      const left = !px[yy * W + x - 1], right = !px[yy * W + x + 1];
+      out[yy * W + x] = left || right ? 1 : v;   // a borda da cabeça continua contorno
+    }
+  }
+  // pontas: de frente e de costas, saem pela direita; de lado, para trás
+  const s = spans(px, y, y)[0];
+  if (!s) return;
+  const put = (x: number, yy: number, v: number): void => { if (x >= 0 && x < W && yy >= 0 && yy < W && !px[yy * W + x]) out[yy * W + x] = v; };
+  const dir = h.kind === 'side' ? -h.face : 1, x0 = dir > 0 ? s[1] : s[0];
+  for (let k = 1; k <= 4; k++) {
+    put(x0 + dir * k, y + Math.floor(k / 2), top);
+    put(x0 + dir * k, y + Math.floor(k / 2) + 1, k === 4 ? 1 : bottom);
+    put(x0 + dir * k, y + Math.floor(k / 2) + 2, 1);
+  }
+  put(x0 + dir * 5, y + 2, 1); put(x0 + dir * 5, y + 3, 1);
+}
+
+/** Ninja: roupa preta (o macacão do time escurece) e a faixa na cor do time amarrada na testa. */
+function addNinja(px: Uint8Array, b: Box): Uint8Array {
+  const h = findHead(px, b);
+  const out = px.slice();
+  for (let i = 0; i < out.length; i++) {
+    const k = SUIT_BODY.indexOf(out[i] as 8 | 9 | 10);
+    if (k >= 0) out[i] = SUIT_DARK[k];
+  }
+  if (h) headband(out, px, h, h.t + 2, INK.T, INK.t);
+  return out;
+}
+
+/** Olho do lado de cá: a coluna do 1º olho (pixel de contorno entre dois de pele) na altura da viseira. */
+function eyeColumn(px: Uint8Array, h: Head): { x: number; y0: number; y1: number } | null {
+  const hits: number[] = [];
+  let y0 = W, y1 = -1;
+  for (let y = h.t + 3; y <= h.t + 9; y++) for (let x = 1; x < W - 1; x++) {
+    if (px[y * W + x] === 1 && px[y * W + x - 1] === 4 && px[y * W + x + 1] === 4) { hits.push(x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  }
+  if (!hits.length) return null;
+  const xs = [...new Set(hits)].sort((a, c) => a - c);
+  // de frente, o olho da esquerda; de lado, o mais perto do centro da cabeça (o outro fica na beirada da viseira)
+  const x = h.kind === 'side' ? xs.reduce((a, c) => (Math.abs(c - h.hc) < Math.abs(a - h.hc) ? c : a)) : xs[0];
+  return { x, y0, y1 };
+}
+
+/** Pirata: lenço na cor do acento do time cobrindo o alto da cabeça (com o nó atrás), tapa-olho e camisa listrada. */
+function addPirate(px: Uint8Array, b: Box): Uint8Array {
+  const h = findHead(px, b);
+  if (!h) return px;
+  const out = px.slice();
+  // lenço: as 3 primeiras linhas da cabeça, com pintinhas brancas; a linha de baixo é a tira do tapa-olho
+  for (let y = h.t; y <= h.t + 2; y++) for (let x = 0; x < W; x++) {
+    const v = px[y * W + x];
+    if (!v || v === 1 || !px[y * W + x - 1] || !px[y * W + x + 1] || !px[(y - 1) * W + x]) continue;
+    out[y * W + x] = (x + 2 * y) % 5 === 0 ? INK.w : INK.r;
+  }
+  headband(out, px, h, h.t + 3, INK.r, 1);
+  if (h.kind !== 'back') {
+    const e = eyeColumn(px, h);
+    if (e) for (let y = e.y0 - 1; y <= e.y1 + 1; y++) for (let x = e.x - 1; x <= e.x + 1; x++) out[y * W + x] = 1;
+  }
+  // camisa listrada: linhas alternadas de branco e cor do time no tronco
+  const tr = torso(px, b, h);
+  if (tr.y0 >= 0) for (let y = tr.y0; y <= Math.min(tr.y1, tr.y0 + 4); y++) for (let x = 0; x < W; x++)
+    if (TEAM_BODY(px[y * W + x])) out[y * W + x] = (y - tr.y0) % 2 === 0 ? INK.w : INK.t;
+  return out;
+}
+
+/** Super-herói: capa na cor do acento do time atrás do corpo (de frente, aparece dos lados; de lado, voa para trás;
+ *  de costas, cobre as costas) e um losango dourado no peito. */
+function addCape(px: Uint8Array, b: Box): Uint8Array {
+  const h = findHead(px, b);
+  if (!h) return px;
+  const tr = torso(px, b, h);
+  if (tr.y0 < 0) return px;
+  const out = px.slice(), y0 = tr.y0, y1 = Math.min(b.y1 - 3, tr.y1 + 3);
+  const sp = spans(px, y0, y1), cx = Math.round(h.hc);
+  const put = (x: number, y: number, v: number): void => { if (x >= 0 && x < W && y >= 0 && y < W && !px[y * W + x]) out[y * W + x] = v; };
+  for (let y = y0; y <= y1; y++) {
+    const s = sp[y - y0];
+    if (!s) continue;
+    const k = y - y0, last = y === y1;
+    if (h.kind === 'back') {
+      // de costas: a capa cobre o tronco e abre um pouco para os lados
+      for (let x = s[0]; x <= s[1]; x++) if (px[y * W + x] && px[y * W + x] !== 1 && px[y * W + x] !== 6 && px[y * W + x] !== 7) out[y * W + x] = last ? 1 : INK.r;
+      const w = 1 + (k >> 2);
+      for (let d = 1; d <= w; d++) { put(s[0] - d, y, d === w || last ? 1 : INK.r); put(s[1] + d, y, d === w || last ? 1 : INK.r); }
+      continue;
+    }
+    const dirs = h.kind === 'side' ? [-h.face] : [-1, 1], w = h.kind === 'side' ? 1 + Math.round(k * 0.6) : 1 + (k >> 2);
+    for (const dir of dirs) {
+      const x0 = dir < 0 ? s[0] : s[1];
+      for (let d = 1; d <= w; d++) put(x0 + dir * d, y, d === w || last ? 1 : INK.r);
+    }
+  }
+  if (h.kind === 'front') {   // losango no peito
+    const y = y0 + 1;
+    for (const [dx, dy, v] of [[0, -1, 4], [-1, 0, 4], [0, 0, 5], [1, 0, 4], [0, 1, 4]] as const)
+      if (TEAM_BODY(px[(y + dy) * W + cx + dx])) out[(y + dy) * W + cx + dx] = v;
+  }
+  return out;
+}
+
+/** Cozinheiro: chapéu alto branco e, de frente, avental branco sobre o macacão. */
+function addChef(px: Uint8Array, b: Box): Uint8Array {
+  const h = findHead(px, b);
+  if (!h) return px;
+  const out = px.slice();
+  stamp(out, ART_CHEF, h.hc, h.t);
+  if (h.kind === 'back') return out;
+  const tr = torso(px, b, h);
+  if (tr.y0 < 0) return out;
+  const c = Math.round(h.kind === 'side' ? h.hc + h.face * 2 : h.hc), half = h.kind === 'side' ? 2 : 3;
+  for (let y = tr.y0 + 1; y <= tr.y1; y++) for (let x = c - half; x <= c + half; x++) {
+    const v = px[y * W + x];
+    if (TEAM_BODY(v) || v === 2 || v === 3) out[y * W + x] = x === c + half || (h.kind !== 'side' && x === c - half) ? INK.h : INK.w;
+  }
+  return out;
+}
+
+/** Altão: o mesmo boneco com o tronco e as pernas esticados (1,5×); a cabeça sobe junto e os pés ficam no lugar. */
+function makeTall(px: Uint8Array, b: Box): Uint8Array {
+  const h = findHead(px, b);
+  if (!h) return px;
+  // trecho esticado: do queixo até logo acima das botas (as botas, a sombra e a cabeça não mudam de tamanho)
+  // botas: o bloco de linhas com rosa (6/7) mais embaixo (o de cima são as luvas)
+  const pink = (y: number): boolean => { for (let x = 0; x < W; x++) if (px[y * W + x] === 6 || px[y * W + x] === 7) return true; return false; };
+  let boots = b.y1;
+  while (boots > h.t + 11 && !pink(boots)) boots--;
+  while (boots > h.t + 12 && pink(boots - 1)) boots--;
+  const r0 = h.t + 11, r1 = boots - 1, n = r1 - r0 + 1;
+  if (n < 3) return px;
+  const grow = Math.min(h.t, Math.round(n * 0.5)), m = n + grow;   // não passa do topo do quadro
+  const out = new Uint8Array(px.length);
+  for (let y = boots; y < W; y++) out.set(px.subarray(y * W, y * W + W), y * W);
+  for (let k = 0; k < m; k++) {
+    const sy = r0 + Math.min(n - 1, Math.floor(k * n / m));
+    out.set(px.subarray(sy * W, sy * W + W), (r0 - grow + k) * W);
+  }
+  for (let y = 0; y < r0; y++) if (y - grow >= 0) out.set(px.subarray(y * W, y * W + W), (y - grow) * W);
+  return out;
+}
+
+/** Cabeção: a cabeça 1,35× maior (assentada no mesmo pescoço), o corpo igual. */
+function makeBighead(px: Uint8Array, b: Box): Uint8Array {
+  const h = findHead(px, b);
+  if (!h) return px;
+  const neck = h.t + 10, s = 1.35, out = px.slice();
+  for (let y = 0; y <= neck; y++) out.fill(0, y * W, y * W + W);
+  for (let y = 0; y <= neck; y++) for (let x = 0; x < W; x++) {
+    const sx = Math.round(h.hc + (x - h.hc) / s), sy = Math.round(neck - (neck - y) / s);
+    if (sx < 0 || sx >= W || sy < 0 || sy > neck) continue;
+    const v = px[sy * W + sx];
+    if (v) out[y * W + x] = v;
+  }
+  return out;
 }

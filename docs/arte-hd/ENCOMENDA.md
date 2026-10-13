@@ -123,7 +123,7 @@ Uma pasta com `pacote.json` na raiz e as imagens (PNG ou WebP) ao lado (subpasta
 
 ### Personagens
 
-Cada personagem tem 78 desenhos: todas as ações do jogo, nas 4 direções
+Cada personagem tem 22.285714285714285 desenhos: todas as ações do jogo, nas 4 direções
 (`up`, `right`, `down`, `left`), menos derrota e vitória, que não têm direção. `<p>` é o número do personagem:
 
 | `<p>` | Vaga (nome provisório) |
@@ -134,6 +134,21 @@ Cada personagem tem 78 desenhos: todas as ações do jogo, nas 4 direções
 | 3 | AERO |
 | 4 | VERDI |
 | 5 | RUBI |
+| 6 | CARTOLA |
+| 7 | PEQUENO |
+| 8 | GORDAO |
+| 9 | COROA |
+| 10 | COWBOY |
+| 11 | NINJA |
+| 12 | PIRATA |
+| 13 | SUPER |
+| 14 | CHEF |
+| 15 | ALTAO |
+| 16 | CABECAO |
+| 17 | DOURADO |
+| 18 | SOMBRA |
+| 19 | FANTASMA |
+| 20 | NEON |
 
 | Chave | O que desenhar | Tamanho | Apoio | Quadros | Ticks por quadro (60 Hz) | Loop | Prioridade |
 |---|---|---|---|---|---|---|---|

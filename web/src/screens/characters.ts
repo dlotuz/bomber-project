@@ -51,15 +51,21 @@ export function charactersScreen(app: App): Screen & {
   const scheme = createPickScheme(app);
   const ppu = new PpuCanvas();
 
-  /** ←/→ dão a volta nas 3 colunas; ↑ sobe e ↓ desce de linha, dando a volta (spec §6.6). */
+  /** ←/→ dão a volta na linha; ↑ sobe e ↓ desce de linha, dando a volta (spec §6.6). A última linha pode ser
+   *  incompleta: as casas vazias são puladas. */
   const moveCursor = (i: number, p: number): void => {
     if (!p) return;
     const c = setup.chars[i];
     const col = c % COLS, row = Math.floor(c / COLS);
-    if (p & BTN.LEFT) setup.chars[i] = row * COLS + (col + COLS - 1) % COLS;
-    if (p & BTN.RIGHT) setup.chars[i] = row * COLS + (col + 1) % COLS;
-    if (p & BTN.UP) setup.chars[i] = ((row + ROWS - 1) % ROWS) * COLS + col;
-    else if (p & BTN.DOWN) setup.chars[i] = ((row + 1) % ROWS) * COLS + col;
+    const inRow = Math.min(COLS, GRID.count - row * COLS);   // casas da linha atual
+    if (p & BTN.LEFT) setup.chars[i] = row * COLS + (col + inRow - 1) % inRow;
+    if (p & BTN.RIGHT) setup.chars[i] = row * COLS + (col + 1) % inRow;
+    const step = p & BTN.UP ? ROWS - 1 : p & BTN.DOWN ? 1 : 0;
+    if (step) {
+      let r = row;
+      do r = (r + step) % ROWS; while (r * COLS + col >= GRID.count);   // linha sem essa coluna: pula
+      setup.chars[i] = r * COLS + col;
+    }
     app.audio.sfx(SFX.move);
   };
 
@@ -92,8 +98,8 @@ export function charactersScreen(app: App): Screen & {
       const a: RomAssets | null = romState.assets;
       hdMenu(ctx, null, { title: 15 }, 'lobby');
       // uma faixa por personagem, no padrão das telas do online
-      for (let k = 0; k < COLS * ROWS; k++) {
-        hdPanel({ x: GRID.x[k % COLS] - 6, y: GRID.y[Math.floor(k / COLS)] - 1, w: 44, h: 40,
+      for (let k = 0; k < GRID.count; k++) {
+        hdPanel({ x: GRID.x[k % COLS] + 2, y: GRID.y[Math.floor(k / COLS)], w: GRID.cellW - 2, h: GRID.cellH - 2,
           fill: 'rgba(10,30,90,0.6)', stroke: '#8fd8ff' });
       }
       drawText(ctx, bank, 'menuTitle', S.chars.title, 128, 8, { align: 'center', bare: true });
@@ -108,10 +114,10 @@ export function charactersScreen(app: App): Screen & {
         }));
         ppu.drawOver(ctx, charselSprites(a, [0, 1, 2, 3, 4].map(i => (setup.slots[i] !== 'off' ? setup.chars[i] : null)), oam));
       } else {
-        // Grade 3×2 dos personagens (sem ROM: nossa própria arte).
+        // Grade dos personagens (sem ROM: nossa própria arte).
         CHARACTERS.forEach((ch, k) => {
           const x = GRID.x[k % COLS], y = GRID.y[Math.floor(k / COLS)];
-          ctx.drawImage(bank.bomber(k, 2, 0), x, y, 32, 40);
+          ctx.drawImage(bank.bomber(k, 2, 0), x + 3, y + 2, 26, 32);
         });
         // Coluna da esquerda: o retrato de cada jogador ativo (sem ROM: a arte do fallback).
         for (const i of scheme.activeIdx) {
@@ -129,8 +135,8 @@ export function charactersScreen(app: App): Screen & {
         const k = setup.chars[i];
         const x = GRID.x[k % COLS], y = GRID.y[Math.floor(k / COLS)];
         const color = PLAYER_COLORS[i];
-        drawCornerCursor(ctx, x - 2, y - 2, GRID.cellW - 12, GRID.cellH - 4, color);
-        drawText(ctx, bank, 'ascii8', S.chars.tags[i], x - 3, y - 10, { color, bare: true });
+        drawCornerCursor(ctx, x + 1, y - 1, GRID.cellW, GRID.cellH, color, 5);
+        drawText(ctx, bank, 'ascii8', S.chars.tags[i], x + 1, y - 9, { color, bare: true });
       }
       // `bare` (M1, revisão final): igual a Opções/Remapeamento — sem o campo opaco do `ascii8`, como na ROM.
       if (scheme.activeIdx.every(i => scheme.confirmed[i])) {

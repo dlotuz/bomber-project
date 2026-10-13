@@ -2,6 +2,7 @@
 // anfitrião); aqui ficam a conexão, o estado da sala e, na partida, o lockstep — o App inteiro (batalha, placar, empate,
 // vitória, pausa) roda com a entrada combinada de todos, tick a tick, em cada navegador. Quando a partida termina (tela
 // de fase ou título), todo mundo volta para a tela da sala.
+import { CHAR_COUNT } from '../render/art/charskins';
 import type { App } from '../app/app';
 import type { SpriteBank } from '../render/sprite-bank';
 import { configFromSetup, type SetupLike, type SlotKind } from '../game/config';
@@ -93,7 +94,7 @@ export class OnlineClient {
 
   /** Personagem escolhido no menu (vale ao criar/entrar numa sala e na partida rápida; na sala dá para trocar). */
   get char(): number {
-    try { const c = Number(localStorage.getItem(CHAR_KEY)); return Number.isInteger(c) && c >= 0 && c <= 8 ? c : 0; } catch { return 0; }
+    try { const c = Number(localStorage.getItem(CHAR_KEY)); return Number.isInteger(c) && c >= 0 && c < CHAR_COUNT ? c : 0; } catch { return 0; }
   }
   set char(c: number) { try { localStorage.setItem(CHAR_KEY, String(c)); } catch { /* sem storage */ } this.syncAccount(); }
 
