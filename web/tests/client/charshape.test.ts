@@ -95,7 +95,8 @@ describe('formas das skins (arte desenhada à mão)', () => {
   });
 
   it('formas novas (acessórios, fantasias, alto, cabeção): mudam o boneco nas 3 direções, sem sair do quadro', () => {
-    const NEW = ['crown', 'cowboy', 'ninja', 'pirate', 'cape', 'chef', 'tall', 'bighead'] as const;
+    const NEW = ['crown', 'cowboy', 'ninja', 'pirate', 'cape', 'chef', 'tall', 'bighead',
+      'antenna', 'bow', 'mohawk', 'wizard', 'safari', 'plume', 'bubble', 'board'] as const;
     for (const shape of NEW) for (const f of ['front', 'back', 'right'] as const) {
       const src = doll(f);
       for (let y = 27; y <= 28; y++) for (let x = 11; x <= 19; x++) src[y * W + x] = 6;   // botas (o altão estica até elas)

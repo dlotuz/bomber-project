@@ -45,6 +45,16 @@ export const SKINS: readonly SkinDef[] = [
   { base: 0, name: 'SOMBRA', helmet: ['#18141f', '#3a3448', '#625a78'] },
   { base: 0, name: 'FANTASMA', helmet: ['#3c8ca8', '#78d0e8', '#c8f4ff'] },
   { base: 0, name: 'NEON', helmet: ['#1e8c14', '#48dc28', '#b4ff5a'] },
+  // lote 2 (temas)
+  { base: 0, name: 'ANTENAS', shape: 'antenna' },
+  { base: 0, name: 'LACINHO', shape: 'bow' },
+  { base: 0, name: 'MOICANO', shape: 'mohawk' },
+  { base: 0, name: 'MAGO', shape: 'wizard' },
+  { base: 0, name: 'SAFARI', shape: 'safari' },
+  { base: 0, name: 'PLUMA', shape: 'plume' },
+  { base: 0, name: 'ASTRONAUTA', shape: 'bubble' },
+  { base: 0, name: 'PRANCHA', shape: 'board' },
+  { base: 0, name: 'RUBRO', helmet: ['#5a0a0e', '#b01e26', '#f05a4a'] },
 ];
 
 /** Índices do capacete na paleta do personagem (escuro, médio, claro). */

@@ -6,7 +6,8 @@
 // inteiro; peças pequenas, sombras e efeitos da folha ficam como estão.
 
 export type SkinShape = 'hat' | 'fat' | 'small' | 'suit'
-  | 'crown' | 'cowboy' | 'ninja' | 'pirate' | 'cape' | 'chef' | 'tall' | 'bighead';
+  | 'crown' | 'cowboy' | 'ninja' | 'pirate' | 'cape' | 'chef' | 'tall' | 'bighead'
+  | 'antenna' | 'bow' | 'mohawk' | 'wizard' | 'safari' | 'plume' | 'bubble' | 'board';
 
 const W = 32;
 const MIN_BODY_H = 16;
@@ -291,6 +292,9 @@ const SHAPES: Record<SkinShape, (px: Uint8Array, b: Box) => Uint8Array> = {
   hat: addHat, small: makeSmall, suit: addSuit, fat: makeFat,
   crown: (px, b) => addArt(px, b, ART_CROWN), cowboy: (px, b) => addArt(px, b, ART_COWBOY), chef: addChef,
   ninja: addNinja, pirate: addPirate, cape: addCape, tall: makeTall, bighead: makeBighead,
+  antenna: (px, b) => addArt(px, b, ART_ANTENNA), bow: (px, b) => addArt(px, b, ART_BOW), mohawk: addMohawk,
+  wizard: (px, b) => addArt(px, b, ART_WIZARD), safari: (px, b) => addArt(px, b, ART_SAFARI),
+  plume: (px, b) => addArt(px, b, ART_PLUME), bubble: addBubble, board: addBoard,
 };
 const apply = (px: Uint8Array, b: Box, shape: SkinShape): Uint8Array => SHAPES[shape](px, b);
 
@@ -544,6 +548,150 @@ function makeBighead(px: Uint8Array, b: Box): Uint8Array {
     if (sx < 0 || sx >= W || sy < 0 || sy > neck) continue;
     const v = px[sy * W + sx];
     if (v) out[y * W + x] = v;
+  }
+  return out;
+}
+
+// ======================================================================================================================
+// Lote 2 (temas): antenas, laço, moicano, mago, safári, pluma, astronauta (bolha) e prancha. Mesmas regras: só índices
+// da paleta do Blanco; o que é "do time" (T/t/u/r) continua mostrando de quem é o boneco.
+// ======================================================================================================================
+
+const ART_ANTENNA: Art = {
+  ax: 5, ay: 6,
+  rows: [
+    '.111...111.',
+    '.1r1...1r1.',
+    '.111...111.',
+    '..1.....1..',
+    '..1.....1..',
+    '..1.....1..',
+  ],
+};
+const ART_BOW: Art = {
+  ax: 5, ay: 4,
+  rows: [
+    '11.......11',
+    '1r11...11r1',
+    '1rrr1r1rrr1',
+    '1rr1rrr1rr1',
+    '1r11.1.11r1',
+    '11.......11',
+  ],
+};
+const ART_MOHAWK: Art = {
+  ax: 2, ay: 5,
+  rows: [
+    '..1..',
+    '.1r1.',
+    '.1r1.',
+    '1rrr1',
+    '1rrr1',
+  ],
+};
+const ART_MOHAWK_SIDE: Art = {
+  ax: 6, ay: 4,
+  rows: [
+    '.1...1...1...',
+    '1r1.1r1.1r1..',
+    '1rr1rrr1rrr1.',
+    '1rrrrrrrrrrr1',
+  ],
+};
+const ART_WIZARD: Art = {
+  ax: 7, ay: 7,
+  rows: [
+    '.......1.......',
+    '......1T1......',
+    '......1T1......',
+    '.....1TyT1.....',
+    '.....1TTt1.....',
+    '....1TTTtt1....',
+    '....1uuuuu1....',
+    '1TTTTTTTTTTTTT1',
+    '.1111111111111.',
+  ],
+};
+const ART_SAFARI: Art = {
+  ax: 7, ay: 5,
+  rows: [
+    '.........1r1...',
+    '.....11111r1...',
+    '....1wwwww1....',
+    '....1wwwww1....',
+    '....1kkkkk1....',
+    '1hhhhhhhhhhhhh1',
+    '.1111111111111.',
+  ],
+};
+const ART_PLUME: Art = {
+  ax: 8, ay: 6,
+  rows: [
+    '...11111.....',
+    '..1wwwww11...',
+    '.1wwhhwwww1..',
+    '1whw11hwwww1.',
+    '1h1...1hwww1.',
+    '.1.....1ww1..',
+    '........11...',
+  ],
+};
+
+/** Moicano: crista de frente/de costas estreita; de lado, comprida (da testa à nuca). */
+function addMohawk(px: Uint8Array, b: Box): Uint8Array {
+  const h = findHead(px, b);
+  if (!h) return px;
+  const out = px.slice();
+  if (h.kind === 'side') stamp(out, ART_MOHAWK_SIDE, h.hc, h.t, h.face < 0);
+  else stamp(out, ART_MOHAWK, h.hc, h.t);
+  return out;
+}
+
+/** Astronauta: bolha de vidro em volta da cabeça (1 px de folga, vidro cinza-claro, contorno e um brilho). */
+function addBubble(px: Uint8Array, b: Box): Uint8Array {
+  const h = findHead(px, b);
+  if (!h) return px;
+  const y0 = h.t, y1 = Math.min(W - 1, h.t + 10);
+  const head = new Uint8Array(W * W);
+  for (let y = y0; y <= y1; y++) for (let x = 0; x < W; x++) if (px[y * W + x]) head[y * W + x] = 1;
+  const grow = (m: Uint8Array): Uint8Array => {
+    const o = m.slice();
+    for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) if (m[y * W + x])
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const X = x + dx, Y = y + dy;
+        if (X >= 0 && X < W && Y >= 0 && Y <= y1) o[Y * W + X] = 1;
+      }
+    return o;
+  };
+  const d1 = grow(head), d2 = grow(d1), d3 = grow(d2);
+  const out = px.slice();
+  let hl = 0;
+  for (let y = 0; y <= y1; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x;
+    if (px[i]) continue;
+    if (d2[i] && !d1[i]) {
+      out[i] = INK.h;
+      if (hl < 3 && y <= y0 && x < h.hc) { out[i] = INK.w; hl++; }   // brilho no alto, à esquerda
+    } else if (d3[i] && !d2[i]) out[i] = 1;
+  }
+  return out;
+}
+
+/** Prancha: uma prancha na cor do time debaixo das botas (de frente e de lado, sempre deitada). */
+function addBoard(px: Uint8Array, b: Box): Uint8Array {
+  const h = findHead(px, b);
+  if (!h) return px;
+  // logo abaixo das botas (rosa, 6/7): as linhas de baixo do quadro são a sombra, que o jogo desenha à parte
+  let y = -1;
+  for (let yy = b.y1; yy > h.t + 11 && y < 0; yy--) for (let x = 0; x < W; x++) if (px[yy * W + x] === 6 || px[yy * W + x] === 7) { y = yy + 1; break; }
+  if (y < 0 || y + 2 >= W) return px;
+  const out = px.slice(), c = Math.round(h.hc), half = h.kind === 'side' ? 11 : 9;
+  for (let x = c - half; x <= c + half; x++) {
+    if (x < 0 || x >= W) continue;
+    const end = x === c - half || x === c + half;
+    out[y * W + x] = end ? 1 : INK.T;               // tampo (claro) e lateral (média), pontas arredondadas
+    out[(y + 1) * W + x] = end ? 0 : x === c - half + 1 || x === c + half - 1 ? 1 : INK.t;
+    if (!end && x !== c - half + 1 && x !== c + half - 1) out[(y + 2) * W + x] = 1;
   }
   return out;
 }

@@ -128,20 +128,18 @@ describe('desenho (revisão da Task 10, rodada 2)', () => {
 
 describe('personagens (§6.6, R13, R32)', () => {
   it('cada humano move o próprio cursor: ←/→ com volta na linha, ↑ sobe e ↓ desce, cada um para o seu lado', () => {
-    // grade de 6 colunas (CHARSEL_PICK): 21 personagens = 3 linhas cheias e a última com 18, 19 e 20
+    // grade de 6 colunas (CHARSEL_PICK): 30 personagens = 5 linhas cheias
     const { app } = mkApp();
     const c = charactersScreen(app); app.go(c);
     press(app, BTN.LEFT, 0); expect(c.charOf(0)).toBe(5);
     press(app, BTN.DOWN, 0); expect(c.charOf(0)).toBe(11);
     press(app, BTN.RIGHT, 1); expect(c.charOf(1)).toBe(2);
-    press(app, BTN.UP, 1); expect(c.charOf(1)).toBe(20);         // do alto, ↑ dá a volta para a última linha
-    press(app, BTN.UP, 1); expect(c.charOf(1)).toBe(14);
-    press(app, BTN.DOWN, 1); expect(c.charOf(1)).toBe(20);
-    press(app, BTN.RIGHT, 1); expect(c.charOf(1)).toBe(18);      // a última linha (incompleta) dá a volta nas 3 casas dela
-    press(app, BTN.DOWN, 1); expect(c.charOf(1)).toBe(0);        // ↓ da última linha volta ao alto
+    press(app, BTN.UP, 1); expect(c.charOf(1)).toBe(26);         // do alto, ↑ dá a volta para a última linha
+    press(app, BTN.UP, 1); expect(c.charOf(1)).toBe(20);
+    press(app, BTN.DOWN, 1); expect(c.charOf(1)).toBe(26);
+    press(app, BTN.LEFT, 1); press(app, BTN.LEFT, 1); press(app, BTN.LEFT, 1); expect(c.charOf(1)).toBe(29);   // volta na linha
+    press(app, BTN.DOWN, 1); expect(c.charOf(1)).toBe(5);        // ↓ da última linha volta ao alto
     press(app, BTN.UP, 0); expect(c.charOf(0)).toBe(5);          // P1 estava em 11: ↑ volta uma linha (e não desce)
-    press(app, BTN.DOWN, 0); press(app, BTN.DOWN, 0); expect(c.charOf(0)).toBe(17);
-    press(app, BTN.DOWN, 0); expect(c.charOf(0)).toBe(5);        // a última linha não tem a 6ª coluna: pula para o alto
   });
   it('A confirma ($02); o P1 escolhe as CPUs em ordem depois do próprio; o último A leva à fase', () => {
     const { app, sink } = mkApp();

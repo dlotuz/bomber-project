@@ -123,7 +123,7 @@ Uma pasta com `pacote.json` na raiz e as imagens (PNG ou WebP) ao lado (subpasta
 
 ### Personagens
 
-Cada personagem tem 22.285714285714285 desenhos: todas as ações do jogo, nas 4 direções
+Cada personagem tem 15.6 desenhos: todas as ações do jogo, nas 4 direções
 (`up`, `right`, `down`, `left`), menos derrota e vitória, que não têm direção. `<p>` é o número do personagem:
 
 | `<p>` | Vaga (nome provisório) |
@@ -149,6 +149,15 @@ Cada personagem tem 22.285714285714285 desenhos: todas as ações do jogo, nas 4
 | 18 | SOMBRA |
 | 19 | FANTASMA |
 | 20 | NEON |
+| 21 | ANTENAS |
+| 22 | LACINHO |
+| 23 | MOICANO |
+| 24 | MAGO |
+| 25 | SAFARI |
+| 26 | PLUMA |
+| 27 | ASTRONAUTA |
+| 28 | PRANCHA |
+| 29 | RUBRO |
 
 | Chave | O que desenhar | Tamanho | Apoio | Quadros | Ticks por quadro (60 Hz) | Loop | Prioridade |
 |---|---|---|---|---|---|---|---|

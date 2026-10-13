@@ -65,12 +65,14 @@ export const CHARSEL_STANDEE: readonly { tile: number; pal: number }[] = [
 /** Escolha de personagem com as skins: grade de 6 colunas (os 6 originais na 1ª linha, as skins depois, na ordem de
  *  `SKINS`); a última linha pode ficar incompleta. */
 const PICK_COLS = 6, PICK_ROWS = Math.ceil(CHAR_COUNT / PICK_COLS);
+/** Altura de cada linha: 38 px até 4 linhas; com mais, encolhe para a grade caber até a linha 204. */
+const PICK_STEP = Math.min(38, Math.floor(170 / PICK_ROWS));
 export const CHARSEL_PICK = {
   cols: PICK_COLS, rows: PICK_ROWS, count: CHAR_COUNT,
   x: Array.from({ length: PICK_COLS }, (_, c) => 59 + 30 * c),
-  y: Array.from({ length: PICK_ROWS }, (_, r) => 36 + 38 * r),
-  standeeY: Array.from({ length: PICK_ROWS }, (_, r) => 38 + 38 * r),
-  cellW: 30, cellH: 36,
+  y: Array.from({ length: PICK_ROWS }, (_, r) => 34 + PICK_STEP * r),
+  standeeY: Array.from({ length: PICK_ROWS }, (_, r) => 34 + PICK_STEP * r),
+  cellW: 30, cellH: PICK_STEP - 2,
 };
 /** Linha de OBJ de cada skin no boneco da grade: as que só mudam o desenho dividem a linha 0 (a paleta da partida do
  *  personagem-base); as que trocam de cor ganham uma linha própria (1–4 e 7; 5 e 6 são dos originais). */
