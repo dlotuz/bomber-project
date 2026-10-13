@@ -127,13 +127,17 @@ describe('desenho (revisão da Task 10, rodada 2)', () => {
 });
 
 describe('personagens (§6.6, R13, R32)', () => {
-  it('cada humano move o próprio cursor: ←/→ com volta nas 3 colunas, ↑/↓ trocam a linha', () => {
+  it('cada humano move o próprio cursor: ←/→ com volta nas 3 colunas, ↑ sobe e ↓ desce, cada um para o seu lado', () => {
     const { app } = mkApp();
     const c = charactersScreen(app); app.go(c);
     press(app, BTN.LEFT, 0); expect(c.charOf(0)).toBe(2);
     press(app, BTN.DOWN, 0); expect(c.charOf(0)).toBe(5);
     press(app, BTN.RIGHT, 1); expect(c.charOf(1)).toBe(2);
-    press(app, BTN.UP, 1); expect(c.charOf(1)).toBe(5);          // dois no mesmo personagem
+    press(app, BTN.UP, 1); expect(c.charOf(1)).toBe(8);          // do alto, ↑ dá a volta para a última linha
+    press(app, BTN.UP, 1); expect(c.charOf(1)).toBe(5);
+    press(app, BTN.DOWN, 1); expect(c.charOf(1)).toBe(8);
+    press(app, BTN.DOWN, 1); expect(c.charOf(1)).toBe(2);        // ↓ da última linha volta ao alto
+    press(app, BTN.UP, 0); expect(c.charOf(0)).toBe(2);          // P1 estava em 5: ↑ volta uma linha (e não desce)
   });
   it('A confirma ($02); o P1 escolhe as CPUs em ordem depois do próprio; o último A leva à fase', () => {
     const { app, sink } = mkApp();

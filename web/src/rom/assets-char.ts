@@ -4,7 +4,8 @@ import type { RomView } from './view';
 import { decodeTiles } from './decode/tiles';
 import { readBgr555 } from './decode/palette';
 import { decodeZte } from './decode/zte';
-import { CHAR_COUNT, baseChar, recolorBgr555, skinOf } from '../render/art/charskins';
+import { CHAR_COUNT, baseChar, skinOf, skinPalette } from '../render/art/charskins';
+import { reshapeFrame } from '../render/art/charshape';
 
 export const CHAR_SHEETS = 0xc20730, VICTORY_SHEETS = 0xc28ebf, CHAR_PALETTES = 0xc2779d;
 export const HUD_HEAD_BLOCKS = 0xc46170, HUD_HEAD_SRC = 0xc4617f, HUD_HEAD_DST = 0xc461f7;
@@ -55,14 +56,20 @@ export function loadCharacter(rom: RomView, id: number, heads: () => Uint8Array)
   };
   return {
     char: id,
-    frame: g => { let f = frames.get(g); if (!f) { f = sheetFrame(rom, sheet, g); frames.set(g, f); } return f; },
+    frame: g => {
+      let f = frames.get(g);
+      if (!f) { f = sheetFrame(rom, sheet, g); if (skin?.shape) f = reshapeFrame(f, skin.shape); frames.set(g, f); }
+      return f;
+    },
     palettes: Array.from({ length: 5 }, (_, s) => {
       const p = readBgr555(rom.bytes(rom.p24(CHAR_PALETTES + 32 * c + 4 * s), 32), 0, 16);
-      return skin ? recolorBgr555(p, skin) : p;
+      return skin ? skinPalette(p, skin) : p;
     }),
     victoryFrame: g => {
       if (!(g >= 0 && g <= 3)) throw new RangeError(`quadro de vitória inválido: ${g}`);
-      let f = victoryFrames.get(g); if (!f) { f = sheetFrame(rom, vsheet, g); victoryFrames.set(g, f); } return f;
+      let f = victoryFrames.get(g);
+      if (!f) { f = sheetFrame(rom, vsheet, g); if (skin?.shape) f = reshapeFrame(f, skin.shape); victoryFrames.set(g, f); }
+      return f;
     },
     hudHead: slot => face(hudHeads, 6 + c, slot),
     hudCry: slot => face(hudCries, c, slot),

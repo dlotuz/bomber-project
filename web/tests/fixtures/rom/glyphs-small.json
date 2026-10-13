@@ -2,8 +2,8 @@
   "rom": "38f4394986bd39fcbe32a722a3fe103ee6177d9b",
   "styles": {
     "ascii8": {
-      "glyphs": 64,
-      "sha1": "7d35b1578d41f820f5903b1bdfe081f3423c241c"
+      "glyphs": 66,
+      "sha1": "f83ae7ea41c4d9fe748c07a28a3ee3284748f486"
     },
     "banner": {
       "glyphs": 15,

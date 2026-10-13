@@ -10,6 +10,7 @@ import {
   NO_CHAR, PORTRAIT_OF_CHAR, charselPortraitTile, portraitPalette, portraitPixels, scoreboardPortraitTile,
 } from '../../src/render/screens-rom/portraits';
 import { CHARSEL_PORTRAIT_PAL } from '../../src/render/screens-rom/charsel';
+import { SKINS } from '../../src/render/art/charskins';
 import { bgr555ToRgba } from '../../src/app/rom-api';
 
 /** RGBA 32×32 do retrato (transparente = 0,0,0,0). */
@@ -53,12 +54,9 @@ describe.skipIf(!ASSETS)('retratos × capturas', () => {
       expect(Array.from(portraitPalette(ASSETS!, k, k)), `slot ${k}`).toEqual(Array.from(cs!.cgram.slice(16 * row, 16 * row + 16)));
     }
   });
-  it('a tabela de paletas tem o "×" (mesma paleta) nas entradas 6–8 de cada slot', () => {
-    for (let s = 0; s < 5; s++) {
-      const x = Array.from(portraitPalette(ASSETS!, s, 6));
-      expect(Array.from(portraitPalette(ASSETS!, s, 7))).toEqual(x);
-      expect(Array.from(portraitPalette(ASSETS!, s, 8))).toEqual(x);
-    }
+  it('as entradas 6.. de cada slot são as skins: sem troca de cor, a paleta é a do personagem-base', () => {
+    for (let s = 0; s < 5; s++) SKINS.forEach((k, i) =>
+      expect(Array.from(portraitPalette(ASSETS!, s, 6 + i))).toEqual(Array.from(portraitPalette(ASSETS!, s, k.base))));
   });
   const sbPng = loadCapturePng('scoreboard'), csPng = loadCapturePng('charsel');
   it.skipIf(!sbPng)('pixels: cada cabeça do placar (x 48, y 56 + 32·k) tem o SHA-1 do nosso retrato', () => {
