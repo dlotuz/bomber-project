@@ -5,7 +5,7 @@ import { FADE_MENU } from '../app/fade';
 import { romState, type RomAssets } from '../app/rom-api';
 import { obj, PpuCanvas } from '../render/screens-rom/scene';
 import { CHARACTERS } from '../render/art/bomber';
-import { CHARSEL_PICK, CHARSEL_PORTRAIT, CHARSEL_PICK_STANDEE, charselSprites } from '../render/screens-rom/charsel';
+import { CHARSEL_PICK, CHARSEL_PORTRAIT, CHARSEL_PICK_STANDEE, charselSprites, charselStandeeSrc } from '../render/screens-rom/charsel';
 import { hdMenu, hdPanel } from '../render/hd-menu';
 import { drawText } from '../render/text/text';
 import { S } from '../render/text/strings';
@@ -51,14 +51,15 @@ export function charactersScreen(app: App): Screen & {
   const scheme = createPickScheme(app);
   const ppu = new PpuCanvas();
 
-  /** ←/→ dão a volta nas 3 colunas; ↑/↓ trocam a linha (spec §6.6). */
+  /** ←/→ dão a volta nas 3 colunas; ↑ sobe e ↓ desce de linha, dando a volta (spec §6.6). */
   const moveCursor = (i: number, p: number): void => {
     if (!p) return;
     const c = setup.chars[i];
     const col = c % COLS, row = Math.floor(c / COLS);
     if (p & BTN.LEFT) setup.chars[i] = row * COLS + (col + COLS - 1) % COLS;
     if (p & BTN.RIGHT) setup.chars[i] = row * COLS + (col + 1) % COLS;
-    if (p & (BTN.UP | BTN.DOWN)) setup.chars[i] = ((row + 1) % ROWS) * COLS + col;
+    if (p & BTN.UP) setup.chars[i] = ((row + ROWS - 1) % ROWS) * COLS + col;
+    else if (p & BTN.DOWN) setup.chars[i] = ((row + 1) % ROWS) * COLS + col;
     app.audio.sfx(SFX.move);
   };
 
@@ -101,8 +102,10 @@ export function charactersScreen(app: App): Screen & {
         // no BG1 (I6: folha `$CD:E585`, cores `$C1:B3C3` por slot e personagem; "×" nos slots desligados) e os 6
         // bonecos parados como OBJ (`CHARSEL_STANDEE`, medidos em `charsel.oam`), tudo com o HOFS −8 do BG1 (I8).
         // Só o título (no vão da corda) e os cursores vão por cima, depois do PPU.
-        const oam = CHARSEL_PICK_STANDEE.map((s, k) =>
-          obj(GRID.x[k % COLS], GRID.standeeY[Math.floor(k / COLS)], s.tile, s.pal, { big: true, prio: 3 }));
+        const oam = CHARSEL_PICK_STANDEE.map((s, k) => ({
+          ...obj(GRID.x[k % COLS], GRID.standeeY[Math.floor(k / COLS)], s.tile, s.pal, { big: true, prio: 3 }),
+          src: charselStandeeSrc(a, k),
+        }));
         ppu.drawOver(ctx, charselSprites(a, [0, 1, 2, 3, 4].map(i => (setup.slots[i] !== 'off' ? setup.chars[i] : null)), oam));
       } else {
         // Grade 3×2 dos personagens (sem ROM: nossa própria arte).

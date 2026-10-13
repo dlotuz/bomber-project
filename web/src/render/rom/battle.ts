@@ -150,7 +150,7 @@ export function buildBattleFrame(s: RoundState, vis: RomBattleVis, a: RomAssets,
   }
   // skins: o rosto do HUD ganha uma linha de BG própria, pintada (depois das camadas, que também mexem nos mapas)
   if (opts.hudHeads !== false && !skip.has('hud')) {
-    const skins = s.players.map(p => (p.present ? skinOf(p.char) : null));
+    const skins = s.players.map(p => (p.present ? skinOf(p.char) : null)).map(k => (k?.tint ? k : null));   // só as que trocam de cor
     if (skins.some(Boolean)) paintHudFaces(b, HUD_MAP_ROW, (ar.hudMap[10] >> 10) & 7, skins, hudFrameIndices(ar.bgTiles.px, ar.hudMap));
   }
   const math = skip.has('arena') ? 'none' : ar.colorMath;   // sem a arena, nada para misturar (e o fundo fica puro)

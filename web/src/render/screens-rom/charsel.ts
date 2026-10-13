@@ -15,7 +15,7 @@ import type { RomAssets, ObjEntry, PpuFrame } from '../../app/rom-api';
 import { box, MENU_GEO, newMap, pattern, put, sceneFrame, sceneGfx, sceneMaps, tileWord, type SceneMaps } from './scene';
 import { drawText } from '../text/text';
 import { charselPortraitTile, NO_CHAR, withPortraitPalettes } from './portraits';
-import { SKINS, recolorBgr555 } from '../art/charskins';
+import { SKINS, skinPalette } from '../art/charskins';
 
 /** Grade 3×2 dos 6 personagens (`render/art/bomber.ts` `CHARACTERS`), medida no `charsel.oam`. */
 export const CHARSEL_GRID = { cols: 3, rows: 2, x: [80, 128, 176] as const, y: [88, 136] as const, cellW: 48, cellH: 48 };
@@ -73,9 +73,18 @@ export function withSkinPalettes(cgram: Uint16Array): Uint16Array {
   const out = cgram.slice();
   SKINS.forEach((s, i) => {
     const from = 128 + 16 * CHARSEL_STANDEE[s.base].pal;
-    out.set(recolorBgr555(cgram.slice(from, from + 16), s), 128 + 16 * i);
+    out.set(skinPalette(cgram.slice(from, from + 16), s), 128 + 16 * i);
   });
   return out;
+}
+
+/** Quadro do boneco de frente e parado na folha do personagem (o mesmo da partida). */
+const STANDEE_FRAME = 6;
+/** Fonte do boneco `k` da grade: o tile da ROM; as skins usam o quadro de frente do próprio boneco (já com a forma
+ *  desenhada — cartola, gordão, pequeno), com a paleta dele: fica igual ao da partida. */
+export function charselStandeeSrc(a: RomAssets, k: number): ObjEntry['src'] {
+  if (k < CHARSEL_STANDEE.length) return { tile: CHARSEL_PICK_STANDEE[k].tile };
+  return { px: a.character(k).frame(STANDEE_FRAME) };
 }
 
 /** Moldura de corda da cena (BG1, mesma família das outras cenas de menu — T5 `MENU_GEO.rope` — mas `charsel` não
@@ -163,7 +172,9 @@ export function charselSprites(a: RomAssets, chars: readonly (number | null)[], 
   const bg1 = newMap();
   for (const p of charselPortraitWords(chars)) put(bg1, p.col, p.row, p.w);
   const frame = sceneFrame(g, { bg1 }, { ...CHARSEL_SCROLL, oam });
-  return { ...frame, cgram: withSkinPalettes(withPortraitPalettes(a, g.cgram, chars.map(c => c ?? NO_CHAR), CHARSEL_PORTRAIT_PAL)) };
+  const cgram = withSkinPalettes(withPortraitPalettes(a, g.cgram, chars.map(c => c ?? NO_CHAR), CHARSEL_PORTRAIT_PAL));
+  SKINS.forEach((_, i) => cgram.set(a.character(CHARSEL_STANDEE.length + i).palettes[0], 128 + 16 * i));   // as cores da partida
+  return { ...frame, cgram };
 }
 
 /** Nosso título (PT-BR) dentro do vão que a ROM deixava para "Select a character!" (`CHARSEL_TITLE_PX`, 2 linhas de
