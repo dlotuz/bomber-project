@@ -8,7 +8,7 @@ import { romTables } from './tables';
 import { readScene } from './adapt';
 import { fieldWords } from './field';
 import { headOverrides, headTiles, hudFrameIndices, hudWords, infinityOverrides, paintHudFaces } from './hud';
-import { skinOf } from '../art/charskins';
+import { recolors, skinOf } from '../art/charskins';
 import { CLOCK_FROZEN_FROM } from '../../core/constants';
 import { hudCrying } from '../hud-cry';
 import { sceneryCgram, sceneryTiles } from './scenery';
@@ -150,7 +150,7 @@ export function buildBattleFrame(s: RoundState, vis: RomBattleVis, a: RomAssets,
   }
   // skins: o rosto do HUD ganha uma linha de BG própria, pintada (depois das camadas, que também mexem nos mapas)
   if (opts.hudHeads !== false && !skip.has('hud')) {
-    const skins = s.players.map(p => (p.present ? skinOf(p.char) : null)).map(k => (k?.tint ? k : null));   // só as que trocam de cor
+    const skins = s.players.map(p => (p.present ? skinOf(p.char) : null)).map(k => (recolors(k) ? k : null));   // só as que trocam de cor
     if (skins.some(Boolean)) paintHudFaces(b, HUD_MAP_ROW, (ar.hudMap[10] >> 10) & 7, skins, hudFrameIndices(ar.bgTiles.px, ar.hudMap));
   }
   const math = skip.has('arena') ? 'none' : ar.colorMath;   // sem a arena, nada para misturar (e o fundo fica puro)

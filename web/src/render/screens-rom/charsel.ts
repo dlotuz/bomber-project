@@ -15,7 +15,7 @@ import type { RomAssets, ObjEntry, PpuFrame } from '../../app/rom-api';
 import { box, MENU_GEO, newMap, pattern, put, sceneFrame, sceneGfx, sceneMaps, tileWord, type SceneMaps } from './scene';
 import { drawText } from '../text/text';
 import { charselPortraitTile, NO_CHAR, withPortraitPalettes } from './portraits';
-import { SKINS, skinPalette } from '../art/charskins';
+import { CHAR_COUNT, SKINS, recolors } from '../art/charskins';
 
 /** Grade 3×2 dos 6 personagens (`render/art/bomber.ts` `CHARACTERS`), medida no `charsel.oam`. */
 export const CHARSEL_GRID = { cols: 3, rows: 2, x: [80, 128, 176] as const, y: [88, 136] as const, cellW: 48, cellH: 48 };
@@ -62,19 +62,32 @@ export const CHARSEL_STANDEE: readonly { tile: number; pal: number }[] = [
   { tile: 0x084, pal: 6 },   // 5 RUBI
 ];
 
-/** Escolha de personagem com as skins: grade 3×3 (as 3 skins vêm depois dos 6 originais). Cada skin usa os tiles do
- *  personagem-base e uma das linhas 0–2 de OBJ, onde `withSkinPalettes` grava a paleta do base pintada. */
-export const CHARSEL_PICK = { cols: 3, rows: 3, x: [80, 128, 176] as const, y: [60, 102, 144] as const, standeeY: [68, 110, 152] as const, cellW: 48, cellH: 42 };
+/** Escolha de personagem com as skins: grade de 6 colunas (os 6 originais na 1ª linha, as skins depois, na ordem de
+ *  `SKINS`); a última linha pode ficar incompleta. */
+const PICK_COLS = 6, PICK_ROWS = Math.ceil(CHAR_COUNT / PICK_COLS);
+/** Altura de cada linha: 38 px até 4 linhas; com mais, encolhe para a grade caber até a linha 204. */
+const PICK_STEP = Math.min(38, Math.floor(170 / PICK_ROWS));
+export const CHARSEL_PICK = {
+  cols: PICK_COLS, rows: PICK_ROWS, count: CHAR_COUNT,
+  x: Array.from({ length: PICK_COLS }, (_, c) => 59 + 30 * c),
+  y: Array.from({ length: PICK_ROWS }, (_, r) => 34 + PICK_STEP * r),
+  standeeY: Array.from({ length: PICK_ROWS }, (_, r) => 34 + PICK_STEP * r),
+  cellW: 30, cellH: PICK_STEP - 2,
+};
+/** Linha de OBJ de cada skin no boneco da grade: as que só mudam o desenho dividem a linha 0 (a paleta da partida do
+ *  personagem-base); as que trocam de cor ganham uma linha própria (1–4 e 7; 5 e 6 são dos originais). */
+const SKIN_ROWS = [1, 2, 3, 4, 7];
+const skinRow: number[] = (() => {
+  let n = 0;
+  return SKINS.map(s => (recolors(s) ? SKIN_ROWS[n++] ?? 0 : 0));
+})();
 export const CHARSEL_PICK_STANDEE: readonly { tile: number; pal: number }[] = [
-  ...CHARSEL_STANDEE, ...SKINS.map((s, i) => ({ tile: CHARSEL_STANDEE[s.base].tile, pal: i })),
+  ...CHARSEL_STANDEE, ...SKINS.map((s, i) => ({ tile: CHARSEL_STANDEE[s.base].tile, pal: skinRow[i] })),
 ];
-/** `cgram` com, nas linhas de OBJ 0..2, a paleta de cada skin (a linha do personagem-base, pintada). */
-export function withSkinPalettes(cgram: Uint16Array): Uint16Array {
+/** `cgram` com a paleta de cada skin (a da partida, vaga 1) na linha de OBJ dela. */
+export function withSkinPalettes(a: RomAssets, cgram: Uint16Array): Uint16Array {
   const out = cgram.slice();
-  SKINS.forEach((s, i) => {
-    const from = 128 + 16 * CHARSEL_STANDEE[s.base].pal;
-    out.set(skinPalette(cgram.slice(from, from + 16), s), 128 + 16 * i);
-  });
+  SKINS.forEach((_, i) => out.set(a.character(CHARSEL_STANDEE.length + i).palettes[0], 128 + 16 * skinRow[i]));
   return out;
 }
 
@@ -172,8 +185,7 @@ export function charselSprites(a: RomAssets, chars: readonly (number | null)[], 
   const bg1 = newMap();
   for (const p of charselPortraitWords(chars)) put(bg1, p.col, p.row, p.w);
   const frame = sceneFrame(g, { bg1 }, { ...CHARSEL_SCROLL, oam });
-  const cgram = withSkinPalettes(withPortraitPalettes(a, g.cgram, chars.map(c => c ?? NO_CHAR), CHARSEL_PORTRAIT_PAL));
-  SKINS.forEach((_, i) => cgram.set(a.character(CHARSEL_STANDEE.length + i).palettes[0], 128 + 16 * i));   // as cores da partida
+  const cgram = withSkinPalettes(a, withPortraitPalettes(a, g.cgram, chars.map(c => c ?? NO_CHAR), CHARSEL_PORTRAIT_PAL));
   return { ...frame, cgram };
 }
 

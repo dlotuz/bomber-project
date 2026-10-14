@@ -19,7 +19,7 @@ export const CHARACTERS: readonly CharacterDef[] = [
   ...ORIGINALS,
   ...SKINS.map((s): CharacterDef => {
     const b = ORIGINALS[s.base];
-    return { id: `skin-${s.name.toLowerCase()}`, name: s.name, shape: b.id, helmet: recolorHex(b.helmet, s), helmetShade: recolorHex(b.helmetShade, s),
+    return { id: `skin-${s.name.toLowerCase()}`, name: s.name, shape: b.id, helmet: recolorHex(b.helmet, s, 'helmet'), helmetShade: recolorHex(b.helmetShade, s, 'helmetShade'),
       body: recolorHex(b.body, s), gloves: recolorHex(b.gloves, s), accent: recolorHex(b.accent, s) };
   }),
 ];

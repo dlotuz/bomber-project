@@ -1,5 +1,5 @@
 import type { MountAbility } from '../types';
-import { spawnShot, advanceProjectile, shotBlocked, F_SPEC, SHOT_END_TICKS, endShot } from '../projectile';
+import { spawnShot, advanceProjectile, shotInPlay, F_SPEC, SHOT_END_TICKS } from '../projectile';
 import { lockAct } from '../core-api';
 import { mev } from '../events';
 
@@ -17,7 +17,7 @@ export const DANCE_TICKS = 192;
 export const ABILITY_F: MountAbility = {
   type: 0xf,
   onY(s, p, _r, ev) {
-    if (shotBlocked(s, p, 0xf)) return true;   // um por vez + espera (SHOT_COOLDOWN)
+    if (shotInPlay(s, p.slot, 0xf)) return true;
     spawnShot(s, p, 0xf);
     ev.push(mev({ id: 'mount_ability', slot: p.slot, mount: 0xf }));
     return true;
@@ -31,7 +31,7 @@ export const ABILITY_F: MountAbility = {
           ev.push(mev({ id: 'mount_struck', slot: pr.owner, target: pr.target, mount: 0xf }));
         }
       }
-      if (s.tick - pr.t >= SHOT_END_TICKS) endShot(s, pr);
+      if (s.tick - pr.t >= SHOT_END_TICKS) pr.state = 'done';
       return;
     }
     const res = advanceProjectile(s, pr, F_SPEC);

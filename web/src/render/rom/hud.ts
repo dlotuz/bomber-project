@@ -1,7 +1,7 @@
 import type { CharacterAssets } from '../../rom/types';
 import type { TileOverride } from './scene';
 import { CLOCK_FROZEN_FROM } from '../../core/constants';
-import { recolorBgr555, type SkinDef } from '../art/charskins';
+import { helmetRecolor, recolorBgr555, type SkinDef } from '../art/charskins';
 
 export const HUD_WORDS = 96;
 
@@ -109,7 +109,7 @@ export function paintHudFaces(b: { bg1: Uint16Array; bg2: Uint16Array; cg: Uint1
       r = free.shift();
       if (r === undefined) return;   // sem linha livre: o rosto fica como está
       rowOf.set(skin, r);
-      const from = b.cg.slice(16 * src, 16 * src + 16), painted = recolorBgr555(from, skin);
+      const from = b.cg.slice(16 * src, 16 * src + 16), painted = skin.helmet ? helmetRecolor(from, skin) : recolorBgr555(from, skin);
       keep.forEach(i => { painted[i] = from[i]; });   // fundo do painel e moldura do HUD não mudam de cor
       b.cg.set(painted, 16 * r);
     }

@@ -14,7 +14,7 @@
 import type { RomAssets, Tiles } from '../../app/rom-api';
 import { tilesFrom, zteBlock } from '../../app/rom-api';
 import type { ObjEntry } from '../../app/rom-api';
-import { BASE_CHARS, baseChar, recolorBgr555, skinOf } from '../art/charskins';
+import { BASE_CHARS, baseChar, helmetRecolor, recolorBgr555, skinOf } from '../art/charskins';
 
 export const PORTRAIT_SHEET_ADDR = 0xcde585;
 export const PORTRAIT_PAL_TABLE = 0xc1b3c3;
@@ -92,7 +92,8 @@ export function portraitPalette(a: RomAssets, slot: number, char: number): Uint1
   const skin = skinOf(char);
   if (skin) {   // skin: o retrato do personagem-base, pintado (o fundo do quadrinho, cor 15, é do slot e não muda)
     const base = portraitPalette(a, slot, skin.base);
-    const out = recolorBgr555(base, skin);
+    // capacete de outra cor: troca as cores do capacete do personagem-base nesta vaga (as mesmas no retrato)
+    const out = skin.helmet ? helmetRecolor(base, skin, a.character(skin.base).palettes[slot]) : recolorBgr555(base, skin);
     out[15] = base[15];
     return out;
   }

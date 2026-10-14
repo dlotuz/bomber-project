@@ -18,6 +18,9 @@ export interface SkinDef {
   shape?: SkinShape | readonly SkinShape[];
   /** Troca de cor (ausente = as cores originais): rotação do matiz (graus), multiplicador de saturação e brilho somado (−1..1). */
   tint?: { hue: number; sat: number; light: number };
+  /** Capacete de outra cor (escura, média, clara; "#rrggbb"): as cores 12–14 da paleta do personagem, em todas as vagas.
+   *  O macacão (cor do time/vaga) não muda, então dá para saber quem é quem. */
+  helmet?: readonly [string, string, string];
 }
 
 /** Todas partem do Blanco, com as cores originais; mudam só uma característica. Mais skins = mais linhas aqui
@@ -26,11 +29,68 @@ export const SKINS: readonly SkinDef[] = [
   { base: 0, name: 'CARTOLA', shape: ['suit', 'hat'] },
   { base: 0, name: 'PEQUENO', shape: 'small' },
   { base: 0, name: 'GORDAO', shape: 'fat' },
+  // acessórios na cabeça
+  { base: 0, name: 'COROA', shape: 'crown' },
+  { base: 0, name: 'COWBOY', shape: 'cowboy' },
+  { base: 0, name: 'NINJA', shape: 'ninja' },
+  // fantasias
+  { base: 0, name: 'PIRATA', shape: 'pirate' },
+  { base: 0, name: 'SUPER', shape: 'cape' },
+  { base: 0, name: 'CHEF', shape: 'chef' },
+  // outras formas
+  { base: 0, name: 'ALTAO', shape: 'tall' },
+  { base: 0, name: 'CABECAO', shape: 'bighead' },
+  // capacete de outra cor (o macacão continua com a cor da vaga)
+  { base: 0, name: 'DOURADO', helmet: ['#a06a10', '#e0aa28', '#ffe680'] },
+  { base: 0, name: 'SOMBRA', helmet: ['#18141f', '#3a3448', '#625a78'] },
+  { base: 0, name: 'FANTASMA', helmet: ['#3c8ca8', '#78d0e8', '#c8f4ff'] },
+  { base: 0, name: 'NEON', helmet: ['#1e8c14', '#48dc28', '#b4ff5a'] },
+  // lote 2 (temas)
+  { base: 0, name: 'ANTENAS', shape: 'antenna' },
+  { base: 0, name: 'LACINHO', shape: 'bow' },
+  { base: 0, name: 'MOICANO', shape: 'mohawk' },
+  { base: 0, name: 'MAGO', shape: 'wizard' },
+  { base: 0, name: 'SAFARI', shape: 'safari' },
+  { base: 0, name: 'PLUMA', shape: 'plume' },
+  { base: 0, name: 'ASTRONAUTA', shape: 'bubble' },
+  { base: 0, name: 'PRANCHA', shape: 'board' },
+  { base: 0, name: 'RUBRO', helmet: ['#5a0a0e', '#b01e26', '#f05a4a'] },
 ];
+
+/** Índices do capacete na paleta do personagem (escuro, médio, claro). */
+export const HELMET_IDX = [12, 13, 14] as const;
+/** A skin troca alguma cor (e precisa de linha de paleta própria). */
+export const recolors = (skin: SkinDef | null | undefined): boolean => !!(skin?.tint || skin?.helmet);
+const hexToBgr555 = (hex: string): number => {
+  const n = parseInt(hex.slice(1), 16), q = (x: number): number => Math.round((x / 255) * 31);
+  return q(n >> 16) | (q((n >> 8) & 255) << 5) | (q(n & 255) << 10);
+};
 
 /** Paleta do boneco com a skin: cores giradas se a skin tem `tint`; senão a própria paleta. */
 export function skinPalette(pal: Uint16Array, skin: SkinDef): Uint16Array {
-  return recolorBgr555(pal, skin);
+  const out = recolorBgr555(pal, skin);
+  if (skin.helmet) HELMET_IDX.forEach((i, k) => { out[i] = hexToBgr555(skin.helmet![k]); });
+  return out;
+}
+
+/** Outra paleta (retrato, rosto do HUD) com o capacete da skin: cada cor igual a uma das do capacete original da vaga
+ *  (`charPal`, a paleta do personagem-base na mesma vaga) troca pela nova; sem `charPal`, os brancos e cinzas claros. */
+export function helmetRecolor(pal: Uint16Array, skin: SkinDef, charPal?: Uint16Array): Uint16Array {
+  const out = pal.slice();
+  if (!skin.helmet) return out;
+  const fresh = skin.helmet.map(hexToBgr555);
+  const rgb = (v: number): Rgb => [(v & 31) / 31, ((v >> 5) & 31) / 31, ((v >> 10) & 31) / 31];
+  for (let i = 2; i < out.length; i++) {
+    const v = out[i];
+    if (charPal) {
+      const k = HELMET_IDX.findIndex(j => charPal[j] === v);
+      if (k >= 0) out[i] = fresh[k];
+      continue;
+    }
+    const [, s, l] = rgbToHsl(rgb(v));
+    if (s < 0.2 && l >= 0.45) out[i] = fresh[l >= 0.9 ? 2 : l >= 0.62 ? 1 : 0];
+  }
+  return out;
 }
 
 /** Total de personagens escolhíveis (originais + skins). */
@@ -86,7 +146,8 @@ export function recolorBgr555(pal: Uint16Array, skin: SkinDef, keep = 2): Uint16
 }
 
 /** Cor "#rrggbb" da skin (arte própria, sem ROM). */
-export function recolorHex(hex: string, skin: SkinDef): string {
+export function recolorHex(hex: string, skin: SkinDef, part?: 'helmet' | 'helmetShade'): string {
+  if (skin.helmet && part) return part === 'helmet' ? skin.helmet[2] : skin.helmet[1];
   const n = parseInt(hex.slice(1), 16);
   const [R, G, B] = recolorRgb([(n >> 16) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255], skin);
   const q = (x: number): string => Math.max(0, Math.min(255, Math.round(x * 255))).toString(16).padStart(2, '0');

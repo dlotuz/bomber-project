@@ -1,5 +1,6 @@
 import { fromRows, makePix, flipH, setPx, alphaAt, blit } from '../../src/render/art/pix';
 import { CHARACTERS, bomberFrame, headCryIcon, headIcon } from '../../src/render/art/bomber';
+import { CHAR_COUNT } from '../../src/render/art/charskins';
 import { bombPix, itemIcon } from '../../src/render/art/items';
 import { flamePiece, type FlamePart } from '../../src/render/art/flames';
 import { THEMES, stageTiles } from '../../src/render/art/tiles';
@@ -40,9 +41,9 @@ describe('pix', () => {
 });
 
 describe('personagens', () => {
-  it('6 personagens e 3 skins, todas as direções e quadros em 16×20 com conteúdo', () => {
-    expect(CHARACTERS).toHaveLength(9);
-    for (let c = 0; c < 9; c++) for (let d = 1; d <= 4; d++) for (let f = 0; f < 3; f++) {
+  it('6 personagens e as skins, todas as direções e quadros em 16×20 com conteúdo', () => {
+    expect(CHARACTERS).toHaveLength(CHAR_COUNT);
+    for (let c = 0; c < CHAR_COUNT; c++) for (let d = 1; d <= 4; d++) for (let f = 0; f < 3; f++) {
       const p = bomberFrame(c, d, f);
       expect([p.w, p.h]).toEqual([16, 20]);
       expect(opaque(p)).toBeGreaterThan(100);

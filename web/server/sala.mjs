@@ -9,6 +9,7 @@ import { randomInt } from 'node:crypto';
 import { WebSocketServer } from 'ws';
 import { MIN_DELAY, RTT_WINDOW, rttOf, delaysFor } from './delay.mjs';
 import { Accounts } from './contas.mjs';
+import { CHAR_MAX } from './chars.mjs';
 
 const DIST = process.env.SALA_DIST ? join(process.env.SALA_DIST, '/') : fileURLToPath(new URL('../dist/', import.meta.url));
 const PORT = Number(process.env.PORT ?? 8787);
@@ -220,7 +221,7 @@ wss.on('connection', ws => {
         rooms.set(r.code, r);
         peer.room = r; peer.slot = 0; peer.name = cleanName(m.name) || 'P1';
         r.lobby.names[0] = peer.name;
-        r.lobby.chars[0] = clampInt(m.char, 0, 8, r.lobby.chars[0]);
+        r.lobby.chars[0] = clampInt(m.char, 0, CHAR_MAX, r.lobby.chars[0]);
         r.lobby.powerKey[0] = !!m.power;
         applyConfig(r.lobby, m.lobby);   // fase e regras já escolhidas na criação
         broadcastRoom(r);
@@ -240,7 +241,7 @@ wss.on('connection', ws => {
         if (s < 0) { send(ws, { t: 'error', msg: 'A sala está cheia (5 jogadores).' }); return; }
         r.peers.add(peer); peer.room = r; peer.slot = s; peer.name = cleanName(m.name) || `P${s + 1}`;
         r.lobby.names[s] = peer.name; r.lobby.powerKey[s] = !!m.power; r.lobby.ready[s] = false;
-        r.lobby.chars[s] = clampInt(m.char, 0, 8, r.lobby.chars[s]);
+        r.lobby.chars[s] = clampInt(m.char, 0, CHAR_MAX, r.lobby.chars[s]);
         broadcastRoom(r);
         break;
       }
@@ -271,7 +272,7 @@ wss.on('connection', ws => {
         if (queue.includes(peer)) return;
         if (room) { if (!room.quick) return; leave(peer); }   // sobra de uma partida rapida que acabou
         peer.name = cleanName(m.name) || 'P';
-        peer.char = clampInt(m.char, 0, 8, 0);
+        peer.char = clampInt(m.char, 0, CHAR_MAX, 0);
         peer.power = !!m.power;
         queue.push(peer);
         queueUpdate();
@@ -291,7 +292,7 @@ wss.on('connection', ws => {
       }
       case 'char': {   // cada um escolhe o próprio personagem
         if (!room || room.game) return;
-        room.lobby.chars[peer.slot] = clampInt(m.c, 0, 8, room.lobby.chars[peer.slot]);
+        room.lobby.chars[peer.slot] = clampInt(m.c, 0, CHAR_MAX, room.lobby.chars[peer.slot]);
         broadcastRoom(room);
         break;
       }
@@ -302,7 +303,7 @@ wss.on('connection', ws => {
         L.mode = n.mode === 'team' ? 'team' : 'ffa';
         if (Array.isArray(n.slots)) n.slots.forEach((k, s) => { if (s < 5 && L.slots[s] !== 'human' && (k === 'cpu' || k === 'off')) L.slots[s] = k; });
         if (Array.isArray(n.teams)) n.teams.forEach((v, s) => { if (s < 5) L.teams[s] = v === 1 ? 1 : 0; });
-        if (Array.isArray(n.chars)) n.chars.forEach((c, s) => { if (s < 5 && L.slots[s] !== 'human') L.chars[s] = clampInt(c, 0, 8, L.chars[s]); });
+        if (Array.isArray(n.chars)) n.chars.forEach((c, s) => { if (s < 5 && L.slots[s] !== 'human') L.chars[s] = clampInt(c, 0, CHAR_MAX, L.chars[s]); });
         broadcastRoom(room);
         break;
       }

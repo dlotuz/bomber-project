@@ -127,17 +127,19 @@ describe('desenho (revisão da Task 10, rodada 2)', () => {
 });
 
 describe('personagens (§6.6, R13, R32)', () => {
-  it('cada humano move o próprio cursor: ←/→ com volta nas 3 colunas, ↑ sobe e ↓ desce, cada um para o seu lado', () => {
+  it('cada humano move o próprio cursor: ←/→ com volta na linha, ↑ sobe e ↓ desce, cada um para o seu lado', () => {
+    // grade de 6 colunas (CHARSEL_PICK): 30 personagens = 5 linhas cheias
     const { app } = mkApp();
     const c = charactersScreen(app); app.go(c);
-    press(app, BTN.LEFT, 0); expect(c.charOf(0)).toBe(2);
-    press(app, BTN.DOWN, 0); expect(c.charOf(0)).toBe(5);
+    press(app, BTN.LEFT, 0); expect(c.charOf(0)).toBe(5);
+    press(app, BTN.DOWN, 0); expect(c.charOf(0)).toBe(11);
     press(app, BTN.RIGHT, 1); expect(c.charOf(1)).toBe(2);
-    press(app, BTN.UP, 1); expect(c.charOf(1)).toBe(8);          // do alto, ↑ dá a volta para a última linha
-    press(app, BTN.UP, 1); expect(c.charOf(1)).toBe(5);
-    press(app, BTN.DOWN, 1); expect(c.charOf(1)).toBe(8);
-    press(app, BTN.DOWN, 1); expect(c.charOf(1)).toBe(2);        // ↓ da última linha volta ao alto
-    press(app, BTN.UP, 0); expect(c.charOf(0)).toBe(2);          // P1 estava em 5: ↑ volta uma linha (e não desce)
+    press(app, BTN.UP, 1); expect(c.charOf(1)).toBe(26);         // do alto, ↑ dá a volta para a última linha
+    press(app, BTN.UP, 1); expect(c.charOf(1)).toBe(20);
+    press(app, BTN.DOWN, 1); expect(c.charOf(1)).toBe(26);
+    press(app, BTN.LEFT, 1); press(app, BTN.LEFT, 1); press(app, BTN.LEFT, 1); expect(c.charOf(1)).toBe(29);   // volta na linha
+    press(app, BTN.DOWN, 1); expect(c.charOf(1)).toBe(5);        // ↓ da última linha volta ao alto
+    press(app, BTN.UP, 0); expect(c.charOf(0)).toBe(5);          // P1 estava em 11: ↑ volta uma linha (e não desce)
   });
   it('A confirma ($02); o P1 escolhe as CPUs em ordem depois do próprio; o último A leva à fase', () => {
     const { app, sink } = mkApp();
@@ -148,14 +150,14 @@ describe('personagens (§6.6, R13, R32)', () => {
     press(app, BTN.A, 0);
     expect([c.controller, c.controlling]).toEqual([0, 2]);
     press(app, BTN.RIGHT, 1);                                    // P2 já confirmou: não mexe em nada
-    press(app, BTN.RIGHT, 0); expect(c.charOf(2)).toBe(0);
+    press(app, BTN.RIGHT, 0); expect(c.charOf(2)).toBe(3);
     press(app, BTN.A, 0); expect(c.controlling).toBe(3);
     press(app, BTN.A, 0); press(app, BTN.A, 0);
     expect(app.inTransition).toBe(true);
     settle(app);
     expect(app.screen.id).toBe('stage');
     expect(sink.of('sfx').filter(x => x.id === 2)).toHaveLength(5);
-    expect(app.settings.setup.chars).toEqual([0, 1, 0, 3, 4]);
+    expect(app.settings.setup.chars).toEqual([0, 1, 3, 3, 4]);
   });
   it('B de qualquer controle, mesmo depois de confirmar, volta às regras com $03', () => {
     const { app, sink } = mkApp();
@@ -179,7 +181,7 @@ describe('personagens (§6.6, R13, R32)', () => {
     const c = charactersScreen(app); app.go(c);
     pressC(BTN.A, 1); pressC(BTN.A, 0);
     expect([c.controller, c.controlling]).toEqual([0, 2]);
-    pressC(BTN.RIGHT, 0); expect(c.charOf(2)).toBe(0);
+    pressC(BTN.RIGHT, 0); expect(c.charOf(2)).toBe(3);
     pressC(BTN.A, 0); pressC(BTN.A, 0);
     settle(app);
     expect(app.screen.id).toBe('stage');
@@ -202,7 +204,7 @@ describe('personagens (§6.6, R13, R32)', () => {
     app.update({ ...idleInput(), connected: [true, true, false, false, false] } as MenuInput);
     expect(c.confirmed[2]).toBe(false);
     press(app, BTN.RIGHT, 2);                                     // idleInput: tudo conectado
-    expect(c.charOf(2)).toBe(0);
+    expect(c.charOf(2)).toBe(3);
   });
   it('sem humano com dispositivo, qualquer controle escolhe por todos', () => {
     const { app } = mkApp();
