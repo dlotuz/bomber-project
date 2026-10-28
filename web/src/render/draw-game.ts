@@ -9,6 +9,7 @@ import { NO_SKIP, type HdSkip } from './hdart/cover';
 import { hdBattleSkip } from './hdart/mode';
 import { heldBombPose } from './rom/adapt';
 import { visualTick } from './rom/battle';
+import { battleStageFor } from './stage-skin';
 
 export { SCREEN_W, SCREEN_H };
 
@@ -82,7 +83,7 @@ export function drawRound(ctx: CanvasRenderingContext2D, round: RoundState, view
   const actors = opts.actors !== false;
   const skip = opts.skip ?? (actors ? hdBattleSkip(round, crowns) : NO_SKIP);
   const arena = !skip.has('arena');
-  const tiles = bank.tiles(round.stage);
+  const tiles = bank.tiles(battleStageFor(round.stage));   // fases 14–18: tema próprio (art/tiles.ts)
   if (arena) {
     ctx.fillStyle = tiles.bg;
     ctx.fillRect(0, 0, SCREEN_W, SCREEN_H);
