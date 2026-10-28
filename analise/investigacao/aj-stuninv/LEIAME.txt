@@ -1,0 +1,9 @@
+Scripts do ajuste aj-stuninv (invencível depois de perder a montaria não é atordoado).
+Rodar desta pasta com o venv dos cores (o core de debug é o de analise/extraido/cores/rom-mecanicas):
+  PY="../../extraido/cores/venv/bin/python"
+  $PY base.py                    # gera d0_*.bin (P2 montado no tipo 3, atingido em D0)
+  $PY punch.py 5 30 50 70        # bomba socada no P2: desmontando / piscando / depois
+  $PY base2.py F 6 60; $PY shots.py pre_F_6_60.bin 60 -40   # nota F (troque F por E para o tiro lento)
+  $PY kick.py 2 50               # bomba chutada
+  $PY mnt.py                     # ocupação enquanto monta
+Os .bin gerados são savestates (derivados da ROM): não versionar.

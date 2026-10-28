@@ -10,6 +10,12 @@ import { airborne, releaseGrab } from './grab';
 
 export const isImmune = (s: RoundState, p: Player): boolean => s.phase === 'won' && p.state === 'alive';
 
+/** Montando ($C2:261E) ou desmontando ($C2:105E → $C2:10D5; com reserva, $C2:1089): o jogador não está na grade de
+ *  ocupação $7F:1000 — $C2:4B5C apaga os bits dele ao perder a montaria ($C2:4BA3 → $C2:3419) e só a rotina normal os
+ *  grava de novo ($C2:33FC). Quem procura jogador por ela (bomba que cai, tiros e notas, golpe P) não o acha.
+ *  Emulador (aj-stuninv): desmontando, o P2 fica sem bit do acerto até voltar à rotina normal, já com +$96 = 32. */
+export const offGrid = (p: Player): boolean => MOUNTS.current.offGrid?.(p) ?? false;
+
 /** Desconta a invencibilidade (+$96) e devolve true no tick em que ela acaba: o DEC de $C1:77E7/$C1:775B que zera +$96
  *  põe +$E0 = $FF, e $C2:4B5C ainda trata esse tick como invencível (emulador: chama em H+84 do desmonte não mata). */
 export function tickInv(p: Player): boolean {
@@ -59,11 +65,15 @@ export function tickDeath(s: RoundState, p: Player, ev: GameEvent[]): void {
  *  fica (não está na lista de perdas).
  *  Invencível (+$96 ≠ 0): $C2:59D6, por onde passam os pedidos de atordoamento (bomba que cai em cima, $C1:294D; bola da
  *  arena 3, $C3:0A9B), não pede nada e apaga o pedido pendente — vale também logo depois de perder a montaria.
+ *  Montando ou desmontando (`offGrid`): as rotinas $C2:261E/$C2:10D5/$C2:1089 não chamam a checagem ($C2:4C54) e, no
+ *  fim, apagam o pedido ($C2:59AB em $C2:26CF/$C2:10A8/$C2:10F1), então nada atordoa nessa fase — nem a bola da arena 3
+ *  ($C3:0A9B acha o jogador pela posição, não pela ocupação). Emulador: bomba socada no P2 desmontando não chama
+ *  $C2:59D6 e fica parada na casa dele; o desmonte termina sem $C2:0E29.
  *  `ignoreInv`: a cerca da arena 5 atordoa por outro caminho ($C2:319B → +$51 bit 4, não passa por $C2:59D6); fica
- *  como antes (não conferido contra +$96). */
+ *  como antes (não conferido contra +$96 nem contra o desmonte). */
 export function stunPlayer(s: RoundState, p: Player, ev: GameEvent[], ignoreInv = false): void {
   if (p.state !== 'alive' || isImmune(s, p) || p.act === 'stunned' || airborne(p)) return;
-  if (p.inv > 0 && !ignoreInv) return;
+  if (!ignoreInv && (p.inv > 0 || offGrid(p))) return;
   if (p.carry >= 0) dropFront(s, p);
   if (p.grab >= 0) releaseGrab(s, p);
   p.push.left = 0;

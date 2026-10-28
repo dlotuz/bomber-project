@@ -1,6 +1,6 @@
 import type { RoundState, Player } from '../types';
 import { CODE } from '../types';
-import { mstate, type MountProjectile, type MountState, type ProjKind } from './types';
+import { mstate, rider, type MountProjectile, type MountState, type ProjKind } from './types';
 import { cellAt, cellOf, colOf, linOf, centerX, centerY, GRID_W, GRID_H, isEnemy } from './core-api';
 
 /** Modelo por casas medido no emulador (relatório da T3 do plano 9; testes de bloqueio do ajuste C). Posições em
@@ -65,11 +65,16 @@ export function shotInPlay(s: RoundState, owner: number, kind: 0xe | 0xf): boole
     && (pr.state === 'fly' || (pr.state === 'cloud' && s.tick - pr.t < SHOT_END_TICKS)));
 }
 
-/** 1º adversário do dono (ordem P1..P5) parado na casa `cell`; −1 se não houver. */
+/** 1º adversário do dono (ordem P1..P5) parado na casa `cell`; −1 se não houver. A ROM acha o alvo pela ocupação
+ *  ([$38] & $3FF0 & +$1A: E $C1:2E73, F $C1:30B9, D $C1:3322): montando ou desmontando o jogador não está nela e o tiro
+ *  passa (emulador, aj-stuninv: tiro E e nota F no P2 desmontando seguem sem $C1:2ED0/$C2:59BF). */
 function enemyIn(s: RoundState, pr: MountProjectile, cell: number): number {
   if (cell < 0) return -1;
   const own = s.players[pr.owner];
-  for (const q of s.players) if (isEnemy(s, own, q) && cellAt(q.x, q.y) === cell) return q.slot;
+  for (const q of s.players) {
+    const r = rider(q);
+    if (isEnemy(s, own, q) && !(r && r.phase !== 'riding') && cellAt(q.x, q.y) === cell) return q.slot;
+  }
   return -1;
 }
 

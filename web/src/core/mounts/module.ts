@@ -28,6 +28,7 @@ export const mountModule: MountModule = {
   bombFire(p) { const r = riding(p); return r ? ABILITIES[r.type]?.fire?.(p) ?? null : null; },
   speedLevel(p) { const r = riding(p); return r ? ABILITIES[r.type]?.speed?.(p) ?? null : null; },
   drive(s, p, ev) { const r = riding(p); return !!(r && ABILITIES[r.type]?.drive?.(s, p, r, ev)); },
+  offGrid(p) { const r = rider(p); return !!r && r.phase !== 'riding'; },
   tick(s, ev) {
     tickRiders(s, ev);
     if (s.phase !== 'play') return;                       // L16
