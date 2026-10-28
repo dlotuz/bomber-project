@@ -8,31 +8,33 @@ import { createImage, renderPpu } from '../../src/render/ppu';
 import { mkApp, press, tap, idle, hold, settle } from './helpers';
 import { ASSETS } from './rom';
 import { VISIBLE_STAGES } from '../../src/game/stages';
+import { RANDOM_STAGE, stageChoices } from '../../src/game/stage-choice';
 
-/** Só as fases visíveis aparecem na seleção (game/stages.ts): 1ª, última e a `k`-ésima depois da 1ª, com volta. */
+/** Só as fases visíveis aparecem na seleção (game/stages.ts), mais ALEATÓRIO no fim (game/stage-choice.ts): 1ª e
+ *  última visível e a `k`-ésima opção depois da 1ª, com volta. */
 const FIRST = VISIBLE_STAGES[0], LAST = VISIBLE_STAGES[VISIBLE_STAGES.length - 1];
-const nth = (k: number): number => VISIBLE_STAGES[k % VISIBLE_STAGES.length];
+const nth = (k: number): number => stageChoices()[k % stageChoices().length];
 import { loadCapture, capturedMap, mapMatch, type Rect } from './captures';
 
 describe('seleção de fase (§6.7)', () => {
-  it('→: $01 no botão, faixa rola 8 px/f por 16 f, o número troca no fim, com volta da última visível para a 1ª', () => {
+  it('→: $01 no botão, faixa rola 8 px/f por 16 f, o número troca no fim, com volta da última opção (ALEATÓRIO) para a 1ª', () => {
     const { app, sink } = mkApp();
-    app.settings.setup.stage = LAST;
+    app.settings.setup.stage = RANDOM_STAGE;
     const st = stageScreen(app); app.go(st); sink.clear();
     tap(app, BTN.RIGHT);
-    expect([st.scroll(), st.stage]).toEqual([0, LAST]);
+    expect([st.scroll(), st.stage]).toEqual([0, RANDOM_STAGE]);
     idle(app, 1); expect(st.scroll()).toBe(-8);
-    idle(app, 14); expect([st.scroll(), st.stage]).toEqual([-120, LAST]);
+    idle(app, 14); expect([st.scroll(), st.stage]).toEqual([-120, RANDOM_STAGE]);
     idle(app, 1); expect([st.scroll(), st.stage]).toEqual([0, FIRST]);
     expect([app.settings.setup.stage, sink.of('sfx').map(c => c.id)]).toEqual([FIRST, [1]]);
   });
-  it('← anda para o outro lado, com volta da 1ª visível para a última', () => {
+  it('← anda para o outro lado, com volta da 1ª visível para a última opção (ALEATÓRIO)', () => {
     const { app } = mkApp();
     const st = stageScreen(app); app.go(st);
     tap(app, BTN.LEFT); idle(app, 1);
     expect(st.scroll()).toBe(8);
     idle(app, 15);
-    expect(st.stage).toBe(LAST);
+    expect(st.stage).toBe(RANDOM_STAGE);
   });
   it('segurar: 36 f e depois a cada 21 f', () => {
     const { app } = mkApp();

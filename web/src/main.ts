@@ -12,6 +12,7 @@ import { createAudioStarter } from './audio/starter';
 import { bootPack, bootTrace, onRomChange, romState } from './app/rom-api';
 import { parseConfig } from './game/config';
 import { createMatchSession, carry, sessionSeed, type MatchSession } from './game/match-session';
+import { seedStagePick } from './game/stage-choice';
 import { InputManager, buildInput, emptyDevices, idleInput, withEscapeAsBack } from './input/input';
 import { createDisplay, fitOptionsFor, resolveScreenKind, resolveScreenMode, screenModeFromUrl } from './render/display';
 import { present } from './render/fx/present';
@@ -29,6 +30,8 @@ const settings = params.has('reset') ? defaultSettings() : loadSettings(store);
 if (params.has('reset')) saveSettings(store, settings);
 // Semente sorteada a cada abertura (a do boot, $0012, repetia a 1ª partida); ?seed=N fixa.
 carry.seed = sessionSeed(window.location.search);
+// Fase ALEATÓRIO da seleção de fase: Math.random; com ?seed=N, sorteios reproduzíveis a partir de N.
+seedStagePick(window.location.search);
 
 const input = new InputManager(window, settings.keymaps);
 input.setPadmaps(settings.padmaps);

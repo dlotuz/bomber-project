@@ -12,7 +12,8 @@ import { BTN } from '../game/core-api';
 import { MUSIC, SFX } from '../app/audio';
 import { FADE_TO_TITLE } from '../app/fade';
 import { S, STAGE_NAMES_PT } from '../render/text/strings';
-import { stepVisible, visibleStage } from '../game/stages';
+import { visibleStage } from '../game/stages';
+import { isRandomStage, stepChoice } from '../game/stage-choice';
 import { CHARACTERS } from '../render/art/bomber';
 import { TITLE_X, TITLE_Y, FOOTER_Y } from '../render/screens-rom/options';
 import { drawText } from '../render/text/text';
@@ -44,6 +45,9 @@ interface Row extends MenuRow { label: string; value?: () => string; dim?: () =>
 interface Rect { x: number; y: number; w: number; h: number }
 /** Fase e regras: o que se configura ao criar a sala e depois, em CONFIGURAÇÕES. */
 interface Cfg { stage: number; rules: Lobby['rules'] }
+/** Nome da fase da sala (maiúsculas); ALEATÓRIO é sorteado só no início da partida, da semente comum (net/online.ts). */
+const stageLabel = (stage: number): string =>
+  (isRandomStage(stage) ? S.stage.random : STAGE_NAMES_PT[visibleStage(stage) - 1]).toUpperCase();
 
 /** Opções de uma vaga sem jogador (anfitrião): CPU com cada personagem, depois NENHUM. */
 const CPU_CHOICES = CHARACTERS.length + 1;
@@ -153,9 +157,9 @@ export function onlineScreen(app: App, o: { code?: string; cursor?: string; view
     const dim = (): boolean => !can();
     const rows: Row[] = [
       {
-        id: 'stage', label: S.online.stage, dim, value: () => STAGE_NAMES_PT[visibleStage(get().stage) - 1].toUpperCase(),
-        left: () => can() && (set({ stage: stepVisible(get().stage, -1) }), true),
-        right: () => can() && (set({ stage: stepVisible(get().stage, 1) }), true),
+        id: 'stage', label: S.online.stage, dim, value: () => stageLabel(get().stage),
+        left: () => can() && (set({ stage: stepChoice(get().stage, -1) }), true),
+        right: () => can() && (set({ stage: stepChoice(get().stage, 1) }), true),
       },
       {
         id: 'crowns', label: S.online.crowns, dim, value: () => String(get().rules.matches),
@@ -556,7 +560,7 @@ export function onlineScreen(app: App, o: { code?: string; cursor?: string; view
       small(ctx, bank, label, 22, tyOf(r), { tone: focus ? 'yellow' : 'white' });
       if (value) small(ctx, bank, value, 234, tyOf(r), { align: 'right', tone: vTone });
     };
-    strip(RM.stage, 'stage', S.online.stage, STAGE_NAMES_PT[visibleStage(lob.stage) - 1].toUpperCase(), isHost ? 'yellow' : 'gray');
+    strip(RM.stage, 'stage', S.online.stage, stageLabel(lob.stage), isHost ? 'yellow' : 'gray');
     strip(RM.config, 'config', S.online.config, '');
     strip(RM.controls, 'controls', S.online.controls, '');
     strip(RM.invite, 'invite', S.online.roomCode, `${room.code}  ${copied > 0 ? S.online.copied : S.online.copy}`);

@@ -39,7 +39,11 @@ export const S = {
     title: 'Escolha um personagem!', tags: ['1P', '2P', '3P', '4P', '5P'], allReady: 'TUDO PRONTO', help: 'A: ESCOLHER   B: VOLTAR',
   },
   teams: { title: 'Escolha as equipes!', vs: 'VS', help: 'ESQ/DIR: LADO  A: OK  B: VOLTAR' },
-  stage: { title: 'Escolha a fase!', stage: (n: number) => `Fase ${n}`, names: STAGE_NAMES_PT, battle: 'BATALHA!' },
+  stage: {
+    title: 'Escolha a fase!', stage: (n: number) => `Fase ${n}`, names: STAGE_NAMES_PT, battle: 'BATALHA!',
+    // ALEATÓRIO (game/stage-choice.ts): sorteia uma das fases visíveis ao confirmar
+    random: 'Aleatório', randomStage: 'Fase ?',
+  },
   battle: { pause: 'PAUSA!', hurry: 'RÁPIDO!!', timeUp: 'TEMPO ESGOTADO!', timeUpShort: 'TEMPO!', disconnected: (n: number) => `CONTROLE ${n} DESCONECTADO` },
   score: { title: 'PLACAR', tags: ['1P', '2P', '3P', '4P', '5P'] },
   draw: { title: 'EMPATE' },
@@ -116,7 +120,7 @@ export const STRING_USES: readonly Use[] = uniq([
     ...[1, 2, 3, 4, 5].map(S.lobby.player), S.lobby.human, S.lobby.cpu, S.lobby.off, S.lobby.playersHelp, ...S.lobby.rules,
     ...S.lobby.levels, ...S.lobby.time, S.lobby.no, S.lobby.yes, S.lobby.rulesHelp,
     S.online.name, S.online.create, S.online.code, S.online.join, S.online.back, S.online.empty, S.online.you, S.online.cpu,
-    S.online.off, S.online.stage, S.online.crowns, S.online.time, S.online.level, S.online.sudden, S.online.bad,
+    S.online.off, S.online.stage, S.stage.random.toUpperCase(), S.online.crowns, S.online.time, S.online.level, S.online.sudden, S.online.bad,
     S.online.controls, S.online.invite, S.online.copy, S.online.copied, S.online.start, S.online.waitHost, S.online.playing, S.online.leave,
     S.online.connecting, S.online.typing, S.online.needName, S.online.needCode, S.online.help, S.online.guestHelp,
     S.online.players, S.online.rules, S.online.roomCode, S.online.copyHelp, S.online.levelShort, S.online.badShort,
