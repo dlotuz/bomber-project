@@ -41,6 +41,20 @@ describe('IA: bomba na cabeça no tempo certo', () => {
     expect(killFuse(s, p, b, C(7, 3), 1)).toBe(-1);
   });
 
+  it('killFuse: alvo invencível, montando ou desmontando (fora da ocupação, $C2:3419) não serve; montado serve', () => {
+    const mk = () => { const s = arena(); const p = put(s, 0, 4, 3); const q = put(s, 1, 7, 3); return { s, p, q, b: addBomb(s, 0, C(4, 3), { fire: 1 }) }; };
+    const base = mk();
+    expect(killFuse(base.s, base.p, base.b, C(7, 3), 1)).toBeGreaterThanOrEqual(0);
+    const inv = mk(); inv.q.inv = 20;
+    expect(killFuse(inv.s, inv.p, inv.b, C(7, 3), 1)).toBe(-1);
+    for (const phase of ['mounting', 'dismount', 'riding'] as const) {
+      const k = mk();
+      k.q.mount = { type: 3, slot: 1, phase, t0: k.s.tick, reserves: [], trail: [], cooldown: 0, remount: false, remountFx: null };
+      const kf = killFuse(k.s, k.p, k.b, C(7, 3), 1);
+      expect(kf >= 0, phase).toBe(phase === 'riding');
+    }
+  });
+
   it('killFuse confere com o núcleo: com o pavio dele a vítima que foge ao acordar morre; com 126, escapa', () => {
     const scene = (fuse: number) => {
       const s = arena(); const p = put(s, 0, 4, 3); p.glove = true; p.face = 2; put(s, 1, 7, 3);

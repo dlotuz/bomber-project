@@ -7,7 +7,7 @@ import { CHAIN_DELAY, LIFT_TICKS, PUNCH_TICKS, THROW_TICKS } from './constants';
 import { SUB, cellCenter, cellOf, centerX, centerY, colAt, colOf, faceStep, inField, inGrid, linAt, linOf, wrapFlight } from './units';
 import { isEggCode, isItemCode, itemCode, newId, playerCell, setAct, standing } from './state';
 import { bombAt, bombById, bombOccupies, removeBomb } from './bombs';
-import { hitPlayer, stunPlayer } from './hit';
+import { hitPlayer, offGrid, stunPlayer } from './hit';
 
 /** Quiques seguidos antes de a bomba sumir e voltar ao dono (proteção contra laço; 🟡). */
 const MAX_BOUNCES = 32;
@@ -93,7 +93,9 @@ function land(s: RoundState, f: Flyer, ev: GameEvent[]): void {
   // $C1:27A4: casa com bit $0800 (bomba $C900, bloco, queimando $EDC0, item, caveira) ou com bomba chutada ([$38] bit $4000) quica
   // ($C1:2868) antes do teste de jogador ($C1:280B → $C1:294D): quem está sobre uma bomba não é atordoado.
   const blocked = out || (v & 0x0800) !== 0 || bombOccupies(s, cell);
-  const victims = blocked ? [] : s.players.filter(q => grounded(q) && playerCell(q) === cell);
+  // $C1:294D acha os jogadores pela ocupação ([$38] & $3FF0): montando/desmontando não está nela, e a bomba pousa na
+  // casa como se ela estivesse vazia (emulador, aj-stuninv: P2 desmontando, a bomba socada fica $C900 embaixo dele)
+  const victims = blocked ? [] : s.players.filter(q => grounded(q) && !offGrid(q) && playerCell(q) === cell);
   // Reflect: bomba da luva caindo em quem segura bomba com a luva volta na direção de quem jogou (só luva × luva)
   const reflector = f.glove ? victims.find(q => q.carry >= 0) : undefined;
   if (reflector) { reflect(s, f, reflector, ev); return; }
