@@ -3,7 +3,7 @@ import { CHARACTERS, bomberFrame, headCryIcon, headIcon } from '../../src/render
 import { CHAR_COUNT } from '../../src/render/art/charskins';
 import { bombPix, itemIcon } from '../../src/render/art/items';
 import { flamePiece, type FlamePart } from '../../src/render/art/flames';
-import { THEMES, stageTiles } from '../../src/render/art/tiles';
+import { THEMES, stageTiles, themeOf } from '../../src/render/art/tiles';
 import { textPix, textWidth, hasGlyph } from '../../src/render/art/font';
 import { crownPix, trophyPix, clockPix } from '../../src/render/art/trophy';
 import { STAGE_NAMES } from '../../src/core';
@@ -109,6 +109,18 @@ describe('arenas', () => {
       for (const p of [t.floor, t.floorAlt, t.hard, t.wall]) expect(opaque(p)).toBe(256);
       expect(opaque(t.soft)).toBeGreaterThan(80);
       expect(t.bg).toMatch(/^#[0-9a-f]{6}$/);
+    }
+  });
+  it('fases 14–18 (sem ROM): tema próprio para cada uma, diferente dos outros; 11–13 usam o da fase 1', () => {
+    const own = [14, 15, 16, 17, 18].map(themeOf);
+    for (const t of own) expect(THEMES).not.toContain(t);
+    expect(new Set(own.map(t => `${t.floorA}${t.hardFace}${t.softA}${t.wallFace}`)).size).toBe(5);
+    for (const st of [11, 12, 13]) expect(themeOf(st)).toBe(THEMES[0]);
+    for (let st = 1; st <= 10; st++) expect(themeOf(st)).toBe(THEMES[st - 1]);
+    for (const st of [14, 15, 16, 17, 18]) {
+      const t = stageTiles(st);
+      for (const p of [t.floor, t.floorAlt, t.hard, t.wall]) expect(opaque(p)).toBe(256);
+      expect(opaque(t.soft)).toBeGreaterThan(80);
     }
   });
 });

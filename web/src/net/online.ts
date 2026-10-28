@@ -7,6 +7,7 @@ import type { App } from '../app/app';
 import type { SpriteBank } from '../render/sprite-bank';
 import { configFromSetup, type SetupLike, type SlotKind } from '../game/config';
 import { createMatchSession, type MatchSession } from '../game/match-session';
+import { resolveOnlineStage } from '../game/stage-choice';
 import { battleScreen } from '../screens/battle';
 import { onlineScreen } from '../screens/online';
 import { BANK, MUSIC } from '../app/audio';
@@ -22,6 +23,7 @@ import { hasPowerKey, type MenuInput } from '../input/input';
 import { browserStorage, normalizeSettings, saveSettings } from '../app/settings';
 
 export interface Lobby {
+  /** Fase escolhida pelo anfitrião, ou ALEATÓRIO (`RANDOM_STAGE`, game/stage-choice.ts). */
   stage: number; mode: 'ffa' | 'team'; teams: number[]; slots: SlotKind[]; chars: number[]; names: string[];
   /** Vaga com tecla/botão próprio do P no CONTROLE ONLINE de quem está nela (cada um informa o seu). */
   powerKey?: boolean[];
@@ -311,7 +313,9 @@ export class OnlineClient {
   // ---------------------------------------------------------------------------------------------------- partida
   private begin(m: Extract<ServerMsg, { t: 'start' }>): void {
     const L = m.lobby, x = m.extras;
-    const setup: SetupLike = { mode: L.mode, slots: L.slots, teams: L.teams, chars: L.chars, stage: L.stage, rules: { ...L.rules, racer: false } };
+    // ALEATÓRIO: a fase sai da semente da partida, a mesma em todos os navegadores (todos jogam a mesma fase)
+    const stage = resolveOnlineStage(L.stage, m.seed);
+    const setup: SetupLike = { mode: L.mode, slots: L.slots, teams: L.teams, chars: L.chars, stage, rules: { ...L.rules, racer: false } };
     // todos com a mesma configuração: semente do servidor, dispositivos neutros (sem pausa por controle desconectado)
     const cfg = configFromSetup(setup, x.randomSpawns, ['kb', 'kb', 'kb', 'kb', 'kb'], m.seed, {
       gloveEscape: x.gloveEscape, throwStun: x.throwStun, sleepTicks: x.sleepTicks, allMounts: x.allMounts,

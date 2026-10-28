@@ -114,7 +114,7 @@ const cleanPassword = n => String(n ?? '').slice(0, 8);
 const QUICK_WAIT = Number(process.env.SALA_QUICK_WAIT ?? 10);
 const QUICK_MAX = 5;
 /** Fases que a partida rapida sorteia (as mesmas visiveis da selecao de fase: VISIBLE_STAGES em src/game/stages.ts). */
-const QUICK_STAGES = [1, 11, 12, 13];
+const QUICK_STAGES = [1, 11, 12, 13, 14, 15, 16, 17, 18];
 /** @type {any[]} */
 const queue = [];
 let queueLeft = null, queueTimer = null;
@@ -154,9 +154,12 @@ function unqueue(peer) {
   queueUpdate();
 }
 
+/** ALEATORIO na fase da sala (RANDOM_STAGE em src/game/stage-choice.ts). */
+const RANDOM_STAGE = 0;
 /** Fase e regras vindas do cliente (ao criar a sala e em CONFIGURAÇÕES): valores fora do limite voltam ao atual. */
 function applyConfig(L, n = {}) {
-  L.stage = clampInt(n.stage, 1, 13, L.stage);   // 11 a 13: cópias da 1 com outras cores (src/game/stages.ts)
+  L.stage = clampInt(n.stage, 1, 18, L.stage);   // 11 a 18: cópias da 1 com outras cores/ambientação (src/game/stages.ts)
+  if (n.stage === RANDOM_STAGE) L.stage = RANDOM_STAGE;   // ALEATORIO: cada cliente sorteia da semente do 'start' (a mesma)
   const r = n.rules ?? {};
   L.rules = {
     cpuLevel: clampInt(r.cpuLevel, 0, 2, L.rules.cpuLevel), matches: clampInt(r.matches, 1, 5, L.rules.matches),

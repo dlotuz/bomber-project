@@ -1,4 +1,5 @@
 import { makePix, fillRect, setPx, noise, type Pix } from './pix';
+import { coreStage } from '../../game/stages';
 
 type FloorKind = 'hatch' | 'grass' | 'checker' | 'planks' | 'plates' | 'stars' | 'tiles' | 'sand' | 'carpet';
 type SoftKind = 'brick' | 'crate' | 'bush' | 'rock' | 'fabric';
@@ -27,6 +28,24 @@ export const THEMES: readonly Theme[] = [
   { floor: 'sand', floorA: '#d8b56a', floorB: '#e6c57c', hardFace: '#9a6a3a', hardLight: '#c99662', hardDark: '#5c3e1f', wallFace: '#6a8fc8', wallLight: '#9dbcec', wallDark: '#3a5580', soft: 'crate', softA: '#e8c54a', softB: '#c9a334', softDark: '#8a6c1c', bg: '#2d3a55' },
   { floor: 'carpet', floorA: '#7a3a8f', floorB: '#8f4aa6', hardFace: '#8a5a3a', hardLight: '#b98357', hardDark: '#4f311d', wallFace: '#c0b8a8', wallLight: '#ece6d8', wallDark: '#7a7466', soft: 'fabric', softA: '#e86a9a', softB: '#c84a7a', softDark: '#7a2448', bg: '#24122b' },
 ];
+
+/** Temas sem ROM das fases com a ambientação de outra arena (game/stages.ts, 14–18): cores e padrão próprios, que
+ *  lembram a arena do original de cada uma (3, 4, 7, 9 e 10). */
+const LOOK_THEMES: Readonly<Record<number, Theme>> = {
+  // Arquibancada (arena 3): piso de areia clara, pilares de concreto, lanches dourados, muro azul-acinzentado
+  14: { floor: 'sand', floorA: '#e6cfa6', floorB: '#d8bd8e', hardFace: '#7f8a8e', hardLight: '#aab5b8', hardDark: '#4c5558', wallFace: '#56677a', wallLight: '#8296ab', wallDark: '#2d3946', soft: 'rock', softA: '#e8b048', softB: '#c88a2c', softDark: '#7a4f16', bg: '#1f2633', hardStyle: 'flat', checker: false },
+  // Campo Aberto (arena 4): grama, pedras furadas cinza, rochas azuladas, barranco de terra
+  15: { floor: 'grass', floorA: '#4fa83a', floorB: '#5fbd48', hardFace: '#b2ab9c', hardLight: '#d8d2c2', hardDark: '#6f695c', wallFace: '#6a4526', wallLight: '#93653d', wallDark: '#3b2412', soft: 'rock', softA: '#7fa6ad', softB: '#5d858d', softDark: '#2c4549', bg: '#1a0f07', checker: false },
+  // Selva (arena 7): piso de tábuas, pilares de pedra, blocos de gelo azul-claro, mata fechada em volta
+  16: { floor: 'planks', floorA: '#9c6a3c', floorB: '#7e5230', hardFace: '#a3a6a0', hardLight: '#d2d5ce', hardDark: '#5e615b', wallFace: '#2f6b34', wallLight: '#4f9a52', wallDark: '#173a1b', soft: 'crate', softA: '#7fd6e6', softB: '#56b2c8', softDark: '#22607a', bg: '#0f2412', checker: false },
+  // Cidade Grande (arena 9): calçada verde-azulada, prédios cinza, casas de telhado vermelho, muro escuro
+  17: { floor: 'plates', floorA: '#3d7566', floorB: '#356657', hardFace: '#9aa0aa', hardLight: '#c8ccd4', hardDark: '#565b64', wallFace: '#474c58', wallLight: '#6e7584', wallDark: '#25282f', soft: 'brick', softA: '#cc4a3a', softB: '#a8392b', softDark: '#561d16', bg: '#12141c', wallStyle: 'plate' },
+  // Discoteca (arena 10): pista creme em xadrez, caixas de luz amarelas, taças verdes, neon rosa
+  18: { floor: 'checker', floorA: '#f2e2c0', floorB: '#e0c894', hardFace: '#e8b828', hardLight: '#fff09a', hardDark: '#8e6a0c', wallFace: '#d0479a', wallLight: '#f48ccc', wallDark: '#6e1c50', soft: 'fabric', softA: '#58cc7c', softB: '#3aa65e', softDark: '#1b5a31', bg: '#1a0a1c' },
+};
+
+/** Tema sem ROM da fase da interface: o próprio (1–10 e 14–18) ou o da fase base (cópias de paleta, 11–13). */
+export const themeOf = (stage: number): Theme => LOOK_THEMES[stage] ?? THEMES[coreStage(stage) - 1] ?? THEMES[0];
 
 function paintFloor(t: Theme, alt: boolean, seed: number): Pix {
   const p = makePix(16, 16);
@@ -151,7 +170,7 @@ function burning(soft: Pix, frame: number, seed: number): Pix {
 export interface StageTiles { floor: Pix; floorAlt: Pix; hard: Pix; wall: Pix; soft: Pix; burning: [Pix, Pix]; bg: string }
 
 export function stageTiles(stage: number): StageTiles {
-  const t = THEMES[stage - 1];
+  const t = themeOf(stage);
   const soft = paintSoft(t, stage);
   return {
     floor: paintFloor(t, false, stage), floorAlt: t.checker === false ? paintFloor(t, false, stage) : paintFloor(t, true, stage + 50),

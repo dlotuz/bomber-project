@@ -1,5 +1,6 @@
 import { defaultRules } from '../game/core-api';
 import { STAGE_MAX } from '../game/stages';
+import { RANDOM_STAGE } from '../game/stage-choice';
 import {
   DEFAULT_KEYMAPS, DEFAULT_PADMAP, DEVICE_IDS, KEY_FIELDS, PAD_FIELDS,
   type DeviceId, type KeyMap, type PadMap,
@@ -70,6 +71,7 @@ export interface Setup {
   teams: number[];
   rules: RuleChoices;
   chars: number[];
+  /** Fase escolhida (game/stages.ts) ou ALEATÓRIO (`RANDOM_STAGE`, game/stage-choice.ts). */
   stage: number;
 }
 
@@ -218,7 +220,8 @@ export function normalizeSettings(raw: unknown): Settings {
         racer: bool(rr.racer, ds.rules.racer),
       },
       chars: five(s.chars, (x, i) => intIn(x, 0, CHARACTERS.length - 1, ds.chars[i])),
-      stage: intIn(s.stage, 1, STAGE_MAX, ds.stage),
+      // ALEATÓRIO fica salvo como ALEATÓRIO (o cursor volta nele); a fase sorteada vale só para a partida
+      stage: s.stage === RANDOM_STAGE ? RANDOM_STAGE : intIn(s.stage, 1, STAGE_MAX, ds.stage),
     },
     controlSlots: slots(r.controlSlots, d.controlSlots, x => normalizeControlPreset(x, d)),
     gameplaySlots: slots(r.gameplaySlots, d.gameplaySlots, x => normalizeGameplayPreset(x, d.options)),

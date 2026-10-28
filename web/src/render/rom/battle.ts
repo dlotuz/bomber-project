@@ -17,7 +17,8 @@ import { MAP_W, newMemo, type RomClock, type RomMemo } from './scene';
 import { warnOnce } from './warn';
 import { cellCategory, NO_SKIP, type HdSkip } from '../hdart/cover';
 import { hdBattleSkip } from '../hdart/mode';
-import { battleSkin, skinCgram } from '../stage-skin';
+import { battleSkin, battleStageFor, skinCgram } from '../stage-skin';
+import { lookArena } from './stage-look';
 
 /** D1: o que a tela da partida passa além da rodada. */
 export interface RomBattleVis { crowns: readonly number[] }
@@ -123,7 +124,7 @@ export function visualTick(s: RoundState): number {
 
 export function buildBattleFrame(s: RoundState, vis: RomBattleVis, a: RomAssets, frame: number, opts: BuildOpts = {}): PpuFrame {
   const skip = opts.skip ?? NO_SKIP;
-  const ar = a.arena(s.stage);
+  const ar = lookArena(a, battleStageFor(s.stage));   // fases 14–18: ambientação de outra arena (stage-look.ts)
   const tb = romTables(a);
   const memo = romMemo(s);
   const clock = battleClock(s, memo, frame);

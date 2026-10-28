@@ -4,7 +4,7 @@ import { rnd } from '../rng';
 import { cellAt, cellOf, centerX, centerY, colOf, linOf, px } from '../units';
 import { itemCode, newId, playerCell, setAct, standing } from '../state';
 import { PRESSURE_BORDER_AT, PRESSURE_STEPS_SD, STUN_TICKS, FUSE } from '../constants';
-import { isImmune, stunPlayer } from '../hit';
+import { isImmune, offGrid, stunPlayer } from '../hit';
 import { addBomb, bombOccupies } from '../bombs';
 import { launchBomb } from '../flyers';
 import { activeCount } from '../mounts/eggs';
@@ -81,7 +81,8 @@ export function landItem(s: RoundState, item: number, cell: number): void {
 /** Bomba (fogo 4, sem dono) que termina de cair: jogador de pé → atordoa e quica; piso → bomba parada; resto → quica. */
 export function landBomb(s: RoundState, cell: number, ev: GameEvent[]): void {
   if (cell < 0) return;
-  const hit = s.players.filter(p => standing(p) && playerCell(p) === cell);
+  // $C1:2366: jogador pela ocupação ([$38] & $3FF0); montando/desmontando não está nela (`offGrid`): vira bomba parada
+  const hit = s.players.filter(p => standing(p) && !offGrid(p) && playerCell(p) === cell);
   for (const p of hit) stunPlayer(s, p, ev);
   const g = s.grid[cell];
   if (g === CODE.BURNING || g === CODE.PRESSURE) return;

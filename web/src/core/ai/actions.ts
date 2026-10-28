@@ -13,7 +13,7 @@ import { centered, enterTicks, escape, hasRefuge, ticksPerCell, walkBlocked } fr
 import { fork, survives } from './whatif';
 import { oldestRemote, type Brain } from './brain';
 import { aiRoll, type AiLevel } from './level';
-import { isImmune } from '../hit';
+import { isImmune, offGrid } from '../hit';
 import { airborne } from '../grab';
 
 /** Casa que bloqueia o avanço do P e o empurrão (bit $8000: parede, pilar, soft, bomba, queimando, pressão). */
@@ -76,7 +76,7 @@ function launch(sim: RoundState, id: number, flight: `throw${2 | 3 | 4 | 5}` | '
 export function killFuse(s: RoundState, p: Player, b: Bomb, land: number, dir: 0 | 1 | 2 | 3): number {
   if (land < 0 || !inField(colOf(land), linOf(land))) return -1;
   if ((s.grid[land] & 0x0800) !== 0 || bombOccupies(s, land, b)) return -1;   // quica antes do teste de jogador ($C1:27A4)
-  const there = s.players.filter(q => standing(q) && q.heldBy < 0 && !q.flying && q.act !== 'dropped' && playerCell(q) === land);
+  const there = s.players.filter(q => standing(q) && q.heldBy < 0 && !q.flying && q.act !== 'dropped' && !offGrid(q) && playerCell(q) === land);
   if (!there.length || there.some(q => !isFoe(s, p, q))) return -1;
   if (!there.some(q => q.act !== 'stunned' && q.inv <= 0)) return -1;            // $C2:59D6: invencível não é atordoado
   const [x, y] = cellCenter(land);

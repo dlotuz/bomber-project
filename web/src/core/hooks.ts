@@ -38,6 +38,7 @@ export interface MountModule {
   bombFire?(p: Player): number | null;                                      // tipo 6: fogo da bomba
   speedLevel?(p: Player): number | null;                                    // tipo B: nível de velocidade
   drive?(s: RoundState, p: Player, ev: GameEvent[]): boolean;               // tipo 4: investida (true = travado)
+  offGrid?(p: Player): boolean;                                             // montando/desmontando: fora da ocupação $7F:1000
   tick(s: RoundState, ev: GameEvent[]): void;                               // projéteis, ovo reserva
   ai?: AiMountHints;
 }
