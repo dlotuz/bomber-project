@@ -3,8 +3,9 @@ import { PAD_NAMES } from '../../input/input';
 
 export const STAGE_NAMES_PT = ['O Clássico', 'Rápido e Devagar', 'Bombardeio Orbital', 'Não Me Empurre', 'Escola de Choques',
   'Piso Traiçoeiro', 'Esconde-Explode', 'Caça-Níquel', 'Gangorra', 'Alfaiataria',
-  // 11 em diante: cópias com outra paleta (game/stages.ts)
-  'O Clássico Noturno', 'O Clássico Gelado', 'O Clássico em Brasa'] as const;
+  // 11 em diante: cópias da fase 1 (game/stages.ts). 11–13: outra paleta; 14–18: ambientação de outra arena
+  'O Clássico Noturno', 'O Clássico Gelado', 'O Clássico em Brasa',
+  'Arquibancada', 'Campo Aberto', 'Selva', 'Cidade Grande', 'Discoteca'] as const;
 
 export const RACER_PRIZE_NAMES = {
   'bomb+1': 'BOMBA +1', pierce: 'BOMBA PERFURANTE', 'fire+1': 'FOGO +1', fullFire: 'FOGO TOTAL', 'speed+1': 'PATINS +1',

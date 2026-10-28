@@ -29,7 +29,7 @@
 import type { RomAssets } from '../../app/rom-api';
 import { newMap, put, pattern, sceneGfx, MENU_GEO, type SceneGfx, type SceneMaps } from './scene';
 import { coreStage } from '../../game/stages';
-import { skinColors } from '../stage-skin';
+import { skinColors, stageLook } from '../stage-skin';
 
 /** Coluna/linha do slot central (128 px de passo, igual a `STAGE.scrollPx * STAGE.scrollFrames`). */
 export const STAGE_ICON_COL = 8, STAGE_ICON_ROW = 2;
@@ -46,19 +46,25 @@ const wrapStage10 = (n: number): number => ((n - 1 + STAGES * 10) % STAGES) + 1;
 /** Fase `d` passos depois de `stage`: por padrão as 10 do original em sequência; a tela passa a lista visível. */
 export type StageStep = (stage: number, d: number) => number;
 const step10: StageStep = (stage, d) => wrapStage10(stage + d);
-/** Fases da interface além das 10 (cópias com outra paleta, game/stages.ts) ficam como estão; as outras dão a volta. */
+/** Fases da interface além das 10 (cópias, game/stages.ts) ficam como estão; as outras dão a volta. */
 const norm = (n: number): number => (coreStage(n) !== n ? n : wrapStage10(n));
+/** Arena cuja prévia (mapa e paleta da ROM) a fase usa: a base, ou a da ambientação nas fases 14–18. */
+const previewArena = (stage: number): number => wrapStage10(stageLook(norm(stage)));
 /** Mapa 7×7 da prévia de `stage` (com volta 1↔10), como está na ROM (os bits de paleta são trocados pelo slot). */
 export function stageIcon(a: RomAssets, stage: number): Uint16Array {
-  const p = a.rom.u24(STAGE_PREVIEW_MAPS + 3 * (wrapStage10(coreStage(norm(stage))) - 1));
+  const look = previewArena(stage);
+  const p = a.rom.u24(STAGE_PREVIEW_MAPS + 3 * (look - 1));
   const out = new Uint16Array(ICON * ICON);
   for (let i = 0; i < out.length; i++) out[i] = a.rom.u16(p + 2 * i);
+  // Fase com a ambientação da arena 9 (sem gangorra): a gangorra do meio da prévia (linha 3, colunas 2–4) vira o piso
+  // com a sombra dos prédios de cima, copiado da linha 5 (embaixo da 2ª fileira de prédios).
+  if (look === 9 && norm(stage) !== 9) for (const c of [2, 3, 4]) out[3 * ICON + c] = out[5 * ICON + c];
   return out;
 }
 /** As 16 cores da prévia de `stage` (com volta 1↔10). */
 export function stagePalette(a: RomAssets, stage: number): Uint16Array {
   const st = norm(stage);
-  const p = a.rom.u24(STAGE_PREVIEW_PALS + 3 * (wrapStage10(coreStage(st)) - 1));
+  const p = a.rom.u24(STAGE_PREVIEW_PALS + 3 * (previewArena(st) - 1));
   const out = new Uint16Array(16);
   for (let i = 0; i < 16; i++) out[i] = a.rom.u16(p + 2 * i);
   return skinColors(out, st, a.arena(coreStage(st)).bgCgram);

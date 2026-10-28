@@ -4,6 +4,8 @@
 // borda (os "quadrados"), 7 = piso e blocos quebráveis; as cores do piso (índices 13–15) se repetem nas linhas 2, 3 e
 // 6, que a bomba e o fogo parados usam (o piso vem desenhado no próprio tile).
 
+import { coreStage } from '../game/stages';
+
 interface Skin {
   /** Giro de matiz em graus nas linhas `rows` (o cinza não muda: só as cores com matiz giram). */
   hue: number;
@@ -20,10 +22,19 @@ const SKINS: Readonly<Record<number, Skin>> = {
   13: { hue: -100, spread: 0.3, rows: [0, 6, 7], tint: { rows: [5], hue: 12, sat: 0.45 } }, // piso laranja, quadrados de rocha avermelhada
 };
 
+/** Cópias com a ambientação de outra arena (14–18): fase da interface → arena do original cujo visual ela usa (tiles,
+ *  paleta, animações de cenário, borda e decoração), desenhando o campo da fase base (render/rom/stage-look.ts). */
+const LOOKS: Readonly<Record<number, number>> = { 14: 3, 15: 4, 16: 7, 17: 9, 18: 10 };
+/** Arena do original (1–10) cujo visual a fase da interface desenha. */
+export const stageLook = (stage: number): number => LOOKS[stage] ?? coreStage(stage);
+
 /** Fase da partida em andamento (a da interface, não a do núcleo); quem cria a partida avisa. */
 let current = 0;
 export function setBattleStage(stage: number): void { current = stage; }
 export const battleSkin = (): number => current;
+/** Fase da interface que a rodada da fase `coreStageNo` (do núcleo) desenha: a cópia avisada por `setBattleStage`, se
+ *  ela for cópia dessa fase; senão a própria fase do núcleo. */
+export const battleStageFor = (coreStageNo: number): number => (current && coreStage(current) === coreStageNo ? current : coreStageNo);
 
 type Hsl = [number, number, number];
 function toHsl(v: number): Hsl {
