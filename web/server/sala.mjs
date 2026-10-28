@@ -154,9 +154,12 @@ function unqueue(peer) {
   queueUpdate();
 }
 
+/** ALEATORIO na fase da sala (RANDOM_STAGE em src/game/stage-choice.ts). */
+const RANDOM_STAGE = 0;
 /** Fase e regras vindas do cliente (ao criar a sala e em CONFIGURAÇÕES): valores fora do limite voltam ao atual. */
 function applyConfig(L, n = {}) {
   L.stage = clampInt(n.stage, 1, 13, L.stage);   // 11 a 13: cópias da 1 com outras cores (src/game/stages.ts)
+  if (n.stage === RANDOM_STAGE) L.stage = RANDOM_STAGE;   // ALEATORIO: cada cliente sorteia da semente do 'start' (a mesma)
   const r = n.rules ?? {};
   L.rules = {
     cpuLevel: clampInt(r.cpuLevel, 0, 2, L.rules.cpuLevel), matches: clampInt(r.matches, 1, 5, L.rules.matches),
