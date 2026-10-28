@@ -133,11 +133,30 @@ export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'ma
       left: () => { const b = opt().sfxVol; opt().sfxVol = clamp(opt().sfxVol - 1, 0, 10); app.save(); setVol(); return opt().sfxVol !== b; },
       right: () => { const b = opt().sfxVol; opt().sfxVol = clamp(opt().sfxVol + 1, 0, 10); app.save(); setVol(); return opt().sfxVol !== b; },
     });
+    // MÚSICA PRÓPRIA: liga/desliga as faixas do jogador na batalha; ADICIONAR abre o seletor de arquivos (as faixas
+    // ficam no navegador); APAGAR esquece todas. "Restaurar padrão" religa a opção, mas não apaga as faixas.
+    const own = app.audio.ownMusic;
+    const setOwn = (on: boolean): boolean => {
+      const changed = opt().ownMusic !== on;
+      opt().ownMusic = on; app.audio.setOwnMusicOn(on); app.save(); return changed;
+    };
+    rows.push({
+      id: 'ownMusic', label: S.options.ownMusic, value: () => (opt().ownMusic ? S.options.yes : S.options.no),
+      left: () => setOwn(false), right: () => setOwn(true),
+    });
+    rows.push({
+      id: 'ownAdd', label: S.options.ownAdd, value: () => (own?.count ? S.options.ownCount(own.count) : S.options.ownNone),
+      select: () => { note = null; own?.pick(); },
+    });
+    rows.push({
+      id: 'ownClear', label: S.options.ownClear, value: () => said('ownClear'),
+      select: () => { if (!own?.count) return; void own.clear(); note = { id: 'ownClear', text: S.options.ownCleared }; },
+    });
     rows.push({
       id: 'reset', label: S.options.reset, select: () => {
         const d = defaultSettings();
         st.devices = d.devices; st.keymaps = d.keymaps; st.padmaps = d.padmaps; st.options = d.options;
-        app.applyInput(); setVol(); app.save();
+        app.applyInput(); setVol(); app.audio.setOwnMusicOn(d.options.ownMusic); app.save();
       },
     });
   }

@@ -25,10 +25,11 @@ export interface Options {
   allMounts: boolean;    // MONTARIAS EXTRAS: ovos dos 13 tipos (senha 0164 do original); padrão SIM
   screen: ScreenKind;    // 'hd' (padrão): altura toda em 4:3 + laterais borradas; 'classic': inteiros, pixel 8:7, bordas pretas
   smooth: boolean;       // filtro suave (pixel art ampliada com bordas lisas); padrão NÃO (nítido)
+  ownMusic: boolean;     // MÚSICA PRÓPRIA: as faixas do jogador (audio/own-music.ts) tocam na batalha; padrão SIM (sem faixas, nada muda)
 }
 
 export function defaultOptions(): Options {
-  return { randomSpawns: true, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3, fx: true, allMounts: true, screen: 'hd', smooth: false };
+  return { randomSpawns: true, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3, fx: true, allMounts: true, screen: 'hd', smooth: false, ownMusic: true };
 }
 
 /** Slots de Opções → Controles: dispositivo, teclas e botões dos 5 jogadores. */
@@ -206,6 +207,7 @@ export function normalizeSettings(raw: unknown): Settings {
       // TELA e FILTRO SUAVE saíram das Opções: valem sempre HD e nítido (o `?tela=` e o `?filtro=` na URL ainda mandam)
       screen: d.options.screen,
       smooth: d.options.smooth,
+      ownMusic: bool(ro.ownMusic, d.options.ownMusic),
     },
     setup: {
       mode: oneOf(s.mode, ['ffa', 'team'] as const, ds.mode),

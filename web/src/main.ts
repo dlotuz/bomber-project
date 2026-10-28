@@ -7,6 +7,7 @@ import { installTouchControls } from './input/touch';
 import { onlineScreen } from './screens/online';
 import { FADE_IN_1 } from './app/fade';
 import { startRealAudio } from './app/audio';
+import { OwnMusic } from './audio/own-music';
 import { resumeAudio } from './audio/register';
 import { createAudioStarter } from './audio/starter';
 import { bootPack, bootTrace, onRomChange, romState } from './app/rom-api';
@@ -43,6 +44,10 @@ const app = new App(settings, {
   seed: () => 0x0012,
 });
 app.audio.setVolume(settings.options.musicVol / 10, settings.options.sfxVol / 10);
+// MÚSICA PRÓPRIA (Opções): faixas do jogador guardadas no navegador, no lugar da música da batalha.
+const ownMusic = new OwnMusic();
+app.audio.setOwnMusic(ownMusic, settings.options.ownMusic);
+void ownMusic.load();
 
 // Gráficos e som originais embutidos (public/rom-pack.dat): ninguém precisa carregar a ROM. Até o pacote chegar (ou
 // se ele falhar), as telas usam a arte por código. Em dev, ?romtrace=<url da ROM> usa a ROM real rastreando o que é
