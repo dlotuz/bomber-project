@@ -12,6 +12,14 @@ export interface MatchSession {
 export const carry: MatchCarry = { seed: null, racerPrize: null };
 export function resetCarry(): void { carry.seed = null; carry.racerPrize = null; }
 
+/** Semente do RNG ao abrir a página. Com a do boot do cartucho ($0012) a 1ª partida saía sempre igual (mesmos blocos,
+ *  itens e ovos); agora é sorteada a cada abertura. `?seed=N` fixa a semente, para reproduzir uma partida. */
+export function sessionSeed(search: string, random: () => number = Math.random): number {
+  const q = new URLSearchParams(search);
+  if (q.has('seed')) return Number.parseInt(q.get('seed')!, 10) & 0xffff;
+  return Math.floor(random() * 0x10000) & 0xffff;
+}
+
 export function createMatchSession(cfg: GameConfig): MatchSession {
   const seed = cfg.seed ?? carry.seed ?? 0x0012;
   const prize = cfg.rules.racer && cfg.rules.mode === 'ffa' ? carry.racerPrize : null;
