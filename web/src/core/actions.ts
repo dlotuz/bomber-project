@@ -42,6 +42,7 @@ export function tickAct(s: RoundState, p: Player, ev: GameEvent[]): boolean {
 }
 
 /** Golpe P: avanço de 16 px (4 ticks), 35 ticks na ação; quem está a pé na casa da frente é empurrado 48 px (12 ticks).
+ *  Com bomba (ou jogador) na mão, ela sai antes do golpe, como no soco (ver `playerActions`).
  *  Montado (qualquer fase) não é alvo: $C2:499F procura na ocupação $7F:1000 com a máscara $01F0, só os bits "a pé"
  *  (+$90); montado a casa tem +$92 ($C2:33FC) e, montando/desmontando, nenhum bit ($C2:3419). Medido: aj-pmount. */
 export function startPPunch(s: RoundState, p: Player, ev: GameEvent[]): void {
@@ -53,6 +54,8 @@ export function startPPunch(s: RoundState, p: Player, ev: GameEvent[]): void {
     q.push = { vx, vy, left: P_PUSH_TICKS };
     setAct(s, q, 'pushed', P_PUSH_TICKS);
   }
+  // o que está na mão sai como no B ($C2:4A4E → $C2:4BC4): a bomba cai na casa da frente, onde ele vai parar
+  if (holding(p)) tossAny(s, p);
   // avanço de 16 px (4 px/tick × 4) como movimento forçado; contra casa sólida à frente não sai do lugar
   if (!solid(s.grid[front] ?? CODE.HARD)) p.push = { vx, vy, left: P_ADVANCE_TICKS };
   setAct(s, p, 'pPunch', P_TICKS);
@@ -104,12 +107,16 @@ export function playerActions(s: RoundState, p: Player, btn: number, pressed: nu
   } else if (pressed & BTN.B && !(onFoot && startLift(s, p, ev))) {   // luva sobre a bomba: B também levanta (segura enquanto apertado)
     detonateRemote(s, p, ev); setAct(s, p, 'detonate', DETONATE_TICKS);
   }
+  // Soco e P com algo na mão: segurar é o estado normal $C2:141C, que chama o soco $C2:48E1 sem olhar +$8C; o Y solta
+  // o que está na mão por $C2:4BC4 (o mesmo do B: bomba +$1C = 9, cai na casa da frente) depois de socar a bomba da
+  // frente ($C2:4943) e antes da pose ($C2:22C9; P: $C2:2216). Ninguém soca com a bomba na mão. Levantando ($C2:3692) e
+  // arremessando ($C2:3882) o soco não é chamado — aqui o `tickAct` trava. Emulador: analise/investigacao/aj-socoluva.
   // X (parar o chute) não é ação do jogador: o deslize da bomba lê o X segurado do dono (kick.ts, `ownerHoldsX`).
   // Tecla própria do P (extra): com ela o P sai só no POWER e o Y fica só com o soco; sem ela, Y faz os dois (ROM).
   const ownP = s.rules.powerKey?.[p.slot] ?? false;
   if (ownP && pressed & BTN.POWER && onFoot && p.pItem) startPPunch(s, p, ev);
   if (pressed & BTN.Y && !MOUNTS.current.onY(s, p, ev) && onFoot) {
     if (p.pItem && !ownP) startPPunch(s, p, ev);
-    else if (p.punch) punchBomb(s, p, ev);
+    else if (p.punch) { punchBomb(s, p, ev); if (holding(p)) tossAny(s, p); }
   }
 }

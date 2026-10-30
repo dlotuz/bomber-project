@@ -1,0 +1,10 @@
+Scripts do ajuste aj-socoluva (Y do soco / do P com bomba na mão). Rodar desta pasta com o venv dos cores
+(core de debug em analise/extraido/cores/rom-mecanicas):
+  PY="/Users/dlotuz/Projetos Claude/Bomber Project/analise/extraido/cores/venv/bin/python"
+  $PY carry_y2.py               # segura a bomba e aperta Y: pose $C2:22C9, +$8C zerado em $C2:4BFE, bomba cai na frente
+  $PY carry_y2.py front         # idem com bomba do P2 à frente: ela é socada e a da mão cai na casa que ela deixou
+  $PY carry_y2.py P front       # com o P: pose $C2:2216, avança, a bomba da mão cai nele (atordoa, $C2:0E29) e quica
+  $PY carry_y2.py yat=8         # Y durante o levantar ($C2:3692): nada
+  $PY carry_b.py                # B segurando: mesmo $C2:4BFE / +$1C = 9 / $C1:26C9 do Y
+  $PY newbomb.py                # A segurado depois: bomba nova em $C2:5142 ($C2:4FE2: A segurado 16 ticks põe bomba)
+Nada é versionado além dos .py (savestates e ROM ficam fora).
