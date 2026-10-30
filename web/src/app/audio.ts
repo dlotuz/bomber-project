@@ -11,6 +11,15 @@ export interface VolumeControl { setVolume(music: number, sfx: number): void }
 const hasVolume = (s: AudioSink): s is AudioSink & VolumeControl =>
   typeof (s as Partial<VolumeControl>).setVolume === 'function';
 
+/** MÚSICA PRÓPRIA (audio/own-music.ts): faixas do jogador que tocam no lugar da música da batalha. */
+export interface OwnMusicPlayer {
+  readonly count: number;
+  play(): void; pause(): void; fade(): void; setVolume(v: number): void;
+  /** Abre o seletor de arquivos do sistema. */
+  pick(): void;
+  clear(): Promise<void>;
+}
+
 type EventAudio = (sink: AudioSink, ev: readonly GameEvent[]) => void;
 let eventAudio: EventAudio = () => {};
 /** O plano 11 registra aqui o mapeamento GameEvent → SFX/voz (§3.15). */
@@ -20,6 +29,8 @@ export function setGameEventAudio(f: EventAudio): void { eventAudio = f; }
 export class AudioDirector implements AudioSink {
   current: { bank: number | null; music: number | null } = { bank: null, music: null };
   private vol: [number, number] | null = null;
+  private own: OwnMusicPlayer | null = null;
+  private ownOn = false;
 
   constructor(private sink: AudioSink = new NoopSink()) {}
 
@@ -27,17 +38,33 @@ export class AudioDirector implements AudioSink {
     this.sink = s;
     if (this.vol && hasVolume(s)) s.setVolume(this.vol[0], this.vol[1]);
     if (this.current.bank !== null) s.bank(this.current.bank as 0x2f | 0x30);
-    if (this.current.music !== null) s.music(this.current.music);
+    if (this.current.music !== null && !this.ownPlays(this.current.music)) s.music(this.current.music);
   }
-  bank(id: 0x2f | 0x30): void { this.current = { bank: id, music: null }; this.sink.bank(id); }
-  music(id: number): void { this.current.music = id; this.sink.music(id); }
+  /** Liga as faixas do jogador (`on` = opção MÚSICA PRÓPRIA). */
+  setOwnMusic(p: OwnMusicPlayer, on: boolean): void {
+    this.own = p;
+    if (this.vol) p.setVolume(this.vol[0]);
+    this.ownOn = on;
+  }
+  setOwnMusicOn(on: boolean): void { this.ownOn = on; }
+  get ownMusic(): OwnMusicPlayer | null { return this.own; }
+  /** A música da batalha vira a do jogador quando a opção está ligada e há faixas (os jingles seguem os da ROM). */
+  private ownPlays(id: number): boolean { return id === MUSIC.battle && this.ownOn && !!this.own && this.own.count > 0; }
+  bank(id: 0x2f | 0x30): void { this.current = { bank: id, music: null }; this.own?.pause(); this.sink.bank(id); }
+  music(id: number): void {
+    this.current.music = id;
+    if (this.ownPlays(id)) { this.sink.stop(); this.own!.play(); return; }
+    this.own?.pause();
+    this.sink.music(id);
+  }
   sfx(id: number): void { this.sink.sfx(id); }
   voice(id: number): void { this.sink.voice(id); }
-  stop(): void { this.current.music = null; this.sink.stop(); }
-  fade(): void { this.current.music = null; this.sink.fade(); }
+  stop(): void { this.current.music = null; this.own?.pause(); this.sink.stop(); }
+  fade(): void { this.current.music = null; this.own?.fade(); this.sink.fade(); }
   tick(): void { this.sink.tick(); }
   setVolume(music: number, sfx: number): void {
     this.vol = [music, sfx];
+    this.own?.setVolume(music);
     if (hasVolume(this.sink)) this.sink.setVolume(music, sfx);
   }
   playEvents(ev: readonly GameEvent[]): void { if (ev.length) eventAudio(this, ev); }
