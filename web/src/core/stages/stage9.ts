@@ -5,6 +5,7 @@ import type { Jump, Seesaw, Stage9State } from './state';
 import { A9_SAWS } from './tables';
 import { playerCell, px, setAct, stageEvent, standing, wrapPx } from './kit';
 import { stage9Ai } from '../ai/stages/stage9';
+import { releaseHand } from '../grab';
 
 export const JUMP_DY = [0, 0, 0, -6, -10, -13, -15, -16, -16, -16, -15, -13, -10, -6];
 export const HOP_DX = [3, 3, 3, 3, 2, 2, 0, 0];
@@ -28,6 +29,7 @@ function launch(s: RoundState, a: Stage9State, p: Player, ev: GameEvent[]): void
   const c = playerCell(p);
   p.x = centerX(colOf(c)); p.y = centerY(linOf(c));
   p.push = { vx: 0, vy: 0, left: 0 };
+  releaseHand(s, p);   // $C2:1C58 → $C2:1C68: o pulo passa por $C2:4BC4 — a bomba cai da mão na casa da frente
   a.jumps.push({ slot: p.slot, t: -1, dx, baseY: p.y, born: s.tick, hop: -1 });
   setAct(s, p, 'launched', LOCK);
   stageEvent(ev, 'a9_launch', { slot: p.slot });

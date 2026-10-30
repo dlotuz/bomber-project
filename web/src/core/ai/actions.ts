@@ -6,7 +6,7 @@ import { cellAt, cellCenter, colOf, faceStep, inField, linOf } from '../units';
 import { playerCell, standing } from '../state';
 import { bombAt, bombById, bombOccupies } from '../bombs';
 import { canKick, kickable, stopKick } from '../kick';
-import { aimThrow, handFrom } from '../flyers';
+import { aimThrow, handFrom, tossHeld } from '../flyers';
 import { MOUNTS } from '../mounts';
 import { SAFE, crossCells, firstLanding, flightEnd, hazards, kickPath, type Hazard } from './danger';
 import { centered, enterTicks, escape, hasRefuge, ticksPerCell, walkBlocked } from './nav';
@@ -429,9 +429,7 @@ function glove(s: RoundState, p: Player, level: AiLevel, brain: Brain, last: num
           const chance = b.fuse <= kf ? level.dropKill : level.dropStun;
           if (unsafe || aiRoll(b.id, p.slot, 11, brain.seed) < chance) {
             const sim = fork(s);
-            sim.players[p.slot].carry = -1;
-            const [x, y] = cellCenter(here);
-            launch(sim, b.id, 'bounce', (p.face >> 1) as 0 | 1 | 2 | 3, { x, y, z: 0 });
+            tossHeld(sim, sim.players[p.slot]);                        // o B do núcleo ($C2:4BC4): 1 casa, da mão
             if (survives(sim, p.slot, level, DETONATE_TICKS)) { brain.liftAt = -1; brain.cool = s.tick + GLOVE_COOL; return BTN.A | BTN.B; }
           }
         }

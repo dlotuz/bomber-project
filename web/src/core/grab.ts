@@ -5,7 +5,7 @@ import { BTN, type FlightId, type GameEvent, type Player, type RoundState } from
 import { LIFT_TICKS, THROW_TICKS } from './constants';
 import { cellCenter } from './units';
 import { newId, playerCell, setAct, standing } from './state';
-import { aimThrow, dropHeld, handFrom } from './flyers';
+import { aimThrow, dropHeld, handFrom, tossHeld } from './flyers';
 import { isImmune } from './hit';
 
 /** Trava de quem está na mão ou voando: só a luva/o pouso liberam. */
@@ -93,6 +93,13 @@ export function tossGrab(s: RoundState, p: Player): void {
   // como lockAct (volta a agir em T + DROP_TICKS); de slot maior, ele ainda roda neste tick e já desconta 1
   setAct(s, q, 'dropped', DROP_TICKS - (q.slot > p.slot ? 0 : 1));
   q.actT0 = s.tick;
+}
+
+/** $C2:4BC4: solta o que está na mão — jogador (como no B: `tossGrab`; o emulador mostra o mesmo $C2:1C35 no B e no
+ *  atordoamento) ou bomba (`tossHeld`, cai na casa da frente). */
+export function releaseHand(s: RoundState, p: Player): void {
+  if (p.grab >= 0) tossGrab(s, p);
+  if (p.carry >= 0) tossHeld(s, p);
 }
 
 /** Quem está na mão acompanha quem segura; se um dos dois saiu do jogo, solta. */

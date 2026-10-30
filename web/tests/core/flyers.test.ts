@@ -303,7 +303,12 @@ describe('reflect (luva × luva) e soco em quem segura bomba', () => {
     for (let i = 0; i < 80 && d.p.act !== 'stunned'; i++) fly(s, 1);
     expect(d.p.act).toBe('stunned');
     expect(f.dir).toBe(1);
-    expect([d.b.state, d.b.cell]).toEqual(['idle', C(11, 1)]);
+    expect([d.p.carry, d.b.state]).toEqual([-1, 'air']);   // $C2:4BC4: cai da mão em 10 ticks, não na hora
+    // a bomba arremessada quicou nele e parou na (11,1) 8 ticks depois; a dele chega lá em 10, acha bomba e quica mais 1
+    fly(s, 10);
+    expect([f.ref, s.bombs.find(b => b.id === f.ref)?.cell]).toEqual([a.b.id, C(11, 1)]);
+    fly(s, 8);
+    expect([d.b.state, d.b.cell]).toEqual(['idle', C(12, 1)]);
   });
   it('bomba largada com B caindo direto em quem segura bomba: também reflete', () => {
     const s = arena({ players: 2 });
@@ -322,7 +327,8 @@ describe('reflect (luva × luva) e soco em quem segura bomba', () => {
     punchBomb(s, p, []);
     for (let i = 0; i < 60 && d.p.act !== 'stunned'; i++) fly(s, 1);
     expect(d.p.act).toBe('stunned');
-    expect(d.p.carry).toBe(-1);
+    expect([d.p.carry, d.b.state]).toEqual([-1, 'air']);   // $C2:4BC4: cai da mão em 10 ticks, não na hora
+    fly(s, 10);
     expect([d.b.state, d.b.cell]).toEqual(['idle', C(7, 1)]);
   });
 });
