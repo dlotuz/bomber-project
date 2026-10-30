@@ -41,7 +41,7 @@ function scriptOf(f: Flyer): Script {
     case 'punch': return PUNCH[f.dir];
     case 'bounce': return BOUNCE[f.dir];
     case 'item': return ITEM_FLIGHT[f.script].script;
-    default: return THROW[Number(f.flight.slice(5)) as 2 | 3 | 4 | 5][f.dir];
+    default: return THROW[Number(f.flight.slice(5)) as 1 | 2 | 3 | 4 | 5][f.dir];
   }
 }
 const vertical = (dir: number): boolean => dir === 0 || dir === 2;
@@ -136,17 +136,22 @@ function landPlayer(s: RoundState, f: Flyer, cell: number, out: boolean, v: numb
   if (f.script > MAX_BOUNCES) settle(cell);
 }
 
+/** Um passo do script de `f`; no último, pousa. */
+function advance(s: RoundState, f: Flyer, ev: GameEvent[]): void {
+  const sc = scriptOf(f);
+  const [dx, dy] = sc[f.i++];
+  f.x += dx * SUB;
+  if (vertical(f.dir)) f.y += dy * SUB; else f.z += dy;
+  wrap(f);
+  if (f.kind === 'player') { const q = s.players[f.ref]; if (q) { q.x = f.x; q.y = f.y; q.z = Math.max(0, -f.z); } }
+  if (f.i >= sc.length) land(s, f, ev);
+}
+
 export function tickFlyers(s: RoundState, ev: GameEvent[]): void {
   if (s.phase === 'won') return;
   for (const f of [...s.flyers]) {
     if (f.born === s.tick || !s.flyers.includes(f)) continue;
-    const sc = scriptOf(f);
-    const [dx, dy] = sc[f.i++];
-    f.x += dx * SUB;
-    if (vertical(f.dir)) f.y += dy * SUB; else f.z += dy;
-    wrap(f);
-    if (f.kind === 'player') { const q = s.players[f.ref]; if (q) { q.x = f.x; q.y = f.y; q.z = Math.max(0, -f.z); } }
-    if (f.i >= sc.length) land(s, f, ev);
+    advance(s, f, ev);
   }
 }
 
@@ -199,26 +204,20 @@ export function throwHeld(s: RoundState, p: Player, ev: GameEvent[]): void {
   ev.push({ type: 'throw', slot: p.slot });
 }
 
-/** Luva, B: a bomba sai da mão quicando 1 casa para a frente; o pouso (`land`) cuida do resto — parede ou bomba:
- *  quica mais uma casa; jogador: fica atordoado e ela quica para a casa seguinte. */
+/** A bomba sai da mão ($C2:4BC4: +$8C = 0 em $C2:4BFE, +$1C = 9 → $C1:25EA) — B da luva, soco/P com ela na mão,
+ *  dança, atordoamento, empurrão do P, morte, gangorra. Cai na casa da frente com o script de 1 casa da luva
+ *  ($C1:2579), saindo da mão como o arremesso; o pouso (`land`) cuida do resto — parede ou bomba: quica mais uma casa;
+ *  jogador: fica atordoado e ela quica para a casa seguinte; quem segura bomba com a luva: reflete. O objeto da bomba
+ *  roda depois dos jogadores e já dá o 1º passo no tick da soltura: 11 passos, parada em T+10 (emulador, aj-socoluva). */
 export function tossHeld(s: RoundState, p: Player): void {
   const b = bombById(s, p.carry);
   p.carry = -1; p.throwQueued = false;
   if (!b) return;
+  const dir = (p.face >> 1) as 0 | 1 | 2 | 3;
   const [x, y] = cellCenter(playerCell(p));
-  launchBomb(s, b, 'bounce', (p.face >> 1) as 0 | 1 | 2 | 3, { x, y, z: 0 }).glove = true;   // caindo direto: reflete
-}
-
-/** Atordoado segurando bomba: ela cai na casa da frente (piso livre, sem bomba nem jogador); senão, como `dropHeld`. */
-export function dropFront(s: RoundState, p: Player): void {
-  const b = bombById(s, p.carry);
-  const c = faceStep(playerCell(p), p.face);
-  if (!b || c < 0 || s.grid[c] !== CODE.FLOOR || bombOccupies(s, c) || s.players.some(q => grounded(q) && playerCell(q) === c)) {
-    dropHeld(s, p);
-    return;
-  }
-  p.carry = -1; p.throwQueued = false;
-  b.state = 'idle'; b.cell = c; [b.x, b.y] = cellCenter(c); s.grid[c] = CODE.BOMB;
+  const f = launchBomb(s, b, 'throw1', dir, handFrom(x, y, dir));
+  f.glove = true;
+  advance(s, f, []);
 }
 
 /** Solta a bomba da mão: cai na casa se estiver livre; senão some e volta ao dono. */

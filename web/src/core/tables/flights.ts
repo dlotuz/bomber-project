@@ -1,6 +1,7 @@
 // GERADO por scripts/rom-facts/core-flights.ts — NÃO EDITAR. Rode: SB4_ROM=… node scripts/rom-facts/core-all.ts
 // ROM SHA-1 38f4394986bd39fcbe32a722a3fe103ee6177d9b
-// soco e quique $C1:2126 (8 u16: 4 soco + 4 quique), luva $C1:2571/2569/2561/2559 (2/3/4/5 casas),
+// soco e quique $C1:2126 (8 u16: 4 soco + 4 quique), luva $C1:2579/2571/2569/2561/2559 (1/2/3/4/5 casas;
+// a de 1 casa é a bomba que sai da mão por $C2:4BC4, +$1C = 9 → $C1:25EA),
 // chute $C1:35C9, itens voando $C1:6715 (12 × {u16 script, u16 dir}); índice de direção 0 ↑ 1 → 2 ↓ 3 ←
 export type Script = readonly (readonly [number, number])[];
 export const PUNCH: readonly Script[] = [
@@ -49,7 +50,25 @@ export const KICK_STEP: readonly Script[] = [
     [-2, 0], [-2, 0], [-2, 0], [-2, 0], [-2, 0], [-2, 0], [-2, 0], [-2, 0],
   ],
 ];
-export const THROW: Readonly<Record<2 | 3 | 4 | 5, readonly Script[]>> = {
+export const THROW: Readonly<Record<1 | 2 | 3 | 4 | 5, readonly Script[]>> = {
+  1: [
+    [
+      [0, -2], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0],
+      [0, 1], [0, 1],
+    ],
+    [
+      [2, -3], [2, -3], [2, -2], [2, 0], [2, 2], [1, 3], [1, 3], [1, 4], [1, 4],
+      [1, 4], [1, 4],
+    ],
+    [
+      [0, -2], [0, 4], [0, 4], [0, 4], [0, 4], [0, 4], [0, 4], [0, 4], [0, 4],
+      [0, 1], [0, 1],
+    ],
+    [
+      [-2, -3], [-2, -3], [-2, -2], [-2, 0], [-2, 2], [-1, 3], [-1, 3], [-1, 4], [-1, 4],
+      [-1, 4], [-1, 4],
+    ],
+  ],
   2: [
     [
       [0, -2], [0, -2], [0, -2], [0, -2], [0, -2], [0, -2], [0, -2], [0, -2], [0, -2],

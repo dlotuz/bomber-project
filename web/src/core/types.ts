@@ -112,7 +112,7 @@ export interface Bomb {
   born: number;                          // tick de criação
 }
 
-export type FlightId = 'punch' | 'bounce' | 'throw2' | 'throw3' | 'throw4' | 'throw5' | 'item';
+export type FlightId = 'punch' | 'bounce' | 'throw1' | 'throw2' | 'throw3' | 'throw4' | 'throw5' | 'item';
 
 export interface Flyer {
   id: number; kind: 'bomb' | 'item' | 'player';

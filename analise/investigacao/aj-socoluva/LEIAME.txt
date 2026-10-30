@@ -8,3 +8,9 @@ Scripts do ajuste aj-socoluva (Y do soco / do P com bomba na mão). Rodar desta 
   $PY carry_b.py                # B segurando: mesmo $C2:4BFE / +$1C = 9 / $C1:26C9 do Y
   $PY newbomb.py                # A segurado depois: bomba nova em $C2:5142 ($C2:4FE2: A segurado 16 ticks põe bomba)
 Nada é versionado além dos .py (savestates e ROM ficam fora).
+
+Incapacitado com algo na mão (2º ajuste):
+  $PY incap.py dance            # nota real da montaria F: $C2:59BF → $C2:4C88 → $C2:4BFE → dança $C2:0D83; a bomba cai na frente em T+10
+  $PY incap.py danceq|stun|pvict|death   # pedidos gravados direto: todos soltam por $C2:4BFE e a bomba cai na frente em T+10
+  $PY grabrel.py B|stun|dance|pvict|death   # segurando o P2: o B e o atordoamento soltam igual (P2 em $C2:1C35 por 41 ticks)
+  $PY throwt.py                 # arremesso e queda dão o 1º passo no frame da soltura (arremesso pousa em T+11, queda em T+10)

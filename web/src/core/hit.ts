@@ -3,10 +3,9 @@ import { rnd } from './rng';
 import { DROP_EVERY, DROP_START, HIT_INV, OUT_AT, STUN_TICKS } from './constants';
 import { playerCell, setAct } from './state';
 import { dropCategory, loseItems } from './items';
-import { dropFront, dropHeld } from './flyers';
 import { becomeBad } from './bad-bomber';
 import { MOUNTS } from './mounts';
-import { airborne, releaseGrab } from './grab';
+import { airborne, releaseHand } from './grab';
 
 export const isImmune = (s: RoundState, p: Player): boolean => s.phase === 'won' && p.state === 'alive';
 
@@ -40,8 +39,7 @@ export function hitPlayer(s: RoundState, p: Player, cause: 'flame' | 'pressure',
     if (p.costume >= 0) { p.costume = -1; p.inv = HIT_INV; return; }
     if (p.heart) { p.heart = false; p.inv = HIT_INV; return; }
   }
-  if (p.carry >= 0) dropHeld(s, p);
-  if (p.grab >= 0) releaseGrab(s, p);
+  releaseHand(s, p);   // $C2:4B4E → $C2:4BB1: a bomba cai da mão na casa da frente (não fica na casa dele)
   p.state = 'dying'; p.hitT0 = s.tick; s.lastHit = s.tick;
   p.disease = 0; p.diseaseT = 0; p.push.left = 0;
   setAct(s, p, 'dying', 0);
@@ -74,8 +72,7 @@ export function tickDeath(s: RoundState, p: Player, ev: GameEvent[]): void {
 export function stunPlayer(s: RoundState, p: Player, ev: GameEvent[], ignoreInv = false): void {
   if (p.state !== 'alive' || isImmune(s, p) || p.act === 'stunned' || airborne(p)) return;
   if (!ignoreInv && (p.inv > 0 || offGrid(p))) return;
-  if (p.carry >= 0) dropFront(s, p);
-  if (p.grab >= 0) releaseGrab(s, p);
+  releaseHand(s, p);   // $C2:4C54 → $C2:4C6F: $C2:4BC4, a bomba cai da mão na casa da frente em T+10
   p.push.left = 0;
   setAct(s, p, 'stunned', STUN_TICKS);
   loseItems(s, p, ((rnd(s.rng, 0xff) & 6) >> 1) + 1, ev);

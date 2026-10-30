@@ -5,9 +5,9 @@ import { playerCell, setAct, standing } from './state';
 import { movePlayer, passesBomb } from './movement';
 import { rollerAt, tryKick } from './kick';
 import { detonateRemote, placeBomb } from './bombs';
-import { punchBomb, startLift, throwHeld, tossHeld } from './flyers';
+import { punchBomb, startLift, throwHeld } from './flyers';
 import { isImmune } from './hit';
-import { DROP_INV, airborne, grabbedInput, holding, throwGrab, tossGrab, tryGrab } from './grab';
+import { DROP_INV, airborne, grabbedInput, holding, releaseHand, throwGrab, tryGrab } from './grab';
 import { MOUNTS } from './mounts';
 import { STAGES } from './stages';
 
@@ -51,11 +51,12 @@ export function startPPunch(s: RoundState, p: Player, ev: GameEvent[]): void {
   if (p.punch) punchBomb(s, p, ev);
   for (const q of s.players) {
     if (q === p || q.mount || !standing(q) || airborne(q) || isImmune(s, q) || playerCell(q) !== front) continue;
+    releaseHand(s, q);   // $C2:4C14 → $C2:4C41: o empurrado larga o que está na mão
     q.push = { vx, vy, left: P_PUSH_TICKS };
     setAct(s, q, 'pushed', P_PUSH_TICKS);
   }
   // o que está na mão sai como no B ($C2:4A4E → $C2:4BC4): a bomba cai na casa da frente, onde ele vai parar
-  if (holding(p)) tossAny(s, p);
+  releaseHand(s, p);
   // avanço de 16 px (4 px/tick × 4) como movimento forçado; contra casa sólida à frente não sai do lugar
   if (!solid(s.grid[front] ?? CODE.HARD)) p.push = { vx, vy, left: P_ADVANCE_TICKS };
   setAct(s, p, 'pPunch', P_TICKS);
@@ -64,8 +65,6 @@ export function startPPunch(s: RoundState, p: Player, ev: GameEvent[]): void {
 
 /** Luva: arremessa o que está na mão (jogador ou bomba). */
 function throwAny(s: RoundState, p: Player, ev: GameEvent[]): void { if (p.grab >= 0) throwGrab(s, p, ev); else throwHeld(s, p, ev); }
-/** Luva: larga o que está na mão 1 casa à frente. */
-function tossAny(s: RoundState, p: Player): void { if (p.grab >= 0) tossGrab(s, p); else tossHeld(s, p); }
 /** Luva, A: pega o jogador da mesma casa; senão levanta a bomba. (O B só levanta bomba.) */
 const liftAny = (s: RoundState, p: Player, ev: GameEvent[]): boolean => tryGrab(s, p, ev) || startLift(s, p, ev);
 
@@ -84,7 +83,7 @@ export function playerActions(s: RoundState, p: Player, btn: number, pressed: nu
     p.throwQueued = false;
     if (!(btn & BTN.A)) { throwAny(s, p, ev); return; }
   }
-  if (holding(p) && !(btn & (BTN.A | BTN.B))) { tossAny(s, p); setAct(s, p, 'idle'); }   // levantou com B e soltou
+  if (holding(p) && !(btn & (BTN.A | BTN.B))) { releaseHand(s, p); setAct(s, p, 'idle'); }   // levantou com B e soltou
   // Trancar: B segurado (depois do tick em que foi apertado) trava o jogador na pose de detonar; assim a luva não o pega.
   if (btn & BTN.B && !(pressed & BTN.B) && !holding(p) && !p.mount) { p.moveDir = 8; setAct(s, p, 'detonate'); return; }
   movePlayer(s, p, btn, ev);
@@ -102,7 +101,7 @@ export function playerActions(s: RoundState, p: Player, btn: number, pressed: nu
   if (pressed & BTN.A) { if (!holding(p) && !(onFoot && p.glove && liftAny(s, p, ev))) placeBomb(s, p, ev); }
   else if (p.disease === DISEASE.DIARRHEA && !holding(p)) placeBomb(s, p, ev);
   if (pressed & BTN.B && holding(p)) {   // luva: B larga a bomba (ou o jogador) na casa da frente
-    tossAny(s, p);
+    releaseHand(s, p);
     setAct(s, p, 'detonate', 1);   // pose do B ($C2:36CA) no tick do aperto; parado em T+1, anda em T+2 (B segurado: tranca)
   } else if (pressed & BTN.B && !(onFoot && startLift(s, p, ev))) {   // luva sobre a bomba: B também levanta (segura enquanto apertado)
     detonateRemote(s, p, ev); setAct(s, p, 'detonate', DETONATE_TICKS);
@@ -117,6 +116,6 @@ export function playerActions(s: RoundState, p: Player, btn: number, pressed: nu
   if (ownP && pressed & BTN.POWER && onFoot && p.pItem) startPPunch(s, p, ev);
   if (pressed & BTN.Y && !MOUNTS.current.onY(s, p, ev) && onFoot) {
     if (p.pItem && !ownP) startPPunch(s, p, ev);
-    else if (p.punch) { punchBomb(s, p, ev); if (holding(p)) tossAny(s, p); }
+    else if (p.punch) { punchBomb(s, p, ev); releaseHand(s, p); }
   }
 }

@@ -2,6 +2,7 @@ import type { MountAbility } from '../types';
 import { spawnShot, advanceProjectile, shotInPlay, F_SPEC, SHOT_END_TICKS } from '../projectile';
 import { lockAct } from '../core-api';
 import { mev } from '../events';
+import { releaseHand } from '../../grab';
 
 export const F_FLIGHT = 159;    // o voo acaba em k = 159 (80 px; 5 casas de 32 ticks, $C1:3067), medido (L7)
 // $C0 = 192 ticks de dança ($C2:0DDC; ROM: atingido no 79, livre no 271 — vs_F_Y_72). lockAct(t) deixa o jogador
@@ -27,6 +28,8 @@ export const ABILITY_F: MountAbility = {
       if (pr.target !== undefined && s.tick - pr.t === 1) {
         const q = s.players[pr.target];
         if (q.state === 'alive') {
+          // $C2:4C88 → $C2:4C94: o pedido de dança passa por $C2:4BC4 — a bomba (ou o jogador) sai da mão
+          releaseHand(s, q);
           lockAct(s, q, 'dance', s.rules.sleepTicks ?? DANCE_TICKS);   // extra: duração configurável
           ev.push(mev({ id: 'mount_struck', slot: pr.owner, target: pr.target, mount: 0xf }));
         }

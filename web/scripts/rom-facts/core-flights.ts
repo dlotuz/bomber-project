@@ -25,14 +25,16 @@ export function renderFlights(rom: Rom): string {
     return { dir, cells, s };
   });
   return header('core-flights.ts', rom.sha1, [
-    'soco e quique $C1:2126 (8 u16: 4 soco + 4 quique), luva $C1:2571/2569/2561/2559 (2/3/4/5 casas),',
+    'soco e quique $C1:2126 (8 u16: 4 soco + 4 quique), luva $C1:2579/2571/2569/2561/2559 (1/2/3/4/5 casas;',
+    'a de 1 casa é a bomba que sai da mão por $C2:4BC4, +$1C = 9 → $C1:25EA),',
     'chute $C1:35C9, itens voando $C1:6715 (12 × {u16 script, u16 dir}); índice de direção 0 ↑ 1 → 2 ↓ 3 ←',
   ]) + [
     'export type Script = readonly (readonly [number, number])[];',
     `export const PUNCH: readonly Script[] = [\n${pb.slice(0, 4).map(p => '  ' + pairs(script(rom, p), 9).replace(/\n/g, '\n  ')).join(',\n')},\n];`,
     `export const BOUNCE: readonly Script[] = [\n${pb.slice(4).map(p => '  ' + pairs(script(rom, p), 9).replace(/\n/g, '\n  ')).join(',\n')},\n];`,
     `export const KICK_STEP: readonly Script[] = ${four(rom, 0xc135c9)};`,
-    'export const THROW: Readonly<Record<2 | 3 | 4 | 5, readonly Script[]>> = {',
+    'export const THROW: Readonly<Record<1 | 2 | 3 | 4 | 5, readonly Script[]>> = {',
+    `  1: ${four(rom, 0xc12579).replace(/\n/g, '\n  ')},`,
     `  2: ${four(rom, 0xc12571).replace(/\n/g, '\n  ')},`,
     `  3: ${four(rom, 0xc12569).replace(/\n/g, '\n  ')},`,
     `  4: ${four(rom, 0xc12561).replace(/\n/g, '\n  ')},`,

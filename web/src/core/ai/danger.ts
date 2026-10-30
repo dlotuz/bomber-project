@@ -98,7 +98,7 @@ function scriptOf(f: Flyer): Script {
   if (f.flight === 'punch') return PUNCH[f.dir];
   if (f.flight === 'bounce') return BOUNCE[f.dir];
   if (f.flight === 'item') return ITEM_FLIGHT[f.script].script;
-  return THROW[Number(f.flight.slice(5)) as 2 | 3 | 4 | 5][f.dir];
+  return THROW[Number(f.flight.slice(5)) as 1 | 2 | 3 | 4 | 5][f.dir];
 }
 
 /** Percorre o resto do script a partir de (x, y, passo i) com a volta pela borda: ponto de pouso. */
