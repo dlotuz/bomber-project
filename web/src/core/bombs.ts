@@ -106,6 +106,7 @@ export function areaCells(s: RoundState, c0: number, level: number, asBomb?: Rea
     if (c === c0) continue;
     const v = s.grid[c];
     if (v === CODE.HARD || v === CODE.PRESSURE || v === CODE.BURNING) continue;
+    if (STAGES[s.stage]?.flameBlocked?.(s, c)) continue;     // gangorra da arena 9 ($C1:3F13–$C1:3F41)
     if (v === CODE.BOMB || asBomb?.has(c)) bombs.push(c); else cells.push(c);
   }
   return { cells, bombs };
@@ -113,17 +114,20 @@ export function areaCells(s: RoundState, c0: number, level: number, asBomb?: Rea
 
 /** Explosão por área da bomba evoluída: cada casa vira chama (peça pela vizinhança, para as linhas saírem ligadas),
  *  bloco queima, item queima, caveira pula e bomba entra na cadeia. */
+/** Peça de uma casa `c` da explosão por área (pela vizinhança acesa `lit`, para as linhas saírem ligadas). */
+export function areaPiece(lit: ReadonlySet<number>, c: number): number {
+  const l = lit.has(faceStep(c, 6)), r = lit.has(faceStep(c, 2)), u = lit.has(faceStep(c, 0)), d = lit.has(faceStep(c, 4));
+  if ((l || r) && (u || d)) return FLAME_PIECE.CENTER;
+  if (l && r) return ARM[2];
+  if (u && d) return ARM[0];
+  return l ? TIP[2] : r ? TIP[6] : u ? TIP[4] : d ? TIP[0] : FLAME_PIECE.CENTER;
+}
+
 function explodeArea(s: RoundState, b: Bomb, ev: GameEvent[]): void {
   const st = STAGES[s.stage];
   const { cells, bombs } = areaCells(s, b.cell, b.level ?? 0);
   const lit = new Set(cells);
-  const piece = (c: number): number => {
-    const l = lit.has(faceStep(c, 6)), r = lit.has(faceStep(c, 2)), u = lit.has(faceStep(c, 0)), d = lit.has(faceStep(c, 4));
-    if ((l || r) && (u || d)) return FLAME_PIECE.CENTER;
-    if (l && r) return ARM[2];
-    if (u && d) return ARM[0];
-    return l ? TIP[2] : r ? TIP[6] : u ? TIP[4] : d ? TIP[0] : FLAME_PIECE.CENTER;
-  };
+  const piece = (c: number): number => areaPiece(lit, c);
   for (const c of cells) {
     if (c === b.cell) continue;
     const v = s.grid[c];
@@ -137,6 +141,15 @@ function explodeArea(s: RoundState, b: Bomb, ev: GameEvent[]): void {
     const o = gridBombAt(s, c);
     if (o && (o.chainAt === 0 || o.chainAt > s.tick + CHAIN_DELAY)) o.chainAt = s.tick + CHAIN_DELAY;
   }
+}
+
+/** Braço chegando numa casa que já está em chama ($C1:40B2): compara o tile da casa (`AND #$C30E`) com o centro ($030C)
+ *  e com a ponta e o braço da própria direção ($4C/$4E de $C1:3E32–$C1:3EAC: cima $0300/$0308, direita $0306/$030A,
+ *  baixo $8300/$8308, esquerda $4306/$430A). Se bater, o braço PARA ali sem acender a casa (`RTL`): ele não atravessa o
+ *  centro de outra explosão nem um braço que já vai na mesma direção. Cruzamento perpendicular e braço de frente (o
+ *  tile da direção oposta tem o outro flip) passam e tomam a casa. Medido em aj-fogo/chain.py e samedir.py. */
+export function armStops(piece: number, face: number): boolean {
+  return piece === FLAME_PIECE.CENTER || piece === ARM[face] || piece === TIP[face];
 }
 
 export function explodeBomb(s: RoundState, b: Bomb, ev: GameEvent[]): void {
@@ -153,7 +166,7 @@ export function explodeBomb(s: RoundState, b: Bomb, ev: GameEvent[]): void {
   if (b.level) { explodeArea(s, b, ev); return; }
   const range = rangeOf(b.fire);
   for (const face of [0, 2, 4, 6]) {
-    let c = c0, last = -1;
+    let c = c0, last = -1, lastK = 0;
     for (let k = 1; k <= range; k++) {
       c = faceStep(c, face);
       if (!inGrid(colOf(c), linOf(c))) break;
@@ -162,6 +175,9 @@ export function explodeBomb(s: RoundState, b: Bomb, ev: GameEvent[]): void {
       // soft ($C1:411A) e de item/caveira ($C1:416E → $C1:411A); bomba ($C1:40EF) segura qualquer tipo.
       if (v === CODE.BURNING) { if (b.type === 2) continue; break; }
       if (v === CODE.HARD || v === CODE.PRESSURE) break;
+      // Gangorra da arena 9 ($C1:4077–$C1:40A9) e chama que segura o braço ($C1:40B2): param sem acender. As duas vêm
+      // depois de $C1:550B (repintura da arena 6, via onFlameCell), que a ROM chama também na casa onde o braço para.
+      if (st?.flameBlocked?.(s, c) || (v === CODE.FLAME && armStops(s.cellAux[c], face))) { st?.onFlameCell?.(s, c, face, ev); break; }
       if (v === CODE.SOFT) { burnCell(s, c, BURN.SOFT); st?.onFlameCell?.(s, c, face, ev); if (b.type === 2) continue; break; }
       if (isSkullCode(v)) {   // caveira não queima: pula como a que sai do jogador curado; o braço para nela (perfurante segue)
         s.grid[c] = CODE.FLOOR;
@@ -171,17 +187,19 @@ export function explodeBomb(s: RoundState, b: Bomb, ev: GameEvent[]): void {
         break;
       }
       if (isItemCode(v)) { burnCell(s, c, BURN.ITEM); st?.onFlameCell?.(s, c, face, ev); if (b.type === 2) continue; break; }
-      // Bomba parada: vira D900 (marcada, $C1:40FF–$C1:4104) e o braço termina antes dela, com ponta na casa anterior;
-      // a casa da bomba não acende. Já marcada (D900) também termina ($C1:40F1). Chutada em movimento não está na grade.
+      // Bomba parada: vira D900 (marcada, $C1:40FF–$C1:4104) e o braço termina antes dela (sem ponta: não chegou ao
+      // alcance); a casa da bomba não acende. Já marcada (D900) também termina ($C1:40F1). Chutada em movimento não está na grade.
       if (v === CODE.BOMB) {
         const o = gridBombAt(s, c);
         if (o && (o.chainAt === 0 || o.chainAt > s.tick + CHAIN_DELAY)) o.chainAt = s.tick + CHAIN_DELAY;
         break;
       }
-      if (v === CODE.FLOOR || v === CODE.FLAME) { setFlame(s, c, ARM[face]); last = c; st?.onFlameCell?.(s, c, face, ev); continue; }
+      if (v === CODE.FLOOR || v === CODE.FLAME) { setFlame(s, c, ARM[face]); last = c; lastK = k; st?.onFlameCell?.(s, c, face, ev); continue; }
       st?.onFlameCell?.(s, c, face, ev);         // código especial passável: a arena decide; o braço segue
     }
-    if (last >= 0) s.cellAux[last] = TIP[face];
+    // Ponta só quando o braço chega ao alcance inteiro: o desenho ($C1:51BC) usa a peça de ponta ([$5C]) só na casa de
+    // índice = alcance (+$2D); braço cortado por parede, bloco, bomba ou outra chama termina com a peça do meio.
+    if (last >= 0 && lastK === range) s.cellAux[last] = TIP[face];
   }
 }
 

@@ -3,6 +3,10 @@ import { WORD_PRESSURE, fieldWords } from '../../src/render/rom/field';
 import { romTables } from '../../src/render/rom/tables';
 import type { FlamePieceName, RomClock, RomScene } from '../../src/render/rom/scene';
 import { NORMAL_BOMB, REMOTE_BOMB, fakeAssets, fakeRound } from './fakes';
+import { readScene } from '../../src/render/rom/adapt';
+import { newMemo } from '../../src/render/rom/scene';
+import { addBomb } from '../../src/core/bombs';
+import { step } from '../../src/core/step';
 
 /** Corridas [valor, repetições] de f(0..n−1). */
 function runs<T>(f: (t: number) => T, n: number): [T, number][] {
@@ -119,6 +123,20 @@ describe('palavra do BG2 por casa', () => {
     s.grid[cell(5, 5)] = 0x0f41;
     const w = words(s);
     expect([w[at(3, 3)], w[at(7, 3)], w[at(5, 5)]]).toEqual([ar.bg2Base[at(3, 3)], ar.bg2Base[at(7, 3)], ar.bg2Base[at(5, 5)]]);
+  });
+  it('cadeia em linha (aj-fogo/chain.py 2 2 6 8): mesmas palavras da ROM no tick em que B explode', () => {
+    // A (8,5) alcance 2 acende B (10,5) alcance 6. ROM (tilemap $7E:2000, linha 5, col 6..14, 2 ticks depois de A):
+    // 4F86 4F8A 0F8C 4F6A 0F6C 0F6A 0F6A 0F6A 0F6A — o braço esquerdo de B para no centro de A (col 4 e 5 seguem piso)
+    // e o direito, cortado pela parede, termina com a peça do meio (sem ponta).
+    const s = fakeRound();
+    for (const p of s.players) p.inv = 9999;
+    addBomb(s, 0, cell(8, 5), { fuse: 0, fire: 0 }).born = -1;
+    addBomb(s, 1, cell(10, 5), { fuse: 120, fire: 4 }).born = -1;
+    for (let k = 0; k < 3; k++) step(s, [0, 0, 0, 0, 0]);
+    const w = fieldWords(s, ar, readScene(s, s.tick, newMemo()), tb, clock(s.tick), script);
+    expect([6, 7, 8, 9, 10, 11, 12, 13, 14].map(c => w[at(c, 5)]))
+      .toEqual([0x4f86, 0x4f8a, 0x0f8c, 0x4f6a, 0x0f6c, 0x0f6a, 0x0f6a, 0x0f6a, 0x0f6a]);
+    expect([w[at(4, 5)], w[at(5, 5)]]).toEqual([ar.floor[at(4, 5)], ar.floor[at(5, 5)]]);
   });
   it('moldura (col 0 e 16) e fora de 17×13 ficam com o bg2Base (D10)', () => {
     const s = fakeRound();
