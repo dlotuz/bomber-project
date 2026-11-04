@@ -66,7 +66,15 @@ export const S = {
     copyFrom: 'COPIAR DO', copyDone: 'COPIADO', copyHelp: (n: number) => `A: USA OS CONTROLES DO P${n}  ESQ/DIR: TROCA`,
     pressKey: 'NOVA TECLA? (ESC CANCELA)', pressPad: 'NOVO BOTÃO? (ESC CANCELA)', actions: ACTIONS,
     button: (n: number) => `BOTÃO ${n}`,
+    // CLIPE (src/clip): submenu das Opções
+    clipMenu: 'CLIPE', clipTitle: 'Clipe', clipOn: 'GRAVAR CLIPES', clipSec: 'DURAÇÃO', clipSecValue: (n: number) => `${n} S`,
+    clipKey: 'TECLA DO CLIPE', clipPad: 'BOTÃO DO CLIPE', clipNone: 'NENHUM', clipOnlyChrome: 'SÓ NO CHROME',
+    clipHelp: 'SALVA OS ÚLTIMOS SEGUNDOS DA PARTIDA', clipUnsupported: 'O CLIPE SÓ FUNCIONA NO CHROME',
+    clipBindHelp: 'A: TROCA  ESQ/DIR: APAGA', clipPressKey: 'NOVA TECLA? (ESC CANCELA)', clipPressPad: 'NOVO BOTÃO? (ESC CANCELA)',
+    clipConflict: (action: string, who: string) => `CONFLITO: ${action} DO ${who}`, clipOnline: 'ONLINE',
   },
+  /** Avisos do CLIPE na partida (src/clip/controller.ts). */
+  clip: { saved: 'CLIPE SALVO!', empty: 'CLIPE AINDA VAZIO', failed: 'FALHA AO SALVAR O CLIPE', cancelled: 'CLIPE CANCELADO' },
   online: {
     menu: 'SALA ONLINE', title: 'Sala online',
     name: 'NOME', create: 'CRIAR SALA', code: 'CÓDIGO', join: 'ENTRAR NA SALA', back: 'VOLTAR', empty: '---',
@@ -104,7 +112,7 @@ const uniq = (u: Use[]): Use[] => [...new Map(u.map(x => [`${x.style}|${x.text}`
 /** Todo par (estilo, texto) que o jogo desenha. Base dos testes de cobertura (T4, T16–T18, T22). */
 export const STRING_USES: readonly Use[] = uniq([
   ...as('titleMenu', [S.title.normal, S.title.battle, S.title.options, S.title.pressStart]),
-  ...as('menuTitle', [S.vs.title, S.players.title, S.rules.title, S.chars.title, S.teams.title, S.options.title, S.options.controlsTitle, S.options.gameplayTitle, S.online.title,
+  ...as('menuTitle', [S.vs.title, S.players.title, S.rules.title, S.chars.title, S.teams.title, S.options.title, S.options.controlsTitle, S.options.gameplayTitle, S.options.clipTitle, S.online.title,
     S.online.titleFriends, S.online.titleQuick, S.online.titleCreate, S.online.titlePassword, S.online.titleAccount, S.online.titleConfig, S.online.titleControls]),
   ...as('menuItem', [S.vs.royale, S.vs.champ, S.vs.mania, S.vs.ffa, S.vs.team, ...S.players.row, S.players.human, S.players.cpu,
     S.players.off, ...S.rules.labels, S.rules.controls, S.rules.gameplay, ...S.rules.cpu, ...S.rules.crowns, ...S.rules.time, S.rules.no, S.rules.yes, S.teams.vs]),
@@ -121,6 +129,11 @@ export const STRING_USES: readonly Use[] = uniq([
     ...Array.from({ length: 32 }, (_, i) => S.options.button(i)),
     'ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789 -+.:!?', 'ESPAÇO', '0 1 2 3 4 5 6 7 8 9 10',
     S.options.devSlot, S.options.slotFixed, S.options.allMounts,
+    S.options.clipMenu, S.options.clipOn, S.options.clipSec, S.options.clipSecValue(15), S.options.clipSecValue(30), S.options.clipKey,
+    S.options.clipPad, S.options.clipNone, S.options.clipOnlyChrome, S.options.clipHelp, S.options.clipUnsupported, S.options.clipBindHelp,
+    S.options.clipPressKey, S.options.clipPressPad, S.options.clipOnline,
+    ...Object.values(ACTIONS).flatMap(a => [1, 2, 3, 4, 5].map(n => S.options.clipConflict(a, `P${n}`)).concat(S.options.clipConflict(a, S.options.clipOnline))),
+    ...Object.values(S.clip),
     ...[1, 2, 3, 4, 5].map(S.lobby.player), S.lobby.human, S.lobby.cpu, S.lobby.off, S.lobby.playersHelp, ...S.lobby.rules,
     ...S.lobby.levels, ...S.lobby.time, S.lobby.no, S.lobby.yes, S.lobby.rulesHelp,
     S.online.name, S.online.create, S.online.code, S.online.join, S.online.back, S.online.empty, S.online.you, S.online.cpu,

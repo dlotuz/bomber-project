@@ -40,6 +40,8 @@ export class App {
   tick = 0;
   screen: Screen = NONE;
   readonly audio: AudioDirector;
+  /** O navegador grava o CLIPE (src/clip/support.ts; o main.ts detecta). Sem suporte, as Opções do clipe ficam desativadas. */
+  clipSupported = false;
   private run: Running | null = null;
 
   constructor(public settings: Settings, private hooks: AppHooks, sink?: AudioSink) {

@@ -87,3 +87,23 @@ describe('OwnMusic (IndexedDB)', () => {
     await vi.waitFor(() => expect(m.count).toBe(1));
   });
 });
+
+describe('OwnMusic: elemento de áudio para o CLIPE', () => {
+  it('avisa quem grava quando o <audio> nasce (uma vez) e expõe o elemento', async () => {
+    const el = { addEventListener: vi.fn(), play: vi.fn(async () => {}), pause: vi.fn(), paused: true, ended: false, volume: 1, src: '' };
+    const doc = { createElement: vi.fn(() => el) } as unknown as Pick<Document, 'createElement'>;
+    const m = new OwnMusic(doc);
+    await m.clear();
+    await m.add([new File([new Uint8Array([1])], 'a.mp3', { type: 'audio/mpeg' }), new File([new Uint8Array([2])], 'b.mp3', { type: 'audio/mpeg' })]);
+    const seen: unknown[] = [];
+    m.onElement(e => seen.push(e));
+    expect(m.element).toBeNull();
+    m.play(); m.pause(); m.fade(); m.play();
+    expect(m.element).toBe(el);
+    expect(seen).toEqual([el]);
+    const late: unknown[] = [];
+    m.onElement(e => late.push(e));   // quem assina depois recebe o que já existe
+    expect(late).toEqual([el]);
+    await m.clear();
+  });
+});

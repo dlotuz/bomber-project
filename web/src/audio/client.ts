@@ -8,6 +8,7 @@
 import workletUrl from './worklet?worker&url';
 import type { AudioCmd, WorkletIn, WorkletOut } from './engine/commands';
 import type { AudioSlices } from './host/image';
+import { audioOutput, setAudioOutput } from './output';
 
 /** O que o resto do jogo usa do cliente (a fábrica da Tarefa 11 recebe isto, e os testes, um falso). */
 export interface AudioClientLike { send(cmd: AudioCmd): void; resume?(): void; close(): Promise<void> }
@@ -36,6 +37,7 @@ export class AudioClient implements AudioClientLike {
       const msg: WorkletIn = { t: 'image', c0, data };
       node.port.postMessage(msg, [c0.buffer, data.buffer]);
       const client = new AudioClient(ctx, node);
+      setAudioOutput({ ctx, node });   // o CLIPE grava o som daqui
       client.resume();
       return client;
     } catch (e) {
@@ -47,5 +49,9 @@ export class AudioClient implements AudioClientLike {
   send(cmd: AudioCmd): void { this.node.port.postMessage(cmd); }
   /** Pede para o contexto rodar (sem esperar); chamado na criação e a cada gesto do usuário. */
   resume(): void { if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => undefined); }
-  async close(): Promise<void> { this.node.disconnect(); await this.ctx.close(); }
+  async close(): Promise<void> {
+    if (audioOutput()?.ctx === this.ctx) setAudioOutput(null);
+    this.node.disconnect();
+    await this.ctx.close();
+  }
 }

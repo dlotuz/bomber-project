@@ -41,12 +41,21 @@ export class OwnMusic implements OwnMusicPlayer {
   private cur = -1;
   private vol = 1;
   private fadeTimer: ReturnType<typeof setInterval> | null = null;
+  private readonly elementListeners: ((el: HTMLAudioElement) => void)[] = [];
 
   /** `doc` só é lido ao abrir o seletor ou tocar (os testes rodam sem DOM). */
   constructor(private readonly doc: Pick<Document, 'createElement'> | null = null, private readonly rand: () => number = Math.random) {}
   private get dom(): Pick<Document, 'createElement'> { return this.doc ?? document; }
 
   get count(): number { return this.tracks.length; }
+
+  /** O <audio> que toca as faixas (nasce na 1ª faixa tocada); null antes disso. */
+  get element(): HTMLAudioElement | null { return this.el; }
+  /** Avisa quando o <audio> nasce (o CLIPE grava o som dele); se já existe, avisa na hora. */
+  onElement(f: (el: HTMLAudioElement) => void): void {
+    this.elementListeners.push(f);
+    if (this.el) f(this.el);
+  }
 
   /** Lê as faixas guardadas. Sem IndexedDB (modo privado restrito etc.), fica sem nenhuma. */
   async load(): Promise<void> {
@@ -127,6 +136,7 @@ export class OwnMusic implements OwnMusicPlayer {
     if (!this.el) {
       this.el = this.dom.createElement('audio');
       this.el.addEventListener('ended', () => this.next());
+      for (const f of this.elementListeners) f(this.el);
     }
     if (this.url) URL.revokeObjectURL(this.url);
     this.url = URL.createObjectURL(this.tracks[i].blob);
