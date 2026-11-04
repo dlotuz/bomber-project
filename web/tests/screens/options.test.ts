@@ -347,6 +347,16 @@ describe.skipIf(!ASSETS)('quadro ROM (cena rules reaproveitada, sem captura pró
   });
 });
 
+describe('Opções em duas colunas', () => {
+  it('com o CLIPE a principal passa de 10 linhas: ADICIONAR MÚSICAS vira ADICIONAR (o valor não pisa no rótulo)', () => {
+    const { app } = mkApp();
+    const o = optionsScreen(app);
+    expect(o.rowIds().length).toBeGreaterThan(10);
+    expect([o.label('ownAdd'), o.value('ownAdd')]).toEqual(['ADICIONAR', 'NENHUMA']);
+    expect(optionsScreen(app, 0, 'clip').label('clipOn')).toBe('GRAVAR CLIPES');
+  });
+});
+
 describe('Opções > Clipe', () => {
   const clipApp = (supported = true) => {
     const r = mkApp(); r.app.clipSupported = supported;

@@ -7,7 +7,7 @@ import { SLOT_COUNT, controlsOf, defaultSettings, devControls, gameplayOf, setDe
 import { S } from '../render/text/strings';
 import { MUSIC } from '../app/audio';
 import { FADE_MENU, FADE_TO_TITLE } from '../app/fade';
-import { drawLobbyList, type LobbyItem } from '../render/lobby-list';
+import { drawLobbyList, LOBBY_ONE_COL_MAX, type LobbyItem } from '../render/lobby-list';
 import { titleScreen } from './title';
 import { remapScreen } from './remap';
 import { isTouchDevice, setTouchStyle, touchStyle } from '../input/touch';
@@ -30,7 +30,7 @@ type ClipCapture = 'clipKey' | 'clipPad';
  */
 export type OptionsScreen = Screen & {
   readonly menu: Menu; readonly page: OptionsPage; readonly capturing: ClipCapture | null;
-  rowIds(): string[]; value(id: string): string; footer(): string | undefined;
+  rowIds(): string[]; value(id: string): string; label(id: string): string; footer(): string | undefined;
 };
 
 export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'main', ret?: () => Screen): OptionsScreen {
@@ -209,6 +209,9 @@ export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'ma
     });
   }
   rows.push({ id: 'back', label: S.options.back, select: () => { goBack(); } });
+  // em duas colunas (mais de 10 linhas) a faixa é estreita: o rótulo longo encurta para o valor (NENHUMA, 2 FAIXAS) caber
+  const add = rows.find(r => r.id === 'ownAdd');
+  if (add && rows.length > LOBBY_ONE_COL_MAX) add.label = S.options.ownAddShort;
 
   const menu = new Menu(rows, { cursor });
 
@@ -240,6 +243,7 @@ export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'ma
     footer,
     rowIds() { return rows.map(r => r.id); },
     value(id: string) { return rows.find(r => r.id === id)?.value?.() ?? ''; },
+    label(id: string) { return rows.find(r => r.id === id)?.label ?? ''; },
     update(inp) {
       if (suppress) { if (inp.any === 0) suppress = false; return; }
       if (capturing) { capture(inp); return; }
