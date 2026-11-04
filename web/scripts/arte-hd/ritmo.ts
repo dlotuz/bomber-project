@@ -15,7 +15,8 @@ interface RomAssets {
   anim(addr: number): Anim;
   bombScript(type: number): { word: number; dur: number }[];
 }
-type FonteRom = { kind: 'player'; tab: number; idx: number | null } | { kind: 'seq'; addrs: readonly number[] } | { kind: 'bomb'; type: number };
+type FonteRom = { kind: 'player'; tab: number; idx: number | null } | { kind: 'seq'; addrs: readonly number[] } | { kind: 'bomb'; type: number }
+  | { kind: 'medido'; addr: string };
 interface Medida { ticks: number[]; loop: boolean; distinct: number; addr: string }
 
 const hexAddr = (a: number): string => `$${(a >> 16).toString(16).toUpperCase()}:${(a & 0xffff).toString(16).toUpperCase().padStart(4, '0')}`;
@@ -59,6 +60,7 @@ async function main(): Promise<number> {
   const out = new Map<string, Medida>();
   for (const [name, f] of ritmoFontes()) {
     const r = f.rom;
+    if (r.kind === 'medido') continue;   // fora do pacote embutido: o catálogo já traz os números
     if (r.kind === 'player') {
       const per = CHARACTERS.map((_, c) => { const addr = animAddr(a.rom, r, c); return single(a.anim(addr), addr); });
       const same = per.every(m => m.ticks.join() === per[0].ticks.join() && m.loop === per[0].loop);

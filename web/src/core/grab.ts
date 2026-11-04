@@ -77,22 +77,33 @@ export function throwGrab(s: RoundState, p: Player, ev: GameEvent[]): void {
   ev.push({ type: 'throw', slot: p.slot });
 }
 
-/** Queda de quem foi largado: o pulo de quem perde a montaria ($C2:105E 1 + $C2:10D5 51 = 52 ticks), imune, e depois
- *  32 de invencibilidade (+$96), como no desmonte. */
-export const DROP_TICKS = 52;
-export const DROP_INV = 32;
+/** Pulo de quem sai da mão ($C2:1C35): só toca a animação e volta à rotina normal ($C2:22F0). Largado ($C2:1BE1,
+ *  tabela $C2:6FC5 → $D8:1D44…) são 42 ticks; escapando sozinho ($C2:1C09, $C2:7085 → $D8:1C4A…), 8. Nesses ticks a ROM
+ *  não chama a checagem de chama/pressão ($C2:4B4E) nem a de atordoamento ($C2:4C54) e o jogador está fora da ocupação
+ *  $7F:1000, mas ninguém grava +$96: a chama já mata no 1º tick da rotina normal (emulador, aj-grabinv/drop.py).
+ *  O antigo 52 + 32 de invencibilidade copiava o desmonte ($C2:10D5 → +$96 = $20), que não é o caminho da luva. */
+export const DROP_TICKS = 42;
+export const ESCAPE_TICKS = 8;
 
-/** B com um jogador na mão: larga na própria casa; ele cai (`dropped`) por DROP_TICKS. */
+/** Solta q da mão de p na casa de p e começa o pulo (`dropped`, imune e parado) de `ticks` rodadas do próprio q. */
+function hop(s: RoundState, p: Player, q: Player, ticks: number): void {
+  q.heldBy = -1; q.z = 0;
+  const c = playerCell(p);
+  if (c >= 0) [q.x, q.y] = cellCenter(c);
+  // `tickAct` desconta 1 por rodada de q e o libera na rodada seguinte à que zera: de slot maior, q ainda roda neste
+  // tick (livre em T + ticks); de slot menor, já rodou e só vê o +$C2 bit $10 no próximo (livre em T + ticks + 1)
+  setAct(s, q, 'dropped', ticks);
+  q.actT0 = s.tick;
+}
+
+/** B com um jogador na mão (e $C2:4BC4, quando quem segura é incapacitado): larga na própria casa; ele cai
+ *  (`dropped`) por DROP_TICKS, sem invencibilidade depois. */
 export function tossGrab(s: RoundState, p: Player): void {
   const q = s.players[p.grab];
   p.grab = -1; p.throwQueued = false;
   if (!q) return;
-  q.heldBy = -1; q.escape = 0; q.z = 0;
-  const c = playerCell(p);
-  if (c >= 0) [q.x, q.y] = cellCenter(c);
-  // como lockAct (volta a agir em T + DROP_TICKS); de slot maior, ele ainda roda neste tick e já desconta 1
-  setAct(s, q, 'dropped', DROP_TICKS - (q.slot > p.slot ? 0 : 1));
-  q.actT0 = s.tick;
+  q.escape = 0;
+  hop(s, p, q, DROP_TICKS);
 }
 
 /** $C2:4BC4: solta o que está na mão — jogador (como no B: `tossGrab`; o emulador mostra o mesmo $C2:1C35 no B e no
@@ -118,7 +129,13 @@ export function grabbedInput(s: RoundState, q: Player, pressed: number): boolean
   if (q.heldBy < 0) return false;
   if (pressed & BTN.B && ++q.escape >= s.rules.gloveEscape) {
     const p = s.players[q.heldBy];
-    if (p) { releaseGrab(s, p); if (p.act === 'lift' || p.act === 'carryIdle' || p.act === 'carryWalk') setAct(s, p, 'idle'); }
+    if (p) {
+      p.grab = -1; p.throwQueued = false;
+      // escapou ($C2:1C09): pulo de ESCAPE_TICKS a partir desta rodada (já consumida aqui, por isso − 1); q.escape fica
+      // > 0 até a próxima pega e diz ao render que é o pulo da fuga, não o de largado
+      hop(s, p, q, ESCAPE_TICKS - 1);
+      if (p.act === 'lift' || p.act === 'carryIdle' || p.act === 'carryWalk') setAct(s, p, 'idle');
+    }
   }
   return true;
 }
