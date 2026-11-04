@@ -1,8 +1,8 @@
 import { arena, put, setCell, codeAt, run, runUntil, C, withStage } from './kit';
-import { addBomb, placeBomb, detonateRemote, tickBombs, bombAt, bombOccupies, fuseOf, bombFireOf, canPlaceBomb } from '../../src/core/bombs';
+import { addBomb, armStops, placeBomb, detonateRemote, tickBombs, bombAt, bombOccupies, fuseOf, bombFireOf, canPlaceBomb } from '../../src/core/bombs';
 import { BURN, CODE, FLAME_PIECE, type GameEvent } from '../../src/core/types';
 import { itemCode } from '../../src/core/state';
-import { centerX } from '../../src/core/units';
+import { centerX, colOf, linOf } from '../../src/core/units';
 import { tickFlyers } from '../../src/core/flyers';
 import { crossCells } from '../../src/core/ai/danger';
 
@@ -215,18 +215,24 @@ describe('propagação do braço ($C1:403A): bomba no caminho segura o fogo', ()
     for (let c = from; c <= to; c++) out.push(codeAt(s, c, 1));
     return out;
   };
-  it('exemplo do usuário: alcance 10, bomba parada na 7ª casa → o braço vai só até a casa antes dela, com ponta', () => {
+  it('exemplo do usuário: alcance 10, bomba parada na 7ª casa → o braço vai só até a casa antes dela, sem ponta', () => {
     const s = arena();
     const a = addBomb(s, 0, C(2, 1), { fuse: 0, fire: 8 }); a.born = 0;   // fogo 8 = alcance 10 (até a col 12)
     addBomb(s, 1, C(9, 1), { fire: 0 });                                   // 7ª casa; alcance 2 (até a col 11)
     expect(run(s, 1).filter(e => e.type === 'explosion')).toEqual([{ type: 'explosion', cell: C(2, 1), owner: 0 }]);
     const F = CODE.FLAME;
     expect(arm(s, 3, 12)).toEqual([F, F, F, F, F, F, CODE.BOMB, CODE.FLOOR, CODE.FLOOR, CODE.FLOOR]);
-    expect([s.cellAux[C(7, 1)], s.cellAux[C(8, 1)]]).toEqual([FLAME_PIECE.ARM_RIGHT, FLAME_PIECE.TIP_RIGHT]);
+    // braço cortado antes do alcance termina com a peça do meio: a ponta só vai na casa de índice = alcance ($C1:51BC;
+    // emulador, aj-fogo/chain.py 10 7 2 2: a casa 8 fica $030A, braço, não $0306, ponta)
+    expect([s.cellAux[C(7, 1)], s.cellAux[C(8, 1)]]).toEqual([FLAME_PIECE.ARM_RIGHT, FLAME_PIECE.ARM_RIGHT]);
     run(s, 1);
     expect(codeAt(s, 9, 1)).toBe(CODE.BOMB);
     expect(run(s, 1).filter(e => e.type === 'explosion')).toEqual([{ type: 'explosion', cell: C(9, 1), owner: 1 }]);
     expect(arm(s, 3, 12)).toEqual([F, F, F, F, F, F, F, F, F, CODE.FLOOR]);  // a segunda acende 10 e 11 com o alcance dela
+    // o braço esquerdo dela (alcance 2) vem de frente sobre o braço da primeira: a peça de braço da direção oposta não
+    // segura ($C1:40C4/$C1:40C9 só comparam com a própria direção), a casa vira dela, com ponta no alcance inteiro
+    expect([s.cellAux[C(7, 1)], s.cellAux[C(8, 1)], s.cellT0[C(7, 1)], s.cellT0[C(6, 1)]])
+      .toEqual([FLAME_PIECE.TIP_LEFT, FLAME_PIECE.ARM_LEFT, 103, 101]);
   });
   it('sem a segunda bomba o mesmo braço chega à 10ª casa', () => {
     const s = arena();
@@ -288,6 +294,120 @@ describe('propagação do braço ($C1:403A): bomba no caminho segura o fogo', ()
     expect(p.cells.includes(C(10, 1))).toBe(false);
     const n = crossCells(s, C(4, 1), 8, false);
     expect([n.cells.includes(C(5, 1)), n.cells.includes(C(6, 1))]).toEqual([true, false]);
+  });
+});
+
+describe('cruzamento de chamas ($C1:40B2): o braço para no centro de outra explosão e num braço da mesma direção', () => {
+  // A rotina do braço, ao chegar numa casa já em chama (bit $1000), compara o tile (AND #$C30E) com o centro ($030C) e
+  // com a ponta/braço da própria direção ($4C/$4E): se bater, RTL — para ali sem acender. Medido no emulador (arena 1
+  // sem blocos, linha 5): aj-fogo/chain.py, samedir.py e victim.py.
+  const F = CODE.FLAME, O = CODE.FLOOR;
+  const row = (s: ReturnType<typeof arena>, from: number, to: number, lin = 5) => {
+    const out: number[] = [];
+    for (let c = from; c <= to; c++) out.push(codeAt(s, c, lin));
+    return out;
+  };
+  /** chain.py 2 2 6 8: A (8,5) alcance 2 explode e acende B (10,5) alcance 6, que explode 2 ticks depois. */
+  const chain = (withA = true) => {
+    const s = arena({ players: 3 });
+    if (withA) { const a = addBomb(s, 0, C(8, 5), { fuse: 0, fire: 0 }); a.born = 0; }
+    const b = addBomb(s, 1, C(10, 5), { fuse: withA ? 120 : 0, fire: 4 }); b.born = 0;
+    return s;
+  };
+  it('(a) cadeia em linha: o braço de B na direção de A para no centro de A; as casas além não acendem', () => {
+    const s = chain();
+    run(s, 1);                                       // tick 101: A
+    expect(row(s, 4, 14)).toEqual([O, O, F, F, F, F, CODE.BOMB, O, O, O, O]);
+    run(s, 2);                                       // tick 103: B
+    expect(row(s, 4, 14)).toEqual([O, O, F, F, F, F, F, F, F, F, F]);
+    const aux = (c: number) => s.cellAux[C(c, 5)], t0 = (c: number) => s.cellT0[C(c, 5)];
+    // 6..8 continuam de A (ponta, braço, centro); 9 virou de B (braço esquerdo por cima do braço direito de A)
+    expect([6, 7, 8, 9, 10].map(aux)).toEqual([FLAME_PIECE.TIP_LEFT, FLAME_PIECE.ARM_LEFT, FLAME_PIECE.CENTER, FLAME_PIECE.ARM_LEFT, FLAME_PIECE.CENTER]);
+    expect([6, 7, 8, 9, 10].map(t0)).toEqual([101, 101, 101, 103, 103]);
+    // braço direito de B: 11..14 e parede em 15 (4 casas < alcance 6) — sem ponta
+    expect([11, 14].map(aux)).toEqual([FLAME_PIECE.ARM_RIGHT, FLAME_PIECE.ARM_RIGHT]);
+    run(s, 23);                                      // tick 126: A apaga (25 ticks), a casa 9 segue com B até o 128
+    expect(row(s, 6, 10)).toEqual([O, O, O, F, F]);
+    run(s, 2);
+    expect(row(s, 6, 10)).toEqual([O, O, O, O, O]);
+  });
+  it('(a) sem A, o mesmo braço de B chega à casa 4', () => {
+    const s = chain(false);
+    run(s, 1);
+    expect(row(s, 4, 9)).toEqual([F, F, F, F, F, F]);
+    expect(s.cellAux[C(4, 5)]).toBe(FLAME_PIECE.TIP_LEFT);
+  });
+  it('(g) quem está além do ponto de parada não morre; sem A morre (emulador: victim.py 5 / 5 semA)', () => {
+    for (const withA of [true, false]) {
+      const s = chain(withA);
+      const p = put(s, 2, 5, 5); p.inv = 0;
+      for (const q of [0, 1]) s.players[q].inv = 999;
+      run(s, 40);
+      expect(s.phase).toBe('play');
+      expect(p.state === 'alive' && p.act !== 'dying').toBe(withA);
+    }
+  });
+  /** samedir.py: A em `a` explode; 5 ticks depois uma bomba B (alcance 4) explode dentro do braço de A, em `b`
+   *  (como uma chutada ou arremessada que pousa na chama). */
+  const inside = (a: number, fireA: number, b: number) => {
+    const s = arena();
+    const A = addBomb(s, 0, a, { fuse: 0, fire: fireA }); A.born = 0;
+    run(s, 5);                                       // tick 101: A; tick 105
+    const B = addBomb(s, 1, b, { fuse: 0, fire: 2 }); B.born = 0;
+    run(s, 1);                                       // tick 106: B
+    return s;
+  };
+  it('(c) mesma direção: dentro do braço direito de A, o braço direito de B para já na casa seguinte', () => {
+    const s = inside(C(6, 5), 3, C(8, 5));           // A alcance 5: 7..11
+    const aux = (c: number) => s.cellAux[C(c, 5)], t0 = (c: number) => s.cellT0[C(c, 5)];
+    expect([6, 7, 8, 9, 10, 11].map(aux)).toEqual([FLAME_PIECE.CENTER, FLAME_PIECE.ARM_LEFT, FLAME_PIECE.CENTER,
+      FLAME_PIECE.ARM_RIGHT, FLAME_PIECE.ARM_RIGHT, FLAME_PIECE.TIP_RIGHT]);
+    expect([6, 7, 8, 9, 10, 11].map(t0)).toEqual([101, 106, 106, 101, 101, 101]);   // o esquerdo atravessa 7 e para em 6
+    // cima e baixo de B não cruzam nada: alcance 4 inteiro, com ponta
+    expect([s.cellAux[C(8, 1)], s.cellAux[C(8, 9)], codeAt(s, 8, 10)]).toEqual([FLAME_PIECE.TIP_UP, FLAME_PIECE.TIP_DOWN, O]);
+  });
+  it('(c) mesma direção na vertical e para a esquerda', () => {
+    const v = inside(C(8, 3), 4, C(8, 5));           // A alcance 6: baixo 4..9
+    expect([4, 5, 6].map(l => v.cellT0[C(8, l)])).toEqual([106, 106, 101]);
+    expect(v.cellAux[C(8, 4)]).toBe(FLAME_PIECE.ARM_UP);
+    const h = inside(C(10, 5), 3, C(8, 5));          // A alcance 5: esquerda 9..5
+    expect([7, 8, 9, 10].map(c => h.cellT0[C(c, 5)])).toEqual([101, 106, 106, 101]);
+    expect(h.cellAux[C(9, 5)]).toBe(FLAME_PIECE.ARM_RIGHT);
+  });
+  it('(b) cruzamento perpendicular: o braço passa por cima, toma a casa e segue', () => {
+    const s = arena();
+    const A = addBomb(s, 0, C(6, 3), { fuse: 0, fire: 2 }); A.born = 0;    // baixo 4..7
+    run(s, 3);
+    const B = addBomb(s, 1, C(4, 5), { fuse: 0, fire: 2 }); B.born = 0;    // direita 5..8
+    run(s, 1);
+    expect([s.cellAux[C(6, 5)], s.cellT0[C(6, 5)], s.cellAux[C(8, 5)], s.cellT0[C(6, 6)]])
+      .toEqual([FLAME_PIECE.ARM_RIGHT, 104, FLAME_PIECE.TIP_RIGHT, 101]);
+  });
+  it('ponta só no alcance inteiro ($C1:51BC): braço cortado por bloco, parede ou centro termina com a peça do meio', () => {
+    const s = arena();
+    setCell(s, 9, 5, CODE.SOFT);
+    const b = addBomb(s, 0, C(6, 5), { fuse: 0, fire: 3 }); b.born = 0;   // alcance 5
+    run(s, 1);
+    const aux = (c: number, l: number) => s.cellAux[C(c, l)];
+    expect([aux(7, 5), aux(8, 5), codeAt(s, 9, 5)]).toEqual([FLAME_PIECE.ARM_RIGHT, FLAME_PIECE.ARM_RIGHT, CODE.BURNING]);   // bloco
+    expect([aux(2, 5), codeAt(s, 1, 5), aux(6, 1), codeAt(s, 6, 0)])
+      .toEqual([FLAME_PIECE.ARM_LEFT, CODE.HARD, FLAME_PIECE.ARM_UP, CODE.HARD]);                                    // parede (4 casas)
+    expect([aux(6, 9), aux(6, 10), codeAt(s, 6, 11)]).toEqual([FLAME_PIECE.ARM_DOWN, FLAME_PIECE.TIP_DOWN, CODE.FLOOR]); // 5 casas: ponta
+  });
+  it('a casa onde o braço para ainda passa pelo gancho da arena ($C1:550B, repintura da arena 6, vem antes de $C1:40B2)', () => {
+    const seen: [number, number][] = [];
+    withStage(1, { onFlameCell: (_s, c, d) => { seen.push([c, d]); } }, () => {
+      const s = chain();
+      run(s, 3);
+      expect(seen.filter(([c]) => c === C(8, 5))).toEqual([[C(8, 5), -1], [C(8, 5), 6]]);   // centro de A; braço esquerdo de B
+      expect(seen.filter(([c, d]) => d === 6 && colOf(c) < 8 && linOf(c) === 5).map(([c]) => colOf(c))).toEqual([7, 6]);  // só os de A
+    });
+  });
+  it('armStops: centro e peças da própria direção seguram; as outras não', () => {
+    const P = FLAME_PIECE;
+    expect([P.CENTER, P.ARM_UP, P.TIP_UP, P.ARM_DOWN, P.TIP_DOWN, P.ARM_LEFT, P.ARM_RIGHT].map(x => armStops(x, 0)))
+      .toEqual([true, true, true, false, false, false, false]);
+    expect([P.ARM_RIGHT, P.TIP_RIGHT, P.ARM_LEFT, P.TIP_LEFT].map(x => armStops(x, 6))).toEqual([false, false, true, true]);
   });
 });
 

@@ -1,0 +1,12 @@
+Scripts do ajuste aj-fogo (fogo de uma bomba cruzando o de outra). Rodar desta pasta com o venv dos cores (usa os
+helpers de ../aj-socoluva/h.py e o core de debug de analise/extraido/cores/rom-mecanicas):
+  PY="/Users/dlotuz/Projetos Claude/Bomber Project/analise/extraido/cores/venv/bin/python"
+  $PY dump.py                  # campos do objeto da bomba/explosão: +$2D alcance, +$24/25/28/29 braços, +$2C relógio
+  $PY chain.py 2 2 6 8 [raw]   # (a) cadeia em linha: braço esquerdo de B para no centro de A (col 8); 5 e 4 não acendem
+  $PY chain.py 10 7 2 2        # braço cortado pela bomba termina com a peça do meio ($030A), sem ponta
+  $PY samedir.py 6 5 2 4 5     # (c) mesma direção: B dentro do braço direito de A; o direito de B para já na 1ª casa
+  $PY samedir.py 3 6 2 4 5 vert / samedir.py 10 5 -2 4 5   # idem para baixo e para a esquerda
+  $PY victim.py 5 | 5 semA | 7 # (g) parado além da parada vive; sem A morre ($C2:10F9); dentro do braço de A morre
+  $PY seesaw.py 2 3 6 / 8 3 6  # $9C bit 0 (só a arena 9): o braço para na gangorra (ponta de cima, eixo, virada)
+Medidas de (b), (d), (e), (f) e o levantamento da IA: ajudante, branch aj/fogo-medidas (aj-fogo/b/).
+Nada é versionado além dos .py e deste texto (savestates e ROM ficam fora).

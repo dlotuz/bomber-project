@@ -9,6 +9,8 @@ import { romLayers, fallbackLayers } from '../../src/render/battle-layers';
 import '../../src/render/rom/stages/stage9';
 import '../../src/render/fallback/stages/stage9';
 import { stageArena, put, run, stageEvents, fakeBuilder, fakeAssets, fakeCtx } from './kit';
+import { addBomb } from '../../src/core/bombs';
+import { crossCells } from '../../src/core/ai/danger';
 
 describe('arena 9: gangorras [D15]', () => {
   it('4 gangorras de 3 casas; esquerda estado 0 (ponta de cima B), direita estado 1 (ponta de cima A)', () => {
@@ -98,5 +100,36 @@ describe('arena 9: gangorras [D15]', () => {
     const c = fakeCtx();
     fallbackLayers.find(l => l.id === 'stage9')!.draw(stageArena(9), c.ctx, {} as never, 0);
     expect(c.log.filter(x => x === 'stroke').length).toBe(4);
+  });
+});
+
+describe('arena 9: a chama e as gangorras ($9C bit 0, $C1:4077–$C1:40A9)', () => {
+  // Emulador (aj-fogo/seesaw.py, arena 9 sem blocos): o braço para, sem acender, na ponta de cima, no eixo e nos tiles da
+  // virada; passa pela ponta de baixo ($08EC/$08E4).
+  const flames = (s: ReturnType<typeof stageArena>, cols: number[], lin = 3) => cols.map(c => s.grid[cellOf(c, lin)] === CODE.FLAME);
+  const boom = (s: ReturnType<typeof stageArena>, col: number, lin: number, fire: number) => {
+    addBomb(s, 0, cellOf(col, lin), { fuse: 0, fire }).born = 0;
+    run(s, 1);
+  };
+  it('de (2,3), alcance 6: acende 3 e 4 (ponta de baixo) e para no eixo (5,3)', () => {
+    const s = stageArena(9);
+    for (const p of s.players) p.inv = 9999;
+    boom(s, 2, 3, 4);
+    expect(flames(s, [3, 4, 5, 6, 7, 8])).toEqual([true, true, false, false, false, false]);
+  });
+  it('de (8,3), alcance 6: para em 6 (ponta de cima da esquerda) e em 10 (ponta de cima da direita)', () => {
+    const s = stageArena(9);
+    for (const p of s.players) p.inv = 9999;
+    const arm = crossCells(s, cellOf(8, 3), 4, false).cells;
+    boom(s, 8, 3, 4);
+    expect(flames(s, [5, 6, 7, 8, 9, 10, 11])).toEqual([false, false, true, true, true, false, false]);
+    expect([cellOf(6, 3), cellOf(7, 3), cellOf(10, 3)].map(c => arm.includes(c))).toEqual([false, true, false]);   // a IA vê igual
+  });
+  it('na virada (3 tiles de transição) a ponta de baixo também segura', () => {
+    const s = stageArena(9);
+    for (const p of s.players) p.inv = 9999;
+    st9(s).saws[0].transUntil = s.tick + 5;
+    boom(s, 2, 3, 4);
+    expect(flames(s, [3, 4])).toEqual([true, false]);
   });
 });

@@ -81,5 +81,16 @@ export const stage9: StageModule = {
       }
     }
   },
+  /** $9C bit 0 ($C1:4077–$C1:40A9; área $C1:3F13–$C1:3F41): o braço para, sem acender, na casa da gangorra cujo tile
+   *  é $08E0/$08E2/$08E6/$08E8/$08EA/$48E0/$48E2 — a ponta de cima, o eixo e os 3 tiles da virada. Só a ponta de baixo
+   *  ($08EC, $08E4) deixa passar. Medido: aj-fogo/seesaw.py (arena 9, gangorra (4..6,3) no estado 0: de (2,3) o braço
+   *  acende 3 e 4 e para no eixo; de (8,3) para em 6, ponta de cima, e em 10). */
+  flameBlocked(s, cell) {
+    for (const w of st9(s).saws) {
+      const i = [w.a, w.a + 1, w.b].indexOf(cell);
+      if (i >= 0) { const word = sawWords(w, s.tick)[i]; return word !== 0x08ec && word !== 0x08e4; }
+    }
+    return false;
+  },
   get ai() { return stage9Ai; },
 };

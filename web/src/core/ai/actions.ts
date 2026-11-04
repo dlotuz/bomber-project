@@ -8,7 +8,7 @@ import { bombAt, bombById, bombOccupies } from '../bombs';
 import { canKick, kickable, stopKick } from '../kick';
 import { aimThrow, handFrom, tossHeld } from '../flyers';
 import { MOUNTS } from '../mounts';
-import { SAFE, crossCells, firstLanding, flightEnd, hazards, kickPath, type Hazard } from './danger';
+import { SAFE, crossCells, firstLanding, flightEnd, gridFlameAt, hazards, kickPath, type Hazard } from './danger';
 import { centered, enterTicks, escape, hasRefuge, ticksPerCell, walkBlocked } from './nav';
 import { fork, survives } from './whatif';
 import { oldestRemote, type Brain } from './brain';
@@ -83,9 +83,12 @@ export function killFuse(s: RoundState, p: Player, b: Bomb, land: number, dir: 0
   const f: Flyer = { id: -1, kind: 'bomb', ref: b.id, x, y, z: 0, dir, flight: 'bounce', script: 0, i: 0, born: s.tick };
   const e = flightEnd(s, f);
   if (e.cell < 0) return -1;
-  if (!crossCells(s, e.cell, b.fire, b.type === 2, undefined, true, b.level ?? 0).cells.includes(land)) return -1;
+  // pousando na chama, explode 2 ticks depois com as chamas de agora ainda acesas: o braço para nelas como no núcleo
+  const inFlame = s.grid[e.cell] === CODE.FLAME;
+  const fl = inFlame ? gridFlameAt(s, e.t + CHAIN_DELAY) : undefined;
+  if (!crossCells(s, e.cell, b.fire, b.type === 2, undefined, true, b.level ?? 0, fl).cells.includes(land)) return -1;
   const limit = STUN_TICKS + KILL_SLACK - e.t - 2;                                // a chama chega no offset e.t + pavio + 2
-  if (s.grid[e.cell] === CODE.FLAME) return e.t + CHAIN_DELAY + 1 <= STUN_TICKS + KILL_SLACK ? FUSE_LONG : -1;
+  if (inFlame) return e.t + CHAIN_DELAY + 1 <= STUN_TICKS + KILL_SLACK ? FUSE_LONG : -1;
   if (b.type === 1) return b.owner === p.slot && !b.bad ? FUSE_LONG : -1;          // remota: só a nossa (o B detona)
   return limit;
 }
@@ -129,7 +132,7 @@ function wantB(s: RoundState, p: Player, level: AiLevel, brain: Brain): boolean 
   if (!b) return false;
   const c = b.state === 'kicked' ? cellAt(b.x, b.y) : b.cell;
   if (c < 0) return false;
-  const cross = new Set(crossCells(s, c, b.fire, false, undefined, true, b.level ?? 0).cells);
+  const cross = new Set(crossCells(s, c, b.fire, false, undefined, true, b.level ?? 0, gridFlameAt(s, 1)).cells);   // detona já
   const w = who(s, p, cross);
   if (w.ours || !(w.foe || (s.tick >= b.born + FUSE && b.state === 'idle'))) return false;
   if (routeCells(s, p, brain, ROUTE_HORIZON).some(i => cross.has(i))) return false;

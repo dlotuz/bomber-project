@@ -13,6 +13,8 @@ export interface StageModule {
   fuseStep?(s: RoundState, b: Bomb): number;
   /** Arenas 3, 6, 8: casa de chama com código especial, ou toda casa de chama (a arena decide). */
   onFlameCell?(s: RoundState, cell: number, armDir: number, ev: GameEvent[]): void;
+  /** Arena 9: casa que segura o braço da chama sem acender (gangorra, $9C bit 0 em $C1:4077); a área a pula. */
+  flameBlocked?(s: RoundState, cell: number): boolean;
   /** Arenas 6, 9: o jogador entrou numa casa. */
   onEnterCell?(s: RoundState, p: Player, cell: number, ev: GameEvent[]): void;
   /** Arena 8: jogador de pé na casa (chamado todo tick). */

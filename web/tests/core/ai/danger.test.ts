@@ -1,10 +1,11 @@
-import { arena, put, setCell, C } from '../kit';
-import { blockedUntil, dangerMap, SAFE, kickPath, pressureCells } from '../../../src/core/ai/danger';
+import { arena, put, setCell, C, run } from '../kit';
+import { blockedUntil, dangerMap, hazards, SAFE, kickPath, pressureCells } from '../../../src/core/ai/danger';
 import { addBomb, burnCell } from '../../../src/core/bombs';
 import { punchBomb } from '../../../src/core/flyers';
 import { step } from '../../../src/core/step';
 import { BURN_TICKS } from '../../../src/core/constants';
-import { BURN, CODE } from '../../../src/core/types';
+import { BURN, CODE, type RoundState } from '../../../src/core/types';
+import { CELLS } from '../../../src/core/units';
 
 describe('mapa de perigo (offsets a partir do próximo tick)', () => {
   it('bomba no ar que cai num bloco de pressão some ($C1:27D7): não é perigo; em piso, é', () => {
@@ -34,6 +35,50 @@ describe('mapa de perigo (offsets a partir do próximo tick)', () => {
     addBomb(s, 1, C(6, 1), { fuse: 100 });
     const d = dangerMap(s);
     expect([d[C(4, 1)], d[C(6, 1)], d[C(8, 1)]]).toEqual([12, 14, 14]);
+  });
+  /** Confere o mapa contra o núcleo: o offset em que cada casa vira chama pela 1ª vez (+1) é o previsto; as SAFE não
+   *  acendem nos próximos `n` passos. */
+  const sameAsCore = (s: RoundState, n = 160) => {
+    const d = dangerMap(s), first = new Int32Array(CELLS).fill(SAFE);
+    const sim = structuredClone(s);
+    for (let k = 1; k <= n; k++) {
+      expect(sim.phase).toBe('play');
+      step(sim, [0, 0, 0, 0, 0]);
+      for (let c = 0; c < CELLS; c++) if (sim.grid[c] === CODE.FLAME && first[c] === SAFE && s.grid[c] !== CODE.FLAME) first[c] = k + 1;
+    }
+    for (let c = 0; c < CELLS; c++) if (s.grid[c] !== CODE.FLAME) expect([c, d[c]]).toEqual([c, first[c]]);
+    return d;
+  };
+  it('cruzamento ($C1:40B2): o braço da 2ª da cadeia para no centro da 1ª — além dele não é perigo', () => {
+    const s = arena(); for (const p of s.players) p.inv = 9999;
+    addBomb(s, 0, C(8, 5), { fuse: 10, fire: 0 });              // alcance 2
+    addBomb(s, 1, C(10, 5), { fuse: 100, fire: 4 });            // alcance 6: o braço esquerdo iria até a col 4
+    const d = sameAsCore(s);
+    expect([d[C(4, 5)], d[C(5, 5)], d[C(6, 5)], d[C(9, 5)], d[C(14, 5)]]).toEqual([SAFE, SAFE, 12, 12, 14]);
+  });
+  it('cruzamento: bomba que explode dentro de um braço aceso não passa da casa seguinte na mesma direção', () => {
+    const s = arena(); for (const p of s.players) p.inv = 9999;
+    addBomb(s, 0, C(6, 5), { fuse: 0, fire: 3 }).born = 0;        // alcance 5: 7..11 acesos no tick 101
+    run(s, 4);
+    addBomb(s, 1, C(8, 5), { fuse: 3, fire: 6 }).born = 0;        // alcance 8, explode com o braço de A aceso
+    const d = sameAsCore(s), end = hazards(s).end;
+    expect([d[C(12, 5)], d[C(13, 5)], d[C(8, 1)], d[C(8, 11)]]).toEqual([SAFE, SAFE, 5, 5]);
+    // 9..11 continuam de A (apagam com ela); 7 vira de B (o esquerdo passa por cima do braço direito de A)
+    expect([end[C(9, 5)], end[C(11, 5)], end[C(7, 5)], end[C(6, 5)]]).toEqual([23, 23, 30, 23]);
+  });
+  it('bomba que já terá explodido e apagado não segura o braço de uma posterior', () => {
+    const s = arena(); for (const p of s.players) p.inv = 9999;
+    addBomb(s, 0, C(6, 5), { fuse: 10, fire: 0 });              // explode no offset 11, apaga no 36
+    addBomb(s, 1, C(3, 5), { fuse: 60, fire: 4 });              // alcance 6 (4..9): passa pela casa 6 já apagada
+    const d = sameAsCore(s);
+    expect([d[C(7, 5)], d[C(9, 5)], d[C(10, 5)]]).toEqual([12, 62, SAFE]);
+  });
+  it('cruzamento perpendicular e de frente passam: o perigo segue até o alcance', () => {
+    const s = arena(); for (const p of s.players) p.inv = 9999;
+    addBomb(s, 0, C(6, 3), { fuse: 4, fire: 2 });
+    addBomb(s, 1, C(4, 5), { fuse: 8, fire: 2 });
+    addBomb(s, 0, C(12, 5), { fuse: 6, fire: 1 });
+    sameAsCore(s);
   });
   it('chama atual é letal já no próximo tick', () => {
     const s = arena(); setCell(s, 6, 1, CODE.FLAME); s.cellT0[C(6, 1)] = 100;

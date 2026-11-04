@@ -1,6 +1,6 @@
 // Mapa de perigo da IA. Tudo em offsets de tick a partir do próximo (1 = o próximo `step`). Uma bomba que explode no
 // passo de objetos do offset `t` fere quem está na casa nos offsets t+1 … t+25: janela [at, end) = [t+1, t+26).
-import { CODE, type Bomb, type Flyer, type RoundState } from '../types';
+import { CODE, FLAME_PIECE, type Bomb, type Flyer, type RoundState } from '../types';
 import { CELLS, SUB, cellAt, cellCenter, centerX, centerY, colAt, colOf, faceStep, inField, inGrid, linAt, linOf, wrapFlight } from '../units';
 import { BURN_TICKS, CHAIN_DELAY, FLAME_TICKS, KICK_STEPS, PRESSURE_EVERY, PRESSURE_FIRST, fallTicks, rangeOf } from '../constants';
 import { BOUNCE, ITEM_FLIGHT, PUNCH, THROW, type Script } from '../tables/flights';
@@ -8,7 +8,7 @@ import { isEggCode, isItemCode, playerCell, standing } from '../state';
 import { STAGES } from '../stages';
 import { pressureSpiral } from '../pressure';
 import { pressureTriggerSec } from '../clock';
-import { areaCells } from '../bombs';
+import { areaCells, areaPiece, armStops } from '../bombs';
 
 /** Casa que nenhuma chama conhecida vai atingir. */
 export const SAFE = 1_000_000;
@@ -26,29 +26,58 @@ export interface Hazard { at: Int32Array; end: Int32Array }
 /** Bomba hipotética: `t` = offset do passo em que explode (padrão 127). */
 export interface Extra { cell: number; fire: number; pierce: boolean; t?: number }
 
+/** Peça da chama que uma explosão no offset `t` encontraria em cada casa (−1 = sem chama). */
+export type FlameAt = (c: number) => number;
+const ARM_OF = [FLAME_PIECE.ARM_UP, 0, FLAME_PIECE.ARM_RIGHT, 0, FLAME_PIECE.ARM_DOWN, 0, FLAME_PIECE.ARM_LEFT];
+
+/** Chamas da grade de agora que ainda estarão acesas no passo de objetos do offset `t` (a casa apaga no passo do tick
+ *  T0 + 25, depois das bombas: uma explosão nesse passo ainda a vê). */
+export function gridFlameAt(s: RoundState, t: number): FlameAt {
+  return c => (s.grid[c] === CODE.FLAME && s.cellT0[c] + FLAME_TICKS - s.tick >= t ? s.cellAux[c] : -1);
+}
+
 /** Casas atingidas por uma explosão em `cell` (mesmas regras de explodeBomb) e as bombas alcançadas (cadeia).
  *  `asBomb`: casas tratadas como bomba parada além das da grade (hipotética, ponto de parada de uma chutada).
- *  `itemsStop` = false: o braço segue depois de um item (alguém pode pegá-lo antes da explosão; uso do perigo). */
+ *  `itemsStop` = false: o braço segue depois de um item (alguém pode pegá-lo antes da explosão; uso do perigo).
+ *  `flameAt`: chamas acesas no momento da explosão; o braço para no centro de outra explosão e numa peça da própria
+ *  direção, sem acender ($C1:40B2, armStops). Sem ele, nenhuma chama segura o braço.
+ *  `gone`: casas de bombas que já terão explodido antes desta (deixam de segurar o braço: o centro delas, se ainda
+ *  aceso, para o braço por `flameAt`; apagado, o braço passa).
+ *  `pieces[i]` = peça que a explosão deixa em `cells[i]` (só o que importa para armStops: centro ou braço da direção;
+ *  −1 = a casa queima em vez de virar chama). */
 export function crossCells(s: RoundState, cell: number, fire: number, pierce: boolean, asBomb?: ReadonlySet<number>,
-  itemsStop = true, level = 0): { cells: number[]; bombs: number[] } {
-  if (level > 0) return areaCells(s, cell, level, asBomb);   // bomba evoluída (D/S/H): quadrado, atravessa blocos
-  const cells = [cell], bombs: number[] = [];
+  itemsStop = true, level = 0, flameAt?: FlameAt, gone?: ReadonlySet<number>): { cells: number[]; bombs: number[]; pieces: number[] } {
+  if (level > 0 && gone?.size) {                             // área (rara): grade sem as bombas que já foram
+    const keep = new Set([...(asBomb ?? [])].filter(c => !gone.has(c)));
+    const g = s.grid.slice();
+    for (const c of gone) if (g[c] === CODE.BOMB) g[c] = CODE.FLOOR;
+    return crossCells({ ...s, grid: g }, cell, fire, pierce, keep, itemsStop, level, flameAt);
+  }
+  if (level > 0) {                                           // bomba evoluída (D/S/H): quadrado, atravessa blocos
+    const a = areaCells(s, cell, level, asBomb), lit = new Set(a.cells);
+    return { ...a, pieces: a.cells.map(c => (c === cell ? FLAME_PIECE.CENTER
+      : s.grid[c] === CODE.SOFT || isItemCode(s.grid[c]) ? -1 : areaPiece(lit, c))) };
+  }
+  const cells = [cell], bombs: number[] = [], pieces: number[] = [FLAME_PIECE.CENTER];
   const range = rangeOf(fire);
   for (const face of [0, 2, 4, 6]) {
     let c = cell;
     for (let k = 1; k <= range; k++) {
       c = faceStep(c, face);
       if (!inGrid(colOf(c), linOf(c))) break;
-      const v = s.grid[c];
+      const was = gone?.has(c) ?? false;
+      const v = was && s.grid[c] === CODE.BOMB ? CODE.FLOOR : s.grid[c];
       if (v === CODE.BURNING) { if (pierce) continue; break; }   // perfurante passa bloco queimando ($C1:405B)
       if (v === CODE.HARD || v === CODE.PRESSURE) break;
-      if (v === CODE.BOMB || asBomb?.has(c)) { bombs.push(c); break; }
-      cells.push(c);
+      if (STAGES[s.stage]?.flameBlocked?.(s, c)) break;       // gangorra da arena 9
+      if (v === CODE.BOMB || (!was && asBomb?.has(c))) { bombs.push(c); break; }
+      if (flameAt && armStops(flameAt(c), face)) break;
+      cells.push(c); pieces.push(v === CODE.SOFT || isItemCode(v) ? -1 : ARM_OF[face]);   // bloco/item queimam: sem chama
       if (v === CODE.SOFT) { if (pierce) continue; break; }
       if (itemsStop && !pierce && isItemCode(v)) break;
     }
   }
-  return { cells, bombs };
+  return { cells, bombs, pieces };
 }
 
 /** Offset do passo em que o pavio chega a 0 e a bomba explode (com o `fuseStep` da arena). */
@@ -215,17 +244,32 @@ export function hazards(s: RoundState, forSlot = -1, extra?: Extra | readonly Ex
     asBomb.add(e.cell);
     blasts.push({ cell: e.cell, t: e.t ?? EXTRA_T, fire: e.fire, pierce: e.pierce, trail: [] });
   }
-  const crosses = blasts.map(x => crossCells(s, x.cell, x.fire, x.pierce, asBomb, false, x.level ?? 0));
-  // cadeia: a 1ª bomba alcançada em cada braço explode 2 ticks depois (até estabilizar). Uma remota de adversário pode
-  // ser detonada a qualquer momento: o que ela alcança vira perigo permanente também.
-  for (let changed = true, guard = 0; changed && guard <= blasts.length; guard++) {
-    changed = false;
-    blasts.forEach((a, ia) => {
-      for (const bc of crosses[ia].bombs) blasts.forEach(b => {
-        if (b.cell !== bc || b.perm) return;
-        if (a.perm) { b.perm = true; b.t = 0; changed = true; }
-        else if (b.t > a.t + CHAIN_DELAY) { b.t = a.t + CHAIN_DELAY; changed = true; }
-      });
+  // As explosões na ordem em que acontecem (empate: ordem do vetor, como o núcleo): cada uma vê as chamas das anteriores
+  // ainda acesas e as da grade, e o braço para no centro de outra explosão ou num braço da mesma direção ($C1:40B2) —
+  // então as casas além do ponto de parada não são perigo dela, e a bomba além dele não entra na cadeia por esse braço.
+  // Cadeia: a 1ª bomba alcançada em cada braço explode 2 ticks depois. Uma remota de adversário pode ser detonada a
+  // qualquer momento: o que ela alcança vira perigo permanente também; por isso ela não segura braço de ninguém e o
+  // braço dela não para em chama nenhuma (pior caso).
+  const lit = new Map<number, { t: number; piece: number }>();   // última explosão prevista a acender a casa
+  const flameAt = (t: number): FlameAt => {
+    const now = gridFlameAt(s, t);
+    return c => { const l = lit.get(c); return l ? (t - l.t <= FLAME_TICKS ? l.piece : -1) : now(c); };
+  };
+  const crosses: ReturnType<typeof crossCells>[] = new Array(blasts.length);
+  const gone = new Set<number>();                                         // casas das bombas que já explodiram
+  for (let n = 0; n < blasts.length; n++) {
+    let k = -1;
+    blasts.forEach((b, i) => { if (!crosses[i] && (k < 0 || b.t < blasts[k].t)) k = i; });
+    const a = blasts[k];
+    const live = !a.perm && a.t < SAFE;
+    const cr = live ? crossCells(s, a.cell, a.fire, a.pierce, asBomb, false, a.level ?? 0, flameAt(a.t), gone)
+      : crossCells(s, a.cell, a.fire, a.pierce, asBomb, false, a.level ?? 0);
+    crosses[k] = cr;
+    if (live) { cr.cells.forEach((c, i) => { if (cr.pieces[i] >= 0) lit.set(c, { t: a.t, piece: cr.pieces[i] }); }); gone.add(a.cell); }
+    for (const bc of cr.bombs) blasts.forEach((b, j) => {
+      if (b.cell !== bc || b.perm) return;
+      if (a.perm) { b.perm = true; b.t = 0; }
+      else if (!crosses[j] && b.t > a.t + CHAIN_DELAY) b.t = a.t + CHAIN_DELAY;
     });
   }
   blasts.forEach((b, k) => {
