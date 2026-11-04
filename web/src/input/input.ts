@@ -231,12 +231,17 @@ export class InputManager {
   private padmaps: PadMap[] = [];
   private padHeld: boolean[][] = [];   // [pad][button] segurado na última leitura
   private lastPad: { pad: number; button: number } | null = null;
+  /** Botão do CLIPE (Opções > Clipe): tecla e botão bruto de qualquer controle; lido aqui, fora das entradas do jogo. */
+  private clipKey = '';
+  private clipPad = -1;
+  private clipHit = false;
 
   private onDown = (e: KeyEventLike) => {
     if (isEditable(e.target)) return;
-    if (this.gameKeys.has(e.code)) e.preventDefault();
+    if (this.gameKeys.has(e.code) || (this.clipKey && e.code === this.clipKey)) e.preventDefault();
     this.down.add(e.code);
     if (!e.repeat) this.lastKey = e.code;
+    if (!e.repeat && this.clipKey && e.code === this.clipKey) this.clipHit = true;
   };
   private onUp = (e: KeyEventLike) => { this.down.delete(e.code); };
   private onBlur = () => { this.down.clear(); };
@@ -290,9 +295,22 @@ export class InputManager {
         const pressed = !!gp?.buttons[btn]?.pressed;
         held[btn] = pressed;
         if (pressed && !prev[btn] && !this.lastPad) this.lastPad = { pad: p, button: btn };
+        if (pressed && !prev[btn] && btn === this.clipPad) this.clipHit = true;
       }
       this.padHeld[p] = held;
     }
+  }
+
+  /** Tecla e botão (bruto, de qualquer controle) do CLIPE; '' e -1 = nenhum. */
+  setClipBinding(key: string, pad: number): void {
+    this.clipKey = key; this.clipPad = pad;
+  }
+
+  /** O botão do CLIPE foi apertado desde a última chamada? (teclado na hora do evento; controles no `poll`) */
+  takeClip(): boolean {
+    const hit = this.clipHit;
+    this.clipHit = false;
+    return hit;
   }
 
   /** 1º botão bruto de gamepad que passou de solto para apertado desde a última chamada (remapeamento). */
