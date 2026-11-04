@@ -21,7 +21,8 @@ beforeEach(() => vi.clearAllMocks());
 describe('opções (§6.13)', () => {
   it('linhas na ordem: Opções, Controles e Jogabilidade', () => {
     const { app } = mkApp();
-    expect(optionsScreen(app).rowIds()).toEqual(['controls', 'gameplay', 'fx', 'music', 'sfx', 'ownMusic', 'ownAdd', 'ownClear', 'reset', 'back']);
+    expect(optionsScreen(app).rowIds()).toEqual(['controls', 'gameplay', 'clip', 'fx', 'music', 'sfx', 'ownMusic', 'ownAdd', 'ownClear', 'reset', 'back']);
+    expect(optionsScreen(app, 0, 'clip').rowIds()).toEqual(['clipOn', 'clipSec', 'clipKey', 'clipPad', 'back']);
     expect(optionsScreen(app, 0, 'controls').rowIds()).toEqual(['p1', 'p2', 'p3', 'p4', 'p5', 'slot', 'slotSave', 'slotLoad', 'back']);
     expect(optionsScreen(app, 0, 'gameplay').rowIds()).toEqual(['spawns', 'escape', 'throwStun', 'sleep', 'allMounts', 'slot', 'slotSave', 'slotLoad', 'back']);
   });
@@ -343,5 +344,92 @@ describe.skipIf(!ASSETS)('quadro ROM (cena rules reaproveitada, sem captura pró
   it('funciona com um título bem mais largo (o do remapeamento de gamepad)', () => {
     const f = optionsPpuFrame(ASSETS!, 'CONTROLES DO JOGADOR 5', 'ascii8', 28);
     expect(() => renderPpu(f, createImage(256, 224))).not.toThrow();
+  });
+});
+
+describe('Opções em duas colunas', () => {
+  it('com o CLIPE a principal passa de 10 linhas: ADICIONAR MÚSICAS vira ADICIONAR (o valor não pisa no rótulo)', () => {
+    const { app } = mkApp();
+    const o = optionsScreen(app);
+    expect(o.rowIds().length).toBeGreaterThan(10);
+    expect([o.label('ownAdd'), o.value('ownAdd')]).toEqual(['ADICIONAR', 'NENHUMA']);
+    expect(optionsScreen(app, 0, 'clip').label('clipOn')).toBe('GRAVAR CLIPES');
+  });
+});
+
+describe('Opções > Clipe', () => {
+  const clipApp = (supported = true) => {
+    const r = mkApp(); r.app.clipSupported = supported;
+    const o = optionsScreen(r.app, 0, 'clip'); r.app.go(o);
+    return { ...r, o };
+  };
+  const key = (app: Parameters<typeof press>[0], code: string) => { app.update(inputOf(0, 0, undefined, { key: code })); app.update(idleInput()); };
+  it('padrão: desligado, 15 s, F8 e SELECT; ←/→ liga e troca a duração (salva)', () => {
+    const { app, o, saves } = clipApp();
+    expect(['clipOn', 'clipSec', 'clipKey', 'clipPad'].map(id => o.value(id))).toEqual(['NÃO', '15 S', 'F8', 'SELECT']);
+    goRow(o, 'clipOn'); press(app, BTN.RIGHT);
+    goRow(o, 'clipSec'); press(app, BTN.RIGHT);
+    expect([app.settings.options.clipOn, app.settings.options.clipSec, o.value('clipSec')]).toEqual([true, 30, '30 S']);
+    press(app, BTN.LEFT);
+    expect(app.settings.options.clipSec).toBe(15);
+    press(app, BTN.LEFT);
+    expect([app.settings.options.clipSec, o.value('clipSec')]).toEqual([10, '10 S']);
+    press(app, BTN.LEFT);
+    expect(app.settings.options.clipSec).toBe(10);   // não passa do menor
+    expect(saves()).toBeGreaterThan(0);
+  });
+  it('fora do Chrome (sem suporte): tudo desativado, com o aviso', () => {
+    const { app, o } = clipApp(false);
+    expect(o.value('clipOn')).toBe('SÓ NO CHROME');
+    expect(o.menu.rows.filter(r => r.disabled).map(r => r.id)).toEqual(['clipOn', 'clipSec', 'clipKey', 'clipPad']);
+    expect(o.menu.cursor).toBe(o.rowIds().indexOf('back'));
+    expect(o.footer()).toBe('O CLIPE SÓ FUNCIONA NO CHROME');
+    press(app, BTN.RIGHT);
+    expect(app.settings.options.clipOn).toBe(false);
+  });
+  it('tecla: A espera a tecla nova (F9 vale; F5 e Esc não), aplica no InputManager e salva; ←/→ apaga', () => {
+    const { app, o } = clipApp();
+    let applied = 0; app.applyInput = () => { applied++; };
+    goRow(o, 'clipKey'); press(app, BTN.A);
+    expect([o.capturing, o.footer()]).toEqual(['clipKey', 'NOVA TECLA? (ESC CANCELA)']);
+    key(app, 'F5');
+    expect(o.capturing).toBe('clipKey');
+    key(app, 'F9');
+    expect([app.settings.options.clipKey, o.capturing, o.value('clipKey')]).toEqual(['F9', null, 'F9']);
+    expect(applied).toBe(1);
+    press(app, BTN.A); key(app, 'Escape');
+    expect([app.settings.options.clipKey, o.capturing]).toEqual(['F9', null]);
+    press(app, BTN.LEFT);
+    expect([app.settings.options.clipKey, o.value('clipKey')]).toEqual(['', 'NENHUM']);
+  });
+  it('botão do controle: A espera o botão (de qualquer controle); ←/→ apaga', () => {
+    const { app, o } = clipApp();
+    goRow(o, 'clipPad'); press(app, BTN.A);
+    expect(o.footer()).toBe('NOVO BOTÃO? (ESC CANCELA)');
+    app.update(inputOf(0, 0, undefined, { padButton: { pad: 2, button: 6 } })); app.update(idleInput());
+    expect([app.settings.options.clipPad, o.value('clipPad')]).toEqual([6, 'LT']);
+    press(app, BTN.RIGHT);
+    expect([app.settings.options.clipPad, o.value('clipPad')]).toEqual([-1, 'NENHUM']);
+  });
+  it('tecla ou botão que também é de jogo: avisa no rodapé quem usa', () => {
+    const { app, o } = clipApp();
+    app.settings.options.clipKey = app.settings.keymaps[0].a;   // A (BOMBA) do P1 (DEV CONTROLES: P1 no teclado)
+    goRow(o, 'clipKey');
+    expect(o.footer()).toBe('CONFLITO: A (BOMBA) DO P1');
+    app.settings.options.clipPad = DEFAULT_PADMAP.start;           // P4 e P5 em controles
+    goRow(o, 'clipPad');
+    expect(o.footer()).toBe('CONFLITO: START DO P4');
+    goRow(o, 'clipSec');
+    expect(o.footer()).toBe('SALVA OS ÚLTIMOS SEGUNDOS DA PARTIDA');
+  });
+  it('Opções > CLIPE abre o submenu; VOLTAR volta para as Opções na linha do CLIPE', () => {
+    const { app } = mkApp();
+    const o = optionsScreen(app); app.go(o);
+    goRow(o, 'clip'); press(app, BTN.A); settle(app);
+    expect((app.screen as Opt).page).toBe('clip');
+    const c = app.screen as Opt;
+    goRow(c, 'back'); press(app, BTN.A); settle(app);
+    const back = app.screen as Opt;
+    expect([back.page, back.rowIds()[back.menu.cursor]]).toEqual(['main', 'clip']);
   });
 });

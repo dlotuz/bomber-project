@@ -67,3 +67,20 @@ describe('AudioClient.create (I3)', () => {
     expect(f.posted.at(-1)).toEqual({ t: 'volume', music: 0, sfx: 0.5 });
   });
 });
+
+describe('saída do som original (para o CLIPE)', () => {
+  it('o cliente criado publica o AudioContext e o nó do APU; fechar tira a saída e avisa', async () => {
+    const { audioOutput, onAudioOutput } = await import('../../src/audio/output');
+    const seen: unknown[] = [];
+    const off = onAudioOutput(o => seen.push(o));
+    const f = fakeEnv();
+    const c = await AudioClient.create(slices(), undefined, f.env);
+    expect(audioOutput()?.ctx).toBe(f.contexts[0]);
+    expect(audioOutput()?.node).toBeTruthy();
+    await c.close();
+    expect(audioOutput()).toBeNull();
+    expect(seen).toHaveLength(2);
+    expect(seen[1]).toBeNull();
+    off();
+  });
+});

@@ -17,7 +17,8 @@ describe('configurações v4', () => {
     expect([s.keymaps.length, s.padmaps.length]).toEqual([5, 5]);
     expect(s.padmaps[4]).toEqual(DEFAULT_PADMAP);
     expect(s.keymaps[2].a).toBe('Enter');
-    expect(s.options).toEqual({ randomSpawns: true, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3, fx: true, allMounts: true, screen: 'hd', smooth: false, ownMusic: true });
+    expect(s.options).toEqual({ randomSpawns: true, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3, fx: true, allMounts: true, screen: 'hd', smooth: false, ownMusic: true,
+      clipOn: false, clipSec: 15, clipKey: 'F8', clipPad: 8 });
     expect(s.setup.rules).not.toHaveProperty('randomSpawns');
   });
   it('salva e carrega de volta', () => {
@@ -66,7 +67,8 @@ describe('configurações v4', () => {
   it('valores inválidos caem no padrão', () => {
     const s = normalizeSettings({ padmaps: [{ a: -1, b: 99, x: 'q' }], options: { musicVol: 11, sfxVol: 2.5, randomSpawns: 'sim', gloveEscape: 99 } });
     expect(s.padmaps[0]).toEqual(DEFAULT_PADMAP);
-    expect(s.options).toEqual({ randomSpawns: true, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3, fx: true, allMounts: true, screen: 'hd', smooth: false, ownMusic: true });
+    expect(s.options).toEqual({ randomSpawns: true, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3, fx: true, allMounts: true, screen: 'hd', smooth: false, ownMusic: true,
+      clipOn: false, clipSec: 15, clipKey: 'F8', clipPad: 8 });
   });
   it('efeitos visuais: padrão ligado, campo ausente em configuração antiga vira true, lixo vira padrão', () => {
     expect(defaultSettings().options.fx).toBe(true);
@@ -83,6 +85,15 @@ describe('configurações v4', () => {
     const old = normalizeSettings({ options: { blurBorders: false, hdArt: true } }).options as unknown as Record<string, unknown>;
     expect(old.screen).toBe('hd');
     expect('hdArt' in old || 'blurBorders' in old).toBe(false);
+  });
+  it('CLIPE: padrão desligado, 15 s, F8 e SELECT (botão 8); valores salvos voltam; lixo vira padrão', () => {
+    const ok = normalizeSettings({ options: { clipOn: true, clipSec: 30, clipKey: 'KeyP', clipPad: -1 } }).options;
+    expect([ok.clipOn, ok.clipSec, ok.clipKey, ok.clipPad]).toEqual([true, 30, 'KeyP', -1]);
+    expect(normalizeSettings({ options: { clipSec: 10 } }).options.clipSec).toBe(10);
+    const cleared = normalizeSettings({ options: { clipKey: '' } }).options;
+    expect(cleared.clipKey).toBe('');
+    const bad = normalizeSettings({ options: { clipOn: 'sim', clipSec: 20, clipKey: 7, clipPad: 99 } }).options;
+    expect([bad.clipOn, bad.clipSec, bad.clipKey, bad.clipPad]).toEqual([false, 15, 'F8', 8]);
   });
   it('JSON corrompido → padrão; falha ao gravar não derruba', () => {
     const st = mem();
