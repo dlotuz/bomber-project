@@ -96,7 +96,8 @@ export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'ma
     rows.push({
       id: 'clipSec', label: S.options.clipSec, disabled: off, value: () => S.options.clipSecValue(opt().clipSec),
       tone: () => (off ? 'gray' : undefined),
-      left: () => setSec(CLIP_SECONDS[0]), right: () => setSec(CLIP_SECONDS[CLIP_SECONDS.length - 1]),
+      left: () => setSec(CLIP_SECONDS[Math.max(0, CLIP_SECONDS.indexOf(opt().clipSec) - 1)]),
+      right: () => setSec(CLIP_SECONDS[Math.min(CLIP_SECONDS.length - 1, CLIP_SECONDS.indexOf(opt().clipSec) + 1)]),
     });
     rows.push({
       id: 'clipKey', label: S.options.clipKey, disabled: off,

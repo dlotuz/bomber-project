@@ -129,7 +129,7 @@ export const STRING_USES: readonly Use[] = uniq([
     ...Array.from({ length: 32 }, (_, i) => S.options.button(i)),
     'ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789 -+.:!?', 'ESPAÇO', '0 1 2 3 4 5 6 7 8 9 10',
     S.options.devSlot, S.options.slotFixed, S.options.allMounts,
-    S.options.clipMenu, S.options.clipOn, S.options.clipSec, S.options.clipSecValue(15), S.options.clipSecValue(30), S.options.clipKey,
+    S.options.clipMenu, S.options.clipOn, S.options.clipSec, ...[10, 15, 30].map(n => S.options.clipSecValue(n)), S.options.clipKey,
     S.options.clipPad, S.options.clipNone, S.options.clipOnlyChrome, S.options.clipHelp, S.options.clipUnsupported, S.options.clipBindHelp,
     S.options.clipPressKey, S.options.clipPressPad, S.options.clipOnline,
     ...Object.values(ACTIONS).flatMap(a => [1, 2, 3, 4, 5].map(n => S.options.clipConflict(a, `P${n}`)).concat(S.options.clipConflict(a, S.options.clipOnline))),

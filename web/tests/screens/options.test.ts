@@ -372,6 +372,10 @@ describe('Opções > Clipe', () => {
     expect([app.settings.options.clipOn, app.settings.options.clipSec, o.value('clipSec')]).toEqual([true, 30, '30 S']);
     press(app, BTN.LEFT);
     expect(app.settings.options.clipSec).toBe(15);
+    press(app, BTN.LEFT);
+    expect([app.settings.options.clipSec, o.value('clipSec')]).toEqual([10, '10 S']);
+    press(app, BTN.LEFT);
+    expect(app.settings.options.clipSec).toBe(10);   // não passa do menor
     expect(saves()).toBeGreaterThan(0);
   });
   it('fora do Chrome (sem suporte): tudo desativado, com o aviso', () => {

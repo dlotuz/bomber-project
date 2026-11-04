@@ -89,6 +89,7 @@ describe('configurações v4', () => {
   it('CLIPE: padrão desligado, 15 s, F8 e SELECT (botão 8); valores salvos voltam; lixo vira padrão', () => {
     const ok = normalizeSettings({ options: { clipOn: true, clipSec: 30, clipKey: 'KeyP', clipPad: -1 } }).options;
     expect([ok.clipOn, ok.clipSec, ok.clipKey, ok.clipPad]).toEqual([true, 30, 'KeyP', -1]);
+    expect(normalizeSettings({ options: { clipSec: 10 } }).options.clipSec).toBe(10);
     const cleared = normalizeSettings({ options: { clipKey: '' } }).options;
     expect(cleared.clipKey).toBe('');
     const bad = normalizeSettings({ options: { clipOn: 'sim', clipSec: 20, clipKey: 7, clipPad: 99 } }).options;

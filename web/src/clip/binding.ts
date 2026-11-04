@@ -3,7 +3,7 @@
 // nela (o SELECT só sai da pausa junto com o START), por isso o SELECT do controle é o padrão.
 import { KEY_FIELDS, type DeviceId, type KeyMap, type PadMap } from '../input/input';
 
-export const CLIP_SECONDS = [15, 30] as const;
+export const CLIP_SECONDS = [10, 15, 30] as const;
 export type ClipSeconds = (typeof CLIP_SECONDS)[number];
 export const DEFAULT_CLIP_KEY = 'F8';
 /** SELECT no layout "standard" da Gamepad API. */

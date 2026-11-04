@@ -29,7 +29,7 @@ export interface Options {
   ownMusic: boolean;     // MÚSICA PRÓPRIA: as faixas do jogador (audio/own-music.ts) tocam na batalha; padrão SIM (sem faixas, nada muda)
   // CLIPE (src/clip): grava os últimos segundos da partida; padrão desligado (o codificador custa CPU)
   clipOn: boolean;
-  clipSec: ClipSeconds;  // duração do clipe: 15 (padrão) ou 30 s
+  clipSec: ClipSeconds;  // duração do clipe: 10, 15 (padrão) ou 30 s
   clipKey: string;       // tecla (KeyboardEvent.code) que salva o clipe; '' = nenhuma; padrão F8
   clipPad: number;       // botão bruto de qualquer controle (layout "standard") que salva o clipe; -1 = nenhum; padrão 8 (SELECT)
 }
