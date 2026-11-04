@@ -7,6 +7,7 @@ import {
 } from '../input/input';
 import { SCREEN_KINDS, type ScreenKind } from '../render/display';
 import { CHARACTERS } from '../render/art/bomber';
+import { CLIP_SECONDS, DEFAULT_CLIP_KEY, DEFAULT_CLIP_PAD, type ClipSeconds } from '../clip/binding';
 
 export type SlotKind = 'human' | 'cpu' | 'off';
 
@@ -26,10 +27,18 @@ export interface Options {
   screen: ScreenKind;    // 'hd' (padrão): altura toda em 4:3 + laterais borradas; 'classic': inteiros, pixel 8:7, bordas pretas
   smooth: boolean;       // filtro suave (pixel art ampliada com bordas lisas); padrão NÃO (nítido)
   ownMusic: boolean;     // MÚSICA PRÓPRIA: as faixas do jogador (audio/own-music.ts) tocam na batalha; padrão SIM (sem faixas, nada muda)
+  // CLIPE (src/clip): grava os últimos segundos da partida; padrão desligado (o codificador custa CPU)
+  clipOn: boolean;
+  clipSec: ClipSeconds;  // duração do clipe: 10, 15 (padrão) ou 30 s
+  clipKey: string;       // tecla (KeyboardEvent.code) que salva o clipe; '' = nenhuma; padrão F8
+  clipPad: number;       // botão bruto de qualquer controle (layout "standard") que salva o clipe; -1 = nenhum; padrão 8 (SELECT)
 }
 
 export function defaultOptions(): Options {
-  return { randomSpawns: true, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3, fx: true, allMounts: true, screen: 'hd', smooth: false, ownMusic: true };
+  return {
+    randomSpawns: true, musicVol: 8, sfxVol: 8, gloveEscape: 10, throwStun: false, sleepSec: 3, fx: true, allMounts: true, screen: 'hd', smooth: false, ownMusic: true,
+    clipOn: false, clipSec: 15, clipKey: DEFAULT_CLIP_KEY, clipPad: DEFAULT_CLIP_PAD,
+  };
 }
 
 /** Slots de Opções → Controles: dispositivo, teclas e botões dos 5 jogadores. */
@@ -208,6 +217,10 @@ export function normalizeSettings(raw: unknown): Settings {
       screen: d.options.screen,
       smooth: d.options.smooth,
       ownMusic: bool(ro.ownMusic, d.options.ownMusic),
+      clipOn: bool(ro.clipOn, d.options.clipOn),
+      clipSec: oneOf(ro.clipSec, CLIP_SECONDS, d.options.clipSec),
+      clipKey: typeof ro.clipKey === 'string' && ro.clipKey.length < 32 ? ro.clipKey : d.options.clipKey,
+      clipPad: intIn(ro.clipPad, -1, 31, d.options.clipPad),
     },
     setup: {
       mode: oneOf(s.mode, ['ffa', 'team'] as const, ds.mode),

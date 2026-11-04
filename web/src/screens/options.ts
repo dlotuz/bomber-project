@@ -1,20 +1,25 @@
 import type { App, Screen } from '../app/app';
 import { BTN } from '../game/core-api';
 import { Menu, clamp, cycle, type MenuRow } from './menu';
-import { DEVICE_IDS } from '../input/input';
+import { DEVICE_IDS, keyLabel, padLabel } from '../input/input';
+import { CLIP_SECONDS, clipKeyAllowed, clipKeyConflict, clipPadConflict, type ClipConflict } from '../clip/binding';
 import { SLOT_COUNT, controlsOf, defaultSettings, devControls, gameplayOf, setDevice, type ControlPreset } from '../app/settings';
 import { S } from '../render/text/strings';
 import { MUSIC } from '../app/audio';
 import { FADE_MENU, FADE_TO_TITLE } from '../app/fade';
-import { drawLobbyList, type LobbyItem } from '../render/lobby-list';
+import { drawLobbyList, LOBBY_ONE_COL_MAX, type LobbyItem } from '../render/lobby-list';
 import { titleScreen } from './title';
 import { remapScreen } from './remap';
 import { isTouchDevice, setTouchStyle, touchStyle } from '../input/touch';
+import type { Tone } from '../render/text/types';
 
-interface Row extends MenuRow { label: string; value?: () => string }
+interface Row extends MenuRow { label: string; value?: () => string; tone?: () => Tone | undefined }
 
-/** Página das Opções: a principal e os submenus Controles e Jogabilidade. */
-export type OptionsPage = 'main' | 'controls' | 'gameplay';
+/** Página das Opções: a principal e os submenus Controles, Jogabilidade e Clipe. */
+export type OptionsPage = 'main' | 'controls' | 'gameplay' | 'clip';
+/** Linha de cada submenu na página principal (o VOLTAR do submenu devolve o cursor nela). */
+const SUBMENU_ROW: Record<Exclude<OptionsPage, 'main'>, number> = { controls: 0, gameplay: 1, clip: 2 };
+type ClipCapture = 'clipKey' | 'clipPad';
 
 /**
  * Opções (§6.13, R15, R25). Principal: submenus, volume de música/efeitos (a ROM vem embutida: rom/pack.ts).
@@ -23,7 +28,12 @@ export type OptionsPage = 'main' | 'controls' | 'gameplay';
  * título na "Opções". `ret`: submenu aberto de fora das Opções (atalho em "Configure as regras"); o `back` dele volta
  * para essa tela em vez das Opções.
  */
-export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'main', ret?: () => Screen): Screen & { readonly menu: Menu; readonly page: OptionsPage; rowIds(): string[]; value(id: string): string } {
+export type OptionsScreen = Screen & {
+  readonly menu: Menu; readonly page: OptionsPage; readonly capturing: ClipCapture | null;
+  rowIds(): string[]; value(id: string): string; label(id: string): string; footer(): string | undefined;
+};
+
+export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'main', ret?: () => Screen): OptionsScreen {
   const st = app.settings;
   // `opt()` lê `st.options` na hora (nunca um alias congelado): "RESTAURAR PADRÃO" troca `st.options` por um
   // objeto novo (`d.options`), e um alias tirado na criação da tela ficaria apontando para o objeto antigo —
@@ -35,7 +45,7 @@ export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'ma
   const goBack = (): void => {
     if (page === 'main') app.transition(() => titleScreen(app, { cursor: 2 }), FADE_TO_TITLE);
     else if (ret) app.transition(ret, FADE_MENU);
-    else app.transition(() => optionsScreen(app, page === 'controls' ? 0 : 1), FADE_MENU);
+    else app.transition(() => optionsScreen(app, SUBMENU_ROW[page]), FADE_MENU);
   };
   const open = (to: OptionsPage): void => { app.transition(() => optionsScreen(app, 0, to), FADE_MENU); };
   const turn = (i: number, d: number): boolean => { setDevice(st.devices, i, cycle(DEVICE_IDS, st.devices[i], d)); app.save(); return true; };
@@ -64,6 +74,45 @@ export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'ma
   if (page === 'main') {
     rows.push({ id: 'controls', label: S.options.controlsMenu, select: () => { open('controls'); } });
     rows.push({ id: 'gameplay', label: S.options.gameplayMenu, select: () => { open('gameplay'); } });
+    rows.push({ id: 'clip', label: S.options.clipMenu, select: () => { open('clip'); } });
+  }
+  // CLIPE (src/clip): gravar ou não, a duração e o botão (tecla e botão de controle, lidos fora das entradas do jogo).
+  // Sem suporte (fora do Chrome), tudo desativado com o aviso.
+  let capturing: ClipCapture | null = null;
+  let suppress = false;
+  const off = !app.clipSupported;
+  const conflict = (id: string): ClipConflict | null =>
+    id === 'clipKey' ? clipKeyConflict(st, opt().clipKey) : id === 'clipPad' ? clipPadConflict(st, opt().clipPad) : null;
+  const bound = (): void => { app.applyInput(); app.save(); };
+  if (page === 'clip') {
+    const setOn = (on: boolean): boolean => { const changed = opt().clipOn !== on; opt().clipOn = on; app.save(); return changed; };
+    const setSec = (sec: (typeof CLIP_SECONDS)[number]): boolean => { const changed = opt().clipSec !== sec; opt().clipSec = sec; app.save(); return changed; };
+    rows.push({
+      id: 'clipOn', label: S.options.clipOn, disabled: off,
+      tone: () => (off ? 'gray' : undefined),
+      value: () => (off ? S.options.clipOnlyChrome : opt().clipOn ? S.options.yes : S.options.no),
+      left: () => setOn(false), right: () => setOn(true),
+    });
+    rows.push({
+      id: 'clipSec', label: S.options.clipSec, disabled: off, value: () => S.options.clipSecValue(opt().clipSec),
+      tone: () => (off ? 'gray' : undefined),
+      left: () => setSec(CLIP_SECONDS[Math.max(0, CLIP_SECONDS.indexOf(opt().clipSec) - 1)]),
+      right: () => setSec(CLIP_SECONDS[Math.min(CLIP_SECONDS.length - 1, CLIP_SECONDS.indexOf(opt().clipSec) + 1)]),
+    });
+    rows.push({
+      id: 'clipKey', label: S.options.clipKey, disabled: off,
+      value: () => (opt().clipKey ? keyLabel(opt().clipKey) : S.options.clipNone),
+      tone: () => (off ? 'gray' : conflict('clipKey') ? 'orange' : undefined),
+      select: () => { capturing = 'clipKey'; },
+      left: () => { opt().clipKey = ''; bound(); return true; }, right: () => { opt().clipKey = ''; bound(); return true; },
+    });
+    rows.push({
+      id: 'clipPad', label: S.options.clipPad, disabled: off,
+      value: () => (opt().clipPad >= 0 ? padLabel(opt().clipPad) : S.options.clipNone),
+      tone: () => (off ? 'gray' : conflict('clipPad') ? 'orange' : undefined),
+      select: () => { capturing = 'clipPad'; },
+      left: () => { opt().clipPad = -1; bound(); return true; }, right: () => { opt().clipPad = -1; bound(); return true; },
+    });
   }
   if (page === 'controls') for (let i = 0; i < 5; i++) {
     rows.push({
@@ -161,24 +210,53 @@ export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'ma
     });
   }
   rows.push({ id: 'back', label: S.options.back, select: () => { goBack(); } });
+  // em duas colunas (mais de 10 linhas) a faixa é estreita: o rótulo longo encurta para o valor (NENHUMA, 2 FAIXAS) caber
+  const add = rows.find(r => r.id === 'ownAdd');
+  if (add && rows.length > LOBBY_ONE_COL_MAX) add.label = S.options.ownAddShort;
 
   const menu = new Menu(rows, { cursor });
+
+  const who = (c: ClipConflict): string => (c.who === 'online' ? S.options.clipOnline : `P${c.who}`);
+  const footer = (): string | undefined => {
+    if (page === 'controls') return menu.cursor < 5 ? S.options.playerHelp : undefined;
+    if (page !== 'clip') return undefined;
+    if (capturing) return capturing === 'clipKey' ? S.options.clipPressKey : S.options.clipPressPad;
+    if (off) return S.options.clipUnsupported;
+    const id = rows[menu.cursor].id, c = conflict(id);
+    if (c) return S.options.clipConflict(S.options.actions[c.action], who(c));
+    return id === 'clipKey' || id === 'clipPad' ? S.options.clipBindHelp : S.options.clipHelp;
+  };
+  /** Captura do botão do clipe: tecla (Esc cancela; as do navegador e do sistema não valem) ou botão de qualquer controle. */
+  const capture = (inp: Parameters<Screen['update']>[0]): void => {
+    if (inp.key === 'Escape') { capturing = null; suppress = true; return; }
+    if (capturing === 'clipKey' && inp.key && clipKeyAllowed(inp.key)) opt().clipKey = inp.key;
+    else if (capturing === 'clipPad' && inp.padButton) opt().clipPad = inp.padButton.button;
+    else return;
+    capturing = null; suppress = true;
+    bound();
+  };
 
   return {
     id: 'options',
     menu,
     page,
+    get capturing() { return capturing; },
+    footer,
     rowIds() { return rows.map(r => r.id); },
     value(id: string) { return rows.find(r => r.id === id)?.value?.() ?? ''; },
+    label(id: string) { return rows.find(r => r.id === id)?.label ?? ''; },
     update(inp) {
+      if (suppress) { if (inp.any === 0) suppress = false; return; }
+      if (capturing) { capture(inp); return; }
       const ev = menu.update(inp.any, inp.pressedAny, app.audio);
       if (ev === 'back') goBack();
     },
     draw(ctx, bank) {
-      const items: LobbyItem[] = rows.map(r => ({ label: r.label, value: r.value?.() ?? '', disabled: r.disabled }));
-      const footer = page === 'controls' && menu.cursor < 5 ? S.options.playerHelp : undefined;
-      const title = page === 'controls' ? S.options.controlsTitle : page === 'gameplay' ? S.options.gameplayTitle : S.options.title;
-      drawLobbyList(ctx, bank, title, items, menu.cursor, footer);
+      const items: LobbyItem[] = rows.map(r => ({ label: r.label, value: r.value?.() ?? '', disabled: r.disabled,
+        capturing: capturing === r.id, tone: r.tone?.() }));
+      const title = page === 'controls' ? S.options.controlsTitle : page === 'gameplay' ? S.options.gameplayTitle
+        : page === 'clip' ? S.options.clipTitle : S.options.title;
+      drawLobbyList(ctx, bank, title, items, menu.cursor, footer());
     },
   };
 }

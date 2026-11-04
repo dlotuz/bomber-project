@@ -150,6 +150,36 @@ describe('InputManager', () => {
     im.poll([]);                                  // continua segurado: não é novo
     expect(im.takePadButton()).toBeNull();
   });
+  it('botão do CLIPE: tecla (sem auto-repetição) ou botão bruto de qualquer controle, uma vez por aperto', () => {
+    let gps: (GamepadLike | null)[] = [pad([]), pad([])];
+    const t = fakeTarget();
+    const im = new InputManager(t, DEFAULT_KEYMAPS, () => gps);
+    im.setClipBinding('F8', 8);
+    expect(im.takeClip()).toBe(false);
+    t.fire('keydown', 'F8');
+    expect([im.takeClip(), im.takeClip()]).toEqual([true, false]);
+    t.fire('keydown', 'F8', true);                 // auto-repetição do teclado segurado
+    expect(im.takeClip()).toBe(false);
+    t.fire('keyup', 'F8');
+    im.poll([]);
+    gps = [pad([]), pad([8])];
+    im.poll([]);
+    expect(im.takeClip()).toBe(true);
+    im.poll([]);                                   // continua segurado
+    expect(im.takeClip()).toBe(false);
+    im.setClipBinding('', -1);
+    gps = [pad([]), pad([])]; im.poll([]); gps = [pad([8]), pad([])]; im.poll([]);
+    t.fire('keydown', 'F8');
+    expect(im.takeClip()).toBe(false);             // sem tecla nem botão
+  });
+  it('a tecla do CLIPE não chega ao navegador (preventDefault), como as teclas do jogo', () => {
+    const fns = new Map<string, EventListener>();
+    const im = new InputManager({ addEventListener: (ty, fn) => { fns.set(ty, fn); }, removeEventListener: () => {} }, DEFAULT_KEYMAPS, () => []);
+    im.setClipBinding('F8', -1);
+    let prevented = false;
+    fns.get('keydown')!({ code: 'F8', repeat: false, preventDefault() { prevented = true; } } as unknown as Event);
+    expect(prevented).toBe(true);
+  });
   it('setPadmaps troca o mapa usado no poll', () => {
     const im = new InputManager(fakeTarget(), DEFAULT_KEYMAPS, () => [pad([0])]);
     im.setPadmaps([{ ...DEFAULT_PADMAP, a: 0, b: 1 }]);
