@@ -22,6 +22,16 @@ import { titleScreen } from './screens/title';
 import { battleScreen } from './screens/battle';
 import { hdBegin } from './render/hd-menu';
 import { hdArtFromUrl, hdBattleBegin, resolveHdArt, useHdArt } from './render/hdart/mode';
+import { detectClipSupport } from './clip/support';
+import { ClipController, clipFileName } from './clip/controller';
+import { ClipRecorder } from './clip/recorder';
+import { ClipCanvas } from './clip/canvas';
+import { ClipAudioMix } from './clip/audio-mix';
+import { deliverClip } from './clip/deliver';
+import { drawClipToast } from './clip/toast';
+import { audioOutput, type AudioOutput } from './audio/output';
+import { setTouchClip } from './input/touch';
+import type { BattleScreen } from './screens/battle';
 
 const store = browserStorage();
 const params = new URLSearchParams(window.location.search);
@@ -37,10 +47,14 @@ seedStagePick(window.location.search);
 const input = new InputManager(window, settings.keymaps);
 input.setPadmaps(settings.padmaps);
 input.setExtraKeymap(settings.online.keymap);
+input.setClipBinding(settings.options.clipKey, settings.options.clipPad);
 const app = new App(settings, {
   save: s => { saveSettings(store, s); online.syncAccount(); },
   setKeymaps: m => input.setKeymaps(m),
-  applyInput: s => { input.setKeymaps(s.keymaps); input.setPadmaps(s.padmaps); input.setExtraKeymap(s.online.keymap); },
+  applyInput: s => {
+    input.setKeymaps(s.keymaps); input.setPadmaps(s.padmaps); input.setExtraKeymap(s.online.keymap);
+    input.setClipBinding(s.options.clipKey, s.options.clipPad);
+  },
   seed: () => 0x0012,
 });
 app.audio.setVolume(settings.options.musicVol / 10, settings.options.sfxVol / 10);
@@ -74,6 +88,41 @@ const urlArt = hdArtFromUrl(location.search);
 const display = createDisplay(document.getElementById('screen') as HTMLCanvasElement, () => fitOptionsFor(app.settings.options.screen, location.search));
 const ctx = display.ctx;
 const bank = new SpriteBank();
+// CLIPE (Opções > Clipe): grava os últimos segundos da partida (só no Chrome: quadro-chave periódico, src/clip/support.ts).
+// O quadro do clipe sai do #screen já apresentado; o som, do APU e da MÚSICA PRÓPRIA. O botão é lido aqui, no próprio
+// aparelho (InputManager.takeClip), fora do lockstep: na sala online, só quem apertou grava.
+const clipSupport = detectClipSupport();
+app.clipSupported = clipSupport.ok;
+const clipCanvas = new ClipCanvas();
+let clipMix: { out: AudioOutput; mix: ClipAudioMix } | null = null;
+const clipAudio = (): ClipAudioMix | null => {
+  const out = audioOutput();
+  if (!out) return null;
+  if (clipMix?.out !== out) {
+    clipMix = { out, mix: new ClipAudioMix(out.ctx, out.node) };
+    if (ownMusic.element) clipMix.mix.attach(ownMusic.element);
+  }
+  return clipMix.mix;
+};
+ownMusic.onElement(el => clipMix?.mix.attach(el));
+const battleNow = (): BattleScreen | null => (app.screen.id === 'battle' ? (app.screen as BattleScreen) : null);
+const clip = new ClipController({
+  supported: clipSupport.ok,
+  options: () => app.settings.options,
+  battle: () => { const b = battleNow(); return b ? { paused: b.paused, stage: b.ms.cfg.stage } : null; },
+  hidden: () => document.hidden,
+  audioKey: audioOutput,
+  now: () => performance.now(),
+  newRecorder: keep => new ClipRecorder(clipSupport.mime!, keep, () => {
+    const t = clipAudio()?.track;
+    return t ? [clipCanvas.videoTrack(), t] : [clipCanvas.videoTrack()];
+  }),
+  deliver: (blob, name) => deliverClip(blob, name),
+  fileName: stage => clipFileName(new Date(), stage, clipSupport.mime ?? ''),
+});
+// a aba escondida para o requestAnimationFrame (e o render): a pausa do gravador vem pelo evento
+document.addEventListener('visibilitychange', () => clip.update());
+
 // ?fx=0 desliga os efeitos nesta sessão (debug e capturas fiéis).
 const fxOff = params.get('fx') === '0';
 // ?bordas=preto|borrado e ?filtro=suave|nitido forçam a apresentação; sem eles, valem as opções (lidas a cada quadro).
@@ -87,13 +136,19 @@ const render = (): void => {
   online.drawOverlay(ctx, bank);
   present(display, fxOff ? null : app.screen.fx?.() ?? null, app.brightness() / 15, resolveScreenMode(urlMode, app.settings.options, resolveScreenKind(location.search, app.settings.options.screen)));
   online.drawNames(display.out, display.layout());   // sala online: nome de cada humano em cima da cabeça
+  clip.update();
+  const L = display.layout();
+  if (clip.recording) clipCanvas.compose(display.out.canvas, { x: L.ox, y: L.oy, w: L.gw, h: L.gh });
+  const note = clip.toast();
+  if (note) drawClipToast(display.out, L, bank, note);   // depois da cópia: o aviso não entra nas gravações
+  setTouchClip(clip.available);
   stats.frame();
 };
 // ?quick abre direto numa partida com as regras da URL (ver parseConfig); sem ele, começa no título.
 // Sala online: o cliente (net/online.ts) e a tela (screens/online.ts); ?sala=<código> (link de convite) abre direto nela.
 const online = initOnline(app);
 // celular/tablet: direcional e botões na tela (viram as teclas do perfil em uso; na partida online, o controle online)
-installTouchControls(() => (online.playing ? app.settings.online.keymap : app.settings.keymaps[0]));
+installTouchControls(() => (online.playing ? app.settings.online.keymap : app.settings.keymaps[0]), window, document, () => { void clip.press(); });
 void online.restoreAccount();   // sessão da conta guardada neste navegador
 // FPS e ping no topo da tela (o ping só com a sala online conectada)
 const stats = createStats(document.getElementById('stats'), () => online.ping, () => online.peerPings());
@@ -141,6 +196,7 @@ startLoop(() => {
   const inp = withEscapeAsBack(buildInput(cur, prev, app.settings.devices, input.takeLastKey(),
     { connected: input.connected(), esc: input.escHeld(), padButton: input.takePadButton() }));
   if (inp.pressedAny) audioStart.gesture();        // botão do controle também conta como gesto (M6)
+  if (input.takeClip()) void clip.press();         // botão do CLIPE: só neste aparelho, nunca vai para o lockstep
   // partida online: só o controle da sala online (Opções dele na tela da sala) vai para o lockstep
   // (aba escondida: nenhum botão — o jogo segue para os outros sem ninguém "segurando" uma direção)
   if (online.playing) { const oc = app.settings.online; online.step(document.hidden ? 0 : input.readProfile(oc.device, oc.keymap, oc.padmap)); }

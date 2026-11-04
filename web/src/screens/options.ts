@@ -89,24 +89,26 @@ export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'ma
     const setSec = (sec: (typeof CLIP_SECONDS)[number]): boolean => { const changed = opt().clipSec !== sec; opt().clipSec = sec; app.save(); return changed; };
     rows.push({
       id: 'clipOn', label: S.options.clipOn, disabled: off,
+      tone: () => (off ? 'gray' : undefined),
       value: () => (off ? S.options.clipOnlyChrome : opt().clipOn ? S.options.yes : S.options.no),
       left: () => setOn(false), right: () => setOn(true),
     });
     rows.push({
       id: 'clipSec', label: S.options.clipSec, disabled: off, value: () => S.options.clipSecValue(opt().clipSec),
+      tone: () => (off ? 'gray' : undefined),
       left: () => setSec(CLIP_SECONDS[0]), right: () => setSec(CLIP_SECONDS[CLIP_SECONDS.length - 1]),
     });
     rows.push({
       id: 'clipKey', label: S.options.clipKey, disabled: off,
       value: () => (opt().clipKey ? keyLabel(opt().clipKey) : S.options.clipNone),
-      tone: () => (conflict('clipKey') ? 'orange' : undefined),
+      tone: () => (off ? 'gray' : conflict('clipKey') ? 'orange' : undefined),
       select: () => { capturing = 'clipKey'; },
       left: () => { opt().clipKey = ''; bound(); return true; }, right: () => { opt().clipKey = ''; bound(); return true; },
     });
     rows.push({
       id: 'clipPad', label: S.options.clipPad, disabled: off,
       value: () => (opt().clipPad >= 0 ? padLabel(opt().clipPad) : S.options.clipNone),
-      tone: () => (conflict('clipPad') ? 'orange' : undefined),
+      tone: () => (off ? 'gray' : conflict('clipPad') ? 'orange' : undefined),
       select: () => { capturing = 'clipPad'; },
       left: () => { opt().clipPad = -1; bound(); return true; }, right: () => { opt().clipPad = -1; bound(); return true; },
     });

@@ -41,6 +41,9 @@ const CSS = `
   background: rgba(255,255,255,.4); border: 2px solid rgba(255,255,255,.7); }
 .touch .stick.act b { background: rgba(255,228,107,.7); }
 .touch.js .pad, .touch.dp .zone, .touch.dp .stick { display: none; }
+.touch .clip { display: none; right: max(16px, env(safe-area-inset-right)); top: max(12px, env(safe-area-inset-top));
+  width: auto; height: min(8vmin, 40px); padding: 0 14px; border-radius: 14px; background: rgba(255,90,60,.35); }
+.touch.clip-on .clip { display: block; }
 @media (orientation: portrait) {
   .touch .pad, .touch .stick:not(.act) { bottom: max(70px, env(safe-area-inset-bottom)); }
   .touch .a { bottom: max(80px, env(safe-area-inset-bottom)); }
@@ -77,7 +80,18 @@ export function isTouchDevice(win: Window | undefined = typeof window === 'undef
  * partida online); cada botão aperta a tecla desse perfil, no `target` (a mesma janela em que o InputManager escuta).
  * Devolve uma função que remove tudo.
  */
-export function installTouchControls(keymap: () => KeyMap, win: Window = window, doc: Document = document): () => void {
+/** Botão CLIPE na tela (só com o clipe disponível: opção ligada e gravando ou com a rodada guardada). */
+let clipRoot: HTMLElement | null = null;
+let clipShown = false;
+export function setTouchClip(on: boolean): void {
+  if (on === clipShown || !clipRoot) return;
+  clipShown = on;
+  clipRoot.classList.toggle('clip-on', on);
+}
+
+/** `onClip`: o botão CLIPE da tela (chamado no próprio toque, que conta como gesto para o compartilhar do sistema). */
+export function installTouchControls(keymap: () => KeyMap, win: Window = window, doc: Document = document,
+  onClip?: () => void): () => void {
   if (!isTouchDevice(win)) return () => {};
   const style = doc.createElement('style');
   style.textContent = CSS;
@@ -195,6 +209,14 @@ export function installTouchControls(keymap: () => KeyMap, win: Window = window,
     for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) b.addEventListener(ev, () => set(f, false, b));
     b.addEventListener('contextmenu', e => e.preventDefault());
     root.append(b);
+  }
+  if (onClip) {
+    const c = doc.createElement('button');
+    c.type = 'button'; c.className = 'clip'; c.textContent = 'CLIPE';
+    c.addEventListener('pointerdown', e => { e.preventDefault(); onClip(); });
+    c.addEventListener('contextmenu', e => e.preventDefault());
+    root.append(c);
+    clipRoot = root; clipShown = false;
   }
   doc.body.append(root);
 
