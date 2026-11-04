@@ -87,7 +87,7 @@ export interface Player {
   grab: number;                          // luva: slot do jogador que está na mão ou -1
   heldBy: number;                        // slot de quem me segura com a luva ou -1
   flying: boolean;                       // arremessado por outro jogador (voador kind 'player')
-  escape: number;                        // apertos de B para se soltar (conta até Rules.gloveEscape)
+  escape: number;                        // apertos de B para se soltar (conta até Rules.gloveEscape); > 0 depois de escapar = pulo da fuga
   z: number;                             // altura em px acima do chão (só desenho: na mão ou voando)
   push: { vx: number; vy: number; left: number }; // movimento forçado (P, empurrão), 1/256 px por tick
   walkT: number;                         // ticks andando (passo a cada 20)

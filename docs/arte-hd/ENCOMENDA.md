@@ -181,7 +181,7 @@ Cada personagem tem 15.6 desenhos: todas as ações do jogo, nas 4 direções
 | `char/<p>/dance/<dir>` | dançando sem controle (acertado pela nota da montaria F) | 96×128 | 48, 108 | 18 (12 desenhos) | 1, 10, 27, 6, 7, 8, 9, 8, 6, 6, 18, 16, 8, 8, 8, 8, 8, 8 (= 170) | sim | bom ter |
 | `char/<p>/bad/<dir>` | Bomber Vingador: eliminado, andando pela borda de fora da arena | 96×128 | 48, 108 | 4 (3 desenhos) | 12, 8, 12, 8 (= 40) | sim | bom ter |
 | `char/<p>/held/<dir>` | preso na luva de outro jogador (ou voando, arremessado): pose parada, encolhido | 96×128 | 48, 108 | 1 | parado | não | bom ter |
-| `char/<p>/dropped/<dir>` | largado pela luva: pulo de volta ao chão | 96×128 | 48, 108 | 14 (3 desenhos) | 1, 5, 5, 4, 3, 2, 2, 2, 6, 6, 4, 3, 3, 1 (= 47) | não | bom ter |
+| `char/<p>/dropped/<dir>` | largado pela luva: pulo da cabeça de quem segurava de volta ao chão | 96×128 | 48, 108 | 11 (1 desenho) | 5, 5, 4, 3, 2, 2, 2, 6, 6, 4, 3 (= 42) | não | bom ter |
 
 ### Cavaleiros (montados)
 

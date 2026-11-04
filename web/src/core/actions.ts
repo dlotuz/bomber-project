@@ -7,7 +7,7 @@ import { rollerAt, tryKick } from './kick';
 import { detonateRemote, placeBomb } from './bombs';
 import { punchBomb, startLift, throwHeld } from './flyers';
 import { isImmune } from './hit';
-import { DROP_INV, airborne, grabbedInput, holding, releaseHand, throwGrab, tryGrab } from './grab';
+import { airborne, grabbedInput, holding, releaseHand, throwGrab, tryGrab } from './grab';
 import { MOUNTS } from './mounts';
 import { STAGES } from './stages';
 
@@ -31,11 +31,14 @@ export function applyPush(s: RoundState, p: Player, ev: GameEvent[]): boolean {
 /** Avança a ação travada; true = travado neste tick (o jogador não obedece aos botões). */
 export function tickAct(s: RoundState, p: Player, ev: GameEvent[]): boolean {
   if (p.push.left > 0) applyPush(s, p, ev);
-  if (p.actLeft <= 0) return false;
+  if (p.actLeft <= 0) {
+    if (p.act === 'dropped') setAct(s, p, 'idle');   // 1ª rodada da rotina normal ($C2:22F0 → $C2:141C): já obedece e toma chama
+    return false;
+  }
   if (--p.actLeft === 0) {
     if (p.act === 'lift') setAct(s, p, 'carryIdle');   // T+8: já na mão, ainda parado (o arremesso marcado sai em T+9)
     else if (p.act === 'detonate' && p.prevBtn & BTN.B) { /* trancar: B ainda segurado, fica na pose */ }
-    else if (p.act === 'dropped') { p.inv = DROP_INV; setAct(s, p, 'idle'); }   // caiu da luva: invencível, como no desmonte
+    else if (p.act === 'dropped') { /* última rodada do pulo ($C2:1C35): ainda fora do chão; sem +$96 depois */ }
     else if (!FREE.has(p.act)) setAct(s, p, holding(p) ? 'carryIdle' : 'idle');
   }
   return true;

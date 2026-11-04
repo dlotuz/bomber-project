@@ -14,7 +14,7 @@ import { ORIGINALS as CHARACTERS } from '../art/bomber';
 import { playerAnimRef } from '../anim/player-anim';
 import { FLAME_PHASE } from '../anim/grid-seq';
 import {
-  COSTUME_ANIMS, DANCE_ANIMS, DANCE_NOTE_FRAME_TICKS, DISMOUNT_ANIMS, EGG_ANIMS, MACHINE_EGG_ANIMS, MOUNTING_ANIMS,
+  COSTUME_ANIMS, DANCE_ANIMS, DANCE_NOTE_FRAME_TICKS, DISMOUNT_ANIMS, DROP_FRAME_TICKS, EGG_ANIMS, MACHINE_EGG_ANIMS, MOUNTING_ANIMS,
   MOUNT_ANIMS, PROJ_ANIMS, REMOUNT_GLOW_ANIMS, REMOUNT_GLOW_STAGE_TICKS, REMOUNT_MOUNT_ANIMS, RIDER_ANIMS,
 } from '../rom/mounts/facts';
 import { RITMO_ROM } from './catalog-ritmo';
@@ -70,7 +70,9 @@ interface Padrao { ticks: readonly number[]; loop: boolean; distinct?: number }
 export type FonteRom =
   | { kind: 'player'; tab: number; idx: number | null }
   | { kind: 'seq'; addrs: readonly number[] }
-  | { kind: 'bomb'; type: number };
+  | { kind: 'bomb'; type: number }
+  /** tabela fora do pacote embutido: o ritmo é o `padrao`, com os números já medidos nela (o gerador não a lê) */
+  | { kind: 'medido'; addr: string };
 export interface FonteRitmo { rom: FonteRom; padrao: Padrao; /** força o loop (ex.: derrota some no fim). */ loop?: boolean }
 
 const STILL: Padrao = { ticks: [1], loop: false, distinct: 1 };
@@ -130,8 +132,9 @@ export const ACT_INFO: Readonly<Record<PlayerAct, ActInfo>> = {
     fonte: playerFonte('bad', true, WALK) },
   held: { desc: 'preso na luva de outro jogador (ou voando, arremessado): pose parada, encolhido', priority: 'bom',
     dir: true, fonte: seqFonte(d => RIDER_ANIMS[0x2][DIR_IDX[d]].idle, STILL) },
-  dropped: { desc: 'largado pela luva: pulo de volta ao chão', priority: 'bom', dir: true,
-    fonte: seqFonte(() => DISMOUNT_ANIMS, { ticks: [DISMOUNT_TICKS], loop: false }) },
+  dropped: { desc: 'largado pela luva: pulo da cabeça de quem segurava de volta ao chão', priority: 'bom', dir: true,
+    fonte: () => ({ rom: { kind: 'medido', addr: '$D8:1D44 (por direção, facts.ts DROP_*)' },
+      padrao: { ticks: DROP_FRAME_TICKS, loop: false, distinct: 1 } }) },
 };
 /** Todas as ações do núcleo (as chaves de `ACT_INFO`, conferidas pelo compilador). */
 export const PLAYER_ACTS = Object.keys(ACT_INFO) as PlayerAct[];
@@ -215,6 +218,7 @@ export type RitmoName = string;
 
 /** Ritmo: o da ROM (`catalog-ritmo.ts`) se medido, senão o padrão. */
 function ritmoDe(name: RitmoName, f: FonteRitmo): HdRitmo {
+  if (f.rom.kind === 'medido') return { ...fromPadrao(f.padrao, `ROM ${f.rom.addr}`), loop: f.loop ?? f.padrao.loop };
   const r = RITMO_ROM[name];
   if (!r) return fromPadrao(f.padrao, 'padrão (sem ROM)');
   return { frames: r.ticks.length, ticks: r.ticks, loop: f.loop ?? r.loop, distinct: r.distinct, fonte: `ROM ${r.addr}` };

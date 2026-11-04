@@ -6,7 +6,7 @@ import { mkRound, placePx, ride, run, flameAt, BTN, cx, cy } from './helpers';
 import { riderHook } from '../../src/render/rom/mounts/rider';
 import { mountRomSprites } from '../../src/render/rom/mounts/sprites';
 import { fallbackMountFrame, objPx, sampleSeq } from '../../src/render/rom/mounts/gfx';
-import { MOUNT_GFX, DISMOUNT_ANIMS, REMOUNT_ANIMS, DANCE_NOTE_TICKS } from '../../src/render/rom/mounts/facts';
+import { MOUNT_GFX, DISMOUNT_ANIMS, REMOUNT_ANIMS, DANCE_NOTE_TICKS, DROP_TILE0, DROP_FRAME_TICKS, DROP_FRAME_DY } from '../../src/render/rom/mounts/facts';
 import { cellOf } from '../../src/core/units';
 import type { ObjEntry } from '../../src/render/ppu';
 import type { Anim, RomAssets } from '../../src/rom/types';
@@ -239,5 +239,39 @@ describe.skipIf(!ASSETS)('camada ROM das montarias × emulador', () => {
       const fr = (ASSETS!.anim(tables[dir >> 1]) as Anim)[0];
       expect(got.map(e => [e.x - cx(7), e.y - cy(5), +e.hflip, +e.vflip]), `dir=${dir}`).toEqual(fr.pieces.map(q => [q.dx, q.dy, +q.hflip, +q.vflip]));
     }
+  });
+  // As tabelas do pulo de largado ($C2:6FF5) ficam fora do pacote embutido: o render usa os números de facts.ts
+  // (por isso este só roda com a ROM, não com SB4_PACK).
+  it.skipIf(!!process.env.SB4_PACK)('largado da luva: DROP_* de facts.ts = tabelas $D8:1D44/$D8:1D01/$D8:1C7B/$D8:1CBE da ROM', () => {
+    [0xd81d44, 0xd81d01, 0xd81c7b, 0xd81cbe].forEach((addr, dir) => {
+      const fr = ASSETS!.anim(addr) as Anim;
+      expect(fr.map(f => f.dur), `dir ${dir}`).toEqual(DROP_FRAME_TICKS);
+      expect(fr.map(f => f.my), `dir ${dir}`).toEqual(DROP_FRAME_DY);
+      expect(fr.every(f => f.mx === 0 && f.pieces.length === 1), `dir ${dir}`).toBe(true);
+      expect(fr.map(f => f.pieces[0]), `dir ${dir}`).toEqual(fr.map(() => ({ dx: -16, dy: -24, tile: DROP_TILE0 + dir, hflip: false, vflip: false, big: true, palAdd: 0 })));
+    });
+  });
+  // Largado da luva ($C2:1C35, anim $D8:1D01 olhando para a direita): Y do objeto medido no emulador a cada tick
+  // (analise/investigacao/aj-grabinv/drop.py B: 61 → 49 → 79, chão = 79), da cabeça de quem segurava até o chão.
+  it('largado da luva: o pulo sai da altura da mão e chega ao chão em 42 ticks, como o Y medido', () => {
+    const runs: [number, number][] = [[61, 5], [58, 5], [54, 4], [49, 3], [50, 2], [52, 2], [55, 2], [59, 6], [64, 6], [71, 4], [79, 3]];
+    const exp = runs.flatMap(([y, n]) => Array<number>(n).fill(y - 79));
+    const s = mkRound();
+    const p = placePx(s, 0, cx(7), cy(5));
+    p.face = 2; p.act = 'dropped'; p.actT0 = s.tick; p.escape = 0;
+    const yAt = (t: number) => riderHook(s, p, ASSETS!, s.tick + t, s.tick + t)![0].y;
+    const y0 = yAt(41);
+    expect(Array.from({ length: 44 }, (_, t) => yAt(t) - y0)).toEqual([...exp, 0, 0]);   // depois do fim, fica no chão
+  });
+  // Escapando ($C2:1C09, anim $D8:1C19 olhando para a direita): no emulador o objeto sai de (65, 66) no tick da fuga
+  // (drop.py escape) e chega a (63, 79) em 8 ticks.
+  it('escapando da luva: pulo de 8 ticks da mão ao chão, balançando para o lado de quem segurava', () => {
+    const s = mkRound();
+    const p = placePx(s, 0, cx(7), cy(5));
+    p.face = 2; p.act = 'dropped'; p.actT0 = s.tick; p.escape = 10;
+    const at = (t: number) => riderHook(s, p, ASSETS!, s.tick + t, s.tick + t)![0];
+    const e0 = at(7);
+    expect(Array.from({ length: 9 }, (_, t) => [at(t).x - e0.x, at(t).y - e0.y])).toEqual(
+      [[2, -13], [4, -10], [6, -8], [8, -6], [6, -4], [4, -2], [2, -1], [0, 0], [0, 0]]);
   });
 });

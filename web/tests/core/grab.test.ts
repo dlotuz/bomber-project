@@ -95,7 +95,7 @@ describe('luva pega jogador', () => {
     for (let k = 0; k < 2; k++) { run(s, 1, [BTN.A, BTN.B]); run(s, 1, [BTN.A, 0]); }
     expect(q.heldBy).toBe(0);
     run(s, 1, [BTN.A, BTN.B]);
-    expect([q.heldBy, p.grab, q.act]).toEqual([-1, -1, 'idle']);
+    expect([q.heldBy, p.grab, q.act]).toEqual([-1, -1, 'dropped']);   // pulo da fuga ($C2:1C09, 8 ticks)
   });
   it('arremessado em outro jogador (ou em quem jogou): por padrão ninguém é atordoado, só quica', () => {
     const s = arena({ players: 3 });
@@ -139,7 +139,7 @@ describe('luva pega jogador', () => {
     for (let i = 0; i < 80 && !stunned; i++) { run(s, 1); stunned = s.players[1].act === 'stunned'; }
     expect(stunned).toBe(true);
   });
-  it('B segurando jogador: larga na própria casa; ele cai em 52 ticks (pulo de perder montaria), imune, e ganha 32 de invencibilidade', () => {
+  it('B segurando jogador: larga na própria casa; ele cai em 42 ticks ($C2:1C35), imune só no pulo, sem invencibilidade', () => {
     const { s, p, q } = pair();
     run(s, 1, [BTN.A, 0]); run(s, 8, [BTN.A, 0]);
     run(s, 1, [BTN.A | BTN.B, 0]);
@@ -148,21 +148,21 @@ describe('luva pega jogador', () => {
     checkHit(s, q, []);
     expect(q.state).toBe('alive');
     setCell(s, 4, 1, CODE.FLOOR);
-    run(s, 50, [0, BTN.RIGHT]);
+    run(s, 41, [0, BTN.RIGHT]);
     expect(q.act).toBe('dropped');
-    run(s, 2, [0, 0]);
-    expect([q.act, q.inv > 0]).toEqual(['idle', true]);
+    run(s, 1, [0, 0]);
+    expect([q.act, q.inv]).toEqual(['idle', 0]);
   });
-  it('largado por jogador de slot maior: também 52 ticks', () => {
+  it('largado por jogador de slot maior: só vê o pedido no tick seguinte, livre em T+43', () => {
     const s = arena({ players: 2 });
     const q = put(s, 0, 4, 1);
     const p = put(s, 1, 4, 1); p.glove = true; p.face = 2;
     run(s, 1, [0, BTN.A]); run(s, 8, [0, BTN.A]);
     run(s, 1, [0, BTN.A | BTN.B]);
     expect(q.act).toBe('dropped');
-    run(s, 50);
+    run(s, 42);
     expect(q.act).toBe('dropped');
-    run(s, 2);
-    expect(q.act).toBe('idle');
+    run(s, 1);
+    expect([q.act, q.inv]).toEqual(['idle', 0]);
   });
 });

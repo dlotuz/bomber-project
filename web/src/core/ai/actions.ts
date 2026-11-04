@@ -274,7 +274,7 @@ export function incomingStun(s: RoundState, p: Player): { avoid: ReadonlySet<num
       if (!inField(colOf(c), linOf(c))) break;
       line.push(c);
       if (k === 1 && c === here) hit = true;                       // B: larga a bomba na casa da frente
-      if (k >= 2 && s.players.some(o => o !== q && standing(o) && o.heldBy < 0 && !o.flying && playerCell(o) === c)) {
+      if (k >= 2 && s.players.some(o => o !== q && standing(o) && o.heldBy < 0 && !o.flying && o.act !== 'dropped' && playerCell(o) === c)) {
         if (c === here) hit = true;                                // arremesso: cai no 1º jogador da linha (2..4)
         break;
       }

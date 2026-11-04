@@ -37,6 +37,17 @@ export const MOUNT_ANIMS: Record<number, DirAnims[]> = {
 export const MOUNTING_MOUNT_ANIMS: Record<number, number[]> = {0x2: [0xd835ec], 0x3: [0xd82e34], 0xa: [0xd83848], 0xc: [0xd85d8f], 0xd: [0xd8796a], 0xe: [0xd897a4], 0xf: [0xd893e7], 0x1: [0xd88c69], 0x4: [0xd8613b], 0x5: [0xd86ffc], 0x6: [0xd88379], 0x9: [0xd84c66], 0xb: [0xd85683]};
 export const MOUNTING_ANIMS: Record<number, number[]> = {0x2: [0xd81745, 0xd816c5], 0x3: [0xd81745, 0xd816c5], 0xa: [0xd81745, 0xd816c5], 0xc: [0xd81745, 0xd816c5], 0xd: [0xd81745, 0xd816c5], 0xe: [0xd81745, 0xd816c5], 0xf: [0xd81745, 0xd816c5], 0x1: [0xd81745, 0xd816c5], 0x4: [0xd81745, 0xd816c5], 0x5: [0xd81745, 0xd816c5], 0x6: [0xd81745, 0xd816c5], 0x9: [0xd81745, 0xd816c5], 0xb: [0xd81745, 0xd816c5]};
 export const DISMOUNT_ANIMS: number[] = [0xd816c5, 0xd81851, 0xd81645];
+/** Pulo de quem sai da luva de outro ($C2:1C35), por direção (cima, direita, baixo, esquerda — índice +$61 >> 1 de
+ *  $C2:56E4). Os `my` somam 16: começam na altura da mão (HELD_Z) e terminam no chão.
+ *  Largado ($C2:1BE1, tabela $C2:6FC5 → $C2:6FF5 → $D8:1D44, $D8:1D01, $D8:1C7B, $D8:1CBE): 11 quadros, 42 ticks, um
+ *  só desenho por direção (quadro 20 + direção da folha do personagem, peça 32×32 em (−16, −24)). Essas 4 tabelas não
+ *  estão no pacote embutido (public/rom-pack.dat), então o quadro é montado destes números, conferidos com a ROM em
+ *  tests/mounts/rom-layer.test.ts. */
+export const DROP_TILE0 = 20;
+export const DROP_FRAME_TICKS: readonly number[] = [5, 5, 4, 3, 2, 2, 2, 6, 6, 4, 3];
+export const DROP_FRAME_DY: readonly number[] = [-2, -3, -4, -5, 1, 2, 3, 4, 5, 7, 8];
+/** Escapando ($C2:1C09, $C2:7085 → $C2:70B5): 8 quadros de 1 tick, balançando para o lado de quem segurava. */
+export const ESCAPE_ANIMS: readonly number[] = [0xd81c4a, 0xd81c19, 0xd81bb7, 0xd81be8];
 export const REMOUNT_ANIMS: number[] = [0xd818ef, 0xd816d3];
 export const REMOUNT_MOUNT_ANIMS: number[] = [0xd835e5];   // +$38 durante o remonte
 export const RESERVE_EGG_ANIMS: number[] = [0xd8d1f1, 0xd8d258, 0xd8d206];

@@ -8,8 +8,9 @@ import type { AnimFrame, Piece } from '../../../rom/types';
 import type { ObjEntry } from '../../ppu/types';
 import type { RomPlayerHook } from '../../battle-layers';
 import { rider } from '../../../core/mounts/types';
+import { DROP_TICKS, ESCAPE_TICKS, HELD_Z } from '../../../core/grab';
 import {
-  RIDER_ANIMS, MOUNT_ANIMS, DISMOUNT_ANIMS,
+  RIDER_ANIMS, MOUNT_ANIMS, DISMOUNT_ANIMS, DROP_TILE0, DROP_FRAME_TICKS, DROP_FRAME_DY, ESCAPE_ANIMS,
   REMOUNT_ANIMS, REMOUNT_MOUNT_ANIMS, DANCE_ANIMS, DANCE_NOTE_ANIMS, DANCE_NOTE_TICKS,
   DANCE_NOTE_FRAME_TICKS, REMOUNT_GLOW_ANIMS, REMOUNT_GLOW_STAGE_TICKS, MOUNT_GFX,
 } from './facts';
@@ -93,6 +94,19 @@ function seqFrame(a: RomAssets, addrs: readonly number[], t: number): AnimFrame 
   return { ...frame, mx: ox, my: oy };
 }
 
+/** Quadro do pulo de largado no tick `t` (facts.ts DROP_*): `my` é o deslocamento acumulado, como em `sampleSeq`. */
+function dropFrame(dir: 0 | 1 | 2 | 3, t: number): AnimFrame {
+  let my = 0, k = 0;
+  for (let acc = 0; k < DROP_FRAME_TICKS.length; k++) {
+    my += DROP_FRAME_DY[k];
+    acc += DROP_FRAME_TICKS[k];
+    if (t < acc) break;
+  }
+  k = Math.min(k, DROP_FRAME_TICKS.length - 1);
+  const piece: Piece = { dx: -16, dy: -24, tile: DROP_TILE0 + dir, hflip: false, vflip: false, big: true, palAdd: 0 };
+  return { dur: DROP_FRAME_TICKS[k], mx: 0, my, pieces: [piece] };
+}
+
 /** Índice do quadro em `ticks` (duração medida de cada quadro, não a `dur` da própria tabela) para um `t` dado —
  *  T14b: a captura das notas da dança começa no tick em que o jogador entra na rotina de dança, que já é alguns
  *  ticks depois do objeto da nota ter entrado no quadro 0 da explosão (`DANCE_NOTE_FRAME_TICKS[0]` mais curto que
@@ -162,8 +176,14 @@ export const riderHook: RomPlayerHook = (s, p, a, hostFrame, frame = hostFrame) 
 
   // Na mão da luva de outro (ou arremessado): sentado, com a pose de montado da ROM (já SEAT_RISE px mais alta que a
   // de pé, por isso desce SEAT_RISE para ficar na altura z de quem está na mão).
-  // Largado da luva: o mesmo pulo de quem perde a montaria ($C2:10D5), a partir da cabeça de quem segurava
-  if (!r && p.act === 'dropped') return charPieces(a, s.stage, p, X, Y, pal, seqFrame(a, DISMOUNT_ANIMS, frame - p.actT0));
+  // Saindo da luva ($C2:1C35): da cabeça de quem segurava até o chão; `escape > 0` = escapou sozinho (pulo curto).
+  // A tabela não termina em dur 255 (a ROM sai pelo fim da animação, $A8): para no último quadro em vez de dar a volta.
+  if (!r && p.act === 'dropped') {
+    const esc = p.escape > 0;
+    const t = Math.min(frame - p.actT0, (esc ? ESCAPE_TICKS : DROP_TICKS) - 1);
+    const fr = esc ? seqFrame(a, [ESCAPE_ANIMS[dirIdxOf(p.face)]], t) : dropFrame(dirIdxOf(p.face), t);
+    return charPieces(a, s.stage, p, X, Y - HELD_Z, pal, fr);
+  }
   if (!r && p.act === 'held') {
     return charPieces(a, s.stage, p, X, Y - p.z + SEAT_RISE, pal, seqFrame(a, RIDER_ANIMS[0x2][dirIdxOf(p.face)].idle, 0));
   }

@@ -11,8 +11,10 @@ import { hitPlayer, offGrid, stunPlayer } from './hit';
 
 /** Quiques seguidos antes de a bomba sumir e voltar ao dono (proteção contra laço; 🟡). */
 const MAX_BOUNCES = 32;
-/** De pé e no chão (fora da mão de alguém e sem estar voando): conta como vítima e obstáculo. */
-const grounded = (q: Player): boolean => standing(q) && q.heldBy < 0 && !q.flying;
+/** De pé no chão, na ocupação $7F:1000: fora quem está na mão, voando ou no pulo de quem saiu da luva ($C2:1C35 —
+ *  emulador, aj-grabinv/bombhead.py: a bomba pousa na casa dele sem atordoar e a mira passa por cima). Conta como
+ *  vítima e obstáculo. */
+const grounded = (q: Player): boolean => standing(q) && q.heldBy < 0 && !q.flying && q.act !== 'dropped';
 
 /** Ponto de partida de um arremesso a partir da mão em (x, y): horizontal com altura −16; vertical 16 px acima. */
 export function handFrom(x: number, y: number, dir: 0 | 1 | 2 | 3): { x: number; y: number; z: number } {

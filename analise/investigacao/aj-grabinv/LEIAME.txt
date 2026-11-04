@@ -1,0 +1,12 @@
+Scripts do ajuste aj-grabinv (quem sai da luva de outro jogador: tempo parado e invencibilidade). Rodar desta pasta com o
+venv dos cores (usa os helpers de ../aj-socoluva/h.py e o core de debug de analise/extraido/cores/rom-mecanicas):
+  PY="/Users/dlotuz/Projetos Claude/Bomber Project/analise/extraido/cores/venv/bin/python"
+  $PY drop.py B|stun|dance|pvict|death   # largado: P2 em $C2:1C35 de T a T+41 (42 ticks), +$96 = 0, fora da ocupação até T+42
+  $PY drop.py B flame=1:40               # chama na casa durante o pulo: não mata (P1 invencível para não confundir)
+  $PY drop.py B flame=41 / flame=42      # chama em T+41 não mata; em T+42 (1º tick de $C2:141C) mata ($C2:10F9)
+  $PY drop.py escape [flame=18|19]       # fuga (B do P2): $C2:1C09 → $C2:1C35 de E a E+7 (8 ticks); a chama mata em E+8
+  $PY drop.py throw flame=13|14 cell=9,3 # arremesso: voo $C2:2026 até T+13, chama no pouso mata em T+14; +$96 = 0
+  $PY droplow.py [flame=1]               # pego de slot menor: entra em $C2:1C35 só em T+1, livre e vulnerável em T+43
+  $PY bombhead.py drop|stand [aim]       # bomba arremessada na casa dele no pulo: pousa e fica (sem atordoar); de pé,
+                                         # quica e atordoa. `aim`: a mira 2..4 não o vê no pulo (cai na 5ª casa)
+Nada é versionado além dos .py e deste texto (savestates e ROM ficam fora).
