@@ -89,7 +89,7 @@ export function setTouchClip(on: boolean): void {
   clipRoot.classList.toggle('clip-on', on);
 }
 
-/** `onClip`: o botão CLIPE da tela (chamado no próprio toque, que conta como gesto para o compartilhar do sistema). */
+/** `onClip`: o botão CLIPE da tela (chamado ao soltar o dedo, que conta como gesto para o compartilhar do sistema). */
 export function installTouchControls(keymap: () => KeyMap, win: Window = window, doc: Document = document,
   onClip?: () => void): () => void {
   if (!isTouchDevice(win)) return () => {};
@@ -213,7 +213,10 @@ export function installTouchControls(keymap: () => KeyMap, win: Window = window,
   if (onClip) {
     const c = doc.createElement('button');
     c.type = 'button'; c.className = 'clip'; c.textContent = 'CLIPE';
-    c.addEventListener('pointerdown', e => { e.preventDefault(); onClip(); });
+    // no pointerup: no toque, é ele (não o pointerdown) que conta como gesto para o compartilhar do sistema
+    c.addEventListener('pointerdown', e => { e.preventDefault(); c.classList.add('on'); });
+    c.addEventListener('pointerup', e => { e.preventDefault(); c.classList.remove('on'); onClip(); });
+    c.addEventListener('pointercancel', () => c.classList.remove('on'));
     c.addEventListener('contextmenu', e => e.preventDefault());
     root.append(c);
     clipRoot = root; clipShown = false;
