@@ -25,6 +25,7 @@ import type { SlotKind } from '../game/config';
 import { Menu, type MenuRow } from './menu';
 import { S } from '../render/text/strings';
 import { racerScreen } from './racer';
+import { scenarioTick } from '../game/dev-scenario';
 import type { SpriteBank } from '../render/sprite-bank';
 import { sampleBase } from '../render/display';
 import { cellX, cellY } from '../render/fx/coords';
@@ -288,6 +289,7 @@ export function battleScreen(app: App, ms: MatchSession): BattleScreen {
       const cpu = ms.cfg.humans.map((h, i) => !h && ms.cfg.rules.active[i]);
       const ai = aiInputs(round, ms.ai, cpu, ms.cfg.rules.cpuLevel);
       const pads = [0, 1, 2, 3, 4].map(i => (ms.cfg.humans[i] ? inp.pads[i] & ~(BTN.START | BTN.SELECT) : ai[i]));
+      if (ms.cfg.devScenario) scenarioTick(round, pads, ms.cfg.devScenario);
       const ev = step(round, pads);
       updateView(view, round, ev);
       fxUpdate(fx, round, ev, colorAt);

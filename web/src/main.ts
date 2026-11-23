@@ -152,7 +152,7 @@ installTouchControls(() => (online.playing ? app.settings.online.keymap : app.se
 void online.restoreAccount();   // sessão da conta guardada neste navegador
 // FPS e ping no topo da tela (o ping só com a sala online conectada)
 const stats = createStats(document.getElementById('stats'), () => online.ping, () => online.peerPings());
-if (params.has('quick')) app.go(battleScreen(app, createMatchSession(parseConfig(window.location.search))));
+if (params.has('quick') || params.has('cenario')) app.go(battleScreen(app, createMatchSession(parseConfig(window.location.search))));
 else if (params.has('sala')) app.transition(() => onlineScreen(app, { code: params.get('sala') ?? '' }), { out: [], black: 0, in: FADE_IN_1 });
 else app.transition(() => titleScreen(app), { out: [], black: 0, in: FADE_IN_1 });
 
