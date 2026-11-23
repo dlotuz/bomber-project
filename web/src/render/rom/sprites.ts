@@ -7,7 +7,8 @@ import { playerAnimRef, resolveAnim } from '../anim/player-anim';
 import { invincibleHidden, pressureSprite, skullBlack } from '../anim/effects';
 import { ORDER_OBJ, ORDER_PLAYER, ORDER_PRESSURE, type FrameBuilder } from './builder';
 import type { RomTables } from './tables';
-import { OBJ_ITEM_PAL, type RomClock, type RomMemo, type RomScene } from './scene';
+import { OBJ_ITEM_PAL, type RomClock, type RomMemo, type RomScene, type SceneObj } from './scene';
+import { scriptWord } from '../anim/grid-seq';
 import { warnOnce } from './warn';
 import { NO_SKIP, type HdSkip } from '../hdart/cover';
 import { CHAR_SHADOW, COSTUME_SHADOW, MOUNT_SHADOW, withoutBakedShadow, type ShadowFamily, type ShadowStatus } from './baked-shadow';
@@ -152,12 +153,43 @@ export function drawBadBombers(b: FrameBuilder, c: SpriteCtx): void {
   }
 }
 
+/** Bomba remota (1) e de espinho (2) fora da grade (chutada ou na mão): o objeto $D8:D3A8 da ROM só tem a cara da
+ *  comum, então ela sumia ao chutar e voltava ao parar. Aqui o sprite é o mesmo quadro de BG2 que ela tem parada (o
+ *  script do tipo, no mesmo tempo), com a paleta 2 do BG copiada para a paleta 3 dos objetos — livre na batalha, menos
+ *  na arena 8 (rolos do caça-níquel): lá as cores vão para as mais próximas da paleta 7 da bomba comum. */
+const BOMB_BG_PAL = 2, OBJ_SPECIAL_BOMB_PAL = 3, SLOT_STAGE = 8;
+const rgb = (c: number): [number, number, number] => [c & 31, (c >> 5) & 31, (c >> 10) & 31];
+function nearestIn(cg: Uint16Array, base: number, color: number): number {
+  const [r, g, bl] = rgb(color);
+  let best = 1, dist = Infinity;
+  for (let k = 1; k < 16; k++) {
+    const [r2, g2, b2] = rgb(cg[base + k]);
+    const d = (r - r2) ** 2 + (g - g2) ** 2 + (bl - b2) ** 2;
+    if (d < dist) { dist = d; best = k; }
+  }
+  return best;
+}
+function specialBombEntry(b: FrameBuilder, c: SpriteCtx, o: SceneObj, x: number, y: number): ObjEntry | null {
+  if (!o.bomb || o.bomb.type === 0) return null;
+  const word = scriptWord(c.a.bombScript(o.bomb.type), c.clock.bombTick - o.bomb.born);
+  const px16 = tile16Px(c.tiles, word);
+  const bg = 16 * BOMB_BG_PAL;
+  if (c.s.stage !== SLOT_STAGE) {
+    for (let k = 0; k < 16; k++) b.cgram(128 + 16 * OBJ_SPECIAL_BOMB_PAL + k, b.cg[bg + k]);
+    return { x, y, size: 16, pal: OBJ_SPECIAL_BOMB_PAL, prio: 2, hflip: false, vflip: false, src: { px: px16 } };
+  }
+  const obj = 128 + 16 * OBJ_BOMB.pal, map = new Uint8Array(16);
+  for (let k = 1; k < 16; k++) map[k] = nearestIn(b.cg, obj, b.cg[bg + k]);
+  return { x, y, size: 16, pal: OBJ_BOMB.pal, prio: 2, hflip: false, vflip: false, src: { px: px16.map(v => map[v]) } };
+}
+
 export function drawObjects(b: FrameBuilder, c: SpriteCtx, skip: HdSkip = NO_SKIP): void {
   c.scene.objs.forEach((o, i) => {
     if (skip.has(o.kind === 'bomb' ? 'bombs' : 'items')) return;
     const y = o.y - o.z;
     const e: ObjEntry = o.kind === 'bomb'
-      ? { x: o.x - 8, y: y - 8, size: 16, pal: OBJ_BOMB.pal, prio: 2, hflip: false, vflip: false, src: { tile: OBJ_BOMB.tile } }
+      ? specialBombEntry(b, c, o, o.x - 8, y - 8)
+        ?? { x: o.x - 8, y: y - 8, size: 16, pal: OBJ_BOMB.pal, prio: 2, hflip: false, vflip: false, src: { tile: OBJ_BOMB.tile } }
       : { x: o.x - 8, y: y - 8, size: 16, pal: OBJ_ITEM_PAL, prio: 2, hflip: false, vflip: false,
         src: { px: itemTilePx(c.tiles, c.tb.itemWord(o.item)) } };
     b.sprite(e, o.sortY ?? y, ORDER_OBJ + i);   // bomba na mão: chave de quem segura ± 8 (adapt.ts)

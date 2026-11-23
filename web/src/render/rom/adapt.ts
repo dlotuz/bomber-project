@@ -1,4 +1,4 @@
-import { BURN, px, type Player, type RoundState } from '../../core';
+import { BURN, px, type Bomb, type Player, type RoundState } from '../../core';
 import type { FlamePieceName, GridBomb, PressureDrop, RomMemo, RomScene, SceneObj } from './scene';
 
 /** Índice = valor de FLAME_PIECE do núcleo (plano 6). */
@@ -28,14 +28,15 @@ export function heldBombPose(p: Player, tick: number): HeldPose | null {
 /** Chave de ordem da bomba na mão (a do jogador é o Y dele): na frente (+8) ou atrás (−8) de quem segura. */
 export const heldSortY = (p: Player, pose: HeldPose): number => px(p.y) + (pose.front ? 8 : -8);
 
-function heldAt(s: RoundState, id: number, owner: number, tick: number): SceneObj | null {
-  const p = s.players.find(q => q.present && q.carry === id);
+function heldAt(s: RoundState, bomb: Bomb, tick: number): SceneObj | null {
+  const info = { type: bomb.type, born: bomb.born };
+  const p = s.players.find(q => q.present && q.carry === bomb.id);
   if (p) {
     const pose = heldBombPose(p, tick);
-    return pose && { kind: 'bomb', item: 0, x: px(p.x) + pose.dx, y: px(p.y), z: pose.z, sortY: heldSortY(p, pose) };
+    return pose && { kind: 'bomb', item: 0, x: px(p.x) + pose.dx, y: px(p.y), z: pose.z, sortY: heldSortY(p, pose), bomb: info };
   }
-  const b = s.bad.find(q => q.slot === owner);
-  return b ? { kind: 'bomb', item: 0, x: b.x, y: b.y, z: 16 } : null;
+  const b = s.bad.find(q => q.slot === bomb.owner);
+  return b ? { kind: 'bomb', item: 0, x: b.x, y: b.y, z: 16, bomb: info } : null;
 }
 
 export function readScene(s: RoundState, tick: number, memo: RomMemo): RomScene {
@@ -43,8 +44,8 @@ export function readScene(s: RoundState, tick: number, memo: RomMemo): RomScene 
   const objs: SceneObj[] = [];
   for (const b of s.bombs) {
     if (b.state === 'idle') gridBombs.set(b.cell, { type: b.type, born: b.born });
-    else if (b.state === 'kicked') objs.push({ kind: 'bomb', item: 0, x: px(b.x), y: px(b.y), z: 0 });
-    else if (b.state === 'held') { const o = heldAt(s, b.id, b.owner, tick); if (o) objs.push(o); }
+    else if (b.state === 'kicked') objs.push({ kind: 'bomb', item: 0, x: px(b.x), y: px(b.y), z: 0, bomb: { type: b.type, born: b.born } });
+    else if (b.state === 'held') { const o = heldAt(s, b, tick); if (o) objs.push(o); }
   }
   for (const f of s.flyers) {
     if (f.kind === 'player') continue;   // o próprio jogador é desenhado com a altura p.z (sprites.ts)
