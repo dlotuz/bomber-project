@@ -77,9 +77,12 @@ export const S = {
     clipHelp: 'SALVA OS ÚLTIMOS SEGUNDOS DA PARTIDA', clipUnsupported: 'O CLIPE SÓ FUNCIONA NO CHROME',
     clipBindHelp: 'A: TROCA  ESQ/DIR: APAGA', clipPressKey: 'NOVA TECLA? (ESC CANCELA)', clipPressPad: 'NOVO BOTÃO? (ESC CANCELA)',
     clipConflict: (action: string, who: string) => `CONFLITO: ${action} DO ${who}`, clipOnline: 'ONLINE',
+    clipFolder: 'PASTA', clipDownloads: 'DOWNLOADS', clipFolderHelp: 'A: ESCOLHE  ESQ/DIR: DOWNLOADS',
+    clipFolderFail: 'ABRA COM O TECLADO OU O MOUSE',
   },
   /** Avisos do CLIPE na partida (src/clip/controller.ts). */
-  clip: { saved: 'CLIPE SALVO!', empty: 'CLIPE AINDA VAZIO', failed: 'FALHA AO SALVAR O CLIPE', cancelled: 'CLIPE CANCELADO' },
+  clip: { saved: 'CLIPE SALVO!', empty: 'CLIPE AINDA VAZIO', failed: 'FALHA AO SALVAR O CLIPE', cancelled: 'CLIPE CANCELADO',
+    noFolder: 'SEM ACESSO A PASTA: FOI PARA DOWNLOADS' },
   online: {
     menu: 'SALA ONLINE', title: 'Sala online',
     name: 'NOME', create: 'CRIAR SALA', code: 'CÓDIGO', join: 'ENTRAR NA SALA', back: 'VOLTAR', empty: '---',
@@ -138,6 +141,7 @@ export const STRING_USES: readonly Use[] = uniq([
     S.options.clipMenu, S.options.clipOn, S.options.clipSec, ...[10, 15, 30].map(n => S.options.clipSecValue(n)), S.options.clipKey,
     S.options.clipPad, S.options.clipNone, S.options.clipOnlyChrome, S.options.clipHelp, S.options.clipUnsupported, S.options.clipBindHelp,
     S.options.clipPressKey, S.options.clipPressPad, S.options.clipOnline,
+    S.options.clipFolder, S.options.clipDownloads, S.options.clipFolderHelp, S.options.clipFolderFail,
     ...Object.values(ACTIONS).flatMap(a => [1, 2, 3, 4, 5].map(n => S.options.clipConflict(a, `P${n}`)).concat(S.options.clipConflict(a, S.options.clipOnline))),
     ...Object.values(S.clip),
     ...[1, 2, 3, 4, 5].map(S.lobby.player), S.lobby.human, S.lobby.cpu, S.lobby.off, S.lobby.playersHelp, ...S.lobby.rules,

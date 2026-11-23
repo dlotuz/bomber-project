@@ -141,14 +141,15 @@ export class Mp4Ring implements ClipRing {
   get endMs(): number { return this.frags.reduce((m, f) => Math.max(m, f.end), 0); }
   get bytesHeld(): number { return this.frags.reduce((n, f) => n + f.bytes.length, 0); }
 
-  build(ms: number): ClipFile | null {
+  build(ms: number, title?: string): ClipFile | null {
     if (this.broken || this.header.length < 2) return null;
     const end = this.endMs;
     const i = startIndex(this.frags.map(seg), end, ms);
     if (i < 0) return null;
     const first = this.frags[i];
     const out = this.frags.slice(i).map(f => this.rebased(f, first.tfdt));
-    return { parts: [...this.header, ...out], durMs: end - first.start };
+    const head = title ? this.header.map(h => (boxAt(h, 0) as Box).type === 'moov' ? withTitle(h, title) : h) : this.header;
+    return { parts: [...head, ...out], durMs: end - first.start };
   }
 
   /** Cópia do fragmento com o `tfdt` de cada trilha menos o do primeiro fragmento do clipe. */
@@ -165,4 +166,26 @@ export class Mp4Ring implements ClipRing {
     }
     return b;
   }
+}
+
+const ascii = (s: string): number[] => [...s].map(c => c.charCodeAt(0) & 0xff);
+function mkBox(type: number[], ...payload: Uint8Array[]): Uint8Array {
+  const body = concat(payload), out = new Uint8Array(8 + body.length);
+  view(out).setUint32(0, out.length);
+  out.set(type, 4);
+  out.set(body, 8);
+  return out;
+}
+/** `moov` com o título (`udta/meta/ilst/©nam`, o "Título" que o Windows, o VLC e os players mostram). Sem mexer nos
+ *  fragmentos: no MP4 fragmentado os `trun` apontam para o próprio `moof`, nada aponta para dentro do `moov`. */
+export function withTitle(moov: Uint8Array, title: string): Uint8Array {
+  const m = boxAt(moov, 0);
+  if (!m || m === 'bad' || m.data !== 8 || child(moov, m, 'udta')) return moov;
+  const zeros = (n: number) => new Uint8Array(n);
+  const hdlr = mkBox(ascii('hdlr'), zeros(8), new Uint8Array(ascii('mdirappl')), zeros(9));
+  const dataHead = new Uint8Array(8);
+  view(dataHead).setUint32(0, 1);   // tipo 1 = texto UTF-8; locale 0
+  const nam = mkBox([0xa9, ...ascii('nam')], mkBox(ascii('data'), dataHead, new TextEncoder().encode(title)));
+  const udta = mkBox(ascii('udta'), mkBox(ascii('meta'), zeros(4), hdlr, mkBox(ascii('ilst'), nam)));
+  return mkBox(ascii('moov'), moov.subarray(8, m.end), udta);
 }

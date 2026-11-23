@@ -12,8 +12,8 @@ export interface RecorderLike {
   resume(): void;
   /** Para de gravar; o que já foi gravado continua disponível para `take`. */
   stop(): Promise<void>;
-  /** Os últimos `ms` como arquivo; null = ainda não há quadro-chave gravado. */
-  take(ms: number): Promise<{ blob: Blob; durMs: number } | null>;
+  /** Os últimos `ms` como arquivo (com o título, no MP4); null = ainda não há quadro-chave gravado. */
+  take(ms: number, title?: string): Promise<{ blob: Blob; durMs: number } | null>;
 }
 
 export interface ClipControllerDeps {
@@ -26,13 +26,17 @@ export interface ClipControllerDeps {
   audioKey(): unknown;
   now(): number;
   newRecorder(keepMs: number): RecorderLike;
-  /** Baixa ou compartilha o arquivo (deliver.ts). */
-  deliver(blob: Blob, name: string): Promise<'shared' | 'downloaded' | 'cancelled'>;
+  /** Grava na pasta escolhida (folder.ts), baixa ou compartilha o arquivo (deliver.ts). */
+  deliver(blob: Blob, name: string): Promise<ClipDelivery>;
   fileName(stage: number): string;
+  /** Título gravado dentro do vídeo (com a data e a hora). */
+  title?(stage: number): string;
 }
 
 /** Folga do anel além da duração do clipe: o clipe começa no quadro-chave de até 1 s antes. */
 export const CLIP_SLACK_MS = 3000;
+/** Para onde o clipe foi: `folder` = pasta escolhida; `noFolder` = a pasta ficou sem permissão e o clipe foi baixado. */
+export type ClipDelivery = 'shared' | 'downloaded' | 'cancelled' | 'folder' | 'noFolder';
 export const TOAST_MS = 2500;
 
 export class ClipController {
@@ -82,10 +86,11 @@ export class ClipController {
     if (!rec || this.d.battle()?.paused) return Promise.resolve();
     const run = async (): Promise<void> => {
       try {
-        const r = await rec.take(this.d.options().clipSec * 1000);
+        const stage = this.d.battle()?.stage ?? this.stage;
+        const r = await rec.take(this.d.options().clipSec * 1000, this.d.title?.(stage));
         if (!r) { this.say(S.clip.empty); return; }
-        const how = await this.d.deliver(r.blob, this.d.fileName(this.d.battle()?.stage ?? this.stage));
-        this.say(how === 'cancelled' ? S.clip.cancelled : S.clip.saved);
+        const how = await this.d.deliver(r.blob, this.d.fileName(stage));
+        this.say(how === 'cancelled' ? S.clip.cancelled : how === 'noFolder' ? S.clip.noFolder : S.clip.saved);
       } catch {
         this.say(S.clip.failed);
       } finally {
@@ -106,6 +111,10 @@ export class ClipController {
 }
 
 const two = (n: number): string => String(n).padStart(2, '0');
+/** Título dentro do vídeo: "Crown Blast - Fase 3 - 04/11/2026 14:05:09" (hora local). */
+export function clipTitle(d: Date, stage: number): string {
+  return `Crown Blast - Fase ${stage} - ${two(d.getDate())}/${two(d.getMonth() + 1)}/${d.getFullYear()} ${two(d.getHours())}:${two(d.getMinutes())}:${two(d.getSeconds())}`;
+}
 /** crown-blast-fase3-2026-11-04-14h05m09.mp4 (hora local; a extensão vem do formato gravado). */
 export function clipFileName(d: Date, stage: number, mime: string): string {
   const ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm';
