@@ -43,11 +43,15 @@ export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'ma
   app.audio.ensureMenus(ret ? MUSIC.menus : MUSIC.title);   // aberto das regras: segue a música dos menus da batalha
 
   const goBack = (): void => {
-    if (page === 'main') app.transition(() => titleScreen(app, { cursor: 2 }), FADE_TO_TITLE);
-    else if (ret) app.transition(ret, FADE_MENU);
+    if (ret) app.transition(ret, FADE_MENU);
+    else if (page === 'main') app.transition(() => titleScreen(app, { cursor: 2 }), FADE_TO_TITLE);
     else app.transition(() => optionsScreen(app, SUBMENU_ROW[page]), FADE_MENU);
   };
-  const open = (to: OptionsPage): void => { app.transition(() => optionsScreen(app, 0, to), FADE_MENU); };
+  // Aberto de fora (pausa da batalha): o submenu volta para esta página principal, que volta para quem abriu.
+  const open = (to: OptionsPage): void => {
+    const back = ret && page === 'main' ? () => optionsScreen(app, SUBMENU_ROW[to as Exclude<OptionsPage, 'main'>], 'main', ret) : undefined;
+    app.transition(() => optionsScreen(app, 0, to, back), FADE_MENU);
+  };
   const turn = (i: number, d: number): boolean => { setDevice(st.devices, i, cycle(DEVICE_IDS, st.devices[i], d)); app.save(); return true; };
   const rows: Row[] = [];
   // Slots (Controles e Jogabilidade): SLOT escolhe com ←/→; SALVAR grava o atual; CARREGAR aplica o do slot. Nos

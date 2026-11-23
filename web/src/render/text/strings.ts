@@ -44,7 +44,12 @@ export const S = {
     // ALEATÓRIO (game/stage-choice.ts): sorteia uma das fases visíveis ao confirmar
     random: 'Aleatório', randomStage: 'Fase ?',
   },
-  battle: { pause: 'PAUSA!', hurry: 'RÁPIDO!!', timeUp: 'TEMPO ESGOTADO!', timeUpShort: 'TEMPO!', disconnected: (n: number) => `CONTROLE ${n} DESCONECTADO` },
+  battle: {
+    pauseTitle: 'Jogo pausado!', pauseMenu: { resume: 'Continuar', players: 'Jogadores', rules: 'Regras', chars: 'Trocar personagem', stage: 'Trocar mapa',
+      controls: 'Controles', gameplay: 'Jogabilidade', options: 'Som e tela', draw: 'Encerrar rodada', quit: 'Sair da partida' },
+    nextStage: 'MAPA DA PRÓXIMA RODADA:', nextStageName: (name: string) => name.toUpperCase(),
+    nextRules: 'JOGADORES/REGRAS NOVOS NA PRÓXIMA RODADA',
+    pause: 'PAUSA!', hurry: 'RÁPIDO!!', timeUp: 'TEMPO ESGOTADO!', timeUpShort: 'TEMPO!', disconnected: (n: number) => `CONTROLE ${n} DESCONECTADO` },
   score: { title: 'PLACAR', tags: ['1P', '2P', '3P', '4P', '5P'] },
   draw: { title: 'EMPATE' },
   victory: { title: 'VITÓRIA!' },
@@ -113,13 +118,14 @@ const uniq = (u: Use[]): Use[] => [...new Map(u.map(x => [`${x.style}|${x.text}`
 export const STRING_USES: readonly Use[] = uniq([
   ...as('titleMenu', [S.title.normal, S.title.battle, S.title.options, S.title.pressStart]),
   ...as('menuTitle', [S.vs.title, S.players.title, S.rules.title, S.chars.title, S.teams.title, S.options.title, S.options.controlsTitle, S.options.gameplayTitle, S.options.clipTitle, S.online.title,
-    S.online.titleFriends, S.online.titleQuick, S.online.titleCreate, S.online.titlePassword, S.online.titleAccount, S.online.titleConfig, S.online.titleControls]),
+    S.online.titleFriends, S.online.titleQuick, S.online.titleCreate, S.online.titlePassword, S.online.titleAccount, S.online.titleConfig, S.online.titleControls, S.battle.pauseTitle]),
   ...as('menuItem', [S.vs.royale, S.vs.champ, S.vs.mania, S.vs.ffa, S.vs.team, ...S.players.row, S.players.human, S.players.cpu,
-    S.players.off, ...S.rules.labels, S.rules.controls, S.rules.gameplay, ...S.rules.cpu, ...S.rules.crowns, ...S.rules.time, S.rules.no, S.rules.yes, S.teams.vs]),
+    S.players.off, ...S.rules.labels, S.rules.controls, S.rules.gameplay, ...S.rules.cpu, ...S.rules.crowns, ...S.rules.time, S.rules.no, S.rules.yes, S.teams.vs,
+    ...Object.values(S.battle.pauseMenu)]),
   ...as('spriteBlue', [S.stage.title, ...Array.from({ length: 10 }, (_, i) => S.stage.stage(i + 1)), ...STAGE_NAMES_PT]),
   ...as('banner', [S.battle.pause, S.battle.hurry, S.battle.timeUp, S.battle.timeUpShort, S.racer.press]),
   ...as('ascii8', [
-    ...[1, 2, 3, 4].map(S.battle.disconnected), ...S.score.tags, ...S.chars.tags, S.chars.allReady, S.chars.help, S.teams.help, S.racer.prize, ...Object.values(RACER_PRIZE_NAMES),
+    ...[1, 2, 3, 4].map(S.battle.disconnected), S.battle.nextStage, S.battle.nextRules, ...STAGE_NAMES_PT.map(S.battle.nextStageName), ...S.score.tags, ...S.chars.tags, S.chars.allReady, S.chars.help, S.teams.help, S.racer.prize, ...Object.values(RACER_PRIZE_NAMES),
     ...[1, 2, 3, 4, 5].map(S.options.player), ...Object.values(DEVICE_NAMES), ...[1, 2, 3, 4, 5].map(S.options.controls),
     S.options.device, S.options.all, S.options.copyFrom, S.options.copyDone, ...[1, 2, 3, 4, 5].flatMap(n => [S.options.copyHelp(n), `P${n}`]), S.options.playerHelp, S.options.pressAny, ...PAD_NAMES, '---', S.options.controlsMenu, S.options.gameplayMenu, S.options.slot, S.options.slotEmpty, S.options.slotSave,
     S.options.slotLoad, S.options.slotSaved, S.options.slotLoaded, S.options.spawns, S.options.escape, S.options.throwStun, S.options.sleep, S.options.fx, S.options.screen, S.options.screenHd, S.options.screenClassic, S.options.smooth, S.options.touchStyle, S.options.touchJoystick, S.options.touchDpad, S.options.music, S.options.sfx, S.options.ownMusic, S.options.ownAdd, S.options.ownAddShort, S.options.ownClear, S.options.ownNone,

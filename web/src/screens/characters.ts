@@ -15,6 +15,10 @@ import { createPickScheme } from './pick-scheme';
 import { rulesScreen } from './rules';
 import { stageScreen } from './stage';
 import { teamsScreen } from './teams';
+import type { SlotKind } from '../game/config';
+
+/** Pela pausa da batalha: todos confirmados → `onDone` (em vez de times/fase); B → `onBack`. */
+export interface CharPick { slots: readonly SlotKind[]; onDone(): void; onBack(): void }
 
 const { cols: COLS, rows: ROWS } = CHARSEL_PICK;
 const GRID = CHARSEL_PICK;
@@ -41,14 +45,15 @@ function drawCornerCursor(ctx: CanvasRenderingContext2D, x: number, y: number, w
  * dispositivo) decide depois de confirmar o próprio — ou, sem controlador nenhum, qualquer controle decide por
  * todos. B de qualquer controle, a qualquer momento, volta para as regras.
  */
-export function charactersScreen(app: App): Screen & {
+export function charactersScreen(app: App, pick?: CharPick): Screen & {
   charOf(i: number): number;
   readonly confirmed: readonly boolean[];
   readonly controlling: number | null;
   readonly controller: number | null;
 } {
   const setup = app.settings.setup;
-  const scheme = createPickScheme(app);
+  const slots = pick?.slots ?? setup.slots;
+  const scheme = createPickScheme(app, slots);
   const ppu = new PpuCanvas();
 
   /** ←/→ dão a volta na linha; ↑ sobe e ↓ desce de linha, dando a volta (spec §6.6). A última linha pode ser
@@ -72,7 +77,8 @@ export function charactersScreen(app: App): Screen & {
   const finishIfDone = (): void => {
     if (!scheme.activeIdx.every(i => scheme.confirmed[i])) return;
     app.save();
-    if (setup.mode === 'team') app.transition(() => teamsScreen(app), FADE_MENU);
+    if (pick) pick.onDone();
+    else if (setup.mode === 'team') app.transition(() => teamsScreen(app), FADE_MENU);
     else app.transition(() => stageScreen(app), FADE_MENU);
   };
 
@@ -91,7 +97,8 @@ export function charactersScreen(app: App): Screen & {
     update(inp) {
       if (scheme.handle(inp, moveCursor, confirm)) {
         app.audio.sfx(SFX.back);
-        app.transition(() => rulesScreen(app), FADE_MENU);
+        if (pick) pick.onBack();
+        else app.transition(() => rulesScreen(app), FADE_MENU);
       }
     },
     draw(ctx, bank, frame) {
@@ -112,7 +119,7 @@ export function charactersScreen(app: App): Screen & {
           ...obj(GRID.x[k % COLS], GRID.standeeY[Math.floor(k / COLS)], s.tile, s.pal, { big: true, prio: 3 }),
           src: charselStandeeSrc(a, k),
         }));
-        ppu.drawOver(ctx, charselSprites(a, [0, 1, 2, 3, 4].map(i => (setup.slots[i] !== 'off' ? setup.chars[i] : null)), oam));
+        ppu.drawOver(ctx, charselSprites(a, [0, 1, 2, 3, 4].map(i => (slots[i] !== 'off' ? setup.chars[i] : null)), oam));
       } else {
         // Grade dos personagens (sem ROM: nossa própria arte).
         CHARACTERS.forEach((ch, k) => {
