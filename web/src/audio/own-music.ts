@@ -39,6 +39,8 @@ export class OwnMusic implements OwnMusicPlayer {
   private el: HTMLAudioElement | null = null;
   private url: string | null = null;
   private cur = -1;
+  /** Última faixa que tocou (a próxima sorteada é outra, quando há mais de uma). */
+  private last = -1;
   private vol = 1;
   private fadeTimer: ReturnType<typeof setInterval> | null = null;
   private readonly elementListeners: ((el: HTMLAudioElement) => void)[] = [];
@@ -108,11 +110,14 @@ export class OwnMusic implements OwnMusicPlayer {
 
   pause(): void { this.endFade(); this.el?.pause(); }
 
-  /** Abaixa até zero em OWN_FADE_MS e pausa; a próxima `play()` sorteia outra faixa. */
+  /** Abaixa até zero em OWN_FADE_MS e pausa; a próxima `play()` sorteia outra faixa. A faixa já conta como
+   *  encerrada no começo do fade: no fim da rodada a troca de banco ($30) a pausa antes do fade acabar (16 f depois na
+   *  vitória, 57–58 no empate), e ela não pode voltar de onde parou na rodada seguinte. */
   fade(): void {
     const el = this.el;
     if (!el || el.paused) return;
     this.endFade();
+    this.cur = -1;
     const steps = 20, dv = el.volume / steps;
     let n = 0;
     this.fadeTimer = setInterval(() => {
@@ -131,8 +136,8 @@ export class OwnMusic implements OwnMusicPlayer {
     const n = this.tracks.length;
     if (!n) return;
     let i = Math.floor(this.rand() * n);
-    if (n > 1 && i === this.cur) i = (i + 1) % n;
-    this.cur = i;
+    if (n > 1 && i === this.last) i = (i + 1) % n;
+    this.cur = i; this.last = i;
     if (!this.el) {
       this.el = this.dom.createElement('audio');
       this.el.addEventListener('ended', () => this.next());

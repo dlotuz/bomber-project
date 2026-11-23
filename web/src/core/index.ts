@@ -10,6 +10,7 @@ export { freeSlot as freeMountSlot } from './mounts/eggs';   // teste (?montaria
 export { emptyRound, itemCode, itemOfCode, isItemCode, isEggCode, standing, playerCell } from './state';
 export { createRound, type RoundOptions } from './setup';
 export { step } from './step';
+export { endRoundDraw } from './round-end';
 export { createMatch, startRound, finishRound, setRacerPrize, clearRacerPrize, type MatchState } from './match';
 export { drawRacerPrize, RACER_PRIZES } from './racer';
 export { clockText } from './clock';

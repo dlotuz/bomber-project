@@ -47,13 +47,13 @@ export interface ControlPreset { devices: DeviceId[]; keymaps: KeyMap[]; padmaps
 export type GameplayPreset = Pick<Options, 'randomSpawns' | 'gloveEscape' | 'throwStun' | 'sleepSec'>;
 export const SLOT_COUNT = 3;
 
-/** DEV CONTROLES (Opções → Controles, depois do slot 3; fixo): três jogadores no teclado (a config "3 teclados" do
- *  emulador) e P4/P5 nos controles 2 e 1. P1 com as teclas de poder próprias (J bomba, H dancinha, G soco, Y para a
- *  bomba, T poder do P); P2 com o poder do P no Num7; P3 com o P no Delete. */
+/** DEV CONTROLES (Opções → Controles, depois do slot 3; fixo): P1 e P3 no teclado, P2 no controle 1 com o poder do P
+ *  no RT (o R vai para o RB), P4 e P5 nos controles 2 e 3 com o P no RB. P1 com as teclas de poder próprias (J bomba,
+ *  H dancinha, G soco, Y para a bomba, T poder do P); P3 com o P no Delete. As teclas do P2 ficam para os menus. */
 export function devControls(): ControlPreset {
   const none = { l: '', r: '' };
   return {
-    devices: ['kb', 'kb', 'kb', 'gp1', 'gp0'],
+    devices: ['kb', 'gp0', 'kb', 'gp1', 'gp2'],
     keymaps: [
       { up: 'KeyW', down: 'KeyS', left: 'KeyA', right: 'KeyD', a: 'KeyJ', b: 'KeyH', y: 'KeyG', x: 'KeyY', power: 'KeyT',
         start: 'Digit2', select: 'Digit1', ...none },
@@ -63,7 +63,7 @@ export function devControls(): ControlPreset {
         power: 'Delete', start: '', select: '', ...none },
       { ...DEFAULT_KEYMAPS[3] }, { ...DEFAULT_KEYMAPS[4] },
     ],
-    padmaps: [0, 1, 2, 3, 4].map(() => ({ ...DEFAULT_PADMAP })),
+    padmaps: [0, 1, 2, 3, 4].map(i => (i === 1 ? { ...DEFAULT_PADMAP, power: 7, r: 5 } : { ...DEFAULT_PADMAP })),
   };
 }
 

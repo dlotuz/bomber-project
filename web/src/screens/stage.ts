@@ -3,12 +3,11 @@ import type { App, Screen, Cue } from '../app/app';
 import { LAYOUTS } from '../game/core-api';
 import { themeOf } from '../render/art/tiles';
 import { Repeater } from '../input/repeat';
-import { hasPowerKey } from '../input/input';
 import { STAGE, STAGE_BLACK, stageScrollOffset, battleTextVisible, stageTitleDy } from '../game/timeline';
 import { FADE_OUT_1, FADE_MENU, shortBlack } from '../app/fade';
 import { SFX, MUSIC, VOICE, BANK } from '../app/audio';
 import { createMatchSession } from '../game/match-session';
-import { configFromSetup, canStart } from '../game/config';
+import { configFromSetup, canStart, extrasFromSettings } from '../game/config';
 import { S } from '../render/text/strings';
 import { drawText } from '../render/text/text';
 import { romState } from '../app/rom-api';
@@ -72,7 +71,11 @@ export function drawRandomMark(ctx: CanvasRenderingContext2D, x: number, y: numb
  *  36/21) pelas fases visíveis e, depois da última, ALEATÓRIO (game/stage-choice.ts); A/START tocam a sequência de
  *  646 f até a partida entrar (com ALEATÓRIO, a fase é sorteada no A e aparece no lugar do "?"); B volta para os
  *  personagens (ou as equipes). */
-export function stageScreen(app: App): Screen & {
+/** Escolha de fase aberta da pausa (TROCAR MAPA): A devolve a fase (ALEATÓRIO já sorteado) sem a sequência
+ *  "BATALHA!"; B volta sem trocar. */
+export interface StagePick { onPick(stage: number): void; onBack(): void }
+
+export function stageScreen(app: App, pick?: StagePick): Screen & {
   readonly stage: number; readonly picked: number | null; scroll(): number; readonly seqF: number; battleVisible(): boolean; titleDy(): number;
 } {
   const setup = app.settings.setup;
@@ -95,11 +98,9 @@ export function stageScreen(app: App): Screen & {
 
   const startBattle = (): void => {
     // a fase sorteada vale só para esta partida: `setup.stage` (o que fica salvo) continua ALEATÓRIO
-    const cfg = configFromSetup({ ...setup, stage: picked ?? setup.stage }, app.settings.options.randomSpawns, app.settings.devices, null, {
-      gloveEscape: app.settings.options.gloveEscape, throwStun: app.settings.options.throwStun,
-      sleepTicks: app.settings.options.sleepSec * 60, allMounts: app.settings.options.allMounts,
-      powerKey: app.settings.devices.map((d, i) => hasPowerKey(d, app.settings.keymaps[i], app.settings.padmaps[i])),
-    });
+    const st = app.settings;
+    const cfg = configFromSetup({ ...setup, stage: picked ?? setup.stage }, st.options.randomSpawns, st.devices, null,
+      extrasFromSettings(st.options, st.devices, st.keymaps, st.padmaps));
     const cues: Cue[] = [
       { at: 32, run: fadeAudio }, { at: 233, run: bankCue(BANK.battle) }, { at: 245, run: musicCue(MUSIC.battle) },
     ];
@@ -137,6 +138,7 @@ export function stageScreen(app: App): Screen & {
       if (pulse & BTN.RIGHT) { dir = 1; scrollT = 0; app.audio.sfx(SFX.move); return; }
       const p = inp.pressedAny;
       if (p & (BTN.A | BTN.START)) {
+        if (pick) { app.audio.sfx(SFX.confirm); pick.onPick(resolveStage(setup.stage)); return; }
         if (!canStart(setup.slots)) { app.audio.sfx(SFX.back); return; }   // não deveria acontecer
         app.audio.sfx(SFX.confirm);
         picked = resolveStage(setup.stage);   // ALEATÓRIO: sorteia aqui, uma vez (fora do RNG do núcleo)
@@ -145,6 +147,7 @@ export function stageScreen(app: App): Screen & {
       }
       if (p & BTN.B) {
         app.audio.sfx(SFX.back);
+        if (pick) { pick.onBack(); return; }
         app.transition(() => (setup.mode === 'team' ? teamsScreen(app) : charactersScreen(app)), FADE_MENU);
       }
     },

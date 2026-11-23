@@ -12,7 +12,10 @@ export interface HdSizes { item?: number; title?: number; hand?: number; small?:
 
 /** Quadro arredondado por baixo dos textos (destaque), em px da base. */
 export interface HdPanel { x: number; y: number; w: number; h: number; fill: string; stroke: string; glow?: string }
-const state = { on: false, cursor: null as null | [number, number], texts: [] as HdText[], sizes: {} as HdSizes, bg: 'menu' as HdBg, panels: [] as HdPanel[] };
+/** `layer`: `under` = tela de menu (fundo HD por baixo da base transparente); `over` = menu por cima da partida (sem
+ *  fundo, desenhado depois da base: o menu da pausa). `capture`: o `drawText` desvia para cá só enquanto vale. */
+const state = { on: false, cursor: null as null | [number, number], texts: [] as HdText[], sizes: {} as HdSizes, bg: 'menu' as HdBg, panels: [] as HdPanel[],
+  layer: 'under' as 'under' | 'over', capture: false };
 /** Fundo: `menu` = quebra-cabeça com corda; `title` = arte do título (4:3) centrada no preto. */
 export type HdBg = 'menu' | 'title' | 'lobby';
 
@@ -63,7 +66,18 @@ const handImg = (): HTMLImageElement | null => {
 };
 
 /** Zera o quadro (chamado antes de cada `app.draw`). */
-export function hdBegin(): void { state.on = false; state.cursor = null; state.texts.length = 0; state.sizes = {}; state.bg = 'menu'; state.panels.length = 0; }
+export function hdBegin(): void {
+  state.on = false; state.cursor = null; state.texts.length = 0; state.sizes = {}; state.bg = 'menu'; state.panels.length = 0;
+  state.layer = 'under'; state.capture = false;
+}
+/** Menu por cima da partida (pausa): sem fundo e sem limpar a base; textos, quadros e mão vão por cima da imagem do
+ *  jogo. Os `drawText` de menu entre este e `hdOverlayEnd` viram HD; os de depois (avisos do clipe etc.) seguem na base. */
+export function hdOverlay(cursor?: readonly [number, number] | null, sizes: HdSizes = {}): void {
+  state.on = true; state.layer = 'over'; state.capture = true; state.bg = 'lobby'; state.sizes = sizes;
+  state.cursor = cursor ? [cursor[0], cursor[1]] : null;
+  state.panels.length = 0; state.texts.length = 0;
+}
+export function hdOverlayEnd(): void { state.capture = false; }
 /** Quadro de destaque na tela de menu atual (depois de `hdMenu`), desenhado entre o fundo e os textos. */
 export function hdPanel(p: HdPanel): void { if (state.on) state.panels.push(p); }
 export const hdActive = (): boolean => state.on;
@@ -74,7 +88,7 @@ export const hdTexts = (): readonly HdText[] => state.texts;
 export function hdMenu(ctx: CanvasRenderingContext2D, cursor?: readonly [number, number] | null, sizes: HdSizes = {},
   bg: HdBg = 'menu'): void {
   ctx.clearRect(0, 0, 256, 224);
-  state.on = true;
+  state.on = true; state.layer = 'under'; state.capture = true;
   state.sizes = sizes;
   state.bg = bg;
   state.cursor = cursor ? [cursor[0], cursor[1]] : null;
@@ -85,7 +99,7 @@ export function hdMenu(ctx: CanvasRenderingContext2D, cursor?: readonly [number,
 export function hdText(style: TextStyleId, text: string, x: number, y: number, tone: Tone = 'default',
   align: 'left' | 'center' | 'right' = 'left', color?: string): number | null {
   const row = ROW[style];
-  if (!state.on || !row) return null;
+  if (!state.on || !state.capture || !row) return null;
   const size = (style === 'menuItem' ? state.sizes.item : style === 'menuTitle' ? state.sizes.title : style === 'ascii8' ? state.sizes.small : undefined) ?? SIZE[style]!;
   state.texts.push({ text, x, y, size, row, tone, align, title: style === 'menuTitle', art: style === 'titleMenu', color: style === 'menuTitle' ? undefined : color });
   return text.length * size * 0.52;
@@ -219,12 +233,31 @@ function drawBg(out: CanvasRenderingContext2D): boolean {
 /** Desenha a camada HD em `out` (escalas `sx` × `sy`; `sx` maior com a proporção 4:3 da TV; a imagem do jogo começa
  *  em (`ox`, `oy`) do canvas); depois o chamador põe a base por cima. Sem menu HD, não faz nada. */
 export function drawHdMenu(out: CanvasRenderingContext2D, sx: number, sy = sx, ox = 0, oy = 0): boolean {
-  if (!state.on) return false;
-  const s = sy;   // brilho/sombra do texto em px de dispositivo seguem a escala vertical
+  if (!state.on || state.layer !== 'under') return false;
   out.setTransform(sx, 0, 0, sy, ox, oy);
   out.imageSmoothingEnabled = true;
   out.imageSmoothingQuality = 'high';
   drawBg(out);
+  drawLayer(out, sy);
+  out.setTransform(1, 0, 0, 1, 0, 0);
+  out.imageSmoothingEnabled = false;
+  return true;
+}
+/** Menu por cima da partida (`hdOverlay`), depois da base; `alpha` = brilho do App (some junto no fade). */
+export function drawHdOverlay(out: CanvasRenderingContext2D, sx: number, sy = sx, ox = 0, oy = 0, alpha = 1): boolean {
+  if (!state.on || state.layer !== 'over') return false;
+  out.setTransform(sx, 0, 0, sy, ox, oy);
+  out.imageSmoothingEnabled = true;
+  out.imageSmoothingQuality = 'high';
+  out.globalAlpha = Math.max(0, Math.min(1, alpha));
+  drawLayer(out, sy);
+  out.globalAlpha = 1;
+  out.setTransform(1, 0, 0, 1, 0, 0);
+  out.imageSmoothingEnabled = false;
+  return true;
+}
+/** Quadros, textos e mão (o transform já posto). */
+function drawLayer(out: CanvasRenderingContext2D, s: number): void {
   for (const p of state.panels) drawPanel(out, p, s);
   for (const t of state.texts) if (t.art) drawArtLabel(out, t, s); else drawLabel(out, t);
   if (state.cursor) {
@@ -232,7 +265,4 @@ export function drawHdMenu(out: CanvasRenderingContext2D, sx: number, sy = sx, o
     const t = handTarget(state.texts, hx, hy);
     drawHand(out, hx, t ? inkCenterY(out, t) : hy + 8, state.sizes.hand ?? 1.6);
   }
-  out.setTransform(1, 0, 0, 1, 0, 0);
-  out.imageSmoothingEnabled = false;
-  return true;
 }

@@ -90,7 +90,7 @@ export class ClipRecorder implements RecorderLike {
     return this.stopped;
   }
 
-  async take(ms: number): Promise<{ blob: Blob; durMs: number } | null> {
+  async take(ms: number, title?: string): Promise<{ blob: Blob; durMs: number } | null> {
     const rec = this.rec;
     if (rec && !this.stopped && !this.failed && rec.state !== 'inactive') {
       // os dados ainda no codificador: o `requestData` entrega o que houver (sem esperar para sempre)
@@ -102,7 +102,7 @@ export class ClipRecorder implements RecorderLike {
     }
     if (this.stopped) await this.stopped;
     await this.chain;
-    const f = this.ring.build(ms);
+    const f = this.ring.build(ms, title);
     return f ? { blob: new Blob(f.parts as BlobPart[], { type: this.type }), durMs: f.durMs } : null;
   }
 }

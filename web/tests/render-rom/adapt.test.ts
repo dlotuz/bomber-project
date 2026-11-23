@@ -17,12 +17,12 @@ describe('readScene', () => {
     expect(sc.gridBombs.get(19)).toEqual({ type: 1, born: 77 });
     expect(sc.objs).toEqual([]);
   });
-  it('bomba chutada = OBJ no chão; no ar = só o voador', () => {
+  it('bomba chutada = OBJ no chão, com o tipo (espinho e remota mantêm a cara); no ar = só o voador', () => {
     const s = fakeRound();
-    s.bombs.push(bomb({ id: 1, state: 'kicked', x: 100 * 256 + 128, y: 80 * 256 }), bomb({ id: 2, state: 'air' }));
+    s.bombs.push(bomb({ id: 1, state: 'kicked', x: 100 * 256 + 128, y: 80 * 256, type: 2, born: 40 }), bomb({ id: 2, state: 'air' }));
     s.flyers.push(flyer({ kind: 'bomb', ref: 2, x: 60 * 256, y: 70 * 256, z: -9 }));
     expect(readScene(s, 0, newMemo()).objs).toEqual([
-      { kind: 'bomb', item: 0, x: 100, y: 80, z: 0 },
+      { kind: 'bomb', item: 0, x: 100, y: 80, z: 0, bomb: { type: 2, born: 40 } },
       { kind: 'bomb', item: 0, x: 60, y: 70, z: 9 }]);
   });
   it('bomba na mão: no tick do A não aparece; depois sobe 6, 10, 14, 16 e fica a 16 (D13; emulador, scratchpad bombmao/emu)', () => {
@@ -34,7 +34,7 @@ describe('readScene', () => {
     expect([201, 202, 203, 204, 205].map(t => readScene(s, t, newMemo()).objs[0].z)).toEqual([6, 10, 14, 16, 16]);
     p.act = 'carryWalk';
     // olhando para baixo: na frente de quem segura (chave Y + 8)
-    expect(readScene(s, 300, newMemo()).objs[0]).toEqual({ kind: 'bomb', item: 0, x: 64, y: 96, z: 16, sortY: 104 });
+    expect(readScene(s, 300, newMemo()).objs[0]).toMatchObject({ kind: 'bomb', item: 0, x: 64, y: 96, z: 16, sortY: 104 });
   });
   it('bomba na mão olhando para o lado: 4 px para esse lado (8 no meio do levantar); para cima: atrás de quem segura', () => {
     const s = fakeRound();
@@ -45,13 +45,13 @@ describe('readScene', () => {
     p.face = 2;
     expect(readScene(s, 202, newMemo()).objs[0].x).toBe(72);
     p.act = 'carryIdle'; p.face = 0;
-    expect(readScene(s, 300, newMemo()).objs[0]).toEqual({ kind: 'bomb', item: 0, x: 64, y: 96, z: 16, sortY: 88 });
+    expect(readScene(s, 300, newMemo()).objs[0]).toMatchObject({ kind: 'bomb', item: 0, x: 64, y: 96, z: 16, sortY: 88 });
   });
   it('bomba na mão do Bad Bomber: na posição dele', () => {
     const s = fakeRound();
     s.bad.push({ slot: 3, x: 15, y: 120, phase: 'patrol', face: 2, live: -1, readyAt: 0, born: 0 });
     s.bombs.push(bomb({ id: 8, owner: 3, bad: true, state: 'held' }));
-    expect(readScene(s, 0, newMemo()).objs[0]).toEqual({ kind: 'bomb', item: 0, x: 15, y: 120, z: 16 });
+    expect(readScene(s, 0, newMemo()).objs[0]).toMatchObject({ kind: 'bomb', item: 0, x: 15, y: 120, z: 16 });
   });
   it('item voando: id em ref, altura = −z', () => {
     const s = fakeRound();

@@ -9,10 +9,12 @@ const mem = (): StorageLike & { data: Map<string, string> } => {
 };
 
 describe('configurações v4', () => {
-  it('padrão: versão 4, já com o DEV CONTROLES carregado (3 teclados, P4/P5 nos controles 2 e 1), teclas e botões por jogador, opções', () => {
+  it('padrão: versão 4, já com o DEV CONTROLES carregado (P1/P3 no teclado, P2/P4/P5 nos controles 1, 2 e 3), teclas e botões por jogador, opções', () => {
     const s = defaultSettings();
     expect(s.version).toBe(4);
-    expect(s.devices).toEqual(['kb', 'kb', 'kb', 'gp1', 'gp0']);
+    expect(s.devices).toEqual(['kb', 'gp0', 'kb', 'gp1', 'gp2']);
+    expect([s.padmaps[1].power, s.padmaps[1].r]).toEqual([7, 5]);   // P2: P no RT, R no RB
+    expect(s.padmaps[3].power).toBe(5);                               // P4/P5: P no RB
     expect(s.keymaps[1].power).toBe('Numpad7');
     expect([s.keymaps.length, s.padmaps.length]).toEqual([5, 5]);
     expect(s.padmaps[4]).toEqual(DEFAULT_PADMAP);
@@ -116,7 +118,7 @@ describe('slots de controles e jogabilidade', () => {
       gameplaySlots: [null, { gloveEscape: 99, sleepSec: 5 }, 'x'],
     });
     expect(s.controlSlots[0]).toBeNull();
-    expect([s.controlSlots[1]!.devices[1], s.controlSlots[1]!.keymaps[0].a]).toEqual(['kb', 'KeyZ']);
+    expect([s.controlSlots[1]!.devices[1], s.controlSlots[1]!.keymaps[0].a]).toEqual(['gp0', 'KeyZ']);   // 'xx' cai no padrão do P2 (controle 1)
     expect(s.gameplaySlots).toEqual([null, { randomSpawns: true, gloveEscape: 10, throwStun: false, sleepSec: 5 }, null]);
   });
 });

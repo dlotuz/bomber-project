@@ -17,9 +17,13 @@ const KINDS: readonly SlotKind[] = ['human', 'cpu', 'off'];
 const LABEL: Record<SlotKind, string> = { human: S.players.human, cpu: S.players.cpu, off: S.players.off };
 const TONE: Record<SlotKind, Tone> = { human: 'green', cpu: 'red', off: 'blue' };
 
+/** Pela pausa da batalha: edita `slots` (os da partida em andamento); A → `onDone` (recusado se `ok` disser não);
+ *  B → `onBack`. */
+export interface SlotPick { slots: SlotKind[]; ok(slots: readonly SlotKind[]): boolean; onDone(): void; onBack(): void }
+
 /** "Defina os jogadores": Humano / CPU / Nenhum por linha, sem time (a T10 cuida disso em `teamsScreen`). */
-export function playersScreen(app: App): Screen & { readonly cursor: number; value(i: number): { text: string; tone: Tone } } {
-  const setup = app.settings.setup;
+export function playersScreen(app: App, pick?: SlotPick): Screen & { readonly cursor: number; value(i: number): { text: string; tone: Tone } } {
+  const setup = pick ? { slots: pick.slots } : app.settings.setup;
   app.audio.ensureMenus(MUSIC.menus);
 
   const value = (i: number): { text: string; tone: Tone } => {
@@ -31,7 +35,7 @@ export function playersScreen(app: App): Screen & { readonly cursor: number; val
     const next = idx + d;
     if (next < 0 || next >= KINDS.length) return false;
     setup.slots[i] = KINDS[next];
-    app.save();
+    if (!pick) app.save();
     return true;
   };
   const rows: MenuRow[] = [0, 1, 2, 3, 4].map(i => ({
@@ -40,6 +44,7 @@ export function playersScreen(app: App): Screen & { readonly cursor: number; val
     right: () => shift(i, -1),
     select: () => {
       if (!canStart(setup.slots)) return false;
+      if (pick) { if (!pick.ok(setup.slots)) return false; pick.onDone(); return true; }
       app.transition(() => rulesScreen(app), FADE_MENU);
       return true;
     },
@@ -51,7 +56,9 @@ export function playersScreen(app: App): Screen & { readonly cursor: number; val
     get cursor() { return menu.cursor; },
     value,
     update(inp) {
-      if (menu.update(inp.any, inp.pressedAny, app.audio) === 'back') app.transition(() => titleScreen(app), FADE_TO_TITLE);
+      if (menu.update(inp.any, inp.pressedAny, app.audio) !== 'back') return;
+      if (pick) pick.onBack();
+      else app.transition(() => titleScreen(app), FADE_TO_TITLE);
     },
     draw(ctx, bank) {
       const names: Record<SlotKind, string> = { human: S.lobby.human, cpu: S.lobby.cpu, off: S.lobby.off };

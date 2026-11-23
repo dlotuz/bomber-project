@@ -2,7 +2,7 @@ import { SCREEN_H, SCREEN_W, type Display, type ScreenMode } from '../display';
 import { drawBackdrop } from './backdrop';
 import { smoothFactor, smoothUpscale } from './smooth-gl';
 import { drawFx, prepareFx } from './draw';
-import { drawHdMenu } from '../hd-menu';
+import { drawHdMenu, drawHdOverlay } from '../hd-menu';
 import { drawHdBattleLayer } from '../hdart/mode';
 import type { FxFrame } from './state';
 
@@ -55,6 +55,7 @@ export function present(d: Display, frame: FxFrame | null, fade: number, mode: S
     drawFx(out, frame, prep, fade);
     out.restore();
   }
+  drawHdOverlay(out, sx, sy, ox, oy, fade);   // menu da pausa: por cima da partida e dos efeitos
   out.setTransform(1, 0, 0, 1, 0, 0);
   out.globalAlpha = 1;
   out.globalCompositeOperation = 'source-over';

@@ -1,7 +1,8 @@
 import { CHAR_COUNT } from '../render/art/charskins';
 import { defaultRules, type Rules } from './core-api';
 import { STAGE_MAX } from './stages';
-import type { DeviceId } from '../input/input';
+import { hasPowerKey, type DeviceId, type KeyMap, type PadMap } from '../input/input';
+import type { DevScenario } from './dev-scenario';
 
 export type SlotKind = 'human' | 'cpu' | 'off';
 /** Formato estrutural de `Setup` (app/settings.ts), para não depender da ordem de merge. */
@@ -14,6 +15,12 @@ export interface GameConfig {
   rules: Rules; stage: number; chars: number[]; humans: boolean[]; devices: DeviceId[]; seed: number | null;
   /** Teste (?montaria=N, N em hexa 1–F): os jogadores humanos começam cada rodada montados nesse tipo. */
   devMount?: number;
+  /** Teste (?limpo): cada rodada começa sem os blocos destrutíveis. */
+  devClear?: boolean;
+  /** Teste (?crono): cronômetro em cima de cada bomba e tempo da última explosão. */
+  devClock?: boolean;
+  /** Teste (?cenario=chute): cenário montado (game/dev-scenario.ts). */
+  devScenario?: DevScenario;
 }
 const DEFAULT_DEVICES: DeviceId[] = ['kb', 'kb', 'gp0', 'gp1', 'gp2'];
 
@@ -22,6 +29,15 @@ export const canStart = (slots: readonly SlotKind[]): boolean => activeCount(slo
 
 /** Regras extras que vêm das Opções (não do menu de regras). */
 export type ExtraRules = Partial<Pick<Rules, 'gloveEscape' | 'throwStun' | 'sleepTicks' | 'allMounts' | 'powerKey'>>;
+
+/** As regras extras a partir das Opções e dos controles atuais (início da partida e mudança na pausa). */
+export function extrasFromSettings(o: { gloveEscape: number; throwStun: boolean; sleepSec: number; allMounts: boolean },
+  devices: readonly DeviceId[], keymaps: readonly (KeyMap | undefined)[], padmaps: readonly (PadMap | undefined)[]): ExtraRules {
+  return {
+    gloveEscape: o.gloveEscape, throwStun: o.throwStun, sleepTicks: o.sleepSec * 60, allMounts: o.allMounts,
+    powerKey: devices.map((d, i) => hasPowerKey(d, keymaps[i], padmaps[i])),
+  };
+}
 
 export function configFromSetup(setup: SetupLike, randomSpawns: boolean, devices: readonly DeviceId[], seed: number | null = null,
   extras: ExtraRules = {}): GameConfig {
@@ -43,6 +59,11 @@ const int = (v: string | null, def: number, min: number, max: number): number =>
  *  allmounts (0 = só os 7 tipos do Battle; padrão 13), montaria (tipo em hexa: humanos começam montados, para testes). */
 export function parseConfig(search: string): GameConfig {
   const q = new URLSearchParams(search);
+  // ?cenario=chute: montaria do chute (A) contra dois bonecos parados (game/dev-scenario.ts)
+  if (q.get('cenario') === 'chute') {
+    for (const [k, v] of [['players', '3'], ['humans', '1'], ['time', '4'], ['matches', '5'], ['montaria', 'a']]) if (!q.has(k)) q.set(k, v);
+    q.set('limpo', '');
+  }
   const players = int(q.get('players'), 5, 2, 5);
   const humansN = int(q.get('humans'), 5, 0, 5);
   const raw = (q.get('chars') ?? '').split(',').map(s => Number.parseInt(s, 10));
@@ -59,5 +80,8 @@ export function parseConfig(search: string): GameConfig {
     { allMounts: q.get('allmounts') !== '0' });
   const m = Number.parseInt(q.get('montaria') ?? '', 16);
   if (m >= 1 && m <= 15) cfg.devMount = m;
+  if (q.has('limpo')) cfg.devClear = true;
+  if (q.has('crono')) cfg.devClock = true;
+  if (q.get('cenario') === 'chute') cfg.devScenario = 'chute';
   return cfg;
 }

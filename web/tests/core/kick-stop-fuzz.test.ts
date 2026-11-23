@@ -1,6 +1,8 @@
 // Varredura "bomba chutada parando sem motivo" (aj/stop2). Para cada tick: toda bomba que estava rolando ('kicked') e
 // virou parada ('idle') precisa de um motivo físico ou do X do DONO ($C1:38CE → $C2:5A77). Motivos aceitos:
 //  - donoX: o dono (bomba +$20) com X segurado neste tick;
+//  - montariaX: extra — quem chutou a bomba de outro montado na montaria do chute (tipo A), com X segurado (aí o X do
+//    dono não vale);
 //  - corpo: jogador de pé na casa da bomba ou na da frente ($C1:3644, $C1:36AC, $C1:3403);
 //  - bloco: casa da frente com parede/bloco/pressão (bits $8400), ovo, outra bomba, ou a arena manda parar;
 //  - fusao: extra das bombas em movimento que se batem (a atingida evolui e para).
@@ -20,6 +22,7 @@ import { passesBomb } from '../../src/core/movement';
 import { isEggCode, playerCell, standing } from '../../src/core/state';
 import { STAGES } from '../../src/core/stages';
 import { rules } from './kit';
+import { riderKicked } from '../../src/core/kick';
 
 interface Pre { cell: number; dir: number; level: number; owner: number; kickedBy: number }
 export interface Stop { tick: number; id: number; owner: number; kickedBy: number; cell: number; reason: string }
@@ -37,7 +40,9 @@ function blockedAt(s: RoundState, b: Bomb, f: number): boolean {
 
 /** Motivo da parada da bomba `b` (rolava antes deste tick: `pre`), ou null se não há motivo. */
 export function stopReason(s: RoundState, b: Bomb, pre: Pre): string | null {
-  if ((s.players[b.owner]?.prevBtn ?? 0) & BTN.X) return 'donoX';
+  const rider = riderKicked(s, { ...b, kickedBy: pre.kickedBy });
+  if (rider) { if (rider.prevBtn & BTN.X) return 'montariaX'; }
+  else if ((s.players[b.owner]?.prevBtn ?? 0) & BTN.X) return 'donoX';
   if ((b.level ?? 0) > pre.level) return 'fusao';
   const dirs = [...new Set([b.dir, pre.dir])];
   if (body(s, b.cell) || dirs.some(d => body(s, faceStep(b.cell, d)))) return 'corpo';
@@ -183,6 +188,26 @@ function scenario(who: number, btn: number, delay: number, hold: number, o: Para
   return { s, b, stops };
 }
 
+describe('montaria do chute (tipo A): o único poder dela, mais forte', () => {
+  it('chuta a bomba do outro mesmo com o dono segurando X (a pé, com o item Chute, não)', () => {
+    for (const [mount, kicks] of [[0xa, true], [undefined, false]] as const) {
+      const { s, b } = kickScene(mount === undefined ? {} : { kickerMount: mount });
+      for (let i = 0; i < 40 && b.state !== 'kicked'; i++) step(s, [BTN.RIGHT, BTN.X, 0, 0, 0]);
+      expect(b.state === 'kicked').toBe(kicks);
+    }
+  });
+  it('o X do dono não para a bomba dele chutada pela montaria A', () => {
+    const { b } = scenario(1, BTN.X, 6, 30, { kickerMount: 0xa });
+    expect(b.cell).toBe(C(14, 1));
+  });
+  it('com X, para a bomba do outro que chutou (sem a montaria, não para)', () => {
+    for (const [mount, stops] of [[0xa, true], [0x3, false]] as const) {
+      const { b } = scenario(0, BTN.X, 6, 1, { kickerMount: mount });
+      expect(b.cell !== C(14, 1)).toBe(stops);
+    }
+  });
+});
+
 describe('cenários dirigidos: P1 chuta a bomba do P2', () => {
   const MOUNTS_ALL = [undefined, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf];
   it('sem ação de ninguém, a bomba vai até a parede (coluna 14)', () => {
@@ -190,7 +215,7 @@ describe('cenários dirigidos: P1 chuta a bomba do P2', () => {
     expect([b.cell, stops.map(x => x.reason)]).toEqual([C(14, 1), ['bloco']]);
   });
   for (const [who, name] of [[2, 'terceiro'], [0, 'chutador'], [1, 'dono']] as const) {
-    it(`${name}: cada ação (a pé e montado) não para a bomba alheia — só o X do dono (ou o corpo no caminho)`, () => {
+    it(`${name}: cada ação (a pé e montado) não para a bomba alheia — só o X do dono, o X de quem chutou montado na A (ou o corpo no caminho)`, () => {
       const errs: string[] = [];
       const seen = new Set<string>();
       for (const mount of MOUNTS_ALL) for (const [an, btn] of Object.entries(ACTIONS)) for (const pk of [false, true]) {
@@ -198,7 +223,8 @@ describe('cenários dirigidos: P1 chuta a bomba do P2', () => {
           const o = who === 2 ? { thirdMount: mount } : who === 0 ? { kickerMount: mount } : { ownerMount: mount };
           const { b, stops } = scenario(who, btn, delay, an.includes('segurado') ? 60 : 1, o, pk);
           const early = stops.filter(x => !(x.reason === 'bloco' && x.cell === C(14, 1)));
-          const allowed = who === 1 && btn & BTN.X ? ['donoX', 'corpo'] : ['corpo'];
+          const allowed = who === 1 && btn & BTN.X && !(o.kickerMount === 0xa) ? ['donoX', 'corpo']
+            : who === 0 && mount === 0xa && btn & BTN.X ? ['montariaX', 'corpo'] : ['corpo'];
           for (const e of early) {
             const line = `${name} ${an}${pk ? ' (tecla P)' : ''} montaria ${mount ?? '-'} atraso ${delay}: parou na casa ${e.cell} (${e.reason}), final ${b.cell}`;
             if (!allowed.includes(e.reason)) errs.push(line); else if (process.env.CB_STOP_LOG) seen.add(line.replace(/ atraso \d+/, ''));

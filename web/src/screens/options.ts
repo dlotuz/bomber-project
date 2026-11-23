@@ -12,6 +12,13 @@ import { titleScreen } from './title';
 import { remapScreen } from './remap';
 import { isTouchDevice, setTouchStyle, touchStyle } from '../input/touch';
 import type { Tone } from '../render/text/types';
+import { glyphChars } from '../render/text/text';
+
+/** Nome da pasta na fonte das listas: maiúsculas, sem acento o que a fonte não tem, até 16 letras. */
+export function folderLabel(name: string, ok: ReadonlySet<string> = glyphChars('ascii8')): string {
+  const up = [...name.toUpperCase()].map(c => (c === ' ' || ok.has(c) ? c : c.normalize('NFD')[0])).map(c => (c === ' ' || ok.has(c) ? c : '?')).join('');
+  return up.length > 16 ? up.slice(0, 15) + '.' : up;
+}
 
 interface Row extends MenuRow { label: string; value?: () => string; tone?: () => Tone | undefined }
 
@@ -43,11 +50,15 @@ export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'ma
   app.audio.ensureMenus(ret ? MUSIC.menus : MUSIC.title);   // aberto das regras: segue a música dos menus da batalha
 
   const goBack = (): void => {
-    if (page === 'main') app.transition(() => titleScreen(app, { cursor: 2 }), FADE_TO_TITLE);
-    else if (ret) app.transition(ret, FADE_MENU);
+    if (ret) app.transition(ret, FADE_MENU);
+    else if (page === 'main') app.transition(() => titleScreen(app, { cursor: 2 }), FADE_TO_TITLE);
     else app.transition(() => optionsScreen(app, SUBMENU_ROW[page]), FADE_MENU);
   };
-  const open = (to: OptionsPage): void => { app.transition(() => optionsScreen(app, 0, to), FADE_MENU); };
+  // Aberto de fora (pausa da batalha): o submenu volta para esta página principal, que volta para quem abriu.
+  const open = (to: OptionsPage): void => {
+    const back = ret && page === 'main' ? () => optionsScreen(app, SUBMENU_ROW[to as Exclude<OptionsPage, 'main'>], 'main', ret) : undefined;
+    app.transition(() => optionsScreen(app, 0, to, back), FADE_MENU);
+  };
   const turn = (i: number, d: number): boolean => { setDevice(st.devices, i, cycle(DEVICE_IDS, st.devices[i], d)); app.save(); return true; };
   const rows: Row[] = [];
   // Slots (Controles e Jogabilidade): SLOT escolhe com ←/→; SALVAR grava o atual; CARREGAR aplica o do slot. Nos
@@ -112,6 +123,19 @@ export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'ma
       tone: () => (off ? 'gray' : conflict('clipPad') ? 'orange' : undefined),
       select: () => { capturing = 'clipPad'; },
       left: () => { opt().clipPad = -1; bound(); return true; }, right: () => { opt().clipPad = -1; bound(); return true; },
+    });
+    // PASTA: onde o clipe é salvo (A abre o seletor de pasta do sistema; ←/→ volta para Downloads). Só no Chrome do computador.
+    const folder = app.clipFolder;
+    if (folder?.supported) rows.push({
+      id: 'clipFolder', label: S.options.clipFolder, disabled: off,
+      value: () => (folder.name ? folderLabel(folder.name) : S.options.clipDownloads),
+      tone: () => (off ? 'gray' : undefined),
+      select: () => {
+        note = null;
+        void folder.pick().then(r => { if (r === 'failed') note = { id: 'clipFolder', text: S.options.clipFolderFail }; });
+      },
+      left: () => { const had = !!folder.name; void folder.clear(); return had; },
+      right: () => { const had = !!folder.name; void folder.clear(); return had; },
     });
   }
   if (page === 'controls') for (let i = 0; i < 5; i++) {
@@ -224,6 +248,7 @@ export function optionsScreen(app: App, cursor?: number, page: OptionsPage = 'ma
     if (off) return S.options.clipUnsupported;
     const id = rows[menu.cursor].id, c = conflict(id);
     if (c) return S.options.clipConflict(S.options.actions[c.action], who(c));
+    if (id === 'clipFolder') return said('clipFolder') || S.options.clipFolderHelp;
     return id === 'clipKey' || id === 'clipPad' ? S.options.clipBindHelp : S.options.clipHelp;
   };
   /** Captura do botão do clipe: tecla (Esc cancela; as do navegador e do sistema não valem) ou botão de qualquer controle. */

@@ -29,7 +29,11 @@ export const RULES_ROW_Y = 48, RULES_ROW_STEP = 19;
 
 /** "Configure as regras": os 6 ajustes do original (§6.5, §3.14) e atalhos para os submenus Controles e
  *  Jogabilidade das Opções (voltam para cá). Spawn aleatório mora em Jogabilidade (T3). */
-export function rulesScreen(app: App, cursor?: number): Screen & { readonly cursor: number; values(): string[]; tones(): Tone[] } {
+/** Pela pausa da batalha: A em qualquer linha → `onDone`; B → `onBack`. Sem os atalhos de Controles/Jogabilidade
+ *  (a pausa já tem os dois). */
+export interface RulesPick { onDone(): void; onBack(): void }
+
+export function rulesScreen(app: App, cursor?: number, pick?: RulesPick): Screen & { readonly cursor: number; values(): string[]; tones(): Tone[] } {
   const r = app.settings.setup.rules;
   app.audio.ensureMenus(MUSIC.menus);
   // A Corrida Bônus saiu das regras: um valor antigo salvo não pode ficar ligado sem ter como desligar.
@@ -43,7 +47,10 @@ export function rulesScreen(app: App, cursor?: number): Screen & { readonly curs
     CPU_TONE[r.cpuLevel], 'green', r.timeIdx === S.rules.time.length - 1 ? 'blue' : 'green',
     onOffTone(r.suddenDeath), onOffTone(r.badBomber),
   ];
-  const next = (): boolean => { app.transition(() => charactersScreen(app), FADE_MENU); return true; };
+  const next = (): boolean => {
+    if (pick) pick.onDone(); else app.transition(() => charactersScreen(app), FADE_MENU);
+    return true;
+  };
   // `get`/`set` (em vez de indexar `r[key]` com uma chave-união) porque `cpuLevel` é `0 | 1 | 2`
   // e `matches`/`timeIdx` são `number`: escrever por uma chave só união faz o TS pedir a interseção
   // dos tipos das três propriedades, não a união.
@@ -71,7 +78,7 @@ export function rulesScreen(app: App, cursor?: number): Screen & { readonly curs
   const sub = (id: string, page: OptionsPage): MenuRow => ({
     id, select: () => { const back = rows.findIndex(r => r.id === id); app.transition(() => optionsScreen(app, 0, page, () => rulesScreen(app, back)), FADE_MENU); },
   });
-  rows.push(sub('controls', 'controls'), sub('gameplay', 'gameplay'));
+  if (!pick) rows.push(sub('controls', 'controls'), sub('gameplay', 'gameplay'));
   const labels = [...S.rules.labels, S.rules.controls, S.rules.gameplay];
   const menu = new Menu(rows, { cursor });
 
@@ -81,13 +88,14 @@ export function rulesScreen(app: App, cursor?: number): Screen & { readonly curs
     values,
     tones,
     update(inp) {
-      if (menu.update(inp.any, inp.pressedAny, app.audio) === 'back') app.transition(() => playersScreen(app), FADE_MENU);
+      if (menu.update(inp.any, inp.pressedAny, app.audio) !== 'back') return;
+      if (pick) pick.onBack(); else app.transition(() => playersScreen(app), FADE_MENU);
     },
     draw(ctx, bank) {
       const L = S.lobby, onOffL = (b: boolean): string => (b ? L.yes : L.no);
       const shown = [L.levels[r.cpuLevel], S.rules.crowns[r.matches - 1], L.time[r.timeIdx], onOffL(r.suddenDeath), onOffL(r.badBomber)];
       const tn = tones();
-      const items = L.rules.map((label, i) => ({ label, value: shown[i] ?? '', tone: tn[i] }));
+      const items = L.rules.slice(0, rows.length).map((label, i) => ({ label, value: shown[i] ?? '', tone: tn[i] }));
       drawLobbyList(ctx, bank, S.rules.title, items, menu.cursor, L.rulesHelp);
     },
   };

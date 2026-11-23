@@ -9,6 +9,7 @@ import { BTN } from '../game/core-api';
 import type { App } from '../app/app';
 import { Repeater, DIRS } from '../input/repeat';
 import type { MenuInput } from '../input/input';
+import type { SlotKind } from '../game/config';
 
 export interface PickScheme {
   /** Slots com `setup.slots[i] !== 'off'`, em ordem. */
@@ -31,10 +32,10 @@ export interface PickScheme {
   handle(inp: MenuInput, move: (i: number, pulse: number) => void, tryConfirm: (i: number) => void): boolean;
 }
 
-export function createPickScheme(app: App): PickScheme {
-  const setup = app.settings.setup;
-  const active = (i: number): boolean => setup.slots[i] !== 'off';
-  const human = (i: number): boolean => setup.slots[i] === 'human';
+/** `slots`: quem joga (padrão: o setup das Opções; pela pausa da batalha, os jogadores da partida em andamento). */
+export function createPickScheme(app: App, slots: readonly SlotKind[] = app.settings.setup.slots): PickScheme {
+  const active = (i: number): boolean => slots[i] !== 'off';
+  const human = (i: number): boolean => slots[i] === 'human';
   /** Conexão vista no último `handle` (antes do 1º: teclado sempre, gamepad presumido ligado, 'none' nunca). */
   let connected: readonly boolean[] = [0, 1, 2, 3, 4].map(i => app.settings.devices[i] !== 'none');
   const selfPicking = (i: number): boolean => human(i) && app.settings.devices[i] !== 'none' && connected[i];

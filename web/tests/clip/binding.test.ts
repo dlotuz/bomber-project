@@ -13,17 +13,18 @@ describe('botão do CLIPE', () => {
     expect(clipPadConflict(s, s.options.clipPad)).toBeNull();
   });
   it('tecla de jogo de quem está no teclado: avisa a ação e o jogador (L, R e SELECT não contam: não fazem nada na batalha)', () => {
-    const s = defaultSettings();   // DEV CONTROLES: P1–P3 no teclado
-    expect(clipKeyConflict(s, s.keymaps[1].a)).toEqual({ who: 2, action: 'a' });
+    const s = defaultSettings();   // DEV CONTROLES: P1 e P3 no teclado
+    expect(clipKeyConflict(s, s.keymaps[2].b)).toEqual({ who: 3, action: 'b' });   // Ctrl direito (o Enter também é do online)
     expect(clipKeyConflict(s, s.keymaps[0].select)).toBeNull();
-    s.devices[1] = 'none';
-    expect(clipKeyConflict(s, s.keymaps[1].a)).toBeNull();   // P2 fora do teclado: a tecla dele não joga
+    expect(clipKeyConflict(s, s.keymaps[1].a)).toBeNull();   // P2 no controle 1: a tecla dele não joga
+    s.devices[2] = 'none';
+    expect(clipKeyConflict(s, s.keymaps[2].b)).toBeNull();   // P3 fora do teclado: idem
     s.online.keymap.start = 'KeyZ';
     expect(clipKeyConflict(s, 'KeyZ')).toEqual({ who: 'online', action: 'start' });
   });
   it('botão do controle: conflita com o mapa de quem está num controle (ou com o controle online)', () => {
-    const s = defaultSettings();   // P4 e P5 nos controles 2 e 1, mapa padrão
-    expect(clipPadConflict(s, DEFAULT_PADMAP.a)).toEqual({ who: 4, action: 'a' });
+    const s = defaultSettings();   // P2, P4 e P5 nos controles 1, 2 e 3, mapa padrão
+    expect(clipPadConflict(s, DEFAULT_PADMAP.a)).toEqual({ who: 2, action: 'a' });
     expect(clipPadConflict(s, -1)).toBeNull();
     s.devices = ['kb', 'kb', 'kb', 'none', 'none'] as DeviceId[];
     expect(clipPadConflict(s, DEFAULT_PADMAP.a)).toBeNull();

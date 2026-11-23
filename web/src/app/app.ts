@@ -3,6 +3,7 @@ import type { SpriteBank } from '../render/sprite-bank';
 import type { Settings } from './settings';
 import type { AudioSink } from './rom-api';
 import { AudioDirector } from './audio';
+import type { ClipFolder } from '../clip/folder';
 import type { FxFrame } from '../render/fx/state';
 
 export interface Screen {
@@ -42,6 +43,8 @@ export class App {
   readonly audio: AudioDirector;
   /** O navegador grava o CLIPE (src/clip/support.ts; o main.ts detecta). Sem suporte, as Opções do clipe ficam desativadas. */
   clipSupported = false;
+  /** PASTA DO CLIPE (src/clip/folder.ts): null fora do navegador. */
+  clipFolder: ClipFolder | null = null;
   private run: Running | null = null;
 
   constructor(public settings: Settings, private hooks: AppHooks, sink?: AudioSink) {

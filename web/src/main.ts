@@ -23,11 +23,12 @@ import { battleScreen } from './screens/battle';
 import { hdBegin } from './render/hd-menu';
 import { hdArtFromUrl, hdBattleBegin, resolveHdArt, useHdArt } from './render/hdart/mode';
 import { detectClipSupport } from './clip/support';
-import { ClipController, clipFileName } from './clip/controller';
+import { ClipController, clipFileName, clipTitle } from './clip/controller';
 import { ClipRecorder } from './clip/recorder';
 import { ClipCanvas } from './clip/canvas';
 import { ClipAudioMix } from './clip/audio-mix';
 import { deliverClip } from './clip/deliver';
+import { ClipFolder } from './clip/folder';
 import { drawClipToast } from './clip/toast';
 import { audioOutput, type AudioOutput } from './audio/output';
 import { setTouchClip } from './input/touch';
@@ -93,6 +94,9 @@ const bank = new SpriteBank();
 // aparelho (InputManager.takeClip), fora do lockstep: na sala online, só quem apertou grava.
 const clipSupport = detectClipSupport();
 app.clipSupported = clipSupport.ok;
+const clipFolder = new ClipFolder();
+app.clipFolder = clipFolder;
+void clipFolder.load();
 const clipCanvas = new ClipCanvas();
 let clipMix: { out: AudioOutput; mix: ClipAudioMix } | null = null;
 const clipAudio = (): ClipAudioMix | null => {
@@ -117,8 +121,14 @@ const clip = new ClipController({
     const t = clipAudio()?.track;
     return t ? [clipCanvas.videoTrack(), t] : [clipCanvas.videoTrack()];
   }),
-  deliver: (blob, name) => deliverClip(blob, name),
+  deliver: async (blob, name) => {
+    const f = await clipFolder.save(blob, name);   // pasta escolhida nas Opções; sem ela (ou sem permissão), Downloads
+    if (f === 'saved') return 'folder';
+    const how = await deliverClip(blob, name);
+    return f === 'denied' && how === 'downloaded' ? 'noFolder' : how;
+  },
   fileName: stage => clipFileName(new Date(), stage, clipSupport.mime ?? ''),
+  title: stage => clipTitle(new Date(), stage),
 });
 // a aba escondida para o requestAnimationFrame (e o render): a pausa do gravador vem pelo evento
 document.addEventListener('visibilitychange', () => clip.update());
@@ -152,7 +162,7 @@ installTouchControls(() => (online.playing ? app.settings.online.keymap : app.se
 void online.restoreAccount();   // sessão da conta guardada neste navegador
 // FPS e ping no topo da tela (o ping só com a sala online conectada)
 const stats = createStats(document.getElementById('stats'), () => online.ping, () => online.peerPings());
-if (params.has('quick')) app.go(battleScreen(app, createMatchSession(parseConfig(window.location.search))));
+if (params.has('quick') || params.has('cenario')) app.go(battleScreen(app, createMatchSession(parseConfig(window.location.search))));
 else if (params.has('sala')) app.transition(() => onlineScreen(app, { code: params.get('sala') ?? '' }), { out: [], black: 0, in: FADE_IN_1 });
 else app.transition(() => titleScreen(app), { out: [], black: 0, in: FADE_IN_1 });
 

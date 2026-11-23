@@ -44,7 +44,7 @@ describe('opções (§6.13)', () => {
     app.settings.keymaps[0].a = 'KeyQ';
     expect(app.settings.controlSlots[1]!.keymaps[0].a).toBe('KeyZ');   // o slot é uma cópia
   });
-  it('DEV CONTROLES: depois do slot 3; carrega os 3 teclados e não deixa salvar por cima', () => {
+  it('DEV CONTROLES: depois do slot 3; carrega P1/P3 no teclado e P2/P4/P5 nos controles e não deixa salvar por cima', () => {
     const { app } = mkApp();
     const o = optionsScreen(app, 0, 'controls'); app.go(o);
     goRow(o, 'slot'); for (let i = 0; i < 4; i++) press(app, BTN.RIGHT);
@@ -53,7 +53,7 @@ describe('opções (§6.13)', () => {
     expect(o.value('slotSave')).toBe('FIXO');
     goRow(o, 'slotLoad'); press(app, BTN.A);
     const s = app.settings;
-    expect(s.devices).toEqual(['kb', 'kb', 'kb', 'gp1', 'gp0']);
+    expect(s.devices).toEqual(['kb', 'gp0', 'kb', 'gp1', 'gp2']);
     expect([s.keymaps[0].a, s.keymaps[0].b, s.keymaps[0].y, s.keymaps[0].x, s.keymaps[0].power]).toEqual(['KeyJ', 'KeyH', 'KeyG', 'KeyY', 'KeyT']);
     expect([s.keymaps[2].up, s.keymaps[2].power]).toEqual(['ArrowUp', 'Delete']);
     expect(s.controlSlots).toEqual([null, null, null]);
@@ -416,9 +416,9 @@ describe('Opções > Clipe', () => {
     app.settings.options.clipKey = app.settings.keymaps[0].a;   // A (BOMBA) do P1 (DEV CONTROLES: P1 no teclado)
     goRow(o, 'clipKey');
     expect(o.footer()).toBe('CONFLITO: A (BOMBA) DO P1');
-    app.settings.options.clipPad = DEFAULT_PADMAP.start;           // P4 e P5 em controles
+    app.settings.options.clipPad = DEFAULT_PADMAP.start;           // P2, P4 e P5 em controles
     goRow(o, 'clipPad');
-    expect(o.footer()).toBe('CONFLITO: START DO P4');
+    expect(o.footer()).toBe('CONFLITO: START DO P2');
     goRow(o, 'clipSec');
     expect(o.footer()).toBe('SALVA OS ÚLTIMOS SEGUNDOS DA PARTIDA');
   });

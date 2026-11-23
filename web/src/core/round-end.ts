@@ -3,6 +3,7 @@ import { CELEBRATE_TICKS, TIME_UP_TICKS, VICTORY_SFX_AT, WIN_DELAY } from './con
 import { setAct, standing } from './state';
 import { dropHeld } from './flyers';
 import { landNow, releaseGrab } from './grab';
+import { hitPlayer } from './hit';
 
 export function groupsStanding(s: RoundState): number {
   const st = s.players.filter(standing);
@@ -29,6 +30,16 @@ export function checkRoundEnd(s: RoundState, _ev: GameEvent[]): void {
     p.push.left = 0;
     setAct(s, p, 'victory', 0);
   }
+}
+
+/** ENCERRAR RODADA (menu da pausa): todo mundo de pé morre na hora (sem coração, roupa nem montaria segurando) e a
+ *  rodada acaba em empate pelo caminho normal — animação de morte e depois `round_over` com `reason: 'dead'`.
+ *  Só vale com a rodada em jogo; devolve false fora dela (abertura, vitória, tempo esgotado ou já acabada). */
+export function endRoundDraw(s: RoundState, ev: GameEvent[]): boolean {
+  if (s.phase !== 'play') return false;
+  for (const p of s.players) if (standing(p)) hitPlayer(s, p, 'pressure', ev);
+  if (s.endAt === 0) s.endAt = s.tick;
+  return true;
 }
 
 export function tickEndPhases(s: RoundState, ev: GameEvent[]): void {

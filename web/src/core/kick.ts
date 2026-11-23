@@ -10,12 +10,17 @@ import { MOUNTS } from './mounts';
 
 /** Chuta: o item Chute vale também montado (extra: qualquer montaria), ou a montaria que chuta (A). */
 export const canKick = (p: Player): boolean => (p.kick || !!MOUNTS.current.kicks?.(p)) && !MOUNTS.current.passes?.(p, 0xc900);   // tipo 1 não chuta
+/** Extra: montado na montaria do chute (tipo A, a que só chuta) — o único poder dela fica mais forte: chuta a bomba
+ *  dos outros mesmo com o dono segurando X (e o X do dono não a para depois) e, com X, para a bomba que chutou, mesmo
+ *  sendo de outro. */
+export const kickRider = (p: Player | undefined): boolean => !!p && !!MOUNTS.current.kicks?.(p);
+
 /** Extra: o dono segurando X (parar chute) tranca as próprias bombas contra o chute dos outros (o soco ainda vale).
  *  Só vale para o chute de bomba parada (`tryKick`, `kickWorth`): não para bomba rolando nem impede o desvio
  *  (`redirectRoller`). O efeito é o mesmo da ROM, por outro caminho: lá o chute sai e o X do dono o desfaz no mesmo tick
  *  ($C1:38CE; aj-stop/stophold*.py), e a bomba nem sai da casa. */
 export const kickLocked = (s: RoundState, p: Player, b: Bomb): boolean =>
-  b.owner !== p.slot && !!(s.players[b.owner]?.prevBtn & BTN.X);
+  b.owner !== p.slot && !kickRider(p) && !!(s.players[b.owner]?.prevBtn & BTN.X);
 
 /** Jogador de pé na casa `c` (a grade de ocupação $7F:1000, bits $90/$92 do objeto do jogador, marcados em
  *  $C2:33FC/$C2:5E84 na casa +$80 do centro). */
@@ -160,7 +165,8 @@ export function slideStep(s: RoundState, b: Bomb, _ev: GameEvent[]): void {
   if (at < 0) return;
   if (at !== from && from >= 0 && playerOn(s, at)) { park(s, b, from); return; }
   if (playerOn(s, at) || playerAhead(s, b, at)) { park(s, b, at); return; }
-  if (ownerHoldsX(s, b)) park(s, b, at);
+  const rider = riderKicked(s, b);
+  if (rider ? !!(rider.prevBtn & BTN.X) : ownerHoldsX(s, b)) park(s, b, at);
 }
 
 /** Botão X ($C1:37D6 → $C1:38CE): a cada tick do deslize, depois de andar, a ROM pega o objeto do jogador da bomba
@@ -169,6 +175,12 @@ export function slideStep(s: RoundState, b: Bomb, _ev: GameEvent[]): void {
  *  outro não a para; o dono, de qualquer lugar, para. Medido: aj-stop/stopwho.py, snap.py. `prevBtn` já é o deste tick
  *  (os jogadores agem antes dos objetos). */
 const ownerHoldsX = (s: RoundState, b: Bomb): boolean => !!((s.players[b.owner]?.prevBtn ?? 0) & BTN.X);
+/** Extra (montaria do chute): bomba de outro chutada por quem está montado na A — enquanto ele segue montado, só o X
+ *  dele a para (o do dono, não). */
+export function riderKicked(s: RoundState, b: Bomb): Player | null {
+  const k = b.kickedBy >= 0 && b.kickedBy !== b.owner ? s.players[b.kickedBy] : undefined;
+  return kickRider(k) ? k! : null;
+}
 
 /** Simulação (CPU) do X de `p`: para agora as bombas dele que estão rolando, na casa do centro da conta da ROM. */
 export function stopKick(s: RoundState, p: Player): void {

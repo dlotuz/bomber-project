@@ -9,8 +9,9 @@ export interface ClipFile { parts: Uint8Array[]; durMs: number }
 export interface ClipRing {
   /** Mais bytes do gravador, na ordem em que chegaram (qualquer corte). */
   push(chunk: Uint8Array): void;
-  /** Arquivo com os últimos `ms` (começando no quadro-chave mais próximo antes disso); null = ainda não há o que montar. */
-  build(ms: number): ClipFile | null;
+  /** Arquivo com os últimos `ms` (começando no quadro-chave mais próximo antes disso); null = ainda não há o que montar.
+   *  `title`: título gravado no arquivo (só o MP4; o webm sai sem). */
+  build(ms: number, title?: string): ClipFile | null;
   /** O fluxo não é o contêiner esperado (o anel parou de ler). */
   readonly broken: boolean;
   /** Segmentos guardados (inclui o que ainda está chegando) e quantos começam num quadro-chave. */
