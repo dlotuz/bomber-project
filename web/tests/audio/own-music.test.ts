@@ -88,6 +88,29 @@ describe('OwnMusic (IndexedDB)', () => {
   });
 });
 
+describe('OwnMusic: troca de faixa entre as rodadas', () => {
+  it('fim da rodada (fade cortado pela pausa da troca de banco): a rodada seguinte toca OUTRA faixa, do começo', async () => {
+    const srcs: string[] = [];
+    const el = { addEventListener: vi.fn(), play: vi.fn(async () => {}), pause: vi.fn(() => { el.paused = true; }),
+      paused: true, ended: false, volume: 1, set src(v: string) { srcs.push(v); el.paused = false; } };
+    const doc = { createElement: vi.fn(() => el) } as unknown as Pick<Document, 'createElement'>;
+    const urls = ['blob:a', 'blob:b', 'blob:c'];
+    let u = 0;
+    const create = vi.spyOn(URL, 'createObjectURL').mockImplementation(() => urls[u++ % 3]);
+    const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    const m = new OwnMusic(doc, () => 0);   // o sorteio sempre cairia na 1ª faixa
+    await m.clear();
+    await m.add([new File([new Uint8Array([1])], 'a.mp3', { type: 'audio/mpeg' }), new File([new Uint8Array([2])], 'b.mp3', { type: 'audio/mpeg' })]);
+    for (let round = 0; round < 3; round++) { m.play(); m.fade(); m.pause(); }   // rodada: toca, fade, banco $30 pausa
+    expect(srcs).toHaveLength(3);                                                  // cada rodada carregou uma faixa
+    expect(create.mock.calls.map(c => (c[0] as File).name)).toEqual(['a.mp3', 'b.mp3', 'a.mp3']);   // alternando
+    m.play(); m.pause(); m.play();                                                  // pausa comum (menu): continua a mesma
+    expect(srcs).toHaveLength(4);
+    create.mockRestore(); revoke.mockRestore();
+    await m.clear();
+  });
+});
+
 describe('OwnMusic: elemento de áudio para o CLIPE', () => {
   it('avisa quem grava quando o <audio> nasce (uma vez) e expõe o elemento', async () => {
     const el = { addEventListener: vi.fn(), play: vi.fn(async () => {}), pause: vi.fn(), paused: true, ended: false, volume: 1, src: '' };
